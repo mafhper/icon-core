@@ -7,6 +7,97 @@
     <title>Icon Forge - Professional Icon Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        /* Default (Dark / Slate) */
+        --c-bg-950: #020617;
+        --c-bg-900: #0f172a;
+        --c-bg-800: #1e293b;
+        --c-bg-700: #334155;
+        
+        --c-text-100: #f1f5f9;
+        --c-text-200: #e2e8f0;
+        --c-text-300: #cbd5e1;
+        --c-text-400: #94a3b8;
+        --c-text-500: #64748b;
+        
+        --c-accent-500: #6366f1; /* Indigo */
+        --c-accent-600: #4f46e5;
+      }
+
+      [data-theme="light"] {
+        /* Light Mode (Inverted logic for backgrounds) */
+        --c-bg-950: #ffffff;      /* Main bg becomes white */
+        --c-bg-900: #f8fafc;      /* Sidebar becomes very light gray */
+        --c-bg-800: #e2e8f0;      /* Borders/Inputs become light gray */
+        --c-bg-700: #cbd5e1;
+        
+        --c-text-100: #0f172a;    /* Text becomes dark */
+        --c-text-200: #1e293b;
+        --c-text-300: #334155;
+        --c-text-400: #64748b;
+        --c-text-500: #94a3b8;
+
+        --c-accent-500: #4f46e5;
+        --c-accent-600: #4338ca;
+      }
+
+      [data-theme="design"] {
+        /* Design Mode (Deep Purple / Vibrant) */
+        --c-bg-950: #09090b; /* Zinc Black */
+        --c-bg-900: #18181b;
+        --c-bg-800: #27272a;
+        --c-bg-700: #3f3f46;
+        
+        --c-text-100: #fafafa;
+        --c-text-200: #e4e4e7;
+        --c-text-300: #d4d4d8;
+        --c-text-400: #a1a1aa;
+        --c-text-500: #71717a;
+
+        --c-accent-500: #ec4899; /* Pink */
+        --c-accent-600: #db2777;
+      }
+
+      body {
+        background-color: var(--c-bg-950);
+        color: var(--c-text-100);
+        user-select: none;
+        -webkit-user-select: none;
+        overflow: hidden;
+        transition: background-color 0.3s, color 0.3s;
+      }
+      
+      input, textarea, .selectable-text {
+        user-select: text;
+        -webkit-user-select: text;
+      }
+
+      .titlebar-drag-region {
+        -webkit-app-region: drag;
+        app-region: drag;
+      }
+      
+      .no-drag {
+        -webkit-app-region: no-drag;
+        app-region: no-drag;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--c-bg-900); 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--c-text-500); 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--c-text-400); 
+      }
+    </style>
     <script>
       tailwind.config = {
         theme: {
@@ -15,35 +106,30 @@
               sans: ['Inter', 'sans-serif'],
             },
             colors: {
+              // We override the standard slate palette to use our variables
+              // This allows switching themes without changing class names in React
               slate: {
-                850: '#151e2e',
+                950: 'var(--c-bg-950)',
+                900: 'var(--c-bg-900)',
+                800: 'var(--c-bg-800)',
+                700: 'var(--c-bg-700)',
+                
+                100: 'var(--c-text-100)',
+                200: 'var(--c-text-200)',
+                300: 'var(--c-text-300)',
+                400: 'var(--c-text-400)',
+                500: 'var(--c-text-500)',
+                600: 'var(--c-text-500)', // Mapping middle tones
+              },
+              indigo: {
+                600: 'var(--c-accent-500)',
+                500: 'var(--c-accent-600)', // Hover states usually lighter in TW logic, but variables handle it
               }
             }
           },
         },
       }
     </script>
-    <style>
-      body {
-        background-color: #0f172a;
-        color: #f8fafc;
-      }
-      /* Custom scrollbar for better aesthetics */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #1e293b; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #475569; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #64748b; 
-      }
-    </style>
   <script type="importmap">
 {
   "imports": {

@@ -1,7 +1,7 @@
-
-
 export type IconCategory = 'web' | 'ios' | 'pwa' | 'social' | 'windows' | 'macos' | 'linux';
 export type IconVariant = 'light' | 'dark';
+export type AppLanguage = 'pt' | 'en' | 'es' | 'it' | 'fr' | 'de' | 'zh' | 'ja';
+export type AppTheme = 'dark' | 'light' | 'design';
 
 export interface IconDefinition {
   name: string;
@@ -61,6 +61,7 @@ export const ICON_DEFINITIONS: IconDefinition[] = [
   // Windows (Modern Tiles)
   { name: 'logo-win-150x150.png', width: 150, height: 150, category: 'windows', transparent: true, format: 'png', label: 'Windows Tile Medium' },
   { name: 'logo-win-310x310.png', width: 310, height: 310, category: 'windows', transparent: true, format: 'png', label: 'Windows Tile Large' },
+  { name: 'mstile-150x150.png', width: 150, height: 150, category: 'windows', transparent: true, format: 'png', label: 'Web Tile (mstile)' },
   
   // macOS (Source PNGs for ICNS creation tools)
   { name: 'logo-mac-512x512.png', width: 512, height: 512, category: 'macos', transparent: true, format: 'png', label: 'macOS Icon 512px' },
