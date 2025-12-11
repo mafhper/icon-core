@@ -476,21 +476,62 @@ const WcagBadge = ({ ratio }: { ratio?: number }) => {
   );
 };
 
-const IconMagnifier = ({ url, bgClass }: { url: string, bgClass: string }) => (
-  <div className="group/mag relative w-full h-full">
-    <div className={`w-full h-full flex items-center justify-center overflow-hidden border border-white/5 rounded-xl ${bgClass}`}>
-       <img src={url} className="max-w-full max-h-full object-contain" alt="icon" />
-    </div>
+const IconMagnifier = ({ url, bgClass }: { url: string, bgClass: string }) => {
+  const [position, setPosition] = useState({ x: 50, y: 50 });
+  const [isHovering, setIsHovering] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setPosition({ x, y });
+  };
+
+  return (
     <div 
-      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 h-40 bg-bg-secondary border border-border-light rounded-2xl shadow-2xl z-50 overflow-hidden pointer-events-none hidden group-hover/mag:block animate-zoom-in"
+      className="relative w-full h-full"
+      ref={containerRef}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      onMouseMove={handleMouseMove}
     >
-        <div className="absolute top-0 left-0 bg-black/80 text-white text-[8px] px-2 py-1 rounded-br-lg z-10 font-mono backdrop-blur-md">400%</div>
-        <div className={`w-full h-full flex items-center justify-center ${bgClass}`}>
-           <img src={url} className="w-full h-full object-contain" style={{ imageRendering: 'pixelated', transform: 'scale(4)' }} alt="zoom" />
+      <div className={`w-full h-full flex items-center justify-center overflow-hidden border border-white/5 rounded-xl ${bgClass} cursor-crosshair`}>
+         <img src={url} className="max-w-full max-h-full object-contain" alt="icon" />
+      </div>
+      
+      {isHovering && (
+        <div 
+          className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-48 h-48 bg-bg-secondary border border-border-light rounded-2xl shadow-2xl z-50 overflow-hidden pointer-events-none animate-zoom-in"
+        >
+            <div className="absolute top-0 left-0 bg-black/80 text-white text-[9px] px-2 py-1 rounded-br-lg z-10 font-mono backdrop-blur-md flex items-center gap-2 border-b border-r border-white/10">
+              <ZoomIn size={10} /> 400%
+            </div>
+            
+            <div className={`w-full h-full overflow-hidden ${bgClass}`}>
+               <img 
+                 src={url} 
+                 className="w-full h-full object-contain origin-center transition-transform duration-75 ease-out" 
+                 style={{ 
+                   transformOrigin: `${position.x}% ${position.y}%`,
+                   transform: 'scale(4)',
+                   imageRendering: 'pixelated'
+                 }} 
+                 alt="zoom" 
+               />
+            </div>
+            
+            {/* Crosshair overlay for precision feel */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                <div className="w-4 h-0.5 bg-white/50 rounded-full"></div>
+                <div className="h-4 w-0.5 bg-white/50 rounded-full absolute"></div>
+            </div>
         </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 const ContrastVisualizer = ({ analysis, tLabel }: { analysis: ImageAnalysis, tLabel: string }) => {
   if (!analysis.isLowContrast) return null;
