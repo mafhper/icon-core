@@ -153,7 +153,7 @@ export const processImage = async (
   config: IconDefinition, 
   backgroundColor: string = '#ffffff',
   options?: EditOptions
-): Promise<{ blob: Blob, analysis: ImageAnalysis }> => {
+): Promise<{ blob: Blob, analysis: ImageAnalysis, size: number }> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(sourceFile);
@@ -249,15 +249,17 @@ export const processImage = async (
 
       // --- Output ---
       const mimeType = config.format === 'jpg' ? 'image/jpeg' : 'image/png';
+      // Default high quality if not specified, otherwise use user selection
+      const quality = options?.quality !== undefined ? options.quality : 0.95;
       
       canvas.toBlob((blob) => {
         URL.revokeObjectURL(url);
         if (blob) {
-          resolve({ blob, analysis });
+          resolve({ blob, analysis, size: blob.size });
         } else {
           reject(new Error('Canvas to Blob failed'));
         }
-      }, mimeType, 0.9);
+      }, mimeType, quality);
     };
 
     img.onerror = () => {

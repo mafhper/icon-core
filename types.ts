@@ -29,6 +29,7 @@ export interface EditOptions {
   padding: number;
   backgroundColor?: string;
   keepOriginalBackground?: boolean;
+  quality?: number; // Compression quality (0 to 1)
 }
 
 export interface GeneratedFile {
@@ -36,6 +37,7 @@ export interface GeneratedFile {
   name: string;
   blob: Blob;
   url: string;
+  size: number; // File size in bytes
   category: IconCategory;
   variant: IconVariant;
   width: number;
