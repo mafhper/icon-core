@@ -1,3 +1,4 @@
+
 export type IconCategory = 'web' | 'ios' | 'pwa' | 'social' | 'windows' | 'macos' | 'linux';
 export type IconVariant = 'light' | 'dark';
 export type AppLanguage = 'pt' | 'en' | 'es' | 'it' | 'fr' | 'de' | 'zh' | 'ja';
@@ -19,6 +20,8 @@ export interface ImageAnalysis {
   isLowContrast: boolean;
   hasTransparencyIssues: boolean;
   suggestions: string[];
+  detectedForegroundColor: string;
+  detectedBackgroundColor: string;
 }
 
 export interface EditOptions {

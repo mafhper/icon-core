@@ -1,5 +1,5 @@
 {
-  "name": "icon-forge-v0.1",
+  "name": "icon-forge-v0.3",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,8 @@
     "react-dom": "^19.2.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.556.0",
-    "file-saver": "^2.0.5"
+    "file-saver": "^2.0.5",
+    "framer-motion": "^11.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

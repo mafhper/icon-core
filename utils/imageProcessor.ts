@@ -15,6 +15,13 @@ const getLuminance = (r: number, g: number, b: number) => {
 };
 
 /**
+ * Helper to convert RGB to Hex
+ */
+const rgbToHex = (r: number, g: number, b: number) => {
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+};
+
+/**
  * Extracts the dominant color from an image element.
  * Ignores transparent pixels.
  */
@@ -47,9 +54,7 @@ export const getDominantColor = (img: HTMLImageElement): string => {
   g = Math.floor(g / count);
   b = Math.floor(b / count);
   
-  // Convert RGB to Hex
-  const hex = ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-  return `#${hex}`;
+  return rgbToHex(r, g, b);
 };
 
 /**
@@ -67,6 +72,11 @@ export const analyzeImageVisibility = (
   let totalLuminance = 0;
   let pixelCount = 0;
   
+  // Track average RGB of visible pixels to detect foreground color
+  let totalR = 0;
+  let totalG = 0;
+  let totalB = 0;
+  
   // Parse background color for comparison
   const bgR = parseInt(backgroundColorHex.slice(1, 3), 16) || 255;
   const bgG = parseInt(backgroundColorHex.slice(3, 5), 16) || 255;
@@ -77,18 +87,32 @@ export const analyzeImageVisibility = (
     const a = data[i + 3];
     // Only count pixels that have significant opacity
     if (a > 20) {
-      totalLuminance += getLuminance(data[i], data[i + 1], data[i + 2]);
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      
+      totalLuminance += getLuminance(r, g, b);
+      totalR += r;
+      totalG += g;
+      totalB += b;
       pixelCount++;
     }
   }
 
   const suggestions: string[] = [];
   let contrastRatio = 0;
+  let detectedForegroundColor = '#000000'; // Fallback
 
   if (pixelCount === 0) {
     suggestions.push("Image appears to be empty.");
   } else {
     const avgLuminance = totalLuminance / pixelCount;
+    
+    // Calculate Detected Foreground Color
+    const avgR = Math.round(totalR / pixelCount);
+    const avgG = Math.round(totalG / pixelCount);
+    const avgB = Math.round(totalB / pixelCount);
+    detectedForegroundColor = rgbToHex(avgR, avgG, avgB);
     
     // Calculate Contrast Ratio (L1 + 0.05) / (L2 + 0.05)
     const L1 = Math.max(avgLuminance, bgLuminance);
@@ -118,7 +142,9 @@ export const analyzeImageVisibility = (
     contrastRatio,
     isLowContrast: contrastRatio < 3 && contrastRatio > 0, // 0 usually means empty or transparent analysis
     hasTransparencyIssues: suggestions.length > 0,
-    suggestions
+    suggestions,
+    detectedForegroundColor,
+    detectedBackgroundColor: backgroundColorHex
   };
 };
 

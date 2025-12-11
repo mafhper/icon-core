@@ -4,64 +4,57 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="https://lucide.dev/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Icon Forge - Professional Icon Generator</title>
+    <title>ICON FORGE - Professional Asset Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        /* Default (Dark / Slate) */
-        --c-bg-950: #020617;
-        --c-bg-900: #0f172a;
-        --c-bg-800: #1e293b;
-        --c-bg-700: #334155;
+        /* --- DESIGN SYSTEM TOKENS --- */
         
-        --c-text-100: #f1f5f9;
-        --c-text-200: #e2e8f0;
-        --c-text-300: #cbd5e1;
-        --c-text-400: #94a3b8;
-        --c-text-500: #64748b;
+        /* Base Backgrounds */
+        --bg-primary: #000000;
+        --bg-secondary: #09090b; /* zinc-950 */
+        --bg-tertiary: #18181b;  /* zinc-900 */
         
-        --c-accent-500: #6366f1; /* Indigo */
-        --c-accent-600: #4f46e5;
+        /* Glass / Borders */
+        --border-subtle: rgba(255, 255, 255, 0.05);
+        --border-light: rgba(255, 255, 255, 0.1);
+        --bg-glass: rgba(24, 24, 27, 0.6); /* zinc-900 with opacity */
+
+        /* Text */
+        --text-primary: #ffffff;
+        --text-secondary: #a1a1aa; /* zinc-400 */
+        --text-muted: #71717a;     /* zinc-500 */
+        --text-subtle: #52525b;    /* zinc-600 */
+
+        /* Accents (Purple/Pink Primary) */
+        --accent-from: #a855f7; /* purple-500 */
+        --accent-to: #ec4899;   /* pink-500 */
       }
 
       [data-theme="light"] {
-        /* Light Mode (Inverted logic for backgrounds) */
-        --c-bg-950: #ffffff;      /* Main bg becomes white */
-        --c-bg-900: #f8fafc;      /* Sidebar becomes very light gray */
-        --c-bg-800: #e2e8f0;      /* Borders/Inputs become light gray */
-        --c-bg-700: #cbd5e1;
+        /* Light Mode Mapping (Inverted for visibility while keeping structure) */
+        --bg-primary: #ffffff;
+        --bg-secondary: #f4f4f5; /* zinc-100 */
+        --bg-tertiary: #e4e4e7;  /* zinc-200 */
         
-        --c-text-100: #0f172a;    /* Text becomes dark */
-        --c-text-200: #1e293b;
-        --c-text-300: #334155;
-        --c-text-400: #64748b;
-        --c-text-500: #94a3b8;
+        --border-subtle: rgba(0, 0, 0, 0.05);
+        --border-light: rgba(0, 0, 0, 0.1);
+        --bg-glass: rgba(255, 255, 255, 0.8);
 
-        --c-accent-500: #4f46e5;
-        --c-accent-600: #4338ca;
-      }
+        --text-primary: #09090b;
+        --text-secondary: #52525b;
+        --text-muted: #71717a;
+        --text-subtle: #a1a1aa;
 
-      [data-theme="design"] {
-        /* Design Mode (Deep Purple / Vibrant) */
-        --c-bg-950: #09090b; /* Zinc Black */
-        --c-bg-900: #18181b;
-        --c-bg-800: #27272a;
-        --c-bg-700: #3f3f46;
-        
-        --c-text-100: #fafafa;
-        --c-text-200: #e4e4e7;
-        --c-text-300: #d4d4d8;
-        --c-text-400: #a1a1aa;
-        --c-text-500: #71717a;
-
-        --c-accent-500: #ec4899; /* Pink */
-        --c-accent-600: #db2777;
+        --accent-from: #3b82f6; /* blue-500 */
+        --accent-to: #a855f7;   /* purple-500 */
       }
 
       body {
-        background-color: var(--c-bg-950);
-        color: var(--c-text-100);
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: 'Inter', system-ui, sans-serif;
         user-select: none;
         -webkit-user-select: none;
         overflow: hidden;
@@ -73,58 +66,84 @@
         -webkit-user-select: text;
       }
 
+      /* Drag Regions for Electron/Desktop */
       .titlebar-drag-region {
         -webkit-app-region: drag;
         app-region: drag;
       }
-      
       .no-drag {
         -webkit-app-region: no-drag;
         app-region: no-drag;
       }
 
+      /* Custom Scrollbar */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: var(--c-bg-900); 
+        background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: var(--c-text-500); 
-        border-radius: 4px;
+        background: var(--text-subtle); 
+        border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: var(--c-text-400); 
+        background: var(--text-muted); 
+      }
+
+      /* Utility for hiding scrollbar but allowing scroll */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
     </style>
     <script>
       tailwind.config = {
         theme: {
           extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
             colors: {
-              // We override the standard slate palette to use our variables
-              // This allows switching themes without changing class names in React
-              slate: {
-                950: 'var(--c-bg-950)',
-                900: 'var(--c-bg-900)',
-                800: 'var(--c-bg-800)',
-                700: 'var(--c-bg-700)',
-                
-                100: 'var(--c-text-100)',
-                200: 'var(--c-text-200)',
-                300: 'var(--c-text-300)',
-                400: 'var(--c-text-400)',
-                500: 'var(--c-text-500)',
-                600: 'var(--c-text-500)', // Mapping middle tones
+              // Mapping Tailwind utilities to our CSS Variables
+              bg: {
+                primary: 'var(--bg-primary)',
+                secondary: 'var(--bg-secondary)',
+                tertiary: 'var(--bg-tertiary)',
+                glass: 'var(--bg-glass)',
               },
-              indigo: {
-                600: 'var(--c-accent-500)',
-                500: 'var(--c-accent-600)', // Hover states usually lighter in TW logic, but variables handle it
+              border: {
+                subtle: 'var(--border-subtle)',
+                light: 'var(--border-light)',
+              },
+              text: {
+                primary: 'var(--text-primary)',
+                secondary: 'var(--text-secondary)',
+                muted: 'var(--text-muted)',
+                subtle: 'var(--text-subtle)',
+              },
+              zinc: {
+                950: '#09090b',
+                900: '#18181b',
+                800: '#27272a',
+                700: '#3f3f46',
+                600: '#52525b',
+                500: '#71717a',
+                400: '#a1a1aa',
+                300: '#d4d4d8',
+                200: '#e4e4e7',
+                100: '#f4f4f5',
+                50: '#fafafa',
               }
+            },
+            backgroundImage: {
+              'gradient-primary': 'linear-gradient(to bottom right, var(--accent-from), var(--accent-to))',
+              'gradient-text': 'linear-gradient(to right, #c084fc, #f472b6, #60a5fa)', 
+              'gradient-glow': 'radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.15), transparent 70%)',
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
             }
           },
         },
@@ -138,7 +157,8 @@
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
     "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
-    "file-saver": "https://aistudiocdn.com/file-saver@^2.0.5"
+    "file-saver": "https://aistudiocdn.com/file-saver@^2.0.5",
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^11.0.0"
   }
 }
 </script>
