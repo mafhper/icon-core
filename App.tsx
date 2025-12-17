@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Upload, Download, Settings, Image as ImageIcon, Layers, Monitor, Smartphone, Globe, Info, Check, RefreshCw, X, AlertTriangle, Edit2, ZoomIn, Maximize, Moon, Sun, UploadCloud, Eye, LayoutTemplate, Grid, Palette, Sliders, ChevronRight, Minimize, Minus, Square, User, Languages, FileUp, Menu, Zap, ChevronLeft, ChevronDown, FolderOpen, HardDrive } from 'lucide-react';
+import { Upload, Download, Settings, Image as ImageIcon, Layers, Monitor, Smartphone, Globe, Info, Check, RefreshCw, X, AlertTriangle, Edit2, ZoomIn, Maximize, Moon, Sun, UploadCloud, Eye, LayoutTemplate, Grid, Palette, Sliders, ChevronRight, Minimize, Minus, Square, User, Languages, FileUp, Menu, Zap, ChevronLeft, ChevronDown, FolderOpen, HardDrive, Pipette, Award } from 'lucide-react';
 import JSZip from 'jszip';
 import FileSaver from 'file-saver';
 import { ICON_DEFINITIONS, GeneratedFile, IconCategory, IconDefinition, EditOptions, IconVariant, AppLanguage, AppTheme, ImageAnalysis } from './types';
@@ -64,7 +64,13 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     contrast: "Contraste",
     zoomHover: "Passe o mouse para ampliar",
     replaceSource: "Trocar Fonte desta Versão",
-    detectedFail: "Falha de Contraste Detectada"
+    detectedFail: "Falha de Contraste Detectada",
+    pickColor: "Pegar cor da tela",
+    gradeS: "Excelente (S)",
+    gradeA: "Ótimo (A)",
+    gradeB: "Bom (B)",
+    gradeC: "Ruim (C)",
+    gradeLabel: "Nota Geral"
   },
   en: {
     appName: "ICON FORGE",
@@ -116,7 +122,13 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     contrast: "Contrast",
     zoomHover: "Hover to magnify",
     replaceSource: "Replace Source File",
-    detectedFail: "Contrast Failure Detected"
+    detectedFail: "Contrast Failure Detected",
+    pickColor: "Pick color from screen",
+    gradeS: "Perfect (S)",
+    gradeA: "Great (A)",
+    gradeB: "Good (B)",
+    gradeC: "Poor (C)",
+    gradeLabel: "Overall Grade"
   },
   es: { 
     appName: "ICON FORGE", 
@@ -168,7 +180,13 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     contrast: "Contraste", 
     zoomHover: "Pasar mouse para ver", 
     replaceSource: "Reemplazar Archivo", 
-    detectedFail: "Fallo de contraste" 
+    detectedFail: "Fallo de contraste",
+    pickColor: "Tomar color",
+    gradeS: "Perfecto (S)",
+    gradeA: "Genial (A)",
+    gradeB: "Bueno (B)",
+    gradeC: "Pobre (C)",
+    gradeLabel: "Nota General"
   },
   it: { 
     appName: "ICON FORGE", 
@@ -220,7 +238,13 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     contrast: "Contrasto", 
     zoomHover: "Hover per zoom", 
     replaceSource: "Sostituisci File", 
-    detectedFail: "Errore contrasto" 
+    detectedFail: "Errore contrasto",
+    pickColor: "Preleva colore",
+    gradeS: "Perfetto (S)",
+    gradeA: "Ottimo (A)",
+    gradeB: "Buono (B)",
+    gradeC: "Scarso (C)",
+    gradeLabel: "Voto"
   },
   fr: { 
     appName: "ICON FORGE", 
@@ -272,7 +296,13 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     contrast: "Contraste", 
     zoomHover: "Survoler pour zoomer", 
     replaceSource: "Remplacer Fichier", 
-    detectedFail: "Échec du contraste" 
+    detectedFail: "Échec du contraste",
+    pickColor: "Pipette",
+    gradeS: "Parfait (S)",
+    gradeA: "Super (A)",
+    gradeB: "Bon (B)",
+    gradeC: "Pauvre (C)",
+    gradeLabel: "Note"
   },
   de: { 
     appName: "ICON FORGE", 
@@ -324,7 +354,13 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     contrast: "Kontrast", 
     zoomHover: "Hover zum Zoomen", 
     replaceSource: "Datei Ersetzen", 
-    detectedFail: "Kontrastfehler" 
+    detectedFail: "Kontrastfehler",
+    pickColor: "Farbe wählen",
+    gradeS: "Perfekt (S)",
+    gradeA: "Super (A)",
+    gradeB: "Gut (B)",
+    gradeC: "Schlecht (C)",
+    gradeLabel: "Note"
   },
   zh: { 
     appName: "ICON FORGE", 
@@ -376,7 +412,13 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     contrast: "对比度", 
     zoomHover: "悬停放大", 
     replaceSource: "替换源文件", 
-    detectedFail: "对比度失败" 
+    detectedFail: "对比度失败",
+    pickColor: "吸管",
+    gradeS: "完美 (S)",
+    gradeA: "极好 (A)",
+    gradeB: "良好 (B)",
+    gradeC: "差 (C)",
+    gradeLabel: "评分"
   },
   ja: { 
     appName: "ICON FORGE", 
@@ -428,7 +470,13 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     contrast: "コントラスト", 
     zoomHover: "ホバーで拡大", 
     replaceSource: "ファイルを置換", 
-    detectedFail: "コントラストエラー" 
+    detectedFail: "コントラストエラー",
+    pickColor: "スポイト",
+    gradeS: "完璧 (S)",
+    gradeA: "素晴らしい (A)",
+    gradeB: "良い (B)",
+    gradeC: "悪い (C)",
+    gradeLabel: "成績"
   }
 };
 
@@ -472,6 +520,47 @@ const WcagBadge = ({ ratio }: { ratio?: number }) => {
   return (
     <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${color} flex items-center gap-1 shadow-sm`}>
       <span>WCAG</span><span className="opacity-80">{ratio.toFixed(2)}</span><span className="opacity-60 border-l border-current pl-1 ml-0.5">{label}</span>
+    </div>
+  );
+};
+
+const IconSetGrade = ({ lightRatio, darkRatio, t }: { lightRatio?: number, darkRatio?: number, t: (k: string) => string }) => {
+  const ratios = [];
+  if (lightRatio) ratios.push(lightRatio);
+  if (darkRatio) ratios.push(darkRatio);
+
+  if (ratios.length === 0) return null;
+
+  // We grade based on the "weakest link"
+  const minRatio = Math.min(...ratios);
+  
+  let grade = "C";
+  let colorClass = "bg-red-500 text-white shadow-red-500/40";
+  let labelKey = "gradeC";
+
+  if (minRatio >= 7) { 
+    grade = "S"; 
+    colorClass = "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-500/40"; 
+    labelKey = "gradeS";
+  } else if (minRatio >= 4.5) { 
+    grade = "A"; 
+    colorClass = "bg-gradient-to-br from-green-400 to-green-600 text-white shadow-green-500/40"; 
+    labelKey = "gradeA";
+  } else if (minRatio >= 3) { 
+    grade = "B"; 
+    colorClass = "bg-gradient-to-br from-yellow-400 to-yellow-600 text-black shadow-yellow-500/40"; 
+    labelKey = "gradeB";
+  }
+
+  return (
+    <div className="group/grade relative flex flex-col items-end">
+       <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg shadow-lg ${colorClass} select-none cursor-help transition-transform group-hover/grade:scale-110`}>
+         {grade}
+       </div>
+       <div className="absolute top-full right-0 mt-2 bg-black/90 backdrop-blur border border-white/10 px-2 py-1 rounded text-[10px] text-white whitespace-nowrap opacity-0 group-hover/grade:opacity-100 transition-opacity z-50 pointer-events-none">
+          <span className="opacity-50 block text-[8px] uppercase tracking-wider mb-0.5">{t('gradeLabel')}</span>
+          {t(labelKey)}
+       </div>
     </div>
   );
 };
@@ -690,23 +779,42 @@ const App: React.FC = () => {
   }, []);
 
   type UploadType = 'main' | 'dark' | 'small' | 'small-dark';
+
+  const processSelectedFile = (selectedFile: File, type: UploadType) => {
+    if (!selectedFile.type.startsWith('image/')) { alert('Please upload an image file.'); return; }
+    const url = URL.createObjectURL(selectedFile);
+    switch (type) {
+      case 'main':
+        setFile(selectedFile); setPreviewUrl(url);
+        const img = new Image();
+        img.onload = () => { setBrandColor(getDominantColor(img)); };
+        img.src = url;
+        setGeneratedIcons([]);
+        break;
+      case 'dark': setDarkFile(selectedFile); setDarkPreviewUrl(url); break;
+      case 'small': setSmallFile(selectedFile); setSmallPreviewUrl(url); break;
+      case 'small-dark': setSmallDarkFile(selectedFile); setSmallDarkPreviewUrl(url); break;
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: UploadType) => {
     if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      if (!selectedFile.type.startsWith('image/')) { alert('Please upload an image file.'); return; }
-      const url = URL.createObjectURL(selectedFile);
-      switch (type) {
-        case 'main':
-          setFile(selectedFile); setPreviewUrl(url);
-          const img = new Image();
-          img.onload = () => { setBrandColor(getDominantColor(img)); };
-          img.src = url;
-          setGeneratedIcons([]);
-          break;
-        case 'dark': setDarkFile(selectedFile); setDarkPreviewUrl(url); break;
-        case 'small': setSmallFile(selectedFile); setSmallPreviewUrl(url); break;
-        case 'small-dark': setSmallDarkFile(selectedFile); setSmallDarkPreviewUrl(url); break;
-      }
+      processSelectedFile(e.target.files[0], type);
+    }
+  };
+
+  const handleEyedropper = async () => {
+    if (!('EyeDropper' in window)) {
+      alert("Your browser does not support the Eyedropper API.");
+      return;
+    }
+    try {
+      // @ts-ignore
+      const eyeDropper = new window.EyeDropper();
+      const result = await eyeDropper.open();
+      setBrandColor(result.sRGBHex);
+    } catch (e) {
+      console.log('User canceled the eyedropper');
     }
   };
 
@@ -845,28 +953,55 @@ const App: React.FC = () => {
     { id: 'social', labelKey: 'social', icon: <ImageIcon size={14} /> },
   ];
 
-  const UploadZone = ({ file, preview, type, label, icon, height = "h-32", optional = false, inputRef }: { file: File | null, preview: string | null, type: UploadType, label: string, icon: React.ReactNode, height?: string, optional?: boolean, inputRef?: React.RefObject<HTMLInputElement> }) => (
-    <div className="no-drag group relative hover:scale-[1.02] transition-transform duration-200">
-      <label className="text-xs font-bold text-text-subtle uppercase tracking-wider mb-2 flex items-center gap-2">
-        {icon} <span className="text-text-secondary">{label}</span> {optional && <span className="text-[10px] font-bold text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded ml-auto border border-border-subtle">{t('optional')}</span>}
-      </label>
-      {!file ? (
-        <label className={`flex flex-col items-center justify-center ${height} border border-dashed border-border-light rounded-2xl bg-bg-tertiary/30 hover:bg-bg-tertiary hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5 transition-all cursor-pointer overflow-hidden`}>
-          <div className="p-3 rounded-full bg-bg-glass mb-2 group-hover:scale-110 transition-transform">
-             <Upload className="w-5 h-5 text-text-muted group-hover:text-white" />
-          </div>
-          <span className="text-[10px] font-medium text-text-muted group-hover:text-text-secondary transition-colors">{t('upload')}</span>
-          <input type="file" ref={inputRef} className="hidden" onChange={(e) => handleFileChange(e, type)} />
+  const UploadZone = ({ file, preview, type, label, icon, height = "h-32", optional = false, inputRef }: { file: File | null, preview: string | null, type: UploadType, label: string, icon: React.ReactNode, height?: string, optional?: boolean, inputRef?: React.RefObject<HTMLInputElement> }) => {
+    const [isDragging, setIsDragging] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        processSelectedFile(e.dataTransfer.files[0], type);
+      }
+    };
+
+    return (
+      <div className="no-drag group relative hover:scale-[1.02] transition-transform duration-200">
+        <label className="text-xs font-bold text-text-subtle uppercase tracking-wider mb-2 flex items-center gap-2">
+          {icon} <span className="text-text-secondary">{label}</span> {optional && <span className="text-[10px] font-bold text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded ml-auto border border-border-subtle">{t('optional')}</span>}
         </label>
-      ) : (
-        <div className={`relative ${height} border border-border-light rounded-2xl bg-black overflow-hidden group`}>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-          <img src={preview!} className="relative z-10 w-full h-full object-contain p-4" alt={label} />
-          <button onClick={() => clearFile(type)} className="absolute top-2 right-2 p-1.5 bg-black/80 backdrop-blur text-white rounded-full hover:bg-red-500 hover:text-white transition-colors border border-white/10 z-20"><X size={10}/></button>
-        </div>
-      )}
-    </div>
-  );
+        {!file ? (
+          <label 
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`flex flex-col items-center justify-center ${height} border border-dashed rounded-2xl transition-all cursor-pointer overflow-hidden ${isDragging ? 'bg-purple-500/20 border-purple-500 shadow-lg shadow-purple-500/10 scale-105' : 'border-border-light bg-bg-tertiary/30 hover:bg-bg-tertiary hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5'}`}
+          >
+            <div className={`p-3 rounded-full bg-bg-glass mb-2 transition-transform ${isDragging ? 'scale-125' : 'group-hover:scale-110'}`}>
+               <Upload className={`w-5 h-5 transition-colors ${isDragging ? 'text-white' : 'text-text-muted group-hover:text-white'}`} />
+            </div>
+            <span className={`text-[10px] font-medium transition-colors ${isDragging ? 'text-white' : 'text-text-muted group-hover:text-text-secondary'}`}>{isDragging ? "Drop Here" : t('upload')}</span>
+            <input type="file" ref={inputRef} className="hidden" onChange={(e) => handleFileChange(e, type)} />
+          </label>
+        ) : (
+          <div className={`relative ${height} border border-border-light rounded-2xl bg-black overflow-hidden group`}>
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+            <img src={preview!} className="relative z-10 w-full h-full object-contain p-4" alt={label} />
+            <button onClick={() => clearFile(type)} className="absolute top-2 right-2 p-1.5 bg-black/80 backdrop-blur text-white rounded-full hover:bg-red-500 hover:text-white transition-colors border border-white/10 z-20"><X size={10}/></button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const SidebarContent = () => (
     <div className={`flex-1 overflow-y-auto overflow-x-hidden ${sidebarCollapsed ? 'px-2 py-4' : 'px-6 py-4'}`}>
@@ -896,7 +1031,19 @@ const App: React.FC = () => {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-text-subtle uppercase tracking-wider">{t('brandColor')}</label>
                 <div className="flex gap-2 items-center">
-                    <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="w-6 h-6 bg-transparent border-0 cursor-pointer rounded-full overflow-hidden" />
+                    {'EyeDropper' in window && (
+                      <button 
+                        onClick={handleEyedropper} 
+                        className="p-1.5 bg-bg-tertiary hover:bg-purple-500 hover:text-white rounded-lg border border-border-light text-text-muted transition-colors"
+                        title={t('pickColor')}
+                      >
+                        <Pipette size={14} />
+                      </button>
+                    )}
+                    <div className="relative group/color">
+                      <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="w-6 h-6 bg-transparent border-0 cursor-pointer rounded-full overflow-hidden opacity-0 absolute inset-0 z-10" />
+                      <div className="w-6 h-6 rounded-full border border-border-light shadow-sm overflow-hidden" style={{backgroundColor: brandColor}}></div>
+                    </div>
                     <input type="text" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="bg-bg-tertiary border border-border-light text-xs rounded-md px-2 py-1 w-20 font-mono text-text-secondary focus:outline-none focus:border-purple-500/50" />
                 </div>
               </div>
@@ -1077,7 +1224,10 @@ const App: React.FC = () => {
                                                           <h3 className="font-bold text-text-primary text-sm truncate max-w-[150px]" title={def.label || def.name}>{def.label || def.name}</h3>
                                                           <p className="text-[10px] text-text-muted font-mono mt-1 opacity-70">{def.width > 0 ? `${def.width}x${def.height}` : 'Vector'}</p>
                                                       </div>
-                                                      <span className="text-[9px] bg-bg-tertiary px-1.5 py-0.5 rounded text-text-secondary border border-border-subtle uppercase font-bold">{def.format}</span>
+                                                      <div className="flex flex-col items-end gap-2">
+                                                          <IconSetGrade lightRatio={lightIcon.analysis?.contrastRatio} darkRatio={darkIcon?.analysis?.contrastRatio} t={t} />
+                                                          <span className="text-[9px] bg-bg-tertiary px-1.5 py-0.5 rounded text-text-secondary border border-border-subtle uppercase font-bold">{def.format}</span>
+                                                      </div>
                                                   </div>
 
                                                   {/* Icons Display - Grid within Card */}
