@@ -526,8 +526,8 @@ const WcagBadge = ({ ratio }: { ratio?: number }) => {
 
 const IconSetGrade = ({ lightRatio, darkRatio, t }: { lightRatio?: number, darkRatio?: number, t: (k: string) => string }) => {
   const ratios = [];
-  if (lightRatio) ratios.push(lightRatio);
-  if (darkRatio) ratios.push(darkRatio);
+  if (lightRatio !== undefined) ratios.push(lightRatio);
+  if (darkRatio !== undefined) ratios.push(darkRatio);
 
   if (ratios.length === 0) return null;
 
@@ -673,6 +673,82 @@ const AccordionItem = ({
   );
 };
 
+// --- Extracted Components (Fixed Anti-Pattern) ---
+
+type UploadType = 'main' | 'dark' | 'small' | 'small-dark';
+
+interface UploadZoneProps {
+  file: File | null;
+  preview: string | null;
+  type: UploadType;
+  label: string;
+  icon: React.ReactNode;
+  height?: string;
+  optional?: boolean;
+  inputRef?: React.RefObject<HTMLInputElement>;
+  t: (k: string) => string;
+  onFileSelect: (f: File, t: UploadType) => void;
+  onClear: (t: UploadType) => void;
+}
+
+const UploadZone = ({ 
+  file, preview, type, label, icon, height = "h-32", optional = false, inputRef, t, onFileSelect, onClear 
+}: UploadZoneProps) => {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      onFileSelect(e.dataTransfer.files[0], type);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      onFileSelect(e.target.files[0], type);
+    }
+  };
+
+  return (
+    <div className="no-drag group relative hover:scale-[1.02] transition-transform duration-200">
+      <label className="text-xs font-bold text-text-subtle uppercase tracking-wider mb-2 flex items-center gap-2">
+        {icon} <span className="text-text-secondary">{label}</span> {optional && <span className="text-[10px] font-bold text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded ml-auto border border-border-subtle">{t('optional')}</span>}
+      </label>
+      {!file ? (
+        <label 
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`flex flex-col items-center justify-center ${height} border border-dashed rounded-2xl transition-all cursor-pointer overflow-hidden ${isDragging ? 'bg-purple-500/20 border-purple-500 shadow-lg shadow-purple-500/10 scale-105' : 'border-border-light bg-bg-tertiary/30 hover:bg-bg-tertiary hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5'}`}
+        >
+          <div className={`p-3 rounded-full bg-bg-glass mb-2 transition-transform ${isDragging ? 'scale-125' : 'group-hover:scale-110'}`}>
+             <Upload className={`w-5 h-5 transition-colors ${isDragging ? 'text-white' : 'text-text-muted group-hover:text-white'}`} />
+          </div>
+          <span className={`text-[10px] font-medium transition-colors ${isDragging ? 'text-white' : 'text-text-muted group-hover:text-text-secondary'}`}>{isDragging ? "Drop Here" : t('upload')}</span>
+          <input type="file" ref={inputRef} className="hidden" onChange={handleChange} />
+        </label>
+      ) : (
+        <div className={`relative ${height} border border-border-light rounded-2xl bg-black overflow-hidden group`}>
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+          <img src={preview!} className="relative z-10 w-full h-full object-contain p-4" alt={label} />
+          <button onClick={() => onClear(type)} className="absolute top-2 right-2 p-1.5 bg-black/80 backdrop-blur text-white rounded-full hover:bg-red-500 hover:text-white transition-colors border border-white/10 z-20"><X size={10}/></button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const [lang, setLang] = useState<AppLanguage>('pt'); 
   const [theme, setTheme] = useState<AppTheme>('dark');
@@ -778,7 +854,6 @@ const App: React.FC = () => {
     return cleanup;
   }, []);
 
-  type UploadType = 'main' | 'dark' | 'small' | 'small-dark';
 
   const processSelectedFile = (selectedFile: File, type: UploadType) => {
     if (!selectedFile.type.startsWith('image/')) { alert('Please upload an image file.'); return; }
@@ -794,12 +869,6 @@ const App: React.FC = () => {
       case 'dark': setDarkFile(selectedFile); setDarkPreviewUrl(url); break;
       case 'small': setSmallFile(selectedFile); setSmallPreviewUrl(url); break;
       case 'small-dark': setSmallDarkFile(selectedFile); setSmallDarkPreviewUrl(url); break;
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: UploadType) => {
-    if (e.target.files && e.target.files[0]) {
-      processSelectedFile(e.target.files[0], type);
     }
   };
 
@@ -830,6 +899,8 @@ const App: React.FC = () => {
   const generateSet = async (mainSource: File, smallSource: File | null, variant: IconVariant): Promise<GeneratedFile[]> => {
     const results: GeneratedFile[] = [];
     for (const def of ICON_DEFINITIONS) {
+      if (def.format === 'ico') continue; // Skip standard processing for ICO, handled manually below
+      
       let fileName = def.name;
       if (variant === 'dark') {
         const parts = def.name.split('.');
@@ -841,6 +912,8 @@ const App: React.FC = () => {
       const { blob, analysis, size } = await processImage(sourceToUse, def, brandColor, { scale: 1, padding: 0, keepOriginalBackground, quality: compressionQuality });
       results.push({ id: `${variant}-${def.name}`, name: fileName, blob, url: URL.createObjectURL(blob), size, category: def.category, variant, width: def.width, height: def.height, originalDef: def, analysis });
     }
+    
+    // --- Manual Multi-size ICO Generation ---
     const icoSizes = [16, 32, 48, 64];
     const icoBlobs: { width: number, height: number, blob: Blob }[] = [];
     const icoSource = smallSource || mainSource;
@@ -852,7 +925,23 @@ const App: React.FC = () => {
     const icoBlob = await generateIco(icoBlobs);
     const icoUrl = URL.createObjectURL(icoBlob);
     const icoName = variant === 'dark' ? 'favicon-dark.ico' : 'favicon.ico';
-    results.unshift({ id: `${variant}-favicon.ico`, name: icoName, blob: icoBlob, url: icoUrl, size: icoBlob.size, category: 'web', variant: variant, width: 32, height: 32, originalDef: { name: icoName, width: 32, height: 32, category: 'web', transparent: true, format: 'ico', label: 'Legacy Favicon (ICO)' } });
+    
+    // Find the official ICO definition from ICON_DEFINITIONS to ensure UI mapping works
+    const icoDef = ICON_DEFINITIONS.find(d => d.format === 'ico'); 
+    const fallbackDef: IconDefinition = { name: 'favicon.ico', width: 32, height: 32, category: 'web', transparent: true, format: 'ico', label: 'Legacy Favicon (ICO)' };
+
+    results.unshift({ 
+        id: `${variant}-favicon.ico`, 
+        name: icoName, 
+        blob: icoBlob, 
+        url: icoUrl, 
+        size: icoBlob.size, 
+        category: 'web', 
+        variant: variant, 
+        width: 32, 
+        height: 32, 
+        originalDef: icoDef || fallbackDef
+    });
 
     const svgSource = (smallSource && smallSource.type === 'image/svg+xml') ? smallSource : mainSource;
     if (svgSource.type === 'image/svg+xml') {
@@ -953,138 +1042,6 @@ const App: React.FC = () => {
     { id: 'social', labelKey: 'social', icon: <ImageIcon size={14} /> },
   ];
 
-  const UploadZone = ({ file, preview, type, label, icon, height = "h-32", optional = false, inputRef }: { file: File | null, preview: string | null, type: UploadType, label: string, icon: React.ReactNode, height?: string, optional?: boolean, inputRef?: React.RefObject<HTMLInputElement> }) => {
-    const [isDragging, setIsDragging] = useState(false);
-
-    const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        processSelectedFile(e.dataTransfer.files[0], type);
-      }
-    };
-
-    return (
-      <div className="no-drag group relative hover:scale-[1.02] transition-transform duration-200">
-        <label className="text-xs font-bold text-text-subtle uppercase tracking-wider mb-2 flex items-center gap-2">
-          {icon} <span className="text-text-secondary">{label}</span> {optional && <span className="text-[10px] font-bold text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded ml-auto border border-border-subtle">{t('optional')}</span>}
-        </label>
-        {!file ? (
-          <label 
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`flex flex-col items-center justify-center ${height} border border-dashed rounded-2xl transition-all cursor-pointer overflow-hidden ${isDragging ? 'bg-purple-500/20 border-purple-500 shadow-lg shadow-purple-500/10 scale-105' : 'border-border-light bg-bg-tertiary/30 hover:bg-bg-tertiary hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5'}`}
-          >
-            <div className={`p-3 rounded-full bg-bg-glass mb-2 transition-transform ${isDragging ? 'scale-125' : 'group-hover:scale-110'}`}>
-               <Upload className={`w-5 h-5 transition-colors ${isDragging ? 'text-white' : 'text-text-muted group-hover:text-white'}`} />
-            </div>
-            <span className={`text-[10px] font-medium transition-colors ${isDragging ? 'text-white' : 'text-text-muted group-hover:text-text-secondary'}`}>{isDragging ? "Drop Here" : t('upload')}</span>
-            <input type="file" ref={inputRef} className="hidden" onChange={(e) => handleFileChange(e, type)} />
-          </label>
-        ) : (
-          <div className={`relative ${height} border border-border-light rounded-2xl bg-black overflow-hidden group`}>
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-            <img src={preview!} className="relative z-10 w-full h-full object-contain p-4" alt={label} />
-            <button onClick={() => clearFile(type)} className="absolute top-2 right-2 p-1.5 bg-black/80 backdrop-blur text-white rounded-full hover:bg-red-500 hover:text-white transition-colors border border-white/10 z-20"><X size={10}/></button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const SidebarContent = () => (
-    <div className={`flex-1 overflow-y-auto overflow-x-hidden ${sidebarCollapsed ? 'px-2 py-4' : 'px-6 py-4'}`}>
-      
-      {/* Uploads */}
-      {!sidebarCollapsed ? (
-        <AccordionItem title={t('mainSources')} icon={<FolderOpen size={14} className="text-purple-400" />} defaultOpen collapsed={sidebarCollapsed}>
-             <div className="space-y-4">
-               <UploadZone file={file} preview={previewUrl} type="main" label={t('primary')} icon={<Sun size={14} className="text-amber-400" />} inputRef={mainInputRef} />
-               <UploadZone file={darkFile} preview={darkPreviewUrl} type="dark" label={t('darkMode')} icon={<Moon size={14} className="text-purple-400" />} optional height="h-24" />
-               <div className="grid grid-cols-2 gap-3">
-                 <UploadZone file={smallFile} preview={smallPreviewUrl} type="small" label={t('lightSmall')} icon={<Minimize size={14} className="text-text-muted" />} optional height="h-24" />
-                 <UploadZone file={smallDarkFile} preview={smallDarkPreviewUrl} type="small-dark" label={t('darkSmall')} icon={<Minimize size={14} className="text-text-muted" />} optional height="h-24" />
-               </div>
-             </div>
-        </AccordionItem>
-      ) : (
-        <div className="flex flex-col gap-4 items-center">
-             <button onClick={() => setSidebarCollapsed(false)} className="p-3 bg-bg-tertiary rounded-xl hover:bg-purple-500/20 text-text-muted hover:text-white transition-colors" title={t('mainSources')}><FolderOpen size={18}/></button>
-        </div>
-      )}
-
-      {/* Configuration */}
-      {!sidebarCollapsed ? (
-        <AccordionItem title={t('config')} icon={<Sliders size={14} className="text-blue-400" />} collapsed={sidebarCollapsed}>
-           <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-text-subtle uppercase tracking-wider">{t('brandColor')}</label>
-                <div className="flex gap-2 items-center">
-                    {'EyeDropper' in window && (
-                      <button 
-                        onClick={handleEyedropper} 
-                        className="p-1.5 bg-bg-tertiary hover:bg-purple-500 hover:text-white rounded-lg border border-border-light text-text-muted transition-colors"
-                        title={t('pickColor')}
-                      >
-                        <Pipette size={14} />
-                      </button>
-                    )}
-                    <div className="relative group/color">
-                      <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="w-6 h-6 bg-transparent border-0 cursor-pointer rounded-full overflow-hidden opacity-0 absolute inset-0 z-10" />
-                      <div className="w-6 h-6 rounded-full border border-border-light shadow-sm overflow-hidden" style={{backgroundColor: brandColor}}></div>
-                    </div>
-                    <input type="text" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="bg-bg-tertiary border border-border-light text-xs rounded-md px-2 py-1 w-20 font-mono text-text-secondary focus:outline-none focus:border-purple-500/50" />
-                </div>
-              </div>
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-bg-tertiary/20 border border-border-subtle cursor-pointer hover:bg-bg-tertiary/50 transition-colors">
-                <input type="checkbox" checked={keepOriginalBackground} onChange={(e) => setKeepOriginalBackground(e.target.checked)} className="mt-0.5 accent-purple-500" />
-                <div>
-                    <span className="block text-sm font-medium text-text-secondary">{t('preserveBg')}</span>
-                    <span className="block text-xs text-text-muted mt-0.5">{t('preserveBgDesc')}</span>
-                </div>
-              </label>
-           </div>
-        </AccordionItem>
-      ) : null}
-
-      {/* Optimization */}
-      {!sidebarCollapsed ? (
-        <AccordionItem title={t('optimization')} icon={<HardDrive size={14} className="text-green-400" />} collapsed={sidebarCollapsed}>
-           <div className="space-y-4">
-              <div>
-                  <div className="flex justify-between mb-2">
-                    <label className="text-xs font-bold text-text-subtle uppercase tracking-wider">{t('quality')}</label>
-                    <span className="text-xs font-mono text-text-secondary">{Math.round(compressionQuality * 100)}%</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0.1" 
-                    max="1.0" 
-                    step="0.05" 
-                    value={compressionQuality} 
-                    onChange={(e) => setCompressionQuality(parseFloat(e.target.value))} 
-                    className="w-full accent-green-500 h-1.5 bg-bg-tertiary rounded-lg appearance-none cursor-pointer" 
-                  />
-                  <p className="text-[10px] text-text-muted mt-2">Adjusts JPEG/WebP quality. PNG files are lossless but will be processed.</p>
-              </div>
-           </div>
-        </AccordionItem>
-      ) : null}
-      
-    </div>
-  );
-
   return (
     <div className="h-screen bg-bg-primary text-text-primary font-sans flex flex-col overflow-hidden relative selection:bg-purple-500/30 selection:text-white">
       <div className="absolute inset-0 bg-gradient-glow pointer-events-none opacity-40"></div>
@@ -1148,7 +1105,83 @@ const App: React.FC = () => {
                         </div>
                     </div>
                     
-                    <SidebarContent />
+                    <div className={`flex-1 overflow-y-auto overflow-x-hidden ${sidebarCollapsed ? 'px-2 py-4' : 'px-6 py-4'}`}>
+                        {/* Uploads */}
+                        {!sidebarCollapsed ? (
+                            <AccordionItem title={t('mainSources')} icon={<FolderOpen size={14} className="text-purple-400" />} defaultOpen collapsed={sidebarCollapsed}>
+                                <div className="space-y-4">
+                                <UploadZone file={file} preview={previewUrl} type="main" label={t('primary')} icon={<Sun size={14} className="text-amber-400" />} inputRef={mainInputRef} t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
+                                <UploadZone file={darkFile} preview={darkPreviewUrl} type="dark" label={t('darkMode')} icon={<Moon size={14} className="text-purple-400" />} optional height="h-24" t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
+                                <div className="grid grid-cols-2 gap-3">
+                                    <UploadZone file={smallFile} preview={smallPreviewUrl} type="small" label={t('lightSmall')} icon={<Minimize size={14} className="text-text-muted" />} optional height="h-24" t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
+                                    <UploadZone file={smallDarkFile} preview={smallDarkPreviewUrl} type="small-dark" label={t('darkSmall')} icon={<Minimize size={14} className="text-text-muted" />} optional height="h-24" t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
+                                </div>
+                                </div>
+                            </AccordionItem>
+                        ) : (
+                            <div className="flex flex-col gap-4 items-center">
+                                <button onClick={() => setSidebarCollapsed(false)} className="p-3 bg-bg-tertiary rounded-xl hover:bg-purple-500/20 text-text-muted hover:text-white transition-colors" title={t('mainSources')}><FolderOpen size={18}/></button>
+                            </div>
+                        )}
+
+                        {/* Configuration */}
+                        {!sidebarCollapsed ? (
+                            <AccordionItem title={t('config')} icon={<Sliders size={14} className="text-blue-400" />} collapsed={sidebarCollapsed}>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-text-subtle uppercase tracking-wider">{t('brandColor')}</label>
+                                    <div className="flex gap-2 items-center">
+                                        {'EyeDropper' in window && (
+                                        <button 
+                                            onClick={handleEyedropper} 
+                                            className="p-1.5 bg-bg-tertiary hover:bg-purple-500 hover:text-white rounded-lg border border-border-light text-text-muted transition-colors"
+                                            title={t('pickColor')}
+                                        >
+                                            <Pipette size={14} />
+                                        </button>
+                                        )}
+                                        <div className="relative group/color">
+                                        <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="w-6 h-6 bg-transparent border-0 cursor-pointer rounded-full overflow-hidden opacity-0 absolute inset-0 z-10" />
+                                        <div className="w-6 h-6 rounded-full border border-border-light shadow-sm overflow-hidden" style={{backgroundColor: brandColor}}></div>
+                                        </div>
+                                        <input type="text" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="bg-bg-tertiary border border-border-light text-xs rounded-md px-2 py-1 w-20 font-mono text-text-secondary focus:outline-none focus:border-purple-500/50" />
+                                    </div>
+                                </div>
+                                <label className="flex items-start gap-3 p-3 rounded-xl bg-bg-tertiary/20 border border-border-subtle cursor-pointer hover:bg-bg-tertiary/50 transition-colors">
+                                    <input type="checkbox" checked={keepOriginalBackground} onChange={(e) => setKeepOriginalBackground(e.target.checked)} className="mt-0.5 accent-purple-500" />
+                                    <div>
+                                        <span className="block text-sm font-medium text-text-secondary">{t('preserveBg')}</span>
+                                        <span className="block text-xs text-text-muted mt-0.5">{t('preserveBgDesc')}</span>
+                                    </div>
+                                </label>
+                            </div>
+                            </AccordionItem>
+                        ) : null}
+
+                        {/* Optimization */}
+                        {!sidebarCollapsed ? (
+                            <AccordionItem title={t('optimization')} icon={<HardDrive size={14} className="text-green-400" />} collapsed={sidebarCollapsed}>
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="flex justify-between mb-2">
+                                        <label className="text-xs font-bold text-text-subtle uppercase tracking-wider">{t('quality')}</label>
+                                        <span className="text-xs font-mono text-text-secondary">{Math.round(compressionQuality * 100)}%</span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="0.1" 
+                                        max="1.0" 
+                                        step="0.05" 
+                                        value={compressionQuality} 
+                                        onChange={(e) => setCompressionQuality(parseFloat(e.target.value))} 
+                                        className="w-full accent-green-500 h-1.5 bg-bg-tertiary rounded-lg appearance-none cursor-pointer" 
+                                    />
+                                    <p className="text-[10px] text-text-muted mt-2">Adjusts JPEG/WebP quality. PNG files are lossless but will be processed.</p>
+                                </div>
+                            </div>
+                            </AccordionItem>
+                        ) : null}
+                    </div>
 
                     <div className="p-4 border-t border-border-subtle flex justify-end no-drag bg-bg-tertiary/20">
                          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 text-text-muted hover:text-white hover:bg-white/10 rounded-lg transition-colors">

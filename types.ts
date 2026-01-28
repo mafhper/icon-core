@@ -1,4 +1,5 @@
 
+
 export type IconCategory = 'web' | 'ios' | 'pwa' | 'social' | 'windows' | 'macos' | 'linux';
 export type IconVariant = 'light' | 'dark';
 export type AppLanguage = 'pt' | 'en' | 'es' | 'it' | 'fr' | 'de' | 'zh' | 'ja';
@@ -47,7 +48,8 @@ export interface GeneratedFile {
 }
 
 export const ICON_DEFINITIONS: IconDefinition[] = [
-  // Web / Favicon (PNG Fallbacks)
+  // Web / Favicon (ICO & PNG Fallbacks)
+  { name: 'favicon.ico', width: 32, height: 32, category: 'web', transparent: true, format: 'ico', label: 'Multi-size ICO' },
   { name: 'favicon-16x16.png', width: 16, height: 16, category: 'web', transparent: true, format: 'png', label: 'Favicon 16px' },
   { name: 'favicon-32x32.png', width: 32, height: 32, category: 'web', transparent: true, format: 'png', label: 'Favicon 32px' },
   
