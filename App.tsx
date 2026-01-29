@@ -628,25 +628,77 @@ export const App: React.FC = () => {
     const srcFavLight = favLightFile || favUniversalFile || lightFile || universalFile;
     const srcFavDark = favDarkFile || favUniversalFile || darkFile || universalFile;
 
-    // Helper to generate a single file
+    // --- 0. SVG Pass-through ---
+    // If the source is an SVG, we include the vector file directly.
+    const addSvg = (src: File, name: string, variant: IconVariant, type: 'logo' | 'favicon') => {
+       if (src.type === 'image/svg+xml') {
+          results.push({
+            id: name,
+            name: name,
+            blob: src, // The original vector file
+            url: URL.createObjectURL(src),
+            size: src.size,
+            category: 'web',
+            variant: variant,
+            width: 0, // 0 triggers "SVG" badge in UI
+            height: 0,
+            originalDef: { name, width: 0, height: 0, category: 'web', transparent: true, format: 'svg', type },
+            typeLabel: type
+          });
+       }
+    };
+
+    addSvg(srcLogoLight, 'logo-light.svg', 'light', 'logo');
+    addSvg(srcLogoDark, 'logo-dark.svg', 'dark', 'logo');
+    addSvg(srcFavLight, 'favicon.svg', 'light', 'favicon'); // Modern standard
+
+
+    // --- 0.5 Pre-load sources as Bitmaps for Performance ---
+    const sourceCache = new Map<File, CanvasImageSource>();
+    const createdUrls: string[] = [];
+
+    const getSourceBitmap = async (file: File): Promise<CanvasImageSource> => {
+        if (sourceCache.has(file)) return sourceCache.get(file)!;
+        
+        // Skip createImageBitmap for SVGs to ensure vector scaling works via drawImage
+        // (ImageBitmap creates a raster snapshot, drawImage(img) uses the vector)
+        const isSvg = file.type === 'image/svg+xml';
+
+        if (!isSvg) {
+            try {
+                const bmp = await createImageBitmap(file);
+                sourceCache.set(file, bmp);
+                return bmp;
+            } catch (e) {
+                // Fallback intended for any failed bitmap creation
+            }
+        }
+        
+        // Robust fallback for SVG or failed bitmaps
+        return new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            createdUrls.push(url);
+            img.onload = () => {
+                sourceCache.set(file, img);
+                resolve(img);
+            };
+            img.onerror = () => reject(new Error("The source image could not be decoded."));
+            img.src = url;
+        });
+    };
+    
+    // Helper to generate a single file using cached bitmap
     const gen = async (src: File, size: number, mode: IconVariant, type: 'logo' | 'favicon', format: 'png' | 'ico' = 'png', explicitName?: string) => {
         const name = explicitName || `${type}-${mode}-${size}x${size}.${format}`;
         const def: IconDefinition = { name, width: size, height: size, category: 'web', transparent: true, format, type };
         
-        // Pass KeepOriginal logic correctly: If keepOriginalBackground is true, logic processes transparency. If false, we force bg color.
-        // wait, 'keepOriginalBackground' state implies "Do not fill transparency".
-        // The processImage option 'keepOriginalBackground' when TRUE means "Don't fill".
-        // So we pass the state directly.
-        
-        // However, if the user explicitly wants to "Fill Background", we should pass backgroundColor and ensure keepOriginal is false.
-        // My state variable is named `keepOriginalBackground`. 
-        // If it is TRUE (Transparent strategy), we pass true.
-        // If it is FALSE (Fill strategy), we pass false and the brandColor is used.
-        
-        const { blob, analysis, size: byteSize } = await processImage(src, def, brandColor, { 
+        const bitmap = await getSourceBitmap(src);
+
+        const { blob, analysis, size: byteSize } = await processImage(bitmap, def, brandColor, { 
             scale: 1, 
             padding: 0, 
-            keepOriginalBackground: keepOriginalBackground, // true = transparent, false = use brandColor
+            keepOriginalBackground: keepOriginalBackground, 
             quality: compressionQuality 
         });
         
@@ -667,49 +719,64 @@ export const App: React.FC = () => {
         return { width: size, height: size, blob };
     };
 
-    // 1. Generate PNGs for all sizes (Logos)
-    for (const size of targetSizes) {
-       await gen(srcLogoLight, size, 'light', 'logo');
-       await gen(srcLogoDark, size, 'dark', 'logo');
-    }
+    try {
+        // 1. Generate PNGs for all sizes (Logos) - Parallel
+        const logoPromises = [];
+        for (const size of targetSizes) {
+           logoPromises.push(gen(srcLogoLight, size, 'light', 'logo'));
+           logoPromises.push(gen(srcLogoDark, size, 'dark', 'logo'));
+        }
+        await Promise.all(logoPromises);
 
-    // 2. Generate Favicon PNGs (Small sizes only)
-    const faviconSizes = targetSizes.filter(s => s <= 64);
-    const icoPartsLight: { width: number, height: number, blob: Blob }[] = [];
-    const icoPartsDark: { width: number, height: number, blob: Blob }[] = [];
+        // 2. Generate Favicon PNGs (Small sizes only) - Parallel
+        const faviconSizes = targetSizes.filter(s => s <= 64);
+        const faviconPromises = [];
+        const icoPartsLight: { width: number, height: number, blob: Blob }[] = [];
+        const icoPartsDark: { width: number, height: number, blob: Blob }[] = [];
 
-    for (const size of faviconSizes) {
-        const pL = await gen(srcFavLight, size, 'light', 'favicon');
-        icoPartsLight.push(pL);
-        const pD = await gen(srcFavDark, size, 'dark', 'favicon');
-        icoPartsDark.push(pD);
-    }
+        // We need to await these sequentially or handle array pushing carefully to group them later for ICO
+        // For simplicity, we generate them and collect results
+        for (const size of faviconSizes) {
+            faviconPromises.push(gen(srcFavLight, size, 'light', 'favicon').then(res => { icoPartsLight.push(res); }));
+            faviconPromises.push(gen(srcFavDark, size, 'dark', 'favicon').then(res => { icoPartsDark.push(res); }));
+        }
+        await Promise.all(faviconPromises);
 
-    // 3. Generate ICOs (Multi-layer)
-    if (icoPartsLight.length > 0) {
-        const icoBlob = await generateIco(icoPartsLight);
-        results.push({
-            id: 'favicon-light.ico', name: 'favicon-light.ico', blob: icoBlob, url: URL.createObjectURL(icoBlob), size: icoBlob.size, category: 'web', variant: 'light', width: 32, height: 32,
-            typeLabel: 'favicon', originalDef: { name: 'favicon-light.ico', width: 32, height: 32, category: 'web', transparent: true, format: 'ico', type: 'favicon' }
+        // 3. Generate ICOs (Multi-layer)
+        if (icoPartsLight.length > 0) {
+            const icoBlob = await generateIco(icoPartsLight);
+            results.push({
+                id: 'favicon-light.ico', name: 'favicon-light.ico', blob: icoBlob, url: URL.createObjectURL(icoBlob), size: icoBlob.size, category: 'web', variant: 'light', width: 32, height: 32,
+                typeLabel: 'favicon', originalDef: { name: 'favicon-light.ico', width: 32, height: 32, category: 'web', transparent: true, format: 'ico', type: 'favicon' }
+            });
+        }
+        if (icoPartsDark.length > 0) {
+            const icoBlob = await generateIco(icoPartsDark);
+            results.push({
+                id: 'favicon-dark.ico', name: 'favicon-dark.ico', blob: icoBlob, url: URL.createObjectURL(icoBlob), size: icoBlob.size, category: 'web', variant: 'dark', width: 32, height: 32,
+                typeLabel: 'favicon', originalDef: { name: 'favicon-dark.ico', width: 32, height: 32, category: 'web', transparent: true, format: 'ico', type: 'favicon' }
+            });
+        }
+
+        // 4. Social Media (Force Background Color)
+        const genSocial = async (src: File, w: number, h: number, name: string) => {
+            const def: IconDefinition = { name, width: w, height: h, category: 'social', transparent: false, format: 'jpg', type: 'social' };
+            const bitmap = await getSourceBitmap(src);
+            const { blob, analysis, size } = await processImage(bitmap, def, brandColor, { scale: 1, padding: 0, backgroundColor: brandColor, keepOriginalBackground: false, quality: 0.9 });
+            results.push({ id: name, name, blob, url: URL.createObjectURL(blob), size, category: 'social', variant: 'light', width: w, height: h, originalDef: def, analysis, typeLabel: 'social' });
+        };
+        await Promise.all([
+            genSocial(universalFile, 1200, 630, 'og-image.jpg'),
+            genSocial(universalFile, 1200, 600, 'twitter-card.jpg')
+        ]);
+        
+    } finally {
+        // Cleanup Bitmaps to free memory
+        sourceCache.forEach(item => {
+            if (item instanceof ImageBitmap) item.close();
         });
+        createdUrls.forEach(url => URL.revokeObjectURL(url));
     }
-    if (icoPartsDark.length > 0) {
-        const icoBlob = await generateIco(icoPartsDark);
-        results.push({
-            id: 'favicon-dark.ico', name: 'favicon-dark.ico', blob: icoBlob, url: URL.createObjectURL(icoBlob), size: icoBlob.size, category: 'web', variant: 'dark', width: 32, height: 32,
-            typeLabel: 'favicon', originalDef: { name: 'favicon-dark.ico', width: 32, height: 32, category: 'web', transparent: true, format: 'ico', type: 'favicon' }
-        });
-    }
-
-    // 4. Social Media (Force Background Color)
-    const genSocial = async (src: File, w: number, h: number, name: string) => {
-        const def: IconDefinition = { name, width: w, height: h, category: 'social', transparent: false, format: 'jpg', type: 'social' };
-        // Force Brand Color background for Social
-        const { blob, analysis, size } = await processImage(src, def, brandColor, { scale: 1, padding: 0, backgroundColor: brandColor, keepOriginalBackground: false, quality: 0.9 });
-        results.push({ id: name, name, blob, url: URL.createObjectURL(blob), size, category: 'social', variant: 'light', width: w, height: h, originalDef: def, analysis, typeLabel: 'social' });
-    };
-    await genSocial(universalFile, 1200, 630, 'og-image.jpg');
-    await genSocial(universalFile, 1200, 600, 'twitter-card.jpg');
 
     return results;
   };

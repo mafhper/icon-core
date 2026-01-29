@@ -1,5 +1,3 @@
-
-
 import { IconDefinition, ImageAnalysis, EditOptions } from '../types';
 
 /**
@@ -149,124 +147,140 @@ export const analyzeImageVisibility = (
 };
 
 export const processImage = async (
-  sourceFile: File, 
+  source: File | CanvasImageSource, 
   config: IconDefinition, 
   backgroundColor: string = '#ffffff',
   options?: EditOptions
 ): Promise<{ blob: Blob, analysis: ImageAnalysis, size: number }> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(sourceFile);
+  
+  // Use ImageBitmap for modern performance if possible (it's passed in usually)
+  let imageSource: CanvasImageSource;
 
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      
-      if (!ctx) {
-        URL.revokeObjectURL(url);
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
+  if (source instanceof File) {
+     // Fallback if not pre-loaded, or direct call
+     try {
+       imageSource = await createImageBitmap(source);
+     } catch (e) {
+       // Old fallback just in case
+       return new Promise((resolve, reject) => {
+          const img = new Image();
+          const url = URL.createObjectURL(source);
+          img.onload = () => {
+             processLoadedImage(img, config, backgroundColor, options, () => URL.revokeObjectURL(url))
+                .then(resolve)
+                .catch(reject);
+          };
+          img.onerror = () => reject(new Error("Failed to load image"));
+          img.src = url;
+       });
+     }
+  } else {
+     imageSource = source;
+  }
 
-      canvas.width = config.width;
-      canvas.height = config.height;
-
-      // --- Background Handling ---
-      // Determine if we should fill the background
-      // Default: Fill if config says !transparent OR user set explicit background option
-      // Override: If keepOriginalBackground is true, DO NOT fill (unless manual override forces it? No, keepOriginal takes precedence for the "default" fill)
-      
-      const userHasSetManualBg = !!options?.backgroundColor;
-      const shouldKeepOriginal = options?.keepOriginalBackground;
-      
-      let finalBgColor = options?.backgroundColor || backgroundColor;
-      
-      // If the icon definition requires opacity (not transparent) OR user manually set a color
-      // We fill. BUT if "Keep Original" is ON and user didn't manually override, we skip filling default brand color.
-      let shouldFill = (!config.transparent || userHasSetManualBg);
-      
-      if (shouldKeepOriginal && !userHasSetManualBg) {
-          shouldFill = false;
-      }
-
-      if (shouldFill) {
-        ctx.fillStyle = finalBgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-
-      // --- Drawing Logic with Transforms ---
-      ctx.save();
-      
-      // Center the context
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-
-      let scale = 1;
-      
-      // Calculate Base Scale based on logic type
-      if (options?.scale !== undefined) {
-         // User manual override (1 = 100% of canvas containment)
-         // We need to determine "contain" ratio first
-         const containScale = Math.min(canvas.width / img.width, canvas.height / img.height);
-         scale = containScale * options.scale;
-      } else {
-        // Default Logic
-        if (config.maskable) {
-           // Maskable: shrink to approx 70% to be safe
-           const padding = Math.floor(config.width * 0.15); // 15% each side = 30% total reduction roughly
-           const safeWidth = config.width - (padding * 2);
-           const safeHeight = config.height - (padding * 2);
-           const scaleX = safeWidth / img.width;
-           const scaleY = safeHeight / img.height;
-           scale = Math.min(scaleX, scaleY);
-        } else if (config.category === 'social') {
-           // Cover logic for social (or contain, depending on preference. Contain is safer for logos)
-           const scaleX = canvas.width / img.width;
-           const scaleY = canvas.height / img.height;
-           scale = Math.min(scaleX, scaleY);
-        } else {
-           // Standard Fit
-           const scaleX = canvas.width / img.width;
-           const scaleY = canvas.height / img.height;
-           scale = Math.min(scaleX, scaleY);
-        }
-      }
-
-      ctx.scale(scale, scale);
-      ctx.drawImage(img, -img.width / 2, -img.height / 2);
-      
-      ctx.restore();
-
-      // --- Analysis ---
-      const analysis = analyzeImageVisibility(
-        ctx, 
-        canvas.width, 
-        canvas.height, 
-        !shouldFill, 
-        finalBgColor
-      );
-
-      // --- Output ---
-      const mimeType = config.format === 'jpg' ? 'image/jpeg' : 'image/png';
-      // Default high quality if not specified, otherwise use user selection
-      const quality = options?.quality !== undefined ? options.quality : 0.95;
-      
-      canvas.toBlob((blob) => {
-        URL.revokeObjectURL(url);
-        if (blob) {
-          resolve({ blob, analysis, size: blob.size });
-        } else {
-          reject(new Error('Canvas to Blob failed'));
-        }
-      }, mimeType, quality);
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
-    };
-
-    img.src = url;
+  return processLoadedImage(imageSource as CanvasImageSource & { width: number, height: number }, config, backgroundColor, options, () => {
+     // If we created the bitmap here locally from file, close it. 
+     // BUT, if it was passed in as argument (source is ImageBitmap), the CALLER owns it.
+     if (source instanceof File && imageSource instanceof ImageBitmap) {
+        imageSource.close();
+     }
   });
+};
+
+const processLoadedImage = async (
+  img: CanvasImageSource & { width: number, height: number },
+  config: IconDefinition,
+  backgroundColor: string,
+  options?: EditOptions,
+  cleanup?: () => void
+): Promise<{ blob: Blob, analysis: ImageAnalysis, size: number }> => {
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    
+    if (!ctx) {
+      if(cleanup) cleanup();
+      throw new Error('Could not get canvas context');
+    }
+
+    canvas.width = config.width;
+    canvas.height = config.height;
+
+    // --- Background Handling ---
+    const userHasSetManualBg = !!options?.backgroundColor;
+    const shouldKeepOriginal = options?.keepOriginalBackground;
+    
+    let finalBgColor = options?.backgroundColor || backgroundColor;
+    let shouldFill = (!config.transparent || userHasSetManualBg);
+    
+    if (shouldKeepOriginal && !userHasSetManualBg) {
+        shouldFill = false;
+    }
+
+    if (shouldFill) {
+      ctx.fillStyle = finalBgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // --- Drawing Logic with Transforms ---
+    ctx.save();
+    
+    // Center the context
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+
+    let scale = 1;
+    
+    if (options?.scale !== undefined) {
+       const containScale = Math.min(canvas.width / img.width, canvas.height / img.height);
+       scale = containScale * options.scale;
+    } else {
+      if (config.maskable) {
+         const padding = Math.floor(config.width * 0.15); 
+         const safeWidth = config.width - (padding * 2);
+         const safeHeight = config.height - (padding * 2);
+         const scaleX = safeWidth / img.width;
+         const scaleY = safeHeight / img.height;
+         scale = Math.min(scaleX, scaleY);
+      } else if (config.category === 'social') {
+         const scaleX = canvas.width / img.width;
+         const scaleY = canvas.height / img.height;
+         scale = Math.min(scaleX, scaleY);
+      } else {
+         const scaleX = canvas.width / img.width;
+         const scaleY = canvas.height / img.height;
+         scale = Math.min(scaleX, scaleY);
+      }
+    }
+
+    ctx.scale(scale, scale);
+    // DrawImage supports ImageBitmap directly
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+    
+    ctx.restore();
+
+    // --- Analysis ---
+    const analysis = analyzeImageVisibility(
+      ctx, 
+      canvas.width, 
+      canvas.height, 
+      !shouldFill, 
+      finalBgColor
+    );
+
+    // --- Output ---
+    const mimeType = config.format === 'jpg' ? 'image/jpeg' : 'image/png';
+    const quality = options?.quality !== undefined ? options.quality : 0.95;
+    
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (cleanup) cleanup();
+          if (blob) {
+            resolve({ blob, analysis, size: blob.size });
+          } else {
+            reject(new Error('Canvas to Blob failed'));
+          }
+        }, mimeType, quality);
+    });
 };
