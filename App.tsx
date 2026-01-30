@@ -1177,7 +1177,7 @@ export const App: React.FC = () => {
                     <div className="grid grid-cols-3 gap-3">
                         {SUPPORTED_THEMES.map(m => (
                             <button key={m} onClick={() => setTheme(m)} className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${theme === m ? 'bg-bg-primary border-purple-500 text-white shadow-lg shadow-purple-500/10' : 'bg-bg-tertiary border-transparent text-text-muted opacity-60 hover:opacity-100'}`}>
-                                {m === 'light' ? <Sun size={20}/> : <Moon size={20}/>}
+                                {m === 'light' ? <Sun size={20}/> : m === 'design' ? <Grid size={20}/> : <Moon size={20}/>}
                                 <span className="text-xs font-bold capitalize">{m}</span>
                             </button>
                         ))}
