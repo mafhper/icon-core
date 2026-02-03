@@ -8,12 +8,12 @@ import { generateIco } from './utils/icoGenerator';
 
 const TRANSLATIONS: Record<AppLanguage, any> = {
   pt: {
-    setupTitle: "Forge Studio",
+    setupTitle: "Icon Forge",
     setupDesc: "Configure seus ativos para renderização local de alta fidelidade.",
     universal: "Ativo Master",
     overrides: "Overrides Estratégicos",
-    generate: "Forjar Ativos",
-    processing: "Sincronizando...",
+    generate: "Gerar Ativos",
+    processing: "Processando...",
     ready: "Ativos Prontos",
     download: "Exportar Pack",
     tabStudio: "Estúdio",
@@ -38,7 +38,7 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     dock: "Dock / Taskbar",
     dropMaster: "Arraste o Arquivo Master",
     remove: "Remover",
-    readyForForge: "Pronto para Forjar",
+    readyForForge: "Pronto para Gerar",
     readyDesc: "Adicione variações ou use o Ativo Master",
     assetsComposed: "Ativos Compostos",
     assetsDesc: "Nomenclatura Otimizada & Pronta",
@@ -65,11 +65,11 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     defDark: "Dark (Escuro)"
   },
   en: {
-    setupTitle: "Forge Studio",
+    setupTitle: "Icon Forge",
     setupDesc: "Setup your assets for local high-fidelity rendering.",
     universal: "Master Asset",
     overrides: "Strategic Overrides",
-    generate: "Forge Assets",
+    generate: "Generate Assets",
     processing: "Processing...",
     ready: "Assets Ready",
     download: "Export Pack",
@@ -95,7 +95,7 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     dock: "Dock / Taskbar",
     dropMaster: "Drop Master File",
     remove: "Remove",
-    readyForForge: "Ready for Forge",
+    readyForForge: "Ready to Generate",
     readyDesc: "Add variations or use Master Asset",
     assetsComposed: "Assets Composed",
     assetsDesc: "Nomenclature Optimized & Ready",
@@ -122,11 +122,11 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     defDark: "Dark"
   },
   es: {
-    setupTitle: "Forge Studio",
+    setupTitle: "Icon Forge",
     setupDesc: "Configure sus activos para renderizado local de alta fidelidad.",
     universal: "Activo Maestro",
     overrides: "Anulaciones Estratégicas",
-    generate: "Forjar Activos",
+    generate: "Generar Activos",
     processing: "Procesando...",
     ready: "Activos Listos",
     download: "Exportar Pack",
@@ -152,7 +152,7 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     dock: "Dock / Barra de Tareas",
     dropMaster: "Soltar Archivo Maestro",
     remove: "Eliminar",
-    readyForForge: "Listo para Forjar",
+    readyForForge: "Listo para Generar",
     readyDesc: "Añade variaciones o usa el Activo Maestro",
     assetsComposed: "Activos Compuestos",
     assetsDesc: "Nomenclatura Optimizada y Lista",
@@ -179,11 +179,11 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     defDark: "Dark (Oscuro)"
   },
   // Fallbacks
-  it: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
-  fr: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
-  de: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
-  zh: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
-  ja: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" }
+  it: { setupTitle: "Icon Forge", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
+  fr: { setupTitle: "Icon Forge", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
+  de: { setupTitle: "Icon Forge", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
+  zh: { setupTitle: "Icon Forge", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
+  ja: { setupTitle: "Icon Forge", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" }
 };
 
 // Helper to get translation safely
@@ -692,8 +692,8 @@ export const App: React.FC = () => {
 
       <header className="sticky top-0 h-16 shrink-0 border-b border-studio-border bg-studio-bg/50 backdrop-blur-xl z-50 flex items-center justify-between px-8">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-studio-accent rounded-2xl flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)]"><Layers size={20} className="text-black" strokeWidth={3} /></div>
-             <div className="flex flex-col"><span className="text-[10px] font-black tracking-widest uppercase">Icon Forge Pro</span><span className="text-[8px] text-studio-sub uppercase font-bold">Studio v7.2</span></div>
+             <div className="w-10 h-10 bg-studio-accent rounded-2xl flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)]"><Hammer size={20} className="text-black" strokeWidth={3} /></div>
+             <div className="flex flex-col"><span className="text-[10px] font-black tracking-widest uppercase">Icon Forge</span><span className="text-[8px] text-studio-sub uppercase font-bold">v7.2</span></div>
           </div>
           <div className="hidden md:flex items-center gap-4">
              <div className="flex items-center gap-2 px-3 py-1.5 glass-card rounded-full border border-studio-border/50 group relative">
@@ -722,7 +722,6 @@ export const App: React.FC = () => {
         <aside className={`md:w-[480px] shrink-0 md:border-r border-studio-border md:overflow-y-auto no-scrollbar ${activeTab === 'sources' ? 'block' : 'hidden md:block'}`}>
            <div className="p-8 md:p-10 space-y-10 pb-40 md:pb-12 animate-spring">
               <div className="space-y-2">
-                 <h2 className="text-3xl md:text-4xl font-black tracking-tight">{t('setupTitle')}</h2>
                  <p className="text-sm text-studio-sub font-medium">{t('setupDesc')}</p>
               </div>
 
