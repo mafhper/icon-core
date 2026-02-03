@@ -1,20 +1,20 @@
 
-export type IconCategory = 'web' | 'ios' | 'pwa' | 'social' | 'windows' | 'macos' | 'linux';
-export type IconVariant = 'light' | 'dark';
+export type IconCategory = 'web' | 'ios' | 'pwa' | 'social' | 'windows' | 'macos';
+export type IconVariant = 'light' | 'dark' | 'any';
 export type AppLanguage = 'pt' | 'en' | 'es' | 'it' | 'fr' | 'de' | 'zh' | 'ja';
-export type AppTheme = 'dark' | 'light' | 'design';
+export type AppTheme = 'dark' | 'light' | 'tender';
+export type NamingStrategy = 'verbose' | 'modern';
+export type ExportFramework = 'standard' | 'nextjs' | 'flutter' | 'react-native';
 
-// Dynamic definition structure
 export interface IconDefinition {
-  name: string; // The output filename
+  name: string;
   width: number;
   height: number;
   category: IconCategory;
   transparent: boolean;
   maskable?: boolean;
   format: 'png' | 'ico' | 'jpg' | 'svg';
-  label?: string;
-  type: 'logo' | 'favicon' | 'social'; // Grouping
+  type: 'logo' | 'favicon' | 'social';
 }
 
 export interface ImageAnalysis {
@@ -24,14 +24,6 @@ export interface ImageAnalysis {
   suggestions: string[];
   detectedForegroundColor: string;
   detectedBackgroundColor: string;
-}
-
-export interface EditOptions {
-  scale: number;
-  padding: number;
-  backgroundColor?: string;
-  keepOriginalBackground?: boolean;
-  quality?: number;
 }
 
 export interface GeneratedFile {
@@ -49,5 +41,4 @@ export interface GeneratedFile {
   typeLabel: 'favicon' | 'logo' | 'social';
 }
 
-// Default standard sizes to offer
-export const STANDARD_SIZES = [16, 24, 32, 48, 64, 128, 180, 192, 256, 512];
+export const STANDARD_SIZES = [16, 32, 48, 64, 128, 180, 192, 512];

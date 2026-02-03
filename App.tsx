@@ -1,1267 +1,940 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Upload, Download, Settings, Image as ImageIcon, Layers, Monitor, Smartphone, Globe, Info, Check, RefreshCw, X, AlertTriangle, Edit2, ZoomIn, Maximize, Moon, Sun, UploadCloud, Eye, LayoutTemplate, Grid, Palette, Sliders, ChevronRight, Minimize, Minus, Square, User, Languages, FileUp, Menu, Zap, ChevronLeft, ChevronDown, FolderOpen, HardDrive, Pipette, Award, Plus, Trash2, Share2, MousePointer2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Layers, Check, RefreshCw, X, Moon, Sun, Plus, Zap, ImageIcon, Filter, Grid3X3, Hammer, Shield, FileJson, Sparkles, Share2, ToggleLeft, ToggleRight, Info, Ban, Settings, Monitor, Smartphone, Layout, Type, Maximize, Scaling, Star } from 'lucide-react';
 import JSZip from 'jszip';
 import FileSaver from 'file-saver';
-import { STANDARD_SIZES, GeneratedFile, IconCategory, IconDefinition, EditOptions, IconVariant, AppLanguage, AppTheme, ImageAnalysis } from './types';
+import { GeneratedFile, IconVariant, AppLanguage, AppTheme, NamingStrategy } from './types';
 import { processImage, getDominantColor } from './utils/imageProcessor';
 import { generateIco } from './utils/icoGenerator';
-import { listenForApiRequests, sendApiResponse } from './utils/apiHelpers';
 
-// --- Constants ---
-const SUPPORTED_LANGUAGES: AppLanguage[] = ['pt', 'en', 'es', 'it', 'fr', 'de', 'zh', 'ja'];
-const SUPPORTED_THEMES: AppTheme[] = ['light', 'dark', 'design'];
-const PREVIEW_BACKGROUNDS = ['transparent', 'light', 'dark', 'brand', 'context'] as const;
-
-// --- Translations ---
-const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
+const TRANSLATIONS: Record<AppLanguage, any> = {
   pt: {
-    appName: "ICON FORGE",
-    appDesc: "Gerador Profissional de Ativos",
-    mainSources: "Arquivos de Origem",
-    config: "Configuração",
-    sizes: "Tamanhos de Saída",
-    customSizes: "Personalizado (ex: 24, 42, 80)",
-    optimization: "Otimização",
-    quality: "Qualidade / Compressão",
-    universal: "Logo Universal (Padrão)",
-    universalDesc: "Usado se os específicos não forem fornecidos",
-    lightOverride: "Para Fundo Claro (Opcional)",
-    darkOverride: "Para Fundo Escuro (Opcional)",
-    favUniversal: "Favicon Universal (Padrão)",
-    favLightOverride: "Favicon p/ Claro (Opcional)",
-    favDarkOverride: "Favicon p/ Escuro (Opcional)",
-    brandColor: "Cor da Marca / Fundo",
-    bgStrategy: "Estratégia de Fundo",
-    bgTransparent: "Manter Transparente",
-    bgFill: "Preencher Fundo",
-    bgDesc: "A cor da marca será usada como fundo para imagens que não suportam transparência (Social JPGs) ou se você optar por 'Preencher Fundo'.",
-    bgInfoSocial: "Social Media (JPG) sempre terá fundo preenchido.",
-    generate: "Gerar Ativos",
-    processing: "Processando...",
-    ready: "Pronto para Gerar",
-    readyDesc: "Envie pelo menos o Logo Universal. O sistema gerará as variações automaticamente.",
-    download: "Baixar Pasta Zip",
-    editor: "Editor e Análise",
-    viewMode: "Modo de Visualização",
-    fitScreen: "Ajustar à Tela",
-    realSize: "Tamanho Real (1:1)",
-    previewBg: "Fundo da Prévia",
-    analysis: "Análise",
-    detectedFail: "Contraste Baixo",
-    pickColor: "Pegar cor da tela",
-    gradeS: "Excelente (S)",
-    gradeA: "Ótimo (A)",
-    gradeB: "Bom (B)",
-    gradeC: "Ruim (C)",
-    gradeLabel: "Nota Geral",
-    lightAssets: "Contexto Claro",
-    darkAssets: "Contexto Escuro",
-    simulations: "Simulações de Ambiente",
-    browserSim: "Navegador Web",
-    iosSim: "iOS / Android",
-    winSim: "Windows / Desktop",
+    setupTitle: "Forge Studio",
+    setupDesc: "Configure seus ativos para renderização local de alta fidelidade.",
+    universal: "Ativo Master",
+    overrides: "Overrides Estratégicos",
+    generate: "Forjar Ativos",
+    processing: "Sincronizando...",
+    ready: "Ativos Prontos",
+    download: "Exportar Pack",
+    tabStudio: "Estúdio",
+    tabForge: "Explorar",
+    safeZones: "Safe Zones",
+    manifest: "PWA Manifest",
+    faviconOverride: "Favicon Override",
+    socialBG: "Background Social",
     optional: "Opcional",
-    upload: "Enviar",
-    socialHeader: "Redes Sociais",
-    socialDesc: "OG Image, Twitter Card",
-    hoverZoom: "Passe o mouse para ampliar"
+    autoVariants: "Auto-gerar Variantes",
+    autoVariantsDesc: "Gera variantes apenas se faltar arquivos específicos.",
+    resHint: "Sugerido: ",
+    transparent: "Transparente",
+    masterBG: "Master BG",
+    settings: "Configurações",
+    language: "Idioma",
+    nomenclature: "Nomenclatura",
+    contextView: "Visualização em Contexto",
+    browserLight: "Browser Claro",
+    browserDark: "Browser Escuro",
+    mobileHome: "Home Screen",
+    dock: "Dock / Taskbar",
+    dropMaster: "Arraste o Arquivo Master",
+    remove: "Remover",
+    readyForForge: "Pronto para Forjar",
+    readyDesc: "Adicione variações ou use o Ativo Master",
+    assetsComposed: "Ativos Compostos",
+    assetsDesc: "Nomenclatura Otimizada & Pronta",
+    appName: "Nome do App",
+    newTab: "Nova Guia",
+    lightIcon: "Ícone Light",
+    darkIcon: "Ícone Dark",
+    favLight: "Favicon Light",
+    favDark: "Favicon Dark",
+    socialCardBg: "Social Card BG",
+    labelLogo: "LOGOTIPO",
+    labelSocial: "SOCIAL",
+    labelFavicon: "FAVICON",
+    assets: "ATIVOS",
+    vector: "VETOR",
+    appInfo: "Informações do App",
+    lblName: "Nome",
+    lblShortName: "Nome Curto",
+    lblDesc: "Descrição",
+    lblStartUrl: "URL Inicial",
+    lblPadding: "Margem de Segurança",
+    lblDefaultTheme: "Tema Padrão",
+    defLight: "Light (Claro)",
+    defDark: "Dark (Escuro)"
   },
   en: {
-    appName: "ICON FORGE",
-    appDesc: "Professional Asset Generator",
-    mainSources: "Source Files",
-    config: "Configuration",
-    sizes: "Output Sizes",
-    customSizes: "Custom (e.g., 24, 42, 80)",
-    optimization: "Optimization",
-    quality: "Quality / Compression",
-    universal: "Universal Logo (Default)",
-    universalDesc: "Used if specifics are missing",
-    lightOverride: "For Light Backgrounds (Opt)",
-    darkOverride: "For Dark Backgrounds (Opt)",
-    favUniversal: "Universal Favicon (Default)",
-    favLightOverride: "Favicon for Light (Opt)",
-    favDarkOverride: "Favicon for Dark (Opt)",
-    brandColor: "Brand / Background Color",
-    bgStrategy: "Background Strategy",
-    bgTransparent: "Keep Transparent",
-    bgFill: "Fill Background",
-    bgDesc: "Brand color is used as background for non-transparent formats (Social JPGs) or if 'Fill Background' is selected.",
-    bgInfoSocial: "Social Media (JPG) always has filled background.",
-    generate: "Generate Assets",
+    setupTitle: "Forge Studio",
+    setupDesc: "Setup your assets for local high-fidelity rendering.",
+    universal: "Master Asset",
+    overrides: "Strategic Overrides",
+    generate: "Forge Assets",
     processing: "Processing...",
-    ready: "Ready to Forge",
-    readyDesc: "Upload at least the Universal Logo. The system creates all variations automatically.",
-    download: "Download Zip Folder",
-    editor: "Editor & Analysis",
-    viewMode: "View Mode",
-    fitScreen: "Fit Screen",
-    realSize: "Real Size (1:1)",
-    previewBg: "Preview Background",
-    analysis: "Analysis",
-    detectedFail: "Low Contrast",
-    pickColor: "Pick color from screen",
-    gradeS: "Perfect (S)",
-    gradeA: "Great (A)",
-    gradeB: "Good (B)",
-    gradeC: "Poor (C)",
-    gradeLabel: "Overall Grade",
-    lightAssets: "Light Context",
-    darkAssets: "Dark Context",
-    simulations: "Environment Simulations",
-    browserSim: "Web Browser",
-    iosSim: "iOS / Android",
-    winSim: "Windows / Desktop",
+    ready: "Assets Ready",
+    download: "Export Pack",
+    tabStudio: "Studio",
+    tabForge: "Explore",
+    safeZones: "Safe Zones",
+    manifest: "PWA Manifest",
+    faviconOverride: "Favicon Override",
+    socialBG: "Social Background",
     optional: "Optional",
-    upload: "Upload",
-    socialHeader: "Social Media",
-    socialDesc: "OG Image, Twitter Card",
-    hoverZoom: "Hover to zoom"
+    autoVariants: "Auto-generate Variants",
+    autoVariantsDesc: "Generates variants only if specific files are missing.",
+    resHint: "Suggested: ",
+    transparent: "Transparent",
+    masterBG: "Master BG",
+    settings: "Settings",
+    language: "Language",
+    nomenclature: "Nomenclature",
+    contextView: "Context View",
+    browserLight: "Browser Light",
+    browserDark: "Browser Dark",
+    mobileHome: "Home Screen",
+    dock: "Dock / Taskbar",
+    dropMaster: "Drop Master File",
+    remove: "Remove",
+    readyForForge: "Ready for Forge",
+    readyDesc: "Add variations or use Master Asset",
+    assetsComposed: "Assets Composed",
+    assetsDesc: "Nomenclature Optimized & Ready",
+    appName: "App Name",
+    newTab: "New Tab",
+    lightIcon: "Light Icon",
+    darkIcon: "Dark Icon",
+    favLight: "Favicon Light",
+    favDark: "Favicon Dark",
+    socialCardBg: "Social Card BG",
+    labelLogo: "LOGO",
+    labelSocial: "SOCIAL",
+    labelFavicon: "FAVICON",
+    assets: "ASSETS",
+    vector: "VECTOR",
+    appInfo: "App Info",
+    lblName: "Name",
+    lblShortName: "Short Name",
+    lblDesc: "Description",
+    lblStartUrl: "Start URL",
+    lblPadding: "Safety Margin",
+    lblDefaultTheme: "Default Theme",
+    defLight: "Light",
+    defDark: "Dark"
   },
   es: {
-    appName: "ICON FORGE",
-    appDesc: "Generador de Activos",
-    mainSources: "Fuentes",
-    config: "Configuración",
-    sizes: "Tamaños",
-    customSizes: "Personalizado",
-    optimization: "Optimización",
-    quality: "Calidad",
-    universal: "Logo Universal",
-    universalDesc: "Usado por defecto",
-    lightOverride: "Para Fondo Claro (Opc)",
-    darkOverride: "Para Fondo Oscuro (Opc)",
-    favUniversal: "Favicon Universal",
-    favLightOverride: "Favicon Claro (Opc)",
-    favDarkOverride: "Favicon Oscuro (Opc)",
-    brandColor: "Color Marca / Fondo",
-    bgStrategy: "Estrategia de Fondo",
-    bgTransparent: "Transparente",
-    bgFill: "Rellenar Fondo",
-    bgDesc: "Color usado en JPGs sociales o si eliges rellenar.",
-    bgInfoSocial: "Social JPG siempre tiene fondo.",
-    generate: "Generar",
+    setupTitle: "Forge Studio",
+    setupDesc: "Configure sus activos para renderizado local de alta fidelidad.",
+    universal: "Activo Maestro",
+    overrides: "Anulaciones Estratégicas",
+    generate: "Forjar Activos",
     processing: "Procesando...",
-    ready: "Listo",
-    readyDesc: "Sube el logo universal.",
-    download: "Descargar Zip",
-    editor: "Editor",
-    viewMode: "Vista",
-    fitScreen: "Ajustar",
-    realSize: "Real",
-    previewBg: "Fondo",
-    analysis: "Análisis",
-    detectedFail: "Bajo Contraste",
-    pickColor: "Tomar color",
-    gradeS: "Perfecto",
-    gradeA: "Genial",
-    gradeB: "Bueno",
-    gradeC: "Pobre",
-    gradeLabel: "Nota",
-    lightAssets: "Contexto Claro",
-    darkAssets: "Contexto Oscuro",
-    simulations: "Simulaciones",
-    browserSim: "Navegador",
-    iosSim: "Móvil",
-    winSim: "Escritorio",
+    ready: "Activos Listos",
+    download: "Exportar Pack",
+    tabStudio: "Estudio",
+    tabForge: "Explorar",
+    safeZones: "Zonas Seguras",
+    manifest: "PWA Manifest",
+    faviconOverride: "Favicon Override",
+    socialBG: "Fondo Social",
     optional: "Opcional",
-    upload: "Subir",
-    socialHeader: "Redes Sociales",
-    socialDesc: "OG Image, Twitter",
-    hoverZoom: "Zoom al pasar mouse"
+    autoVariants: "Auto-generar Variantes",
+    autoVariantsDesc: "Genera variantes solo si faltan archivos específicos.",
+    resHint: "Sugerido: ",
+    transparent: "Transparente",
+    masterBG: "Fondo Maestro",
+    settings: "Ajustes",
+    language: "Idioma",
+    nomenclature: "Nomenclatura",
+    contextView: "Vista de Contexto",
+    browserLight: "Navegador Claro",
+    browserDark: "Navegador Oscuro",
+    mobileHome: "Pantalla de Inicio",
+    dock: "Dock / Barra de Tareas",
+    dropMaster: "Soltar Archivo Maestro",
+    remove: "Eliminar",
+    readyForForge: "Listo para Forjar",
+    readyDesc: "Añade variaciones o usa el Activo Maestro",
+    assetsComposed: "Activos Compuestos",
+    assetsDesc: "Nomenclatura Optimizada y Lista",
+    appName: "Nombre App",
+    newTab: "Nueva Pestaña",
+    lightIcon: "Icono Light",
+    darkIcon: "Icono Dark",
+    favLight: "Favicon Light",
+    favDark: "Favicon Dark",
+    socialCardBg: "Fondo Tarjeta Social",
+    labelLogo: "LOGOTIPO",
+    labelSocial: "SOCIAL",
+    labelFavicon: "FAVICON",
+    assets: "ACTIVOS",
+    vector: "VECTOR",
+    appInfo: "Info de la App",
+    lblName: "Nombre",
+    lblShortName: "Nombre Corto",
+    lblDesc: "Descripción",
+    lblStartUrl: "URL Inicial",
+    lblPadding: "Margen de Seguridad",
+    lblDefaultTheme: "Tema Predeterminado",
+    defLight: "Light (Claro)",
+    defDark: "Dark (Oscuro)"
   },
-  it: { appName: "ICON FORGE", appDesc: "Generatore", mainSources: "Fonti", config: "Configurazione", sizes: "Dimensioni", customSizes: "Personalizzato", optimization: "Ottimizzazione", quality: "Qualità", universal: "Logo Universale", universalDesc: "Default", lightOverride: "Sfondo Chiaro", darkOverride: "Sfondo Scuro", favUniversal: "Favicon Univ.", favLightOverride: "Favicon Chiaro", favDarkOverride: "Favicon Scuro", brandColor: "Colore Brand", bgStrategy: "Strategia Sfondo", bgTransparent: "Trasparente", bgFill: "Riempimento", bgDesc: "Colore usato per Social o riempimento.", bgInfoSocial: "Social JPG sempre riempito.", generate: "Genera", processing: "Attendere", ready: "Pronto", readyDesc: "Carica logo.", download: "Scarica", editor: "Editor", viewMode: "Vista", fitScreen: "Adatta", realSize: "Reale", previewBg: "Sfondo", analysis: "Analisi", detectedFail: "Contrasto Basso", pickColor: "Preleva", gradeS: "Perfetto", gradeA: "Ottimo", gradeB: "Buono", gradeC: "Scarso", gradeLabel: "Voto", lightAssets: "Contesto Chiaro", darkAssets: "Contesto Scuro", simulations: "Simulazioni", browserSim: "Browser", iosSim: "Mobile", winSim: "Desktop", optional: "Opzionale", upload: "Carica", socialHeader: "Social", socialDesc: "OG Image", hoverZoom: "Zoom al passaggio" },
-  fr: { appName: "ICON FORGE", appDesc: "Générateur", mainSources: "Sources", config: "Config", sizes: "Tailles", customSizes: "Perso", optimization: "Optimisation", quality: "Qualité", universal: "Logo Universel", universalDesc: "Défaut", lightOverride: "Fond Clair", darkOverride: "Fond Sombre", favUniversal: "Favicon Univ.", favLightOverride: "Favicon Clair", favDarkOverride: "Favicon Sombre", brandColor: "Couleur Marque", bgStrategy: "Stratégie Fond", bgTransparent: "Transparent", bgFill: "Remplir", bgDesc: "Couleur utilisée pour Social ou remplissage.", bgInfoSocial: "Social JPG toujours rempli.", generate: "Générer", processing: "Traitement", ready: "Prêt", readyDesc: "Chargez le logo.", download: "Télécharger", editor: "Éditeur", viewMode: "Vue", fitScreen: "Ajuster", realSize: "Réel", previewBg: "Fond", analysis: "Analyse", detectedFail: "Contraste Faible", pickColor: "Pipette", gradeS: "Parfait", gradeA: "Super", gradeB: "Bon", gradeC: "Pauvre", gradeLabel: "Note", lightAssets: "Contexte Clair", darkAssets: "Contexte Sombre", simulations: "Simulations", browserSim: "Navigateur", iosSim: "Mobile", winSim: "Bureau", optional: "Opt", upload: "Upload", socialHeader: "Social", socialDesc: "OG Image", hoverZoom: "Zoom au survol" },
-  de: { appName: "ICON FORGE", appDesc: "Generator", mainSources: "Quellen", config: "Konfig", sizes: "Größen", customSizes: "Benutzerdefiniert", optimization: "Optimierung", quality: "Qualität", universal: "Universal Logo", universalDesc: "Standard", lightOverride: "Heller Hintergrund", darkOverride: "Dunkler Hintergrund", favUniversal: "Favicon Univ.", favLightOverride: "Favicon Hell", favDarkOverride: "Favicon Dunkel", brandColor: "Markenfarbe", bgStrategy: "Hintergrund", bgTransparent: "Transparent", bgFill: "Füllen", bgDesc: "Farbe für Social oder Füllung.", bgInfoSocial: "Social JPG immer gefüllt.", generate: "Generieren", processing: "Verarbeite", ready: "Bereit", readyDesc: "Logo hochladen.", download: "Download", editor: "Editor", viewMode: "Ansicht", fitScreen: "Passend", realSize: "Echt", previewBg: "Hintergrund", analysis: "Analyse", detectedFail: "Kontrast Schwach", pickColor: "Wählen", gradeS: "Perfekt", gradeA: "Super", gradeB: "Gut", gradeC: "Schlecht", gradeLabel: "Note", lightAssets: "Heller Kontext", darkAssets: "Dunkler Kontext", simulations: "Simulationen", browserSim: "Browser", iosSim: "Mobil", winSim: "Desktop", optional: "Optional", upload: "Upload", socialHeader: "Social", socialDesc: "OG Image", hoverZoom: "Zoom bei Hover" },
-  zh: { appName: "ICON FORGE", appDesc: "生成器", mainSources: "来源", config: "配置", sizes: "尺寸", customSizes: "自定义", optimization: "优化", quality: "质量", universal: "通用图标", universalDesc: "默认", lightOverride: "浅色背景", darkOverride: "深色背景", favUniversal: "通用 Favicon", favLightOverride: "Favicon 浅", favDarkOverride: "Favicon 深", brandColor: "品牌色", bgStrategy: "背景策略", bgTransparent: "保持透明", bgFill: "填充背景", bgDesc: "用于社交媒体或填充。", bgInfoSocial: "社交媒体 JPG 始终填充。", generate: "生成", processing: "处理中", ready: "就绪", readyDesc: "上传图标", download: "下载", editor: "编辑", viewMode: "视图", fitScreen: "适应", realSize: "真实", previewBg: "背景", analysis: "分析", detectedFail: "对比度低", pickColor: "吸管", gradeS: "完美", gradeA: "极好", gradeB: "良好", gradeC: "差", gradeLabel: "评分", lightAssets: "浅色环境", darkAssets: "深色环境", simulations: "模拟", browserSim: "浏览器", iosSim: "移动端", winSim: "桌面", optional: "可选", upload: "上传", socialHeader: "社交媒体", socialDesc: "OG Image", hoverZoom: "悬停放大" },
-  ja: { appName: "ICON FORGE", appDesc: "ジェネレーター", mainSources: "ソース", config: "構成", sizes: "サイズ", customSizes: "カスタム", optimization: "最適化", quality: "品質", universal: "ユニバーサルロゴ", universalDesc: "デフォルト", lightOverride: "明るい背景", darkOverride: "暗い背景", favUniversal: "Favicon 共通", favLightOverride: "Favicon 明", favDarkOverride: "Favicon 暗", brandColor: "ブランド色", bgStrategy: "背景戦略", bgTransparent: "透明を保持", bgFill: "背景を塗りつぶす", bgDesc: "ソーシャルまたは塗りつぶしに使用。", bgInfoSocial: "ソーシャルJPGは常に塗りつぶされます。", generate: "生成", processing: "処理中", ready: "準備完了", readyDesc: "ロゴをアップロード", download: "ダウンロード", editor: "編集", viewMode: "表示", fitScreen: "合わせる", realSize: "実寸", previewBg: "背景", analysis: "分析", detectedFail: "低コントラスト", pickColor: "スポイト", gradeS: "完璧", gradeA: "素晴らしい", gradeB: "良い", gradeC: "悪い", gradeLabel: "成績", lightAssets: "明るいコンテキスト", darkAssets: "暗いコンテキスト", simulations: "シミュレーション", browserSim: "ブラウザ", iosSim: "モバイル", winSim: "デスクトップ", optional: "任意", upload: "アップロード", socialHeader: "ソーシャル", socialDesc: "OG Image", hoverZoom: "ホバーで拡大" }
+  // Fallbacks
+  it: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
+  fr: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
+  de: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
+  zh: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" },
+  ja: { setupTitle: "Forge Studio", dropMaster: "Drop Master File", remove: "Remove", vector: "VECTOR", appName: "App Name", lblPadding: "Safety Margin" }
 };
 
-// ... (Components Logo, TitleBar, WcagBadge, IconMagnifier, ContrastVisualizer, AccordionItem, UploadZone, SimulationSection remain the same) ...
-// --- Custom Logo ---
-const Logo = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-purple-500">
-    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
+// Helper to get translation safely
+const getT = (lang: AppLanguage, key: string) => {
+  return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
+};
 
-// --- Components ---
-
-const TitleBar = ({ onOpenSettings }: { onOpenSettings: () => void }) => (
-  <div className="h-9 bg-black border-b border-border-subtle flex items-center justify-between select-none titlebar-drag-region w-full shrink-0 z-50 px-4 relative">
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-text-muted font-bold tracking-[0.2em] uppercase">Icon Forge</span>
-    </div>
-    <div className="flex items-center gap-1 no-drag">
-      <button onClick={onOpenSettings} className="p-1.5 hover:bg-white/10 rounded-md text-text-muted hover:text-white transition-colors">
-        <Settings size={14} />
-      </button>
-      <div className="w-px h-3 bg-white/10 mx-1"></div>
-      <div className="flex gap-1">
-        <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
-        <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
-        <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
-      </div>
-    </div>
-  </div>
-);
-
-const WcagBadge = ({ ratio }: { ratio?: number }) => {
-  if (ratio === undefined || ratio === 0) return null;
-  let color = "bg-red-500/10 text-red-400 border-red-500/20";
-  let label = "FAIL";
-  if (ratio >= 7) { color = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"; label = "AAA"; }
-  else if (ratio >= 4.5) { color = "bg-green-500/10 text-green-400 border-green-500/20"; label = "AA"; }
-  else if (ratio >= 3) { color = "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"; label = "AA+"; }
+const SafeZoneOverlay = ({ show }: { show: boolean }) => {
+  if (!show) return null;
   return (
-    <div className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${color} flex items-center gap-1 shadow-sm`}>
-      <span>WCAG</span><span className="opacity-80">{ratio.toFixed(2)}</span>
+    <div className="absolute inset-0 pointer-events-none z-30">
+      <div className="absolute inset-[15%] border border-dashed border-studio-accent/30 rounded-full"></div>
+      <div className="absolute inset-[15%] border border-dashed border-studio-accent/30 rounded-[15%]"></div>
+      <div className="absolute top-1/2 left-0 w-full h-px bg-studio-accent/10"></div>
+      <div className="absolute left-1/2 top-0 w-px h-full bg-studio-accent/10"></div>
     </div>
   );
 };
 
-const IconMagnifier = ({ url }: { url: string }) => {
-  const [position, setPosition] = useState({ x: 50, y: 50 });
-  const [isHovering, setIsHovering] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setPosition({ x, y });
-  };
+const ContextPreview = ({ icons, lang, appName, defaultTheme }: { icons: GeneratedFile[], lang: AppLanguage, appName: string, defaultTheme: 'light' | 'dark' }) => {
+  // Find the most appropriate icon based on size and the selected default theme
+  const icon = icons.find(i => i.width === 192 && (i.variant === defaultTheme || i.variant === 'any')) || icons.find(i => i.name.includes('192')) || icons[0];
+  
+  // Favicon: Try to find .ico first, then PNG
+  const favicon = icons.find(i => i.typeLabel === 'favicon' && (i.variant === defaultTheme || i.name === 'favicon.ico')) || icons[0];
+  
+  const t = (k: string) => getT(lang, k);
+  
+  if (!icon) return null;
 
   return (
-    <div 
-      className="relative w-full h-full overflow-hidden rounded-lg group"
-      ref={containerRef}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-      onMouseMove={handleMouseMove}
-    >
-      {/* Base Image */}
-      <div className="w-full h-full flex items-center justify-center transition-opacity duration-200" style={{ opacity: isHovering ? 0 : 1 }}>
-         <img src={url} className="max-w-full max-h-full object-contain" alt="icon" />
-      </div>
+    <div className="space-y-6 mb-16 animate-spring">
+      <h3 className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-3 whitespace-nowrap bg-studio-bg pr-4">
+         <Monitor size={16} className="text-purple-500" />
+         {t('contextView')}
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+         {/* Browser Tab Light */}
+         <div className="bg-white text-gray-900 rounded-xl overflow-hidden shadow-lg border border-gray-200 hover:scale-[1.02] transition-transform duration-500">
+            <div className="bg-gray-100 px-3 py-2 flex items-center gap-2 border-b border-gray-200">
+               <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+               </div>
+            </div>
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+               <div className="bg-white rounded-t-lg px-4 py-2 text-xs font-medium flex items-center gap-2 shadow-sm border-t border-x border-gray-200 w-fit -mb-4 relative z-10">
+                  <img src={favicon?.url} className="w-4 h-4 object-contain" />
+                  <span className="opacity-80">{t('newTab')}</span>
+                  <X size={10} className="ml-2 opacity-40"/>
+               </div>
+            </div>
+            <div className="h-24 bg-white flex items-center justify-center opacity-5">
+              <Sparkles size={48} />
+            </div>
+            <div className="p-3 text-[10px] text-center uppercase font-black text-gray-400 tracking-widest">{t('browserLight')}</div>
+         </div>
 
-      {/* Magnified Lens (Replaces base image on hover) */}
-      <div 
-        className="absolute inset-0 pointer-events-none transition-opacity duration-200"
-        style={{ 
-          opacity: isHovering ? 1 : 0,
-          backgroundImage: `url(${url})`,
-          backgroundPosition: `${position.x}% ${position.y}%`,
-          backgroundSize: '250%', // Zoom level
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        <div className="absolute bottom-1 right-1 bg-black/50 text-white text-[8px] px-1 rounded backdrop-blur-sm pointer-events-none opacity-50">2.5x</div>
+         {/* Browser Tab Dark */}
+         <div className="bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg border border-gray-800 hover:scale-[1.02] transition-transform duration-500">
+            <div className="bg-gray-800 px-3 py-2 flex items-center gap-2 border-b border-gray-700">
+               <div className="flex gap-1.5 opacity-50">
+                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
+               </div>
+            </div>
+            <div className="p-4 bg-gray-900 border-b border-gray-800">
+               <div className="bg-gray-800 rounded-t-lg px-4 py-2 text-xs font-medium flex items-center gap-2 shadow-sm w-fit -mb-4 relative z-10">
+                  <img src={favicon?.url} className="w-4 h-4 object-contain" />
+                  <span className="opacity-80">{t('newTab')}</span>
+                  <X size={10} className="ml-2 opacity-40"/>
+               </div>
+            </div>
+            <div className="h-24 bg-gray-950 flex items-center justify-center opacity-5">
+               <Sparkles size={48} />
+            </div>
+             <div className="p-3 text-[10px] text-center uppercase font-black text-gray-600 tracking-widest">{t('browserDark')}</div>
+         </div>
+
+         {/* Mobile Icon */}
+         <div className="relative overflow-hidden rounded-xl shadow-lg aspect-video md:aspect-auto flex flex-col hover:scale-[1.02] transition-transform duration-500 group">
+            <div className="flex-1 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center p-6 relative">
+               <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+               <div className="flex flex-col items-center gap-2 relative z-10">
+                  <img src={icon.url} className="w-14 h-14 rounded-[1.2rem] shadow-2xl bg-white" style={{boxShadow: '0 10px 20px rgba(0,0,0,0.3)'}} />
+                  <span className="text-[10px] font-medium text-white drop-shadow-md">{appName || t('appName')}</span>
+               </div>
+            </div>
+            <div className="p-3 bg-white dark:bg-black text-[10px] text-center uppercase font-black text-gray-400 tracking-widest border-t border-studio-border">{t('mobileHome')}</div>
+         </div>
+         
+         {/* Dock/App Store */}
+          <div className="relative overflow-hidden rounded-xl shadow-lg border border-studio-border bg-studio-bg flex flex-col hover:scale-[1.02] transition-transform duration-500">
+            <div className="flex-1 flex items-center justify-center p-6 bg-studio-bg relative">
+               <div className="absolute inset-0 bg-studio-accent/5"></div>
+               <div className="flex items-end gap-3 p-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20"></div>
+                  <img src={icon.url} className="w-12 h-12 rounded-[0.8rem] shadow-lg transition-transform hover:-translate-y-2 duration-300 bg-black/20" />
+                  <div className="w-10 h-10 rounded-xl bg-green-500/20"></div>
+               </div>
+            </div>
+            <div className="p-3 bg-studio-card text-[10px] text-center uppercase font-black text-studio-sub tracking-widest border-t border-studio-border">{t('dock')}</div>
+         </div>
       </div>
     </div>
-  );
-};
-
-const ContrastVisualizer = ({ analysis, tLabel }: { analysis: ImageAnalysis, tLabel: string }) => {
-  if (!analysis.isLowContrast) return null;
-  return (
-    <div className="mt-2 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-       <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-red-400 uppercase"><AlertTriangle size={12} /> {tLabel}</div>
-       <div className="flex items-center justify-between gap-2 text-xs">
-          <div className="flex flex-col gap-1 items-center">
-             <div className="w-8 h-8 rounded border border-border-subtle shadow-sm" style={{backgroundColor: analysis.detectedForegroundColor}}></div>
-             <span className="font-mono text-[10px] text-text-secondary">{analysis.detectedForegroundColor}</span>
-          </div>
-          <div className="flex flex-col gap-1 items-center px-2">
-             <span className="font-bold text-red-400 text-lg">{analysis.contrastRatio.toFixed(2)}</span>
-          </div>
-          <div className="flex flex-col gap-1 items-center">
-             <div className="w-8 h-8 rounded border border-border-subtle shadow-sm" style={{backgroundColor: analysis.detectedBackgroundColor}}></div>
-             <span className="font-mono text-[10px] text-text-secondary">{analysis.detectedBackgroundColor}</span>
-          </div>
-       </div>
-    </div>
-  );
-};
-
-const AccordionItem = ({ 
-  title, 
-  icon, 
-  children, 
-  defaultOpen = false,
-  collapsed = false 
-}: { 
-  title: string; 
-  icon: React.ReactNode; 
-  children?: React.ReactNode; 
-  defaultOpen?: boolean;
-  collapsed?: boolean;
-}) => {
-  return (
-    <details className="group border border-border-subtle bg-bg-tertiary/20 rounded-xl overflow-hidden mb-3" open={defaultOpen}>
-      <summary className="flex items-center justify-between p-3 cursor-pointer select-none hover:bg-white/5 transition-colors">
-        <div className="flex items-center gap-2 text-xs font-bold text-text-secondary uppercase tracking-wider">
-          {icon}
-          {!collapsed && <span>{title}</span>}
-        </div>
-        <ChevronDown size={14} className="text-text-muted transition-transform group-open:rotate-180" />
-      </summary>
-      <div className={`p-3 border-t border-border-subtle ${collapsed ? 'hidden' : 'block'}`}>
-        {children}
-      </div>
-    </details>
-  );
-};
-
-// --- Extracted Components ---
-
-type UploadType = 'universal' | 'light_override' | 'dark_override' | 'fav_universal' | 'fav_light_override' | 'fav_dark_override';
-
-interface UploadZoneProps {
-  file: File | null;
-  preview: string | null;
-  type: UploadType;
-  label: string;
-  desc?: string;
-  icon: React.ReactNode;
-  height?: string;
-  optional?: boolean;
-  inputRef?: React.RefObject<HTMLInputElement>;
-  t: (k: string) => string;
-  onFileSelect: (f: File, t: UploadType) => void;
-  onClear: (t: UploadType) => void;
+  )
 }
 
-const UploadZone = ({ 
-  file, preview, type, label, desc, icon, height = "h-32", optional = false, inputRef, t, onFileSelect, onClear 
-}: UploadZoneProps) => {
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onFileSelect(e.dataTransfer.files[0], type);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onFileSelect(e.target.files[0], type);
-    }
-  };
-
-  return (
-    <div className="no-drag group relative hover:scale-[1.02] transition-transform duration-200">
-      <div className="flex items-center justify-between mb-2">
-         <label className="text-xs font-bold text-text-subtle uppercase tracking-wider flex items-center gap-2">
-            {icon} <span className="text-text-secondary">{label}</span>
-         </label>
-         {optional && <span className="text-[9px] font-bold text-text-muted bg-bg-tertiary px-1.5 py-0.5 rounded border border-border-subtle">{t('optional')}</span>}
-      </div>
-      {desc && <p className="text-[10px] text-text-muted mb-2 -mt-1 leading-tight">{desc}</p>}
-      
-      {!file ? (
-        <label 
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`flex flex-col items-center justify-center ${height} border border-dashed rounded-2xl transition-all cursor-pointer overflow-hidden ${isDragging ? 'bg-purple-500/20 border-purple-500 shadow-lg shadow-purple-500/10 scale-105' : 'border-border-light bg-bg-tertiary/30 hover:bg-bg-tertiary hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5'}`}
-        >
-          <div className={`p-3 rounded-full bg-bg-glass mb-2 transition-transform ${isDragging ? 'scale-125' : 'group-hover:scale-110'}`}>
-             <Upload className={`w-5 h-5 transition-colors ${isDragging ? 'text-white' : 'text-text-muted group-hover:text-white'}`} />
-          </div>
-          <span className={`text-[10px] font-medium transition-colors ${isDragging ? 'text-white' : 'text-text-muted group-hover:text-text-secondary'}`}>{isDragging ? "Drop Here" : t('upload')}</span>
-          <input type="file" ref={inputRef} className="hidden" onChange={handleChange} />
-        </label>
-      ) : (
-        <div className={`relative ${height} border border-border-light rounded-2xl bg-black overflow-hidden group`}>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-          <img src={preview!} className="relative z-10 w-full h-full object-contain p-4" alt={label} />
-          <button onClick={() => onClear(type)} className="absolute top-2 right-2 p-1.5 bg-black/80 backdrop-blur text-white rounded-full hover:bg-red-500 hover:text-white transition-colors border border-white/10 z-20"><X size={10}/></button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const SimulationSection = ({ t, lightIcons, darkIcons }: { t: (k: string) => string, lightIcons: GeneratedFile[], darkIcons: GeneratedFile[] }) => {
-  const [activeTab, setActiveTab] = useState<'browser' | 'mobile' | 'desktop'>('browser');
-  const [simMode, setSimMode] = useState<'light' | 'dark'>('light');
-
-  const getIcon = (mode: 'light' | 'dark', type: 'favicon' | 'logo') => {
-    const list = mode === 'light' ? lightIcons : darkIcons;
-    if (type === 'favicon') {
-       return list.find(i => i.originalDef.format === 'ico') || list.find(i => i.typeLabel === 'favicon' && i.width === 32) || list[0];
-    }
-    return list.find(i => i.width >= 64 && i.typeLabel === 'logo') || list[0];
-  };
-
-  const activeIcon = getIcon(simMode, activeTab === 'browser' ? 'favicon' : 'logo');
-  if (!activeIcon) return null;
-
-  return (
-    <div className="mt-8 bg-bg-glass backdrop-blur-md border border-border-subtle rounded-3xl p-6 animate-fade-in-up">
-        <h3 className="text-sm font-bold text-text-muted uppercase tracking-widest mb-6">{t('simulations')}</h3>
-        
-        <div className="flex gap-4 mb-6">
-           <div className="flex bg-bg-tertiary p-1 rounded-lg border border-border-subtle">
-              <button onClick={() => setActiveTab('browser')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'browser' ? 'bg-bg-primary text-white shadow' : 'text-text-muted hover:text-white'}`}>{t('browserSim')}</button>
-              <button onClick={() => setActiveTab('mobile')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'mobile' ? 'bg-bg-primary text-white shadow' : 'text-text-muted hover:text-white'}`}>{t('iosSim')}</button>
-              <button onClick={() => setActiveTab('desktop')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'desktop' ? 'bg-bg-primary text-white shadow' : 'text-text-muted hover:text-white'}`}>{t('winSim')}</button>
-           </div>
-           <div className="flex bg-bg-tertiary p-1 rounded-lg border border-border-subtle ml-auto">
-              <button onClick={() => setSimMode('light')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${simMode === 'light' ? 'bg-white text-black shadow' : 'text-text-muted hover:text-white'}`}><Sun size={12}/> Light</button>
-              <button onClick={() => setSimMode('dark')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${simMode === 'dark' ? 'bg-black text-white shadow' : 'text-text-muted hover:text-white'}`}><Moon size={12}/> Dark</button>
-           </div>
-        </div>
-
-        <div className="relative rounded-2xl overflow-hidden border border-border-light h-64 bg-zinc-900 flex items-center justify-center">
-            {activeTab === 'browser' && (
-               <div className={`w-full h-full flex flex-col ${simMode === 'light' ? 'bg-zinc-100' : 'bg-zinc-900'}`}>
-                  {/* Fake Browser Chrome */}
-                  <div className={`h-8 ${simMode === 'light' ? 'bg-zinc-200 border-b border-zinc-300' : 'bg-zinc-800 border-b border-zinc-700'} flex items-end px-2 space-x-2`}>
-                      <div className={`w-40 h-7 rounded-t-lg flex items-center px-3 gap-2 ${simMode === 'light' ? 'bg-white' : 'bg-zinc-900'}`}>
-                          <img src={activeIcon.url} className="w-4 h-4 object-contain" />
-                          <div className={`w-20 h-2 rounded-full ${simMode === 'light' ? 'bg-zinc-100' : 'bg-zinc-800'}`}></div>
-                      </div>
-                  </div>
-                  <div className="flex-1 p-8 flex items-center justify-center">
-                      <div className="text-center opacity-30">
-                          <Globe size={48} className="mx-auto mb-2"/>
-                          <p className="text-xs font-mono">Browser Context</p>
-                      </div>
-                  </div>
-               </div>
-            )}
-
-            {activeTab === 'mobile' && (
-               <div className="w-full h-full relative overflow-hidden">
-                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center opacity-50"></div>
-                  <div className="absolute inset-0 flex items-center justify-center gap-8">
-                     <div className="flex flex-col items-center gap-2 animate-zoom-in">
-                        <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center overflow-hidden">
-                            <img src={activeIcon.url} className="w-full h-full object-cover" />
-                        </div>
-                        <span className="text-[10px] text-white font-medium drop-shadow-md">App Name</span>
-                     </div>
-                  </div>
-               </div>
-            )}
-
-            {activeTab === 'desktop' && (
-                <div className={`w-full h-full relative ${simMode === 'light' ? 'bg-[url("https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=2670&auto=format&fit=crop")]' : 'bg-[url("https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?q=80&w=2672&auto=format&fit=crop")]'} bg-cover bg-center`}>
-                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 h-14 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center px-4 gap-4 shadow-2xl">
-                         <div className="w-10 h-10 bg-white/20 rounded-xl"></div>
-                         <div className="w-10 h-10 bg-white/20 rounded-xl"></div>
-                         <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg border border-white/30 transform scale-110">
-                            <img src={activeIcon.url} className="w-full h-full object-contain p-1" />
-                         </div>
-                         <div className="w-10 h-10 bg-white/20 rounded-xl"></div>
-                     </div>
-                </div>
-            )}
-        </div>
-    </div>
-  );
-};
-
 export const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'sources' | 'forge' | 'settings'>('sources');
   const [lang, setLang] = useState<AppLanguage>('pt'); 
   const [theme, setTheme] = useState<AppTheme>('dark');
+  const [showSafeZones, setShowSafeZones] = useState(false);
+  const [autoVariants, setAutoVariants] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true); 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // New States
+  const [namingStrategy, setNamingStrategy] = useState<NamingStrategy>('modern');
+  const [defaultTheme, setDefaultTheme] = useState<'light' | 'dark'>('light');
+  const [padding, setPadding] = useState(0); 
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('if-theme') as AppTheme;
-    if (savedTheme) setTheme(savedTheme);
-    const savedLang = localStorage.getItem('if-lang') as AppLanguage;
-    if (savedLang) setLang(savedLang);
-    else {
-      const browserLang = navigator.language.split('-')[0] as AppLanguage;
-      if (SUPPORTED_LANGUAGES.includes(browserLang)) setLang(browserLang);
-    }
-  }, []);
+  // App Metadata State
+  const [appInfo, setAppInfo] = useState({
+    name: 'My App',
+    shortName: 'App',
+    description: 'My awesome application built with Icon Forge',
+    startUrl: '/'
+  });
+
+  const [files, setFiles] = useState<Record<string, { file: File | Blob | null, preview: string | null }>>({
+    universal: { file: null, preview: null },
+    light: { file: null, preview: null },
+    dark: { file: null, preview: null },
+    faviconLight: { file: null, preview: null },
+    faviconDark: { file: null, preview: null },
+    socialBG: { file: null, preview: null }
+  });
+
+  const [generatedIcons, setGeneratedIcons] = useState<GeneratedFile[]>([]);
+  const [brandColor, setBrandColor] = useState('#a855f7');
+  const [brandColorDark, setBrandColorDark] = useState('#1e1e1e');
+  const [isBgTransparent, setIsBgTransparent] = useState(true);
+
+  const t = (key: string) => getT(lang, key);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('if-theme', theme);
   }, [theme]);
 
-  useEffect(() => { localStorage.setItem('if-lang', lang); }, [lang]);
-
-  const t = (key: string) => TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en'][key] || key;
-
-  // --- Global State ---
-  const [universalFile, setUniversalFile] = useState<File | null>(null);
-  const [universalPreview, setUniversalPreview] = useState<string | null>(null);
-
-  const [lightFile, setLightFile] = useState<File | null>(null);
-  const [lightPreview, setLightPreview] = useState<string | null>(null);
-
-  const [darkFile, setDarkFile] = useState<File | null>(null);
-  const [darkPreview, setDarkPreview] = useState<string | null>(null);
-
-  const [favUniversalFile, setFavUniversalFile] = useState<File | null>(null);
-  const [favUniversalPreview, setFavUniversalPreview] = useState<string | null>(null);
-
-  const [favLightFile, setFavLightFile] = useState<File | null>(null);
-  const [favLightPreview, setFavLightPreview] = useState<string | null>(null);
-
-  const [favDarkFile, setFavDarkFile] = useState<File | null>(null);
-  const [favDarkPreview, setFavDarkPreview] = useState<string | null>(null);
-
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedIcons, setGeneratedIcons] = useState<GeneratedFile[]>([]);
-  
-  const [brandColor, setBrandColor] = useState('#ffffff');
-  const [keepOriginalBackground, setKeepOriginalBackground] = useState(false);
-  const [compressionQuality, setCompressionQuality] = useState(0.9);
-
-  // Size State
-  const [selectedSizes, setSelectedSizes] = useState<number[]>([16, 32, 48, 64, 128, 180, 192, 512]);
-  const [customSizesStr, setCustomSizesStr] = useState('');
-
-  const [editingIcon, setEditingIcon] = useState<GeneratedFile | null>(null);
-  const [editOptions, setEditOptions] = useState<EditOptions>({ scale: 1, padding: 0, backgroundColor: '' });
-  const [editPreviewUrl, setEditPreviewUrl] = useState<string | null>(null);
-  const [editAnalysis, setEditAnalysis] = useState<ImageAnalysis | null>(null);
-  const [modalPreviewBg, setModalPreviewBg] = useState<'transparent' | 'light' | 'dark' | 'brand' | 'context'>('transparent');
-  const [modalViewMode, setModalViewMode] = useState<'fit' | 'actual'>('fit');
-
-  const mainInputRef = useRef<HTMLInputElement>(null);
-  const overrideInputRef = useRef<HTMLInputElement>(null);
-  const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
-
-  const renderModalPreviewBackground = () => {
-    let className = "absolute inset-0 z-0 ";
-    let style: React.CSSProperties = {};
-    switch (modalPreviewBg) {
-        case 'transparent': className += "bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-800"; break;
-        case 'light': className += "bg-white"; break;
-        case 'dark': className += "bg-black"; break;
-        case 'brand': style.backgroundColor = brandColor; break;
-        case 'context': className += "bg-gradient-to-br from-blue-500 to-purple-600"; break;
-    }
-    return <div className={className} style={style}></div>;
-  };
-
-  useEffect(() => {
-    const cleanup = listenForApiRequests(async (data) => {
-        // ... (keep API logic if needed, simplified here)
-    });
-    return cleanup;
-  }, []);
-
-  const processSelectedFile = (selectedFile: File, type: UploadType) => {
-    if (!selectedFile.type.startsWith('image/')) { alert('Please upload an image file.'); return; }
-    const url = URL.createObjectURL(selectedFile);
-    
-    // Auto-open sidebar if universal file is selected (for mobile UX flow)
+  const onFileSelect = (file: File, type: string) => {
+    const url = URL.createObjectURL(file);
+    setFiles(prev => ({ ...prev, [type]: { file, preview: url } }));
     if (type === 'universal') {
-       setSidebarOpen(true);
-    }
-
-    switch (type) {
-      case 'universal':
-        setUniversalFile(selectedFile); setUniversalPreview(url);
-        const img = new Image();
-        img.onload = () => { setBrandColor(getDominantColor(img)); };
-        img.src = url;
-        setGeneratedIcons([]);
-        break;
-      case 'light_override': setLightFile(selectedFile); setLightPreview(url); break;
-      case 'dark_override': setDarkFile(selectedFile); setDarkPreview(url); break;
-      case 'fav_universal': setFavUniversalFile(selectedFile); setFavUniversalPreview(url); break;
-      case 'fav_light_override': setFavLightFile(selectedFile); setFavLightPreview(url); break;
-      case 'fav_dark_override': setFavDarkFile(selectedFile); setFavDarkPreview(url); break;
+      const img = new Image();
+      img.onload = () => setBrandColor(getDominantColor(img));
+      img.src = url;
     }
   };
 
-  const handleEyedropper = async () => {
-    if (!('EyeDropper' in window)) { alert("Your browser does not support the Eyedropper API."); return; }
-    try {
-      // @ts-ignore
-      const eyeDropper = new window.EyeDropper();
-      const result = await eyeDropper.open();
-      setBrandColor(result.sRGBHex);
-    } catch (e) { console.log('User canceled the eyedropper'); }
+  const clearFile = (type: string) => {
+    setFiles(prev => ({ ...prev, [type]: { file: null, preview: null } }));
   };
 
-  const clearFile = (type: UploadType) => {
-    switch (type) {
-      case 'universal': setUniversalFile(null); setUniversalPreview(null); setGeneratedIcons([]); break;
-      case 'light_override': setLightFile(null); setLightPreview(null); break;
-      case 'dark_override': setDarkFile(null); setDarkPreview(null); break;
-      case 'fav_universal': setFavUniversalFile(null); setFavUniversalPreview(null); break;
-      case 'fav_light_override': setFavLightFile(null); setFavLightPreview(null); break;
-      case 'fav_dark_override': setFavDarkFile(null); setFavDarkPreview(null); break;
+  /**
+   * Generates filenames dynamically based on Strategy and Default Theme
+   */
+  const resolveFilename = (baseName: string, variant: 'light' | 'dark', extension: string) => {
+    if (namingStrategy === 'modern') {
+      // Modern: clean name for default, suffix for alternate
+      if (variant === defaultTheme) {
+        return `${baseName}.${extension}`;
+      } else {
+        return `${baseName}-${variant}.${extension}`;
+      }
+    } else {
+      // Verbose: always suffix
+      return `${baseName}-${variant}.${extension}`;
     }
   };
 
-  const toggleSize = (size: number) => {
-      setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size].sort((a,b)=>a-b));
-  };
-
-  const generateSet = async (targetSizes: number[]) => {
-    if (!universalFile) return [];
+  const generateSet = async () => {
+    if (!files.universal.file) return;
+    setIsGenerating(true);
     
     const results: GeneratedFile[] = [];
+    const master = files.universal.file;
 
-    // --- Resolve Sources ---
-    const srcLogoLight = lightFile || universalFile;
-    const srcLogoDark = darkFile || universalFile;
-    const srcFavLight = favLightFile || favUniversalFile || lightFile || universalFile;
-    const srcFavDark = favDarkFile || favUniversalFile || darkFile || universalFile;
-
-    // --- 0. SVG Pass-through ---
-    // If the source is an SVG, we include the vector file directly.
-    const addSvg = (src: File, name: string, variant: IconVariant, type: 'logo' | 'favicon') => {
-       if (src.type === 'image/svg+xml') {
-          results.push({
-            id: name,
-            name: name,
-            blob: src, // The original vector file
-            url: URL.createObjectURL(src),
-            size: src.size,
-            category: 'web',
-            variant: variant,
-            width: 0, // 0 triggers "SVG" badge in UI
-            height: 0,
-            originalDef: { name, width: 0, height: 0, category: 'web', transparent: true, format: 'svg', type },
-            typeLabel: type
-          });
-       }
+    const getSourceForVariant = (targetType: 'logo' | 'favicon', variant: 'light' | 'dark'): { file: File | Blob, isAuto: boolean } => {
+      if (targetType === 'favicon') {
+        const specific = variant === 'light' ? files.faviconLight.file : files.faviconDark.file;
+        if (specific) return { file: specific, isAuto: false };
+      } else {
+        const specific = variant === 'light' ? files.light.file : files.dark.file;
+        if (specific) return { file: specific, isAuto: false };
+      }
+      return { file: master, isAuto: autoVariants };
     };
 
-    addSvg(srcLogoLight, 'logo-light.svg', 'light', 'logo');
-    addSvg(srcLogoDark, 'logo-dark.svg', 'dark', 'logo');
-    addSvg(srcFavLight, 'favicon.svg', 'light', 'favicon'); // Modern standard
+    // --- 1. Define Tasks Dynamically (All Variants) ---
+    const variants: ('light' | 'dark')[] = ['light', 'dark'];
+    const tasks: any[] = [];
 
+    // A. PWA / Android / Web (Standard)
+    // Generates icon-192.png, icon-192-dark.png, etc.
+    const pwaSizes = [192, 512];
+    pwaSizes.forEach(size => {
+       variants.forEach(variant => {
+         const name = resolveFilename(`icon-${size}`, variant, 'png');
+         tasks.push({ 
+           name, 
+           width: size, 
+           height: size, 
+           variant, 
+           type: 'logo', 
+           format: 'png', 
+           transparent: isBgTransparent 
+         });
+       });
+    });
 
-    // --- 0.5 Pre-load sources as Bitmaps for Performance ---
-    const sourceCache = new Map<File, CanvasImageSource>();
-    const createdUrls: string[] = [];
-
-    const getSourceBitmap = async (file: File): Promise<CanvasImageSource> => {
-        if (sourceCache.has(file)) return sourceCache.get(file)!;
-        
-        // Skip createImageBitmap for SVGs to ensure vector scaling works via drawImage
-        // (ImageBitmap creates a raster snapshot, drawImage(img) uses the vector)
-        const isSvg = file.type === 'image/svg+xml';
-
-        if (!isSvg) {
-            try {
-                const bmp = await createImageBitmap(file);
-                sourceCache.set(file, bmp);
-                return bmp;
-            } catch (e) {
-                // Fallback intended for any failed bitmap creation
-            }
-        }
-        
-        // Robust fallback for SVG or failed bitmaps
-        return new Promise<HTMLImageElement>((resolve, reject) => {
-            const img = new Image();
-            const url = URL.createObjectURL(file);
-            createdUrls.push(url);
-            img.onload = () => {
-                sourceCache.set(file, img);
-                resolve(img);
-            };
-            img.onerror = () => reject(new Error("The source image could not be decoded."));
-            img.src = url;
+    // B. Linux / Desktop / General Web
+    // Generates icon-64.png, icon-128.png (standard PNGs often used in Linux docks or desktop shortcuts)
+    const generalSizes = [64, 128];
+    generalSizes.forEach(size => {
+      variants.forEach(variant => {
+        const name = resolveFilename(`icon-${size}`, variant, 'png');
+        tasks.push({
+          name, width: size, height: size, variant, type: 'logo', format: 'png', transparent: isBgTransparent
         });
-    };
-    
-    // Helper to generate a single file using cached bitmap
-    const gen = async (src: File, size: number, mode: IconVariant, type: 'logo' | 'favicon', format: 'png' | 'ico' = 'png', explicitName?: string) => {
-        const name = explicitName || `${type}-${mode}-${size}x${size}.${format}`;
-        const def: IconDefinition = { name, width: size, height: size, category: 'web', transparent: true, format, type };
-        
-        const bitmap = await getSourceBitmap(src);
+      });
+    });
 
-        const { blob, analysis, size: byteSize } = await processImage(bitmap, def, brandColor, { 
-            scale: 1, 
-            padding: 0, 
-            keepOriginalBackground: keepOriginalBackground, 
-            quality: compressionQuality 
-        });
-        
-        results.push({
-            id: name,
-            name,
-            blob,
-            url: URL.createObjectURL(blob),
-            size: byteSize,
-            category: 'web',
-            variant: mode,
-            width: size,
-            height: size,
-            originalDef: def,
-            analysis,
-            typeLabel: type
-        });
-        return { width: size, height: size, blob };
-    };
+    // C. Apple Touch Icon (iOS)
+    // Generates apple-touch-icon.png (default theme) AND apple-touch-icon-dark.png (alt theme)
+    // Note: Apple icons are typically OPAQUE. We force transparent: false unless specifically overridden in logic below.
+    variants.forEach(variant => {
+      const name = resolveFilename('apple-touch-icon', variant, 'png');
+      tasks.push({
+        name,
+        width: 180,
+        height: 180,
+        variant,
+        type: 'logo',
+        format: 'png',
+        transparent: false // iOS icons should be solid (black/white bg)
+      });
+    });
+
+    // D. Microsoft Tiles (Windows 8/10/11)
+    // MSTile 150x150 is the most common standard
+    variants.forEach(variant => {
+      const name = resolveFilename('mstile-150x150', variant, 'png');
+      tasks.push({
+        name,
+        width: 150,
+        height: 150,
+        variant,
+        type: 'logo',
+        format: 'png',
+        transparent: isBgTransparent // Windows tiles often transparent
+      });
+    });
+
+    // Social Images (Always Light/Default source usually, but let's make it standard)
+    // Social doesn't usually switch by theme, it uses the primary brand.
+    tasks.push({ name: 'og-image.jpg', width: 1200, height: 630, format: 'jpg', variant: 'light', type: 'social', transparent: false });
+    tasks.push({ name: 'twitter-card.jpg', width: 1200, height: 600, format: 'jpg', variant: 'light', type: 'social', transparent: false });
+
 
     try {
-        // 1. Generate PNGs for all sizes (Logos) - Parallel
-        const logoPromises = [];
-        for (const size of targetSizes) {
-           logoPromises.push(gen(srcLogoLight, size, 'light', 'logo'));
-           logoPromises.push(gen(srcLogoDark, size, 'dark', 'logo'));
+      // --- 2. Execute Raster Tasks ---
+      const processingPromises = tasks.map(async def => {
+        let sourceFile: File | Blob;
+        
+        if (def.type === 'social') {
+             sourceFile = master;
+        } else {
+             const { file } = getSourceForVariant(def.type as any, def.variant as any);
+             sourceFile = file;
         }
-        await Promise.all(logoPromises);
+        
+        let bgColor = def.variant === 'light' ? brandColor : brandColorDark;
+        
+        // Override transparency for social or JPG
+        let useTransparent = def.transparent;
+        if (def.format === 'jpg') useTransparent = false;
+        
+        const { blob, analysis } = await processImage(
+          sourceFile, 
+          { ...def, category: 'web', transparent: useTransparent } as any,
+          bgColor,
+          def.type === 'social' ? files.socialBG.file : null,
+          { scale: 1, padding: padding }
+        );
 
-        // 2. Generate Favicon PNGs (Small sizes only) - Parallel
-        const faviconSizes = targetSizes.filter(s => s <= 64);
-        const faviconPromises = [];
-        const icoPartsLight: { width: number, height: number, blob: Blob }[] = [];
-        const icoPartsDark: { width: number, height: number, blob: Blob }[] = [];
+        results.push({
+          id: def.name, name: def.name, blob, url: URL.createObjectURL(blob),
+          size: blob.size, category: 'web', variant: def.variant as any,
+          width: def.width, height: def.height, originalDef: def as any, analysis, typeLabel: def.type as any
+        });
+      });
 
-        // We need to await these sequentially or handle array pushing carefully to group them later for ICO
-        // For simplicity, we generate them and collect results
-        for (const size of faviconSizes) {
-            faviconPromises.push(gen(srcFavLight, size, 'light', 'favicon').then(res => { icoPartsLight.push(res); }));
-            faviconPromises.push(gen(srcFavDark, size, 'dark', 'favicon').then(res => { icoPartsDark.push(res); }));
-        }
-        await Promise.all(faviconPromises);
-
-        // 3. Generate ICOs (Multi-layer)
-        if (icoPartsLight.length > 0) {
-            const icoBlob = await generateIco(icoPartsLight);
-            results.push({
-                id: 'favicon-light.ico', name: 'favicon-light.ico', blob: icoBlob, url: URL.createObjectURL(icoBlob), size: icoBlob.size, category: 'web', variant: 'light', width: 32, height: 32,
-                typeLabel: 'favicon', originalDef: { name: 'favicon-light.ico', width: 32, height: 32, category: 'web', transparent: true, format: 'ico', type: 'favicon' }
-            });
-        }
-        if (icoPartsDark.length > 0) {
-            const icoBlob = await generateIco(icoPartsDark);
-            results.push({
-                id: 'favicon-dark.ico', name: 'favicon-dark.ico', blob: icoBlob, url: URL.createObjectURL(icoBlob), size: icoBlob.size, category: 'web', variant: 'dark', width: 32, height: 32,
-                typeLabel: 'favicon', originalDef: { name: 'favicon-dark.ico', width: 32, height: 32, category: 'web', transparent: true, format: 'ico', type: 'favicon' }
-            });
-        }
-
-        // 4. Social Media (Force Background Color)
-        const genSocial = async (src: File, w: number, h: number, name: string) => {
-            const def: IconDefinition = { name, width: w, height: h, category: 'social', transparent: false, format: 'jpg', type: 'social' };
-            const bitmap = await getSourceBitmap(src);
-            const { blob, analysis, size } = await processImage(bitmap, def, brandColor, { scale: 1, padding: 0, backgroundColor: brandColor, keepOriginalBackground: false, quality: 0.9 });
-            results.push({ id: name, name, blob, url: URL.createObjectURL(blob), size, category: 'social', variant: 'light', width: w, height: h, originalDef: def, analysis, typeLabel: 'social' });
-        };
-        await Promise.all([
-            genSocial(universalFile, 1200, 630, 'og-image.jpg'),
-            genSocial(universalFile, 1200, 600, 'twitter-card.jpg')
+      // --- 3. Favicons (ICO) ---
+      // Modern: default -> favicon.ico, alternate -> favicon-alt.ico
+      // Verbose: favicon-light.ico, favicon-dark.ico
+      
+      const favTasks = variants.map(async fVar => {
+        const { file } = getSourceForVariant('favicon', fVar);
+        // Generate temp PNGs for ICO construction
+        const f16 = await processImage(file, { name: `_tmp`, width: 16, height: 16, type: 'favicon', category: 'web', transparent: true, format: 'png' } as any, brandColor, null, { scale: 1, padding: padding });
+        const f32 = await processImage(file, { name: `_tmp`, width: 32, height: 32, type: 'favicon', category: 'web', transparent: true, format: 'png' } as any, brandColor, null, { scale: 1, padding: padding });
+        
+        const icoBlob = await generateIco([
+          { width: 16, height: 16, blob: f16.blob },
+          { width: 32, height: 32, blob: f32.blob }
         ]);
         
-    } finally {
-        // Cleanup Bitmaps to free memory
-        sourceCache.forEach(item => {
-            if (item instanceof ImageBitmap) item.close();
-        });
-        createdUrls.forEach(url => URL.revokeObjectURL(url));
-    }
-
-    return results;
-  };
-
-  const handleGenerate = async () => {
-    if (!universalFile) return;
-    setIsGenerating(true);
-    setSidebarOpen(false);
-    
-    // Parse custom sizes
-    const customSizes = customSizesStr.split(',')
-        .map(s => parseInt(s.trim()))
-        .filter(n => !isNaN(n) && n > 0);
-    
-    // Merge and Deduplicate
-    const allSizes = Array.from(new Set([...selectedSizes, ...customSizes])).sort((a,b)=>a-b);
-
-    try {
-      const generated = await generateSet(allSizes);
-      setGeneratedIcons(generated);
-    } catch (error) { console.error(error); alert("Error generating icons"); } finally { setIsGenerating(false); }
-  };
-
-  const handleDownload = async () => {
-    if (generatedIcons.length === 0) return;
-    const zip = new JSZip();
-    const folder = zip.folder("icon-forge-assets");
-    generatedIcons.forEach(icon => folder?.file(icon.name, icon.blob));
-    const content = await zip.generateAsync({ type: "blob" });
-    FileSaver.saveAs(content, "icon-forge-assets.zip");
-  };
-
-  // Re-run processing for Editor
-  useEffect(() => {
-    let isCancelled = false;
-    const updatePreview = async () => {
-      if (!editingIcon) return;
-      // Resolve source just for re-previewing in editor
-      let source = universalFile;
-      // Try to find the specific source that likely generated this
-      if (editingIcon.typeLabel === 'favicon') {
-          if (editingIcon.variant === 'dark') source = favDarkFile || favUniversalFile || darkFile || universalFile;
-          else source = favLightFile || favUniversalFile || lightFile || universalFile;
-      } else {
-          if (editingIcon.variant === 'dark') source = darkFile || universalFile;
-          else source = lightFile || universalFile;
-      }
-      
-      if (!source) return;
-
-      try {
-        const { blob, analysis } = await processImage(source, editingIcon.originalDef, brandColor, editOptions);
-        if (!isCancelled) { 
-            if (editPreviewUrl) URL.revokeObjectURL(editPreviewUrl); 
-            setEditPreviewUrl(URL.createObjectURL(blob)); 
-            setEditAnalysis(analysis); 
+        let icoName = '';
+        if (namingStrategy === 'modern') {
+          if (fVar === defaultTheme) icoName = 'favicon.ico';
+          else icoName = `favicon-${fVar}.ico`;
+        } else {
+          icoName = `favicon-${fVar}.ico`;
         }
-      } catch (e) { console.error(e); }
-    };
-    const timer = setTimeout(updatePreview, 50); 
-    return () => { isCancelled = true; clearTimeout(timer); };
-  }, [editOptions, editingIcon?.id]);
 
-  const saveEditedIcon = async () => {
-      if(!editingIcon || !editPreviewUrl || !editAnalysis) return;
-      const res = await fetch(editPreviewUrl);
-      const blob = await res.blob();
-      setGeneratedIcons(prev => prev.map(icon => { if (icon.id === editingIcon.id) { return { ...icon, blob, url: editPreviewUrl, analysis: editAnalysis, size: blob.size }; } return icon; }));
-      setEditingIcon(null);
+        results.push({
+          id: icoName, name: icoName, blob: icoBlob, url: URL.createObjectURL(icoBlob),
+          size: icoBlob.size, category: 'web', variant: fVar, width: 32, height: 32,
+          typeLabel: 'favicon', originalDef: {} as any
+        });
+      });
+
+
+      // --- 4. SVG Pass-through ---
+      const addSvgIfAvailable = (source: File | Blob | null, variant: IconVariant) => {
+        if (source && source.type === 'image/svg+xml') {
+           // Resolve name
+           let name = '';
+           if (namingStrategy === 'modern') {
+             if (variant === defaultTheme || variant === 'any') name = 'icon.svg';
+             else name = `icon-${variant}.svg`;
+           } else {
+             name = `icon-${variant === 'any' ? 'universal' : variant}.svg`;
+           }
+           
+           results.push({
+             id: name,
+             name: name,
+             blob: source,
+             url: URL.createObjectURL(source),
+             size: source.size,
+             category: 'web',
+             variant: variant,
+             width: 0, 
+             height: 0, 
+             typeLabel: 'logo',
+             originalDef: { name, width: 0, height: 0, category: 'web', transparent: true, format: 'svg', type: 'logo' } as any
+           });
+        }
+      };
+
+      // Add SVGs
+      // If we have a specific light file, add it.
+      if (files.light.file) addSvgIfAvailable(files.light.file, 'light');
+      // If we have a specific dark file, add it.
+      if (files.dark.file) addSvgIfAvailable(files.dark.file, 'dark');
+      
+      // If Universal is the ONLY source, it becomes the default 'icon.svg'.
+      if (files.universal.file && !files.light.file && !files.dark.file) {
+         addSvgIfAvailable(files.universal.file, defaultTheme); 
+      } else {
+         addSvgIfAvailable(files.universal.file, 'any');
+      }
+
+
+      await Promise.all([...processingPromises, ...favTasks]);
+      setGeneratedIcons(results);
+      setActiveTab('forge');
+    } catch (e) {
+      console.error("Forge failed:", e);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const renderIconCard = (icon: GeneratedFile, themeContext: 'light' | 'dark') => (
-      <div key={icon.id} className="group/card flex flex-col items-center animate-fade-in-up">
-          {/* Main Card Container */}
-          <div className={`relative border rounded-xl w-full aspect-square transition-all hover:shadow-xl hover:border-purple-500/50 overflow-hidden flex flex-col ${themeContext === 'light' ? 'bg-white border-black/10' : 'bg-zinc-800 border-white/10'}`}>
-              
-              {/* Icon Area with Magnifier */}
-              <div className="flex-1 relative p-3 flex items-center justify-center overflow-hidden">
-                   <div className="w-full h-full">
-                       <IconMagnifier url={icon.url} />
-                   </div>
-                   
-                   {/* Hover Action (Edit) */}
-                   <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover/card:opacity-100 transition-all duration-200 translate-x-2 group-hover/card:translate-x-0">
-                      {icon.width > 0 && <button onClick={() => { setEditingIcon(icon); setEditOptions({scale:1, padding:0, backgroundColor: (!keepOriginalBackground) ? brandColor : '', keepOriginalBackground}); }} className="p-1.5 bg-zinc-900 text-zinc-300 rounded-lg hover:bg-purple-600 hover:text-white shadow-lg border border-white/10" title="Edit"><Edit2 size={12}/></button>}
-                   </div>
-              </div>
+  const getManifestObject = () => {
+    // Filter icons to ONLY include the Default Theme assets for the Manifest
+    // This keeps the manifest clean. The ZIP will still contain the alternate dark/light files.
+    // We also include SVG if available for default theme.
+    const iconsList = generatedIcons
+      .filter(i => i.typeLabel === 'logo' && (i.variant === defaultTheme || i.variant === 'any'))
+      .map(i => ({
+        src: i.name,
+        sizes: i.width > 0 ? `${i.width}x${i.height}` : 'any',
+        type: i.width > 0 ? "image/png" : "image/svg+xml"
+      }));
 
-              {/* Info Bar (Separated from image to avoid overlap) */}
-              <div className={`h-8 border-t flex items-center justify-between px-3 text-[10px] font-mono shrink-0 ${themeContext === 'light' ? 'bg-zinc-50 border-black/5 text-gray-500' : 'bg-zinc-900 border-white/5 text-gray-400'}`}>
-                  <span className="font-bold">{icon.width > 0 ? `${icon.width}px` : 'SVG'}</span>
-                  <WcagBadge ratio={icon.analysis?.contrastRatio} />
-              </div>
-          </div>
-          
-          {/* Filename below card */}
-          <span className="mt-2 text-[10px] text-gray-400 font-mono truncate w-full text-center px-1 select-all" title={icon.name}>{icon.name}</span>
-      </div>
-  );
+    return {
+      name: appInfo.name,
+      short_name: appInfo.shortName,
+      description: appInfo.description,
+      start_url: appInfo.startUrl,
+      display: "standalone",
+      background_color: brandColor,
+      theme_color: brandColor,
+      orientation: "any",
+      icons: iconsList
+    };
+  };
+
+  // Uses translations for labels
+  const uploadSlots = [
+    { id: 'light', icon: <Sun size={14}/>, labelKey: 'lightIcon', res: '1024x1024' },
+    { id: 'dark', icon: <Moon size={14}/>, labelKey: 'darkIcon', res: '1024x1024' },
+    { id: 'faviconLight', icon: <Grid3X3 size={14}/>, labelKey: 'favLight', res: '512x512' },
+    { id: 'faviconDark', icon: <Grid3X3 size={14}/>, labelKey: 'favDark', res: '512x512' },
+    { id: 'socialBG', icon: <Share2 size={14}/>, labelKey: 'socialCardBg', res: '1200x630' }
+  ];
+
+  const getSectionLabel = (type: string) => {
+    if (type === 'logo') return t('labelLogo');
+    if (type === 'social') return t('labelSocial');
+    if (type === 'favicon') return t('labelFavicon');
+    return t('assets');
+  };
 
   return (
-    <div className="h-screen bg-bg-primary text-text-primary font-sans flex flex-col overflow-hidden relative selection:bg-purple-500/30 selection:text-white">
-      <div className="absolute inset-0 bg-gradient-glow pointer-events-none opacity-40"></div>
+    <div className="flex flex-col md:h-screen bg-studio-bg text-studio-text relative selection:bg-studio-accent/30 overflow-x-hidden">
+      <div className="fixed inset-0 blueprint-grid pointer-events-none z-0"></div>
       
-      <TitleBar onOpenSettings={() => setShowSettings(true)} />
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-8" onClick={() => setShowSettings(false)}>
+           <div className="bg-studio-card border border-studio-border p-8 rounded-[2rem] w-full max-w-md shadow-2xl relative animate-spring max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setShowSettings(false)} className="absolute top-6 right-6 p-2 text-studio-sub hover:text-studio-text"><X size={20}/></button>
+              <h2 className="text-xl font-black uppercase tracking-wide mb-8 flex items-center gap-3"><Settings className="text-studio-accent"/> {t('settings')}</h2>
+              
+              <div className="space-y-8">
+                 <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase text-studio-sub tracking-widest flex items-center gap-2"><Type size={12}/> {t('appInfo')}</label>
+                    <div className="space-y-3">
+                       <div>
+                          <label className="text-[9px] font-bold text-studio-sub uppercase mb-1 block">{t('lblName')}</label>
+                          <input type="text" value={appInfo.name} onChange={e => setAppInfo({...appInfo, name: e.target.value})} className="w-full bg-studio-bg border border-studio-border rounded-lg px-3 py-2 text-xs text-studio-text focus:border-studio-accent outline-none transition-colors" />
+                       </div>
+                       <div className="grid grid-cols-2 gap-3">
+                         <div>
+                            <label className="text-[9px] font-bold text-studio-sub uppercase mb-1 block">{t('lblShortName')}</label>
+                            <input type="text" value={appInfo.shortName} onChange={e => setAppInfo({...appInfo, shortName: e.target.value})} className="w-full bg-studio-bg border border-studio-border rounded-lg px-3 py-2 text-xs text-studio-text focus:border-studio-accent outline-none transition-colors" />
+                         </div>
+                         <div>
+                            <label className="text-[9px] font-bold text-studio-sub uppercase mb-1 block">{t('lblStartUrl')}</label>
+                            <input type="text" value={appInfo.startUrl} onChange={e => setAppInfo({...appInfo, startUrl: e.target.value})} className="w-full bg-studio-bg border border-studio-border rounded-lg px-3 py-2 text-xs text-studio-text focus:border-studio-accent outline-none transition-colors" />
+                         </div>
+                       </div>
+                       <div>
+                          <label className="text-[9px] font-bold text-studio-sub uppercase mb-1 block">{t('lblDesc')}</label>
+                          <textarea value={appInfo.description} onChange={e => setAppInfo({...appInfo, description: e.target.value})} className="w-full bg-studio-bg border border-studio-border rounded-lg px-3 py-2 text-xs text-studio-text focus:border-studio-accent outline-none transition-colors h-20 resize-none" />
+                       </div>
+                    </div>
+                 </div>
 
-      {/* --- HEADER --- */}
-      <header className="h-16 border-b border-border-subtle bg-bg-glass backdrop-blur-md flex items-center justify-between px-4 md:px-8 shrink-0 no-drag z-30">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 text-text-muted hover:text-white"><Menu size={20} /></button>
-            <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-gradient-primary rounded-lg shadow-lg shadow-purple-500/20"><Layers size={18} className="text-white"/></div>
-                <h1 className="font-bold text-sm tracking-widest hidden sm:block">ICON FORGE</h1>
-            </div>
+                 <div className="h-px bg-studio-border"></div>
+
+                 {/* Default Theme Selector */}
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-studio-sub tracking-widest flex items-center gap-2"><Star size={12}/> {t('lblDefaultTheme')}</label>
+                    <div className="flex gap-2">
+                       <button onClick={() => setDefaultTheme('light')} className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 ${defaultTheme === 'light' ? 'bg-white text-black border border-white' : 'bg-studio-bg border border-studio-border text-studio-sub'}`}>
+                          <Sun size={14}/> {t('defLight')}
+                       </button>
+                       <button onClick={() => setDefaultTheme('dark')} className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 ${defaultTheme === 'dark' ? 'bg-gray-900 text-white border border-gray-900' : 'bg-studio-bg border border-studio-border text-studio-sub'}`}>
+                          <Moon size={14}/> {t('defDark')}
+                       </button>
+                    </div>
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-studio-sub tracking-widest">{t('nomenclature')}</label>
+                    <div className="flex gap-2">
+                       {(['verbose', 'modern'] as NamingStrategy[]).map(s => (
+                          <button key={s} onClick={() => setNamingStrategy(s)} className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase transition-all ${namingStrategy === s ? 'bg-studio-text text-studio-bg' : 'bg-studio-bg border border-studio-border text-studio-sub'}`}>
+                             {s}
+                          </button>
+                       ))}
+                    </div>
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase text-studio-sub tracking-widest">{t('language')}</label>
+                    <div className="grid grid-cols-3 gap-2">
+                       {(['pt', 'en', 'es'] as AppLanguage[]).map(l => (
+                          <button key={l} onClick={() => setLang(l)} className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${lang === l ? 'bg-studio-accent text-black' : 'bg-studio-bg border border-studio-border text-studio-sub hover:border-studio-accent'}`}>
+                             {l === 'pt' ? 'Português' : l === 'en' ? 'English' : 'Español'}
+                          </button>
+                       ))}
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      <header className="sticky top-0 h-16 shrink-0 border-b border-studio-border bg-studio-bg/50 backdrop-blur-xl z-50 flex items-center justify-between px-8">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 bg-studio-accent rounded-2xl flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)]"><Layers size={20} className="text-black" strokeWidth={3} /></div>
+             <div className="flex flex-col"><span className="text-[10px] font-black tracking-widest uppercase">Icon Forge Pro</span><span className="text-[8px] text-studio-sub uppercase font-bold">Studio v7.2</span></div>
           </div>
-
-          <div className="flex items-center gap-2 md:gap-4">
-              <button 
-                  onClick={handleDownload}
-                  disabled={generatedIcons.length === 0}
-                  className={`px-4 md:px-6 py-2 rounded-full text-xs md:text-sm font-bold flex items-center gap-2 transition-all duration-200 hover:scale-105 active:scale-95 ${generatedIcons.length === 0 ? 'bg-bg-tertiary text-text-muted' : 'bg-white text-black hover:bg-zinc-200 shadow-[0_0_30px_-5px_rgba(255,255,255,0.3)]'}`}
-              >
-                  <Download size={16}/> <span className="hidden sm:inline">{t('download')}</span>
-              </button>
+          <div className="hidden md:flex items-center gap-4">
+             <div className="flex items-center gap-2 px-3 py-1.5 glass-card rounded-full border border-studio-border/50 group relative">
+                <span className="text-[9px] font-black uppercase text-studio-sub tracking-widest">{t('autoVariants')}</span>
+                <button onClick={() => setAutoVariants(!autoVariants)} className="text-studio-accent">
+                  {autoVariants ? <ToggleRight size={22} /> : <ToggleLeft size={22} className="opacity-40" />}
+                </button>
+                {/* Tooltip for Auto Variants */}
+                <div className="absolute top-full right-0 mt-2 w-48 p-2 bg-studio-card border border-studio-border rounded-lg text-[8px] text-studio-sub opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  {t('autoVariantsDesc')}
+                </div>
+             </div>
+             <div className="h-6 w-px bg-studio-border mx-2"></div>
+             <button onClick={() => setShowSettings(true)} className="p-2 text-studio-sub hover:text-studio-accent transition-colors"><Settings size={20} /></button>
+             <div className="flex items-center gap-1">
+               {['light', 'dark', 'tender'].map(m => (
+                 <button key={m} onClick={() => setTheme(m as any)} className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase transition-all ${theme === m ? 'bg-studio-accent text-black' : 'text-studio-sub hover:bg-studio-border'}`}>{m}</button>
+               ))}
+             </div>
           </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden relative z-10">
-        <input type="file" ref={overrideInputRef} hidden accept="image/*" />
-
-        {/* --- SIDEBAR --- */}
-        <aside 
-            className={`fixed md:static inset-y-0 left-0 z-40 bg-bg-glass backdrop-blur-xl border-r border-border-subtle flex flex-col shrink-0 animate-slide-in-left ${sidebarOpen ? 'flex' : 'hidden md:flex'} ${sidebarCollapsed ? 'w-20' : 'w-80 lg:w-96'} transition-[width] duration-300`}
-        >
-            <div className="p-4 md:hidden flex justify-between items-center border-b border-border-subtle">
-                    <span className="font-bold text-white">{t('appName')}</span>
-                    <button onClick={() => setSidebarOpen(false)}><X size={20} className="text-text-muted"/></button>
-            </div>
-
-            <div className={`flex-1 overflow-y-auto overflow-x-hidden ${sidebarCollapsed ? 'px-2 py-4' : 'px-6 py-4'}`}>
-                {/* Uploads */}
-                {!sidebarCollapsed ? (
-                    <AccordionItem title={t('mainSources')} icon={<FolderOpen size={14} className="text-purple-400" />} defaultOpen collapsed={sidebarCollapsed}>
-                        <div className="space-y-6">
-                            <UploadZone file={universalFile} preview={universalPreview} type="universal" label={t('universal')} desc={t('universalDesc')} icon={<Layers size={14} className="text-blue-400" />} inputRef={mainInputRef} t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
-                            
-                            <div className="pl-4 border-l border-border-subtle space-y-4">
-                                <UploadZone file={lightFile} preview={lightPreview} type="light_override" label={t('lightOverride')} icon={<Sun size={14} className="text-amber-400" />} optional height="h-24" t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
-                                <UploadZone file={darkFile} preview={darkPreview} type="dark_override" label={t('darkOverride')} icon={<Moon size={14} className="text-purple-400" />} optional height="h-24" t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
-                            </div>
-
-                            <div className="pt-4 border-t border-border-subtle">
-                                <h4 className="text-[10px] font-bold text-text-muted uppercase mb-4 opacity-70">Favicon Specifics</h4>
-                                <div className="space-y-4">
-                                    <UploadZone file={favUniversalFile} preview={favUniversalPreview} type="fav_universal" label={t('favUniversal')} icon={<Minimize size={14} className="text-gray-400" />} optional height="h-24" t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <UploadZone file={favLightFile} preview={favLightPreview} type="fav_light_override" label={t('favLightOverride')} icon={<Sun size={14} className="text-gray-500" />} optional height="h-20" t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
-                                        <UploadZone file={favDarkFile} preview={favDarkPreview} type="fav_dark_override" label={t('favDarkOverride')} icon={<Moon size={14} className="text-gray-500" />} optional height="h-20" t={t} onFileSelect={processSelectedFile} onClear={clearFile} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </AccordionItem>
-                ) : (
-                    <div className="flex flex-col gap-4 items-center">
-                        <button onClick={() => setSidebarCollapsed(false)} className="p-3 bg-bg-tertiary rounded-xl hover:bg-purple-500/20 text-text-muted hover:text-white transition-colors"><FolderOpen size={18}/></button>
-                    </div>
-                )}
-
-                {/* Sizes */}
-                    {!sidebarCollapsed ? (
-                    <AccordionItem title={t('sizes')} icon={<LayoutTemplate size={14} className="text-pink-400" />} collapsed={sidebarCollapsed}>
-                        <div className="space-y-3">
-                            <div className="flex flex-wrap gap-2">
-                                {STANDARD_SIZES.map(size => (
-                                    <button 
-                                        key={size}
-                                        onClick={() => toggleSize(size)}
-                                        className={`px-3 py-1 rounded-md text-xs font-mono border transition-all ${selectedSizes.includes(size) ? 'bg-purple-500/20 border-purple-500 text-purple-300' : 'bg-bg-tertiary border-transparent text-text-muted hover:border-white/20'}`}
-                                    >
-                                        {size}px
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="pt-2 border-t border-border-subtle">
-                                <label className="text-[10px] font-bold text-text-muted uppercase mb-1 block">{t('customSizes')}</label>
-                                <input 
-                                    type="text" 
-                                    value={customSizesStr}
-                                    onChange={(e) => setCustomSizesStr(e.target.value)}
-                                    placeholder="e.g. 24, 42, 80"
-                                    className="w-full bg-bg-tertiary border border-border-light rounded-lg px-3 py-2 text-xs font-mono focus:border-purple-500 focus:outline-none"
-                                />
-                            </div>
-                        </div>
-                    </AccordionItem>
-                ) : null}
-
-                {/* Configuration */}
-                {!sidebarCollapsed ? (
-                    <AccordionItem title={t('config')} icon={<Sliders size={14} className="text-blue-400" />} collapsed={sidebarCollapsed}>
-                    <div className="space-y-6">
-                        {/* Color Picker */}
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-bold text-text-subtle uppercase tracking-wider">{t('brandColor')}</label>
-                                <div className="flex gap-2 items-center">
-                                    {'EyeDropper' in window && (
-                                    <button 
-                                        onClick={handleEyedropper} 
-                                        className="p-1.5 bg-bg-tertiary hover:bg-purple-500 hover:text-white rounded-lg border border-border-light text-text-muted transition-colors"
-                                        title={t('pickColor')}
-                                    >
-                                        <Pipette size={14} />
-                                    </button>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="relative group/color w-full">
-                                    <input type="color" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} className="w-full h-10 bg-transparent border-0 cursor-pointer rounded-lg overflow-hidden opacity-0 absolute inset-0 z-10" />
-                                    <div className="w-full h-10 rounded-lg border border-border-light shadow-sm overflow-hidden flex items-center justify-center font-mono text-xs font-bold text-white text-shadow-sm" style={{backgroundColor: brandColor}}>
-                                        {brandColor}
-                                    </div>
-                                </div>
-                            </div>
-                            <p className="text-[10px] text-text-muted leading-relaxed flex gap-2">
-                                <Info size={12} className="shrink-0 mt-0.5" />
-                                {t('bgInfoSocial')}
-                            </p>
-                        </div>
-
-                        {/* Background Strategy */}
-                        <div className="space-y-3 pt-4 border-t border-border-subtle">
-                            <label className="text-xs font-bold text-text-subtle uppercase tracking-wider">{t('bgStrategy')}</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button 
-                                    onClick={() => setKeepOriginalBackground(true)}
-                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all text-xs font-bold ${keepOriginalBackground ? 'bg-bg-tertiary border-purple-500 text-white' : 'bg-transparent border-border-light text-text-muted hover:bg-bg-tertiary'}`}
-                                >
-                                    <div className="w-full h-6 rounded bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-800 opacity-50"></div>
-                                    {t('bgTransparent')}
-                                </button>
-                                <button 
-                                    onClick={() => setKeepOriginalBackground(false)}
-                                    className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition-all text-xs font-bold ${!keepOriginalBackground ? 'bg-bg-tertiary border-purple-500 text-white' : 'bg-transparent border-border-light text-text-muted hover:bg-bg-tertiary'}`}
-                                >
-                                    <div className="w-full h-6 rounded" style={{backgroundColor: brandColor}}></div>
-                                    {t('bgFill')}
-                                </button>
-                            </div>
-                            <p className="text-[10px] text-text-muted leading-relaxed">
-                                {t('bgDesc')}
-                            </p>
-                        </div>
-                    </div>
-                    </AccordionItem>
-                ) : null}
-            </div>
-
-            <div className="p-4 border-t border-border-subtle flex justify-end no-drag bg-bg-tertiary/20">
-                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 text-text-muted hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-                    {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-                    </button>
-            </div>
-
-            <div className={`p-6 bg-gradient-to-t from-bg-primary via-bg-primary/90 to-transparent sticky bottom-0 no-drag ${sidebarCollapsed ? 'px-2' : ''}`}>
-                <button 
-                onClick={handleGenerate}
-                disabled={!universalFile || isGenerating}
-                className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${!universalFile ? 'bg-bg-tertiary text-text-muted cursor-not-allowed' : 'bg-gradient-primary text-white shadow-[0_0_40px_-10px_rgba(168,85,247,0.4)] hover:shadow-[0_0_60px_-10px_rgba(168,85,247,0.6)]'}`}
-                >
-                {isGenerating ? <RefreshCw className="animate-spin" size={18}/> : <RefreshCw size={18}/>}
-                {!sidebarCollapsed && (isGenerating ? t('processing') : t('generate'))}
-                </button>
-            </div>
-        </aside>
+      <div className="flex-1 flex flex-col md:flex-row relative z-10 md:overflow-hidden">
         
-        {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}></div>}
+        {/* ASIDE: SOURCES */}
+        <aside className={`md:w-[480px] shrink-0 md:border-r border-studio-border md:overflow-y-auto no-scrollbar ${activeTab === 'sources' ? 'block' : 'hidden md:block'}`}>
+           <div className="p-8 md:p-10 space-y-10 pb-40 md:pb-12 animate-spring">
+              <div className="space-y-2">
+                 <h2 className="text-3xl md:text-4xl font-black tracking-tight">{t('setupTitle')}</h2>
+                 <p className="text-sm text-studio-sub font-medium">{t('setupDesc')}</p>
+              </div>
 
-        {/* --- MAIN DASHBOARD (SPLIT VIEW) --- */}
-        <main className="flex-1 flex flex-col min-w-0 bg-black relative overflow-y-auto">
-          {generatedIcons.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-text-muted animate-fade-in-up p-8">
-                      <div onClick={() => mainInputRef.current?.click()} className="cursor-pointer w-40 h-40 rounded-[2.5rem] bg-bg-tertiary border border-border-light flex items-center justify-center mb-8 shadow-2xl shadow-purple-500/10 relative overflow-hidden group">
-                          <div className="absolute inset-0 bg-gradient-primary opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
-                          <div className="transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">
-                              <ImageIcon size={64} className="opacity-20 text-white" />
-                          </div>
-                          <div className="absolute bottom-4 text-[10px] font-bold uppercase tracking-widest text-text-muted group-hover:text-white transition-colors">Click Upload</div>
+              {/* Master Slot */}
+              <div className="space-y-4">
+                 <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-studio-accent flex items-center gap-2"><Sparkles size={12}/> {t('universal')}</label>
+                    <span className="text-[9px] font-mono text-studio-sub opacity-50">{t('resHint')}1024x1024</span>
+                 </div>
+                 <div className="aspect-square glass-card rounded-[2.5rem] relative overflow-hidden group shadow-2xl border-studio-accent/20">
+                    {!files.universal.preview ? (
+                      <button onClick={() => document.getElementById('up-master')?.click()} className="w-full h-full flex flex-col items-center justify-center gap-4 hover:bg-studio-accent/5 transition-all">
+                         <div className="p-6 bg-studio-bg/50 rounded-3xl border border-studio-border group-hover:scale-110 transition-transform"><Plus size={32} className="text-studio-sub group-hover:text-studio-accent" /></div>
+                         <span className="text-[9px] font-black uppercase tracking-widest opacity-40">{t('dropMaster')}</span>
+                      </button>
+                    ) : (
+                      <div className="w-full h-full p-12 flex items-center justify-center relative bg-checkered rounded-[2.5rem]">
+                         <SafeZoneOverlay show={showSafeZones} />
+                         <img src={files.universal.preview} className="max-w-full max-h-full object-contain drop-shadow-2xl z-20 relative" />
+                         <button onClick={() => clearFile('universal')} className="absolute top-6 right-6 p-2 bg-red-500/10 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-40"><X size={20}/></button>
                       </div>
-                      <h3 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight text-center">{t('ready')}</h3>
-                      <p className="max-w-md text-center text-text-secondary leading-relaxed mb-8 text-sm md:text-base">{t('readyDesc')}</p>
-                  </div>
-              ) : (
-                <div className="flex flex-col min-h-full">
-                    {/* SPLIT VIEW */}
-                    <div className="flex flex-col xl:flex-row flex-1 border-b border-border-subtle">
-                        {/* LIGHT CONTEXT */}
-                        <div className="flex-1 bg-[#f4f4f5] p-8">
-                            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-3">
-                                <Sun size={14} className="text-amber-500"/> {t('lightAssets')}
-                            </h2>
-                            <div className="space-y-8">
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase mb-4 opacity-50">Logos</h3>
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4">
-                                        {generatedIcons.filter(i => i.variant === 'light' && i.typeLabel === 'logo').map(i => renderIconCard(i, 'light'))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase mb-4 opacity-50">Favicons</h3>
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4">
-                                        {generatedIcons.filter(i => i.variant === 'light' && i.typeLabel === 'favicon').map(i => renderIconCard(i, 'light'))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    )}
+                    <input id="up-master" type="file" hidden accept="image/*" onChange={e => e.target.files?.[0] && onFileSelect(e.target.files[0], 'universal')} />
+                 </div>
+              </div>
 
-                        {/* DARK CONTEXT */}
-                        <div className="flex-1 bg-[#18181b] p-8 border-l border-white/5">
-                            <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-6 flex items-center gap-3">
-                                <Moon size={14} className="text-purple-500"/> {t('darkAssets')}
-                            </h2>
-                            <div className="space-y-8">
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-zinc-600 uppercase mb-4 opacity-50">Logos</h3>
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4">
-                                        {generatedIcons.filter(i => i.variant === 'dark' && i.typeLabel === 'logo').map(i => renderIconCard(i, 'dark'))}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-zinc-600 uppercase mb-4 opacity-50">Favicons</h3>
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4">
-                                        {generatedIcons.filter(i => i.variant === 'dark' && i.typeLabel === 'favicon').map(i => renderIconCard(i, 'dark'))}
-                                    </div>
-                                </div>
+              {/* Overrides Slots */}
+              <div className="space-y-6">
+                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2"><Filter size={14} className="text-studio-accent"/> {t('overrides')}</h3>
+                 <div className="grid grid-cols-2 gap-4">
+                    {uploadSlots.map(slot => (
+                      <div key={slot.id} className="flex flex-col gap-2">
+                         <div className="flex items-center justify-between gap-2 px-1">
+                            <span className="text-[8px] font-black text-studio-sub uppercase tracking-widest truncate">{t(slot.labelKey)}</span>
+                            <div className="group relative">
+                               <Info size={10} className="text-studio-sub/40 hover:text-studio-accent cursor-help" />
+                               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-24 p-2 bg-studio-card border border-studio-border rounded-lg text-[7px] font-bold text-center uppercase opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                                  {slot.res} (Sug)
+                               </div>
                             </div>
-                        </div>
-                    </div>
+                         </div>
+                         <button onClick={() => document.getElementById(`up-${slot.id}`)?.click()} className={`h-28 glass-card rounded-2xl flex items-center justify-center relative overflow-hidden group transition-all ${files[slot.id].preview ? 'border-emerald-500/40 bg-emerald-500/5' : 'hover:bg-studio-accent/5'}`}>
+                            {files[slot.id].preview ? (
+                               <img src={files[slot.id].preview!} className="w-full h-full object-cover" />
+                            ) : (
+                               <div className="p-3 bg-studio-bg rounded-xl border border-studio-border group-hover:scale-110 transition-transform">{slot.icon}</div>
+                            )}
+                            {files[slot.id].preview && (
+                               <div className="absolute inset-0 flex items-center justify-center flex-col gap-2 z-10 bg-black/50 opacity-0 group-hover:opacity-100 transition-all">
+                                  <button onClick={(e) => { e.stopPropagation(); clearFile(slot.id); }} className="text-[8px] font-black uppercase text-white bg-red-500 px-3 py-2 rounded-xl shadow-xl hover:scale-105 transition-transform">{t('remove')}</button>
+                               </div>
+                            )}
+                         </button>
+                         <input id={`up-${slot.id}`} type="file" hidden accept="image/*" onChange={e => e.target.files?.[0] && onFileSelect(e.target.files[0], slot.id)} />
+                      </div>
+                    ))}
+                 </div>
+              </div>
 
-                    {/* SOCIAL & SIMULATIONS */}
-                    <div className="p-8 bg-black">
-                        <div className="max-w-7xl mx-auto space-y-12">
-                             {/* Social Media Section */}
-                            <div>
-                                <h2 className="text-xs font-bold text-text-muted uppercase tracking-widest mb-6 flex items-center gap-3">
-                                    <Share2 size={14} className="text-pink-500"/> {t('socialHeader')}
-                                    <span className="text-[10px] opacity-50 normal-case tracking-normal">({t('socialDesc')})</span>
-                                </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {generatedIcons.filter(i => i.typeLabel === 'social').map(icon => (
-                                        <div key={icon.id} className="group relative">
-                                            <div className="aspect-[1.91/1] w-full rounded-2xl overflow-hidden border border-white/10 relative">
-                                                <img src={icon.url} className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                    <button onClick={() => { setEditingIcon(icon); setEditOptions({scale:1, padding:0, backgroundColor: brandColor, keepOriginalBackground: false}); }} className="p-2 bg-white text-black rounded-lg hover:bg-gray-200"><Edit2 size={16}/></button>
-                                                </div>
-                                            </div>
-                                            <div className="mt-2 flex justify-between items-center px-1">
-                                                <span className="text-xs font-mono text-gray-500">{icon.name}</span>
-                                                <span className="text-[10px] text-gray-600">{icon.width}x{icon.height}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            
-                            <SimulationSection t={t} lightIcons={generatedIcons.filter(i => i.variant === 'light')} darkIcons={generatedIcons.filter(i => i.variant === 'dark')} />
-                        </div>
+              {/* Adjustments */}
+              <div className="glass-card rounded-[2.5rem] p-8 space-y-6 shadow-2xl border-studio-border/30">
+                 <div className="grid grid-cols-2 gap-8">
+                    <div className="flex flex-col gap-3">
+                       <span className="text-[10px] font-black uppercase text-studio-sub tracking-widest">{t('safeZones')}</span>
+                       <button onClick={() => setShowSafeZones(!showSafeZones)} className={`px-4 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 ${showSafeZones ? 'bg-studio-accent text-black shadow-lg shadow-studio-accent/20' : 'bg-studio-sec text-studio-sub border border-studio-border'}`}>
+                          {showSafeZones ? 'On' : 'Off'}
+                       </button>
                     </div>
-                </div>
-              )}
+                    <div className="flex flex-col gap-3 items-end">
+                       <span className="text-[10px] font-black uppercase text-studio-sub tracking-widest">{t('masterBG')}</span>
+                       <div className="flex items-center gap-2">
+                           <button onClick={() => setIsBgTransparent(!isBgTransparent)} className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${isBgTransparent ? 'bg-studio-accent text-black border-studio-accent' : 'bg-studio-sec border-studio-border text-studio-sub'}`} title={t('transparent')}>
+                              <Ban size={16}/>
+                           </button>
+                           <div className={`relative w-10 h-10 rounded-xl overflow-hidden border border-studio-border transition-opacity ${isBgTransparent ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                             <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="absolute inset-[-50%] w-[200%] h-[200%] cursor-pointer p-0" />
+                           </div>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* Padding Slider */}
+                 <div className="pt-4 border-t border-studio-border/50">
+                    <div className="flex items-center justify-between mb-3">
+                       <label className="text-[10px] font-black uppercase text-studio-sub tracking-widest flex items-center gap-2"><Scaling size={12}/> {t('lblPadding')}</label>
+                       <span className="text-[10px] font-mono text-studio-accent">{Math.round(padding * 100)}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="0.5" 
+                      step="0.01" 
+                      value={padding} 
+                      onChange={(e) => setPadding(parseFloat(e.target.value))} 
+                      className="w-full h-1.5 bg-studio-sec rounded-lg appearance-none cursor-pointer accent-studio-accent hover:accent-studio-text transition-all"
+                    />
+                 </div>
+              </div>
+
+              <button onClick={generateSet} disabled={!files.universal.file || isGenerating} className={`w-full py-6 rounded-[2.5rem] font-black uppercase text-xs tracking-[0.3em] flex items-center justify-center gap-4 transition-all shadow-2xl ${!files.universal.file ? 'bg-studio-sec text-studio-sub opacity-50 cursor-not-allowed' : 'bg-studio-accent text-black hover:scale-[1.02] hover:shadow-studio-accent/30'}`}>
+                 {isGenerating ? <RefreshCw className="animate-spin" size={20}/> : <Zap size={18} fill="currentColor" />}
+                 {isGenerating ? t('processing') : t('generate')}
+              </button>
+           </div>
+        </aside>
+
+        {/* MAIN: RESULTS */}
+        <main className={`flex-1 md:overflow-y-auto no-scrollbar pb-40 md:pb-20 ${activeTab === 'forge' ? 'block' : 'hidden md:block'}`}>
+           {generatedIcons.length === 0 ? (
+             <div className="h-full min-h-[60vh] flex flex-col items-center justify-center opacity-10 p-20 text-center animate-spring">
+                <div className="w-32 h-32 border-2 border-dashed border-studio-sub rounded-[3rem] flex items-center justify-center mb-10"><Hammer size={60} strokeWidth={1} /></div>
+                <h3 className="text-2xl font-black uppercase tracking-[0.4em]">{t('readyForForge')}</h3>
+                <p className="text-xs uppercase font-bold mt-4 tracking-widest">{t('readyDesc')}</p>
+             </div>
+           ) : (
+             <div className="p-8 md:p-20 space-y-20 animate-spring">
+                <header className="flex flex-col lg:flex-row items-center justify-between gap-8 glass-card p-10 md:p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent"></div>
+                   <div className="flex items-center gap-8 relative z-10">
+                      <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center border border-emerald-500/20 shadow-inner"><Check size={40} className="text-emerald-500" strokeWidth={3} /></div>
+                      <div>
+                         <h4 className="text-2xl md:text-3xl font-black tracking-tight">{generatedIcons.length} {t('assetsComposed')}</h4>
+                         <p className="text-[10px] text-studio-sub font-black uppercase tracking-widest mt-2">{t('assetsDesc')}</p>
+                      </div>
+                   </div>
+                   <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto z-10">
+                      <button onClick={() => {
+                         const zip = new JSZip();
+                         // Add all generated images
+                         generatedIcons.forEach(i => zip.file(i.name, i.blob));
+                         
+                         // Generate and Add Manifest
+                         const manifest = getManifestObject();
+                         const manifestBlob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+                         zip.file('site.webmanifest', manifestBlob);
+
+                         zip.generateAsync({type:"blob"}).then(c => FileSaver.saveAs(c, "icon-forge-assets.zip"));
+                      }} className="flex-1 lg:flex-none flex items-center justify-center gap-3 px-10 py-5 bg-studio-text text-studio-bg rounded-3xl text-[10px] font-black uppercase tracking-widest hover:bg-studio-accent transition-all shadow-2xl shadow-studio-text/20">
+                         <Download size={18}/> {t('download')}
+                      </button>
+                   </div>
+                </header>
+
+                <ContextPreview icons={generatedIcons} lang={lang} appName={appInfo.name} defaultTheme={defaultTheme} />
+
+                {/* Groups */}
+                {['logo', 'social', 'favicon'].map(type => {
+                  const group = generatedIcons.filter(i => i.typeLabel === type);
+                  if (group.length === 0) return null;
+                  return (
+                    <section key={type} className="space-y-8">
+                       <div className="flex items-center gap-6">
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-3 whitespace-nowrap bg-studio-bg pr-4">
+                             {type === 'logo' ? <Shield size={16} className="text-studio-accent" /> : type === 'social' ? <Share2 size={16} className="text-sky-500" /> : <Grid3X3 size={16} className="text-amber-500" />}
+                             {getSectionLabel(type)} {t('assets')}
+                          </h3>
+                          <div className="h-px w-full bg-studio-border"></div>
+                       </div>
+                       <div className={`grid gap-6 md:gap-8 ${type === 'social' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6'}`}>
+                          {group.map(icon => (
+                            <div key={icon.id} className="flex flex-col gap-4 group">
+                               <div className={`relative aspect-square rounded-[2.5rem] md:rounded-[3rem] border border-studio-border flex items-center justify-center shadow-xl overflow-hidden transition-all duration-500 hover:scale-105 ${icon.name.endsWith('.jpg') ? '' : 'bg-checkered'}`}>
+                                  <img src={icon.url} className="max-w-[75%] max-h-[75%] object-contain relative z-10 drop-shadow-2xl" />
+                                  <div className="absolute top-4 right-4 md:top-6 md:right-6 px-2 md:px-3 py-1 bg-studio-bg/90 backdrop-blur-md rounded-full text-[7px] md:text-[8px] font-black border border-studio-border z-20 shadow-lg tracking-tight uppercase">
+                                     {icon.width > 0 ? `${icon.width}x${icon.height}` : t('vector')}
+                                  </div>
+                                  {icon.variant !== 'any' && (
+                                    <div className={`absolute bottom-4 left-4 p-1.5 rounded-lg z-20 shadow-lg ${icon.variant === 'light' ? 'bg-amber-100 text-amber-600' : 'bg-slate-800 text-slate-300'}`}>
+                                      {icon.variant === 'light' ? <Sun size={12} /> : <Moon size={12} />}
+                                    </div>
+                                  )}
+                               </div>
+                               <span className="text-[9px] font-mono text-studio-sub text-center opacity-40 group-hover:opacity-100 truncate tracking-tight">{icon.name}</span>
+                            </div>
+                          ))}
+                       </div>
+                    </section>
+                  );
+                })}
+             </div>
+           )}
         </main>
       </div>
 
-      {/* --- SETTINGS MODAL --- */}
-      {showSettings && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 no-drag animate-fade-in">
-            <div className="bg-bg-secondary w-full max-w-md rounded-3xl shadow-2xl border border-border-light overflow-hidden animate-zoom-in">
-              <div className="p-6 border-b border-border-light flex justify-between items-center bg-bg-tertiary/50">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2"><Settings size={18} className="text-purple-400"/> {t('settings')}</h3>
-                  <button onClick={() => setShowSettings(false)} className="text-text-muted hover:text-white"><X size={18}/></button>
-              </div>
-              <div className="p-6 space-y-8">
-                  <div>
-                    <label className="text-xs font-bold text-text-muted uppercase mb-3 block flex items-center gap-2"><Languages size={14}/> {t('language')}</label>
-                    <div className="grid grid-cols-2 gap-2">
-                        {SUPPORTED_LANGUAGES.map((id) => (
-                            <button key={id} onClick={() => setLang(id)} className={`px-4 py-2.5 text-sm rounded-xl border transition-all text-left font-medium ${lang === id ? 'bg-purple-500/10 border-purple-500/50 text-purple-300' : 'bg-bg-tertiary border-transparent text-text-secondary hover:bg-bg-tertiary/80'}`}>
-                              {id.toUpperCase()}
-                            </button>
-                        ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-text-muted uppercase mb-3 block flex items-center gap-2"><Palette size={14}/> {t('theme')}</label>
-                    <div className="grid grid-cols-3 gap-3">
-                        {SUPPORTED_THEMES.map(m => (
-                            <button key={m} onClick={() => setTheme(m)} className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${theme === m ? 'bg-bg-primary border-purple-500 text-white shadow-lg shadow-purple-500/10' : 'bg-bg-tertiary border-transparent text-text-muted opacity-60 hover:opacity-100'}`}>
-                                {m === 'light' ? <Sun size={20}/> : m === 'design' ? <Grid size={20}/> : <Moon size={20}/>}
-                                <span className="text-xs font-bold capitalize">{m}</span>
-                            </button>
-                        ))}
-                    </div>
-                  </div>
-              </div>
-              <div className="p-6 border-t border-border-light bg-bg-tertiary/30 flex justify-end">
-                  <button onClick={() => setShowSettings(false)} className="px-8 py-2.5 bg-white text-black hover:bg-gray-200 rounded-xl text-sm font-bold shadow-lg">Done</button>
-              </div>
-            </div>
-        </div>
-      )}
+      {/* MOBILE BAR */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-24 bg-studio-bg/95 backdrop-blur-3xl border-t border-studio-border z-[100] flex items-center justify-around px-8 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.4)]">
+          <button onClick={() => { setActiveTab('sources'); window.scrollTo(0, 0); }} className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'sources' ? 'text-studio-accent' : 'text-studio-sub opacity-40'}`}>
+              <div className={`p-3 rounded-2xl ${activeTab === 'sources' ? 'bg-studio-accent/20' : ''}`}><Hammer size={22} strokeWidth={2.5} /></div>
+              <span className="text-[8px] font-black uppercase tracking-widest">{t('tabStudio')}</span>
+          </button>
+          {generatedIcons.length > 0 && (
+            <button onClick={() => { setActiveTab('forge'); window.scrollTo(0, 0); }} className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'forge' ? 'text-studio-accent' : 'text-studio-sub opacity-40'}`}>
+                <div className={`p-3 rounded-2xl ${activeTab === 'forge' ? 'bg-studio-accent/20' : ''}`}><Zap size={22} strokeWidth={2.5} /></div>
+                <span className="text-[8px] font-black uppercase tracking-widest">{t('tabForge')}</span>
+            </button>
+          )}
+          <div className="flex flex-col items-center gap-1.5 opacity-40">
+              <div className="p-3 rounded-2xl"><button onClick={() => setShowSettings(true)}><Settings size={22} /></button></div>
+              <span className="text-[8px] font-black uppercase tracking-widest">{t('settings')}</span>
+          </div>
+      </nav>
 
-      {/* --- EDITOR MODAL --- */}
-      {editingIcon && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 md:p-6 no-drag animate-fade-in">
-            <div className="bg-bg-secondary w-full max-w-7xl h-[90vh] rounded-3xl shadow-2xl flex flex-col md:flex-row overflow-hidden border border-border-light animate-zoom-in">
-                {/* Editor Sidebar */}
-                <div className="w-full md:w-80 bg-bg-glass border-b md:border-b-0 md:border-r border-border-light p-6 flex flex-col overflow-y-auto">
-                    <div className="flex justify-between items-start mb-6">
-                      <div>
-                          <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2"><Edit2 size={20} className="text-purple-400"/> {t('editor')}</h3>
-                          <p className="text-xs text-text-muted font-mono">{editingIcon.name}</p>
-                      </div>
-                      <button onClick={() => setEditingIcon(null)} className="md:hidden p-2 bg-bg-tertiary rounded-full"><X size={16}/></button>
-                    </div>
-
-                    <div className="space-y-8 flex-1">
-                        <div>
-                            <label className="text-xs font-bold text-text-muted uppercase mb-3 block">{t('viewMode')}</label>
-                            <div className="flex gap-2 bg-bg-tertiary p-1 rounded-xl border border-border-subtle">
-                                <button onClick={() => setModalViewMode('fit')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${modalViewMode === 'fit' ? 'bg-bg-primary text-white shadow-sm' : 'text-text-muted hover:text-white'}`}>{t('fitScreen')}</button>
-                                <button onClick={() => setModalViewMode('actual')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${modalViewMode === 'actual' ? 'bg-bg-primary text-white shadow-sm' : 'text-text-muted hover:text-white'}`}>{t('realSize')}</button>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-text-muted uppercase mb-3 block">{t('previewBg')}</label>
-                            <div className="grid grid-cols-5 gap-2">
-                                {PREVIEW_BACKGROUNDS.map(bg => (
-                                    <button key={bg} onClick={() => setModalPreviewBg(bg)} className={`aspect-square rounded-lg border-2 transition-all ${modalPreviewBg === bg ? 'border-purple-500 scale-110' : 'border-transparent hover:border-white/20'} ${bg === 'transparent' ? "bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-zinc-800" : bg === 'light' ? 'bg-white' : bg === 'dark' ? 'bg-black' : bg === 'brand' ? '' : 'bg-gradient-to-br from-blue-500 to-purple-600'}`} style={bg === 'brand' ? {backgroundColor: brandColor} : {}}></button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="pt-6 border-t border-border-light">
-                              <label className="text-xs font-bold text-text-muted uppercase mb-4 block flex justify-between">Scale <span className="text-white">{Math.round(editOptions.scale * 100)}%</span></label>
-                              <input type="range" min="0.5" max="1.5" step="0.05" value={editOptions.scale} onChange={(e) => setEditOptions({...editOptions, scale: parseFloat(e.target.value)})} className="w-full accent-purple-500 h-1.5 bg-bg-tertiary rounded-lg appearance-none cursor-pointer" />
-                        </div>
-                        {editAnalysis && (
-                            <div className="pt-6 border-t border-border-light">
-                              <label className="text-xs font-bold text-text-muted uppercase mb-2 block flex items-center gap-2"><Eye size={12}/> {t('analysis')}</label>
-                              <div className="space-y-2">
-                                  <div className="flex items-center justify-between bg-bg-tertiary p-2 rounded-lg">
-                                      <span className="text-xs text-text-secondary">{t('contrast')}</span>
-                                      <WcagBadge ratio={editAnalysis.contrastRatio} />
-                                  </div>
-                                  <ContrastVisualizer analysis={editAnalysis} tLabel={t('detectedFail')} />
-                                  {editAnalysis.suggestions?.map((msg, i) => (
-                                      <div key={i} className="text-[10px] text-amber-400 flex items-start gap-2 bg-amber-500/10 p-2 rounded">
-                                          <AlertTriangle size={10} className="shrink-0 mt-0.5"/> {msg}
-                                      </div>
-                                  ))}
-                              </div>
-                            </div>
-                        )}
-                    </div>
-                    <div className="mt-6 flex gap-3">
-                        <button onClick={() => setEditingIcon(null)} className="flex-1 py-3 rounded-xl border border-border-light text-text-secondary hover:bg-bg-tertiary hover:text-white text-sm font-bold transition-colors">{t('cancel')}</button>
-                        <button onClick={saveEditedIcon} className="flex-1 py-3 rounded-xl bg-white text-black hover:bg-gray-200 text-sm font-bold shadow-lg transition-colors">{t('save')}</button>
-                    </div>
-                </div>
-
-                {/* Editor Stage */}
-                <div className="flex-1 relative bg-black flex items-center justify-center p-4 md:p-12 overflow-hidden">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
-                    <div className={`relative shadow-2xl transition-all duration-300 z-10 ${modalViewMode === 'fit' ? 'w-full h-full' : ''}`} style={{ width: modalViewMode === 'actual' ? editingIcon.width : undefined, height: modalViewMode === 'actual' ? editingIcon.height : undefined }}>
-                          {renderModalPreviewBackground()}
-                          <div className="absolute inset-0 flex items-center justify-center z-10">
-                            <img src={editPreviewUrl || editingIcon.url} className={`object-contain transition-all duration-200 ${modalViewMode === 'fit' ? 'max-w-[80%] max-h-[80%]' : ''}`} style={{ width: modalViewMode === 'actual' ? '100%' : undefined, height: modalViewMode === 'actual' ? '100%' : undefined }} alt="Preview" />
-                          </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
+      <style>{`
+        .bg-checkered {
+          background-image: linear-gradient(45deg, rgba(128, 128, 128, 0.1) 25%, transparent 25%), 
+                            linear-gradient(-45deg, rgba(128, 128, 128, 0.1) 25%, transparent 25%), 
+                            linear-gradient(45deg, transparent 75%, rgba(128, 128, 128, 0.1) 75%), 
+                            linear-gradient(-45deg, transparent 75%, rgba(128, 128, 128, 0.1) 75%);
+          background-size: 20px 20px;
+          background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+      `}</style>
     </div>
   );
 };

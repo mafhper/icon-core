@@ -1,20 +1,15 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Icon Forge Pro
 
-# Run and deploy your AI Studio app
+Icon Forge Pro is a browser-based tool for generating high-precision application icons locally.
 
-This contains everything you need to run your app locally.
+## Features
+- Local image processing via Canvas API.
+- Multiple size generation for web and mobile.
+- Real-time previews and mockups.
+- Multi-language support (PT, EN, ES, IT, FR, DE, ZH, JA).
+- Contrast analysis following WCAG 2.2 standards.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Jd79CGiw4MZBWJf46F1W1iVriLo6Bdsz
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Technical Details
+- Built with React, Tailwind CSS, and Lucide icons.
+- Uses `jszip` for package export.
+- 100% privacy: No data is sent to external servers.
