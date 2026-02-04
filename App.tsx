@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Layers, Check, RefreshCw, X, Moon, Sun, Plus, Zap, ImageIcon, Filter, Grid3X3, Hammer, Shield, FileJson, Sparkles, Share2, ToggleLeft, ToggleRight, Info, Ban, Settings, Monitor, Smartphone, Layout, Type, Maximize, Scaling, Star } from 'lucide-react';
+import { Download, Check, RefreshCw, X, Moon, Sun, Plus, Zap, Filter, Grid3X3, Hammer, Shield, Sparkles, Share2, Info, Ban, Settings, Monitor, Type, Scaling, Star } from 'lucide-react';
 import JSZip from 'jszip';
 import FileSaver from 'file-saver';
-import { GeneratedFile, IconVariant, AppLanguage, AppTheme, NamingStrategy } from './types';
+import { GeneratedFile, IconVariant, AppLanguage, AppTheme } from './types';
 import { processImage, getDominantColor } from './utils/imageProcessor';
 import { generateIco } from './utils/icoGenerator';
 
@@ -23,14 +23,11 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     faviconOverride: "Favicon Override",
     socialBG: "Background Social",
     optional: "Opcional",
-    autoVariants: "Auto-gerar Variantes",
-    autoVariantsDesc: "Gera variantes apenas se faltar arquivos específicos.",
     resHint: "Sugerido: ",
     transparent: "Transparente",
     masterBG: "Master BG",
     settings: "Configurações",
     language: "Idioma",
-    nomenclature: "Nomenclatura",
     contextView: "Visualização em Contexto",
     browserLight: "Browser Claro",
     browserDark: "Browser Escuro",
@@ -41,7 +38,7 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     readyForForge: "Pronto para Gerar",
     readyDesc: "Adicione variações ou use o Ativo Master",
     assetsComposed: "Ativos Compostos",
-    assetsDesc: "Nomenclatura Otimizada & Pronta",
+    assetsDesc: "Estrutura Otimizada & Pronta",
     appName: "Nome do App",
     newTab: "Nova Guia",
     lightIcon: "Ícone Light",
@@ -80,14 +77,11 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     faviconOverride: "Favicon Override",
     socialBG: "Social Background",
     optional: "Optional",
-    autoVariants: "Auto-generate Variants",
-    autoVariantsDesc: "Generates variants only if specific files are missing.",
     resHint: "Suggested: ",
     transparent: "Transparent",
     masterBG: "Master BG",
     settings: "Settings",
     language: "Language",
-    nomenclature: "Nomenclature",
     contextView: "Context View",
     browserLight: "Browser Light",
     browserDark: "Browser Dark",
@@ -98,7 +92,7 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     readyForForge: "Ready to Generate",
     readyDesc: "Add variations or use Master Asset",
     assetsComposed: "Assets Composed",
-    assetsDesc: "Nomenclature Optimized & Ready",
+    assetsDesc: "Structure Optimized & Ready",
     appName: "App Name",
     newTab: "New Tab",
     lightIcon: "Light Icon",
@@ -137,14 +131,11 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     faviconOverride: "Favicon Override",
     socialBG: "Fondo Social",
     optional: "Opcional",
-    autoVariants: "Auto-generar Variantes",
-    autoVariantsDesc: "Genera variantes solo si faltan archivos específicos.",
     resHint: "Sugerido: ",
     transparent: "Transparente",
     masterBG: "Fondo Maestro",
     settings: "Ajustes",
     language: "Idioma",
-    nomenclature: "Nomenclatura",
     contextView: "Vista de Contexto",
     browserLight: "Navegador Claro",
     browserDark: "Navegador Oscuro",
@@ -155,7 +146,7 @@ const TRANSLATIONS: Record<AppLanguage, any> = {
     readyForForge: "Listo para Generar",
     readyDesc: "Añade variaciones o usa el Activo Maestro",
     assetsComposed: "Activos Compuestos",
-    assetsDesc: "Nomenclatura Optimizada y Lista",
+    assetsDesc: "Estructura Optimizada y Lista",
     appName: "Nombre App",
     newTab: "Nueva Pestaña",
     lightIcon: "Icono Light",
@@ -205,10 +196,10 @@ const SafeZoneOverlay = ({ show }: { show: boolean }) => {
 
 const ContextPreview = ({ icons, lang, appName, defaultTheme }: { icons: GeneratedFile[], lang: AppLanguage, appName: string, defaultTheme: 'light' | 'dark' }) => {
   // Find the most appropriate icon based on size and the selected default theme
-  const icon = icons.find(i => i.width === 192 && (i.variant === defaultTheme || i.variant === 'any')) || icons.find(i => i.name.includes('192')) || icons[0];
+  const icon = icons.find(i => i.name.includes('192') && i.name.includes(defaultTheme)) || icons.find(i => i.name.includes('192')) || icons[0];
   
   // Favicon: Try to find .ico first, then PNG
-  const favicon = icons.find(i => i.typeLabel === 'favicon' && (i.variant === defaultTheme || i.name === 'favicon.ico')) || icons[0];
+  const favicon = icons.find(i => i.typeLabel === 'favicon' && i.name.includes(defaultTheme) && i.name.endsWith('.ico')) || icons.find(i => i.typeLabel === 'favicon' && i.name.endsWith('.ico')) || icons[0];
   
   const t = (k: string) => getT(lang, k);
   
@@ -299,12 +290,10 @@ export const App: React.FC = () => {
   const [lang, setLang] = useState<AppLanguage>('pt'); 
   const [theme, setTheme] = useState<AppTheme>('dark');
   const [showSafeZones, setShowSafeZones] = useState(false);
-  const [autoVariants, setAutoVariants] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
   // New States
-  const [namingStrategy, setNamingStrategy] = useState<NamingStrategy>('modern');
   const [defaultTheme, setDefaultTheme] = useState<'light' | 'dark'>('light');
   const [padding, setPadding] = useState(0); 
 
@@ -350,136 +339,157 @@ export const App: React.FC = () => {
     setFiles(prev => ({ ...prev, [type]: { file: null, preview: null } }));
   };
 
-  /**
-   * Generates filenames dynamically based on Strategy and Default Theme
-   */
-  const resolveFilename = (baseName: string, variant: 'light' | 'dark', extension: string) => {
-    if (namingStrategy === 'modern') {
-      // Modern: clean name for default, suffix for alternate
-      if (variant === defaultTheme) {
-        return `${baseName}.${extension}`;
-      } else {
-        return `${baseName}-${variant}.${extension}`;
-      }
-    } else {
-      // Verbose: always suffix
-      return `${baseName}-${variant}.${extension}`;
-    }
-  };
-
   const generateSet = async () => {
     if (!files.universal.file) return;
     setIsGenerating(true);
     
     const results: GeneratedFile[] = [];
+    
+    // --- Source Deductions based on User Rules ---
+    // Rule 1: Master file is ALWAYS used as the 'Default' file (assets/logo.svg)
+    // Rule 2: If Master + Light provided -> Master deduced as Dark.
+    // Rule 3: If Master + Dark provided -> Master deduced as Light.
+    
     const master = files.universal.file;
+    const light = files.light.file;
+    const dark = files.dark.file;
 
-    const getSourceForVariant = (targetType: 'logo' | 'favicon', variant: 'light' | 'dark'): { file: File | Blob, isAuto: boolean } => {
-      if (targetType === 'favicon') {
-        const specific = variant === 'light' ? files.faviconLight.file : files.faviconDark.file;
-        if (specific) return { file: specific, isAuto: false };
-      } else {
-        const specific = variant === 'light' ? files.light.file : files.dark.file;
-        if (specific) return { file: specific, isAuto: false };
-      }
-      return { file: master, isAuto: autoVariants };
-    };
+    // Semantic Sources (Who represents what theme)
+    let sourceForLight: File | Blob = master;
+    let sourceForDark: File | Blob = master;
 
-    // --- 1. Define Tasks Dynamically (All Variants) ---
-    const variants: ('light' | 'dark')[] = ['light', 'dark'];
+    if (light && !dark) {
+       // User sent Master + Light. Deduce Master is Dark.
+       sourceForLight = light;
+       sourceForDark = master;
+    } else if (!light && dark) {
+       // User sent Master + Dark. Deduce Master is Light.
+       sourceForLight = master;
+       sourceForDark = dark;
+    } else if (light && dark) {
+       // User sent all. Use specifics.
+       sourceForLight = light;
+       sourceForDark = dark;
+    } 
+    // If only Master, both stay as Master.
+
+    // Favicon Sources
+    const favLight = files.faviconLight.file || sourceForLight;
+    const favDark = files.faviconDark.file || sourceForDark;
+
+
+    // --- 1. Root Assets Generation (assets/logo) ---
+    // "Use Master as Default" -> assets/logo.svg = Master
+    // "Add other as secondary" -> assets/logo-variant.svg
     const tasks: any[] = [];
 
-    // A. PWA / Android / Web (Standard)
-    // Generates icon-192.png, icon-192-dark.png, etc.
-    const pwaSizes = [192, 512];
-    pwaSizes.forEach(size => {
-       variants.forEach(variant => {
-         const name = resolveFilename(`icon-${size}`, variant, 'png');
-         tasks.push({ 
-           name, 
-           width: size, 
-           height: size, 
-           variant, 
-           type: 'logo', 
-           format: 'png', 
-           transparent: isBgTransparent 
-         });
-       });
+    // Default Logo (from Master)
+    const masterExt = master.type === 'image/svg+xml' ? 'svg' : 'png';
+    tasks.push({
+       name: `assets/logo.${masterExt}`,
+       source: master,
+       width: 0, height: 0, variant: 'any', type: 'logo', format: masterExt, transparent: true
     });
 
-    // B. Linux / Desktop / General Web
-    // Generates icon-64.png, icon-128.png (standard PNGs often used in Linux docks or desktop shortcuts)
-    const generalSizes = [64, 128];
-    generalSizes.forEach(size => {
-      variants.forEach(variant => {
-        const name = resolveFilename(`icon-${size}`, variant, 'png');
+    // Secondary Logos
+    if (light && light !== master) {
+       const ext = light.type === 'image/svg+xml' ? 'svg' : 'png';
+       tasks.push({
+          name: `assets/logo-light.${ext}`,
+          source: light,
+          width: 0, height: 0, variant: 'light', type: 'logo', format: ext, transparent: true
+       });
+    }
+    if (dark && dark !== master) {
+       const ext = dark.type === 'image/svg+xml' ? 'svg' : 'png';
+       tasks.push({
+          name: `assets/logo-dark.${ext}`,
+          source: dark,
+          width: 0, height: 0, variant: 'dark', type: 'logo', format: ext, transparent: true
+       });
+    }
+
+    // --- 2. Icons Folder Structure (Semantic) ---
+    // Uses sourceForLight and sourceForDark to populate icons/light/* and icons/dark/*
+    const variants: ('light' | 'dark')[] = ['light', 'dark'];
+    
+    variants.forEach(variant => {
+      const prefix = `icons/${variant}`;
+      const sourceLogo = variant === 'light' ? sourceForLight : sourceForDark;
+      const sourceFav = variant === 'light' ? favLight : favDark;
+      const isOpaque = !isBgTransparent;
+
+      // Favicons (PNG versions)
+      [16, 32, 48].forEach(size => {
+         tasks.push({
+            name: `${prefix}/favicon-${size}x${size}.png`,
+            source: sourceFav,
+            width: size, height: size, variant, type: 'favicon', format: 'png', transparent: true
+         });
+      });
+
+      // Apple Touch Icons
+      [180, 152, 120].forEach(size => {
+        const fName = size === 180 ? 'apple-touch-icon.png' : `apple-touch-icon-${size}x${size}.png`;
         tasks.push({
-          name, width: size, height: size, variant, type: 'logo', format: 'png', transparent: isBgTransparent
+           name: `${prefix}/${fName}`,
+           source: sourceLogo,
+           width: size, height: size, variant, type: 'logo', format: 'png', transparent: false // Apple icons opaque
+        });
+      });
+
+      // PWA Standard
+      [192, 512].forEach(size => {
+        tasks.push({
+           name: `${prefix}/pwa-${size}x${size}.png`,
+           source: sourceLogo,
+           width: size, height: size, variant, type: 'logo', format: 'png', transparent: !isOpaque
+        });
+      });
+
+      // PWA Maskable
+      [192, 512].forEach(size => {
+        tasks.push({
+           name: `${prefix}/pwa-maskable-${size}x${size}.png`,
+           source: sourceLogo,
+           width: size, height: size, variant, type: 'logo', format: 'png', transparent: false,
+           isMaskable: true
         });
       });
     });
 
-    // C. Apple Touch Icon (iOS)
-    // Generates apple-touch-icon.png (default theme) AND apple-touch-icon-dark.png (alt theme)
-    // Note: Apple icons are typically OPAQUE. We force transparent: false unless specifically overridden in logic below.
-    variants.forEach(variant => {
-      const name = resolveFilename('apple-touch-icon', variant, 'png');
-      tasks.push({
-        name,
-        width: 180,
-        height: 180,
-        variant,
-        type: 'logo',
-        format: 'png',
-        transparent: false // iOS icons should be solid (black/white bg)
-      });
-    });
-
-    // D. Microsoft Tiles (Windows 8/10/11)
-    // MSTile 150x150 is the most common standard
-    variants.forEach(variant => {
-      const name = resolveFilename('mstile-150x150', variant, 'png');
-      tasks.push({
-        name,
-        width: 150,
-        height: 150,
-        variant,
-        type: 'logo',
-        format: 'png',
-        transparent: isBgTransparent // Windows tiles often transparent
-      });
-    });
-
-    // Social Images (Always Light/Default source usually, but let's make it standard)
-    // Social doesn't usually switch by theme, it uses the primary brand.
-    tasks.push({ name: 'og-image.jpg', width: 1200, height: 630, format: 'jpg', variant: 'light', type: 'social', transparent: false });
-    tasks.push({ name: 'twitter-card.jpg', width: 1200, height: 600, format: 'jpg', variant: 'light', type: 'social', transparent: false });
-
+    // --- 3. Social ---
+    const socialSource = files.universal.file;
+    tasks.push({ name: 'og-image.png', source: socialSource, width: 1200, height: 630, format: 'png', variant: 'light', type: 'social', transparent: false });
+    tasks.push({ name: 'twitter-image.png', source: socialSource, width: 1200, height: 600, format: 'png', variant: 'light', type: 'social', transparent: false });
 
     try {
-      // --- 2. Execute Raster Tasks ---
+      // Execution
       const processingPromises = tasks.map(async def => {
-        let sourceFile: File | Blob;
-        
-        if (def.type === 'social') {
-             sourceFile = master;
-        } else {
-             const { file } = getSourceForVariant(def.type as any, def.variant as any);
-             sourceFile = file;
-        }
-        
+        if (!def.source) return;
+
         let bgColor = def.variant === 'light' ? brandColor : brandColorDark;
-        
-        // Override transparency for social or JPG
-        let useTransparent = def.transparent;
-        if (def.format === 'jpg') useTransparent = false;
-        
+        if (def.variant === 'any') bgColor = brandColor; // Default for master if undefined
+
+        // SVG Pass-through
+        if (def.format === 'svg' && def.source.type === 'image/svg+xml') {
+           results.push({
+             id: def.name, name: def.name, blob: def.source, url: URL.createObjectURL(def.source),
+             size: def.source.size, category: 'web', variant: def.variant, width: 0, height: 0,
+             typeLabel: def.type, originalDef: def
+           });
+           return;
+        }
+
+        let effectivePadding = padding;
+        if (def.isMaskable) effectivePadding = Math.max(padding, 0.2); 
+
         const { blob, analysis } = await processImage(
-          sourceFile, 
-          { ...def, category: 'web', transparent: useTransparent } as any,
+          def.source, 
+          { ...def, category: 'web' } as any,
           bgColor,
           def.type === 'social' ? files.socialBG.file : null,
-          { scale: 1, padding: padding }
+          { scale: 1, padding: effectivePadding }
         );
 
         results.push({
@@ -489,80 +499,40 @@ export const App: React.FC = () => {
         });
       });
 
-      // --- 3. Favicons (ICO) ---
-      // Modern: default -> favicon.ico, alternate -> favicon-alt.ico
-      // Verbose: favicon-light.ico, favicon-dark.ico
-      
-      const favTasks = variants.map(async fVar => {
-        const { file } = getSourceForVariant('favicon', fVar);
-        // Generate temp PNGs for ICO construction
-        const f16 = await processImage(file, { name: `_tmp`, width: 16, height: 16, type: 'favicon', category: 'web', transparent: true, format: 'png' } as any, brandColor, null, { scale: 1, padding: padding });
-        const f32 = await processImage(file, { name: `_tmp`, width: 32, height: 32, type: 'favicon', category: 'web', transparent: true, format: 'png' } as any, brandColor, null, { scale: 1, padding: padding });
-        
-        const icoBlob = await generateIco([
-          { width: 16, height: 16, blob: f16.blob },
-          { width: 32, height: 32, blob: f32.blob }
-        ]);
-        
-        let icoName = '';
-        if (namingStrategy === 'modern') {
-          if (fVar === defaultTheme) icoName = 'favicon.ico';
-          else icoName = `favicon-${fVar}.ico`;
-        } else {
-          icoName = `favicon-${fVar}.ico`;
-        }
+      // ICO Processing
+      const favIcoTasks = variants.map(async variant => {
+         const prefix = `icons/${variant}`;
+         const sourceFav = variant === 'light' ? favLight : favDark;
+         if (!sourceFav) return;
 
-        results.push({
-          id: icoName, name: icoName, blob: icoBlob, url: URL.createObjectURL(icoBlob),
-          size: icoBlob.size, category: 'web', variant: fVar, width: 32, height: 32,
-          typeLabel: 'favicon', originalDef: {} as any
-        });
+         const f16 = await processImage(sourceFav, { width: 16, height: 16, type: 'favicon', transparent: true, format: 'png' } as any, brandColor, null, { scale: 1, padding });
+         const f32 = await processImage(sourceFav, { width: 32, height: 32, type: 'favicon', transparent: true, format: 'png' } as any, brandColor, null, { scale: 1, padding });
+
+         const icoBlob = await generateIco([
+            { width: 16, height: 16, blob: f16.blob },
+            { width: 32, height: 32, blob: f32.blob }
+         ]);
+
+         results.push({
+            id: `${prefix}/favicon.ico`,
+            name: `${prefix}/favicon.ico`,
+            blob: icoBlob,
+            url: URL.createObjectURL(icoBlob),
+            size: icoBlob.size, category: 'web', variant, width: 32, height: 32, typeLabel: 'favicon', originalDef: {} as any
+         });
+
+         if (sourceFav.type === 'image/svg+xml') {
+            results.push({
+               id: `${prefix}/favicon.svg`,
+               name: `${prefix}/favicon.svg`,
+               blob: sourceFav,
+               url: URL.createObjectURL(sourceFav),
+               size: sourceFav.size, category: 'web', variant, width: 0, height: 0, typeLabel: 'favicon', originalDef: {} as any
+            });
+         }
       });
 
-
-      // --- 4. SVG Pass-through ---
-      const addSvgIfAvailable = (source: File | Blob | null, variant: IconVariant) => {
-        if (source && source.type === 'image/svg+xml') {
-           // Resolve name
-           let name = '';
-           if (namingStrategy === 'modern') {
-             if (variant === defaultTheme || variant === 'any') name = 'icon.svg';
-             else name = `icon-${variant}.svg`;
-           } else {
-             name = `icon-${variant === 'any' ? 'universal' : variant}.svg`;
-           }
-           
-           results.push({
-             id: name,
-             name: name,
-             blob: source,
-             url: URL.createObjectURL(source),
-             size: source.size,
-             category: 'web',
-             variant: variant,
-             width: 0, 
-             height: 0, 
-             typeLabel: 'logo',
-             originalDef: { name, width: 0, height: 0, category: 'web', transparent: true, format: 'svg', type: 'logo' } as any
-           });
-        }
-      };
-
-      // Add SVGs
-      // If we have a specific light file, add it.
-      if (files.light.file) addSvgIfAvailable(files.light.file, 'light');
-      // If we have a specific dark file, add it.
-      if (files.dark.file) addSvgIfAvailable(files.dark.file, 'dark');
-      
-      // If Universal is the ONLY source, it becomes the default 'icon.svg'.
-      if (files.universal.file && !files.light.file && !files.dark.file) {
-         addSvgIfAvailable(files.universal.file, defaultTheme); 
-      } else {
-         addSvgIfAvailable(files.universal.file, 'any');
-      }
-
-
-      await Promise.all([...processingPromises, ...favTasks]);
+      await Promise.all([...processingPromises, ...favIcoTasks]);
       setGeneratedIcons(results);
       setActiveTab('forge');
     } catch (e) {
@@ -573,17 +543,9 @@ export const App: React.FC = () => {
   };
 
   const getManifestObject = () => {
-    // Filter icons to ONLY include the Default Theme assets for the Manifest
-    // This keeps the manifest clean. The ZIP will still contain the alternate dark/light files.
-    // We also include SVG if available for default theme.
-    const iconsList = generatedIcons
-      .filter(i => i.typeLabel === 'logo' && (i.variant === defaultTheme || i.variant === 'any'))
-      .map(i => ({
-        src: i.name,
-        sizes: i.width > 0 ? `${i.width}x${i.height}` : 'any',
-        type: i.width > 0 ? "image/png" : "image/svg+xml"
-      }));
-
+    // Manifest points to 'light' icons by default as per requirements
+    // Assumes icons/light structure
+    
     return {
       name: appInfo.name,
       short_name: appInfo.shortName,
@@ -593,7 +555,32 @@ export const App: React.FC = () => {
       background_color: brandColor,
       theme_color: brandColor,
       orientation: "any",
-      icons: iconsList
+      icons: [
+        {
+          src: "icons/light/pwa-192x192.png",
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "any"
+        },
+        {
+          src: "icons/light/pwa-maskable-192x192.png",
+          sizes: "192x192",
+          type: "image/png",
+          purpose: "maskable"
+        },
+        {
+          src: "icons/light/pwa-512x512.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "any"
+        },
+        {
+          src: "icons/light/pwa-maskable-512x512.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "maskable"
+        }
+      ]
     };
   };
 
@@ -665,17 +652,6 @@ export const App: React.FC = () => {
                  </div>
 
                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase text-studio-sub tracking-widest">{t('nomenclature')}</label>
-                    <div className="flex gap-2">
-                       {(['verbose', 'modern'] as NamingStrategy[]).map(s => (
-                          <button key={s} onClick={() => setNamingStrategy(s)} className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase transition-all ${namingStrategy === s ? 'bg-studio-text text-studio-bg' : 'bg-studio-bg border border-studio-border text-studio-sub'}`}>
-                             {s}
-                          </button>
-                       ))}
-                    </div>
-                 </div>
-
-                 <div className="space-y-3">
                     <label className="text-[10px] font-black uppercase text-studio-sub tracking-widest">{t('language')}</label>
                     <div className="grid grid-cols-3 gap-2">
                        {(['pt', 'en', 'es'] as AppLanguage[]).map(l => (
@@ -696,17 +672,6 @@ export const App: React.FC = () => {
              <div className="flex flex-col"><span className="text-[10px] font-black tracking-widest uppercase">Icon Forge</span><span className="text-[8px] text-studio-sub uppercase font-bold">v7.2</span></div>
           </div>
           <div className="hidden md:flex items-center gap-4">
-             <div className="flex items-center gap-2 px-3 py-1.5 glass-card rounded-full border border-studio-border/50 group relative">
-                <span className="text-[9px] font-black uppercase text-studio-sub tracking-widest">{t('autoVariants')}</span>
-                <button onClick={() => setAutoVariants(!autoVariants)} className="text-studio-accent">
-                  {autoVariants ? <ToggleRight size={22} /> : <ToggleLeft size={22} className="opacity-40" />}
-                </button>
-                {/* Tooltip for Auto Variants */}
-                <div className="absolute top-full right-0 mt-2 w-48 p-2 bg-studio-card border border-studio-border rounded-lg text-[8px] text-studio-sub opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                  {t('autoVariantsDesc')}
-                </div>
-             </div>
-             <div className="h-6 w-px bg-studio-border mx-2"></div>
              <button onClick={() => setShowSettings(true)} className="p-2 text-studio-sub hover:text-studio-accent transition-colors"><Settings size={20} /></button>
              <div className="flex items-center gap-1">
                {['light', 'dark', 'tender'].map(m => (
@@ -772,7 +737,7 @@ export const App: React.FC = () => {
                             {files[slot.id].preview && (
                                <div className="absolute inset-0 flex items-center justify-center flex-col gap-2 z-10 bg-black/50 opacity-0 group-hover:opacity-100 transition-all">
                                   <button onClick={(e) => { e.stopPropagation(); clearFile(slot.id); }} className="text-[8px] font-black uppercase text-white bg-red-500 px-3 py-2 rounded-xl shadow-xl hover:scale-105 transition-transform">{t('remove')}</button>
-                               </div>
+                                </div>
                             )}
                          </button>
                          <input id={`up-${slot.id}`} type="file" hidden accept="image/*" onChange={e => e.target.files?.[0] && onFileSelect(e.target.files[0], slot.id)} />
@@ -856,7 +821,7 @@ export const App: React.FC = () => {
                          // Generate and Add Manifest
                          const manifest = getManifestObject();
                          const manifestBlob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
-                         zip.file('site.webmanifest', manifestBlob);
+                         zip.file('manifest.json', manifestBlob);
 
                          zip.generateAsync({type:"blob"}).then(c => FileSaver.saveAs(c, "icon-forge-assets.zip"));
                       }} className="flex-1 lg:flex-none flex items-center justify-center gap-3 px-10 py-5 bg-studio-text text-studio-bg rounded-3xl text-[10px] font-black uppercase tracking-widest hover:bg-studio-accent transition-all shadow-2xl shadow-studio-text/20">
