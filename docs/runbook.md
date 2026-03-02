@@ -17,6 +17,7 @@ git remote -v
 
 Desktop bundles are generated from workflow `release-desktop.yml` with any of these triggers:
 
+- Push na branch `main` (somente quando ainda não existe release para a versão atual do desktop)
 - Push de tag no formato `v*`
 - Publicação de release no GitHub (evento `release.published`)
 - Execução manual (`workflow_dispatch`) informando a tag
