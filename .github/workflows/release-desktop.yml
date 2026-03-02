@@ -4,10 +4,22 @@ on:
   push:
     tags:
       - 'v*'
+  release:
+    types:
+      - published
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.0.1)"
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+concurrency:
+  group: desktop-release-${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -16,6 +28,8 @@ jobs:
       matrix:
         platform: [macos-latest, ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.platform }}
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,10 +47,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/desktop
-          tagName: ${{ github.ref_name }}
-          releaseName: IconCore ${{ github.ref_name }}
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: IconCore ${{ env.RELEASE_TAG }}
           releaseBody: |
-            Automated desktop release for IconCore ${{ github.ref_name }}.
+            Automated desktop release for IconCore ${{ env.RELEASE_TAG }}.
             Direct download links are finalized after all platform bundles are uploaded.
           releaseDraft: false
           prerelease: false
@@ -44,13 +58,14 @@ jobs:
   update-release-notes:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
     steps:
       - name: Build release body with platform links
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ env.RELEASE_TAG }}
         run: |
           python - <<'PY'
           import json
@@ -110,5 +125,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ env.RELEASE_TAG }}
         run: gh release edit "$TAG" --repo "$REPO" --title "IconCore $TAG" --notes-file release-body.md

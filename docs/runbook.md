@@ -15,11 +15,15 @@ git remote -v
 
 ## Desktop release
 
-Desktop bundles are generated from workflow `release-desktop.yml` when pushing tags in the format `v*`.
+Desktop bundles are generated from workflow `release-desktop.yml` with any of these triggers:
+
+- Push de tag no formato `v*`
+- Publicação de release no GitHub (evento `release.published`)
+- Execução manual (`workflow_dispatch`) informando a tag
 
 - Local build output (development): `apps/desktop/src-tauri/target/debug/bundle/`
 - Local build output (release): `apps/desktop/src-tauri/target/release/bundle/`
 - GitHub releases:
-  - Created automatically from tags (`v*`)
+  - Created/updated automatically from the release workflow trigger
   - Desktop artifacts uploaded per platform (Windows/macOS/Linux)
   - Release body is updated automatically with direct links to each platform artifact
