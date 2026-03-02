@@ -1,24 +1,46 @@
 {
-  "name": "icon-forge-v7.3",
+  "name": "iconcore-workspace",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "packageManager": "bun@1.3.5",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "jszip": "^3.10.1",
-    "lucide-react": "^0.556.0",
-    "file-saver": "^2.0.5"
+    "dev:web": "bun run --filter @iconcore/web dev",
+    "dev:promo": "bun run --filter @iconcore/promo dev",
+    "build:packages": "bun run --filter @iconcore/shared build && bun run --filter @iconcore/engine build",
+    "build:web": "bun run --filter @iconcore/web build",
+    "build:promo": "bun run --filter @iconcore/promo build",
+    "build:desktop": "bun run --filter @iconcore/desktop tauri:build",
+    "build": "bun run build:packages && bun run build:web && bun run build:promo && node scripts/assemble-pages.mjs",
+    "pages:assemble": "node scripts/assemble-pages.mjs",
+    "pages:build": "bun run build",
+    "typecheck:packages": "bun run --filter @iconcore/shared build && bun run --filter @iconcore/engine build && bun run --filter @iconcore/shared typecheck && bun run --filter @iconcore/engine typecheck",
+    "typecheck:web": "bun run --filter @iconcore/web typecheck",
+    "typecheck:promo": "bun run --filter @iconcore/promo typecheck",
+    "typecheck": "bun run typecheck:packages && bun run typecheck:web && bun run typecheck:promo",
+    "test": "bun run --filter @iconcore/shared test && bun run --filter @iconcore/engine test && bun run --filter @iconcore/web test",
+    "test:e2e": "playwright test",
+    "lint": "eslint apps packages tests --ext .ts,.tsx",
+    "desktop:smoke": "bun run --filter @iconcore/desktop tauri:build --debug"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^22.18.8",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "eslint": "^9.32.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.4.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "rollup": "4.59.0"
   }
 }

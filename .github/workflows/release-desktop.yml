@@ -1,0 +1,114 @@
+name: release-desktop
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.5
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build desktop bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: IconCore ${{ github.ref_name }}
+          releaseBody: |
+            Automated desktop release for IconCore ${{ github.ref_name }}.
+            Direct download links are finalized after all platform bundles are uploaded.
+          releaseDraft: false
+          prerelease: false
+
+  update-release-notes:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Build release body with platform links
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          repo = os.environ["REPO"]
+          tag = os.environ["TAG"]
+          release = json.loads(subprocess.check_output(["gh", "api", f"repos/{repo}/releases/tags/{tag}"], text=True))
+          assets = release.get("assets", [])
+
+          def is_signature(name: str) -> bool:
+              lower = name.lower()
+              return (
+                  lower.endswith(".sig")
+                  or lower.endswith(".sigstore")
+                  or lower.endswith(".sha256")
+                  or lower.endswith(".sha256sum")
+                  or lower.endswith(".json")
+              )
+
+          def pick(extensions, hints):
+              usable = [asset for asset in assets if not is_signature(asset["name"])]
+              for extension in extensions:
+                  for asset in usable:
+                      if asset["name"].lower().endswith(extension):
+                          return f"[{asset['name']}]({asset['browser_download_url']})"
+              for hint in hints:
+                  for asset in usable:
+                      if hint in asset["name"].lower():
+                          return f"[{asset['name']}]({asset['browser_download_url']})"
+              return "Not available in this release."
+
+          windows = pick([".msi", ".exe"], ["windows", "win64", "win32"])
+          macos = pick([".dmg", ".pkg", ".app.tar.gz"], ["macos", "darwin", "mac"])
+          linux = pick([".appimage", ".deb", ".rpm", ".tar.xz", ".tar.gz"], ["linux"])
+
+          body = "\n".join(
+              [
+                  f"Desktop release for **{tag}**.",
+                  "",
+                  "## Downloads",
+                  f"- Windows: {windows}",
+                  f"- macOS: {macos}",
+                  f"- Linux: {linux}",
+                  "",
+                  "## All assets",
+                  f"- [Open release page]({release['html_url']})",
+              ]
+          )
+
+          with open("release-body.md", "w", encoding="utf-8") as file:
+              file.write(body)
+          PY
+
+      - name: Update release title and notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "$TAG" --repo "$REPO" --title "IconCore $TAG" --notes-file release-body.md

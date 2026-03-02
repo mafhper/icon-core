@@ -1,0 +1,34 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "IconCore",
+  "version": "1.0.0",
+  "identifier": "com.mafhper.iconcore",
+  "build": {
+    "beforeBuildCommand": "bun run --filter @iconcore/web build:desktop",
+    "beforeDevCommand": "bun run --filter @iconcore/web dev",
+    "devUrl": "http://localhost:5173/icon-core/app/",
+    "frontendDist": "../../web/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "IconCore",
+        "width": 1400,
+        "height": 900,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": false,
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
+  }
+}
