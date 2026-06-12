@@ -496,6 +496,87 @@ input[type='range'] {
   }
 }
 
+@keyframes composer-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes composer-slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes composer-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes composer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes composer-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.composer-enter > * {
+  animation: composer-fade-in 0.3s ease-out both;
+}
+
+.composer-enter > *:nth-child(1) { animation-delay: 0ms; }
+.composer-enter > *:nth-child(2) { animation-delay: 40ms; }
+.composer-enter > *:nth-child(3) { animation-delay: 80ms; }
+
+.composer-slide-up {
+  animation: composer-slide-up 0.35s ease-out both;
+}
+
+.composer-scale-in {
+  animation: composer-scale-in 0.25s ease-out both;
+}
+
+.composer-pulse {
+  animation: composer-pulse 2s ease-in-out infinite;
+}
+
+.composer-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.06) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: composer-shimmer 1.5s ease-in-out infinite;
+}
+
+.composer-layer-enter {
+  animation: composer-fade-in 0.2s ease-out both;
+}
+
+.composer-layer-enter:nth-child(1) { animation-delay: 0ms; }
+.composer-layer-enter:nth-child(2) { animation-delay: 30ms; }
+.composer-layer-enter:nth-child(3) { animation-delay: 60ms; }
+.composer-layer-enter:nth-child(4) { animation-delay: 90ms; }
+.composer-layer-enter:nth-child(5) { animation-delay: 120ms; }
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--core-elevated);
+  border: 1px solid var(--core-border);
+  border-radius: 4px;
+  color: var(--core-muted);
+}
+
 @media (max-width: 760px) {
   .theme-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

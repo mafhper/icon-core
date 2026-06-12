@@ -1,0 +1,26 @@
+{
+  "name": "@iconcore/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "iconcore": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "types": "./dist/cli.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@iconcore/shared": "workspace:*",
+    "@iconcore/engine": "workspace:*",
+    "@iconcore/renderer": "workspace:*",
+    "@iconcore/exporters": "workspace:*",
+    "@iconcore/validator": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
