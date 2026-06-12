@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@iconcore/shared": ["../iconcore-shared/dist/index.d.ts"],
+      "@iconcore/engine": ["../iconcore-engine/dist/index.d.ts"],
+      "@iconcore/renderer": ["../iconcore-renderer/dist/index.d.ts"],
+      "@iconcore/exporters": ["../iconcore-exporters/dist/index.d.ts"],
+      "@iconcore/validator": ["../iconcore-validator/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

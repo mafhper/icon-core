@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildGenerationPlan, generateManifest, resolveSources } from '../src';
+import { buildGenerationPlan, buildOutputMap, generateManifest, resolveSources } from '../src';
 
 const master = { id: 'master' };
 const light = { id: 'light' };
@@ -76,5 +76,68 @@ describe('generateManifest', () => {
     });
 
     expect(manifest.icons[0].src).toContain('icons/dark/');
+  });
+});
+
+describe('regression snapshot', () => {
+  it('v1 buildGenerationPlan default mode output is stable', () => {
+    const resolved = resolveSources({ master, favicon });
+    const tasks = buildGenerationPlan(resolved, {
+      includeSocial: true,
+      includeFaviconSvg: true,
+      opaqueBackground: false
+    });
+
+    const snapshot = tasks.map(({ kind, type, variant, name, width, height, format, transparent, maskable }) => ({
+      kind,
+      type,
+      variant,
+      name,
+      width,
+      height,
+      format,
+      transparent,
+      maskable
+    }));
+
+    expect(snapshot).toMatchSnapshot();
+  });
+
+  it('v1 buildGenerationPlan themed mode output is stable', () => {
+    const resolved = resolveSources({ master, light, dark, favicon });
+    const tasks = buildGenerationPlan(resolved, {
+      includeSocial: false,
+      includeFaviconSvg: false,
+      opaqueBackground: true
+    });
+
+    const snapshot = tasks.map(({ kind, type, variant, name, width, height, format, transparent, maskable }) => ({
+      kind,
+      type,
+      variant,
+      name,
+      width,
+      height,
+      format,
+      transparent,
+      maskable
+    }));
+
+    expect(snapshot).toMatchSnapshot();
+  });
+
+  it('v1 buildOutputMap produces correct entries', () => {
+    const resolved = resolveSources({ master });
+    const tasks = buildGenerationPlan(resolved, {
+      includeSocial: true,
+      includeFaviconSvg: true,
+      opaqueBackground: false
+    });
+
+    const entries = buildOutputMap(tasks);
+
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries.every((entry) => entry.path && entry.directory && entry.variant && entry.type)).toBe(true);
+    expect(entries).toMatchSnapshot();
   });
 });
