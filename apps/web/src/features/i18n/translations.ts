@@ -2,7 +2,7 @@ import type { Locale } from '@iconcore/shared';
 
 export const dictionary = {
   'pt-BR': {
-    appTitle: 'IconCore',
+    appTitle: 'Icon Core',
     appSubtitle: 'Engine vetorial local-first',
     uploadMaster: 'Ativo master',
     masterScope: 'Escopo do master',
@@ -76,7 +76,7 @@ export const dictionary = {
     emptyStep3: '3. Gere os arquivos para ver os resultados aqui.'
   },
   'en-US': {
-    appTitle: 'IconCore',
+    appTitle: 'Icon Core',
     appSubtitle: 'Local-first vector engine',
     uploadMaster: 'Master asset',
     masterScope: 'Master scope',
@@ -150,7 +150,7 @@ export const dictionary = {
     emptyStep3: '3. Generate assets and this area will show the output.'
   },
   'es-ES': {
-    appTitle: 'IconCore',
+    appTitle: 'Icon Core',
     appSubtitle: 'Motor vectorial local-first',
     uploadMaster: 'Activo master',
     masterScope: 'Escopo del master',

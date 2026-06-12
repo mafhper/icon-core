@@ -1,10 +1,18 @@
 import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import type { IconCoreProject } from '@iconcore/shared';
-import { composerReducer, initialState, type ComposerState, type ComposerAction } from './composerReducer';
+import {
+  composerReducer,
+  initialState,
+  normalizeRoute,
+  type ComposerState,
+  type ComposerAction,
+  type ComposerView
+} from './composerReducer';
 
 interface ComposerContextValue {
   state: ComposerState;
   dispatch: React.Dispatch<ComposerAction>;
+  navigate: (view: ComposerView) => void;
 }
 
 const ComposerContext = createContext<ComposerContextValue | null>(null);
@@ -18,12 +26,13 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
         return {
           ...init,
           project,
-          view: 'compose' as const,
+          view: 'edit-space' as const,
           history: [project],
-          historyIndex: 0
+          historyIndex: 0,
+          enabledTargets: new Set(project.targets.filter((target) => target.enabled).map((target) => target.target))
         };
       } catch (err) {
-        console.warn('Failed to restore saved IconCore Composer project:', err);
+        console.warn('Failed to restore saved Icon Core project:', err);
       }
     }
     return init;
@@ -41,20 +50,29 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash;
-      if (hash.startsWith('#/composer')) {
-        const view = hash.replace('#/composer/', '') as ComposerState['view'];
-        if (['start', 'compose', 'variants', 'preview', 'export', 'audit'].includes(view)) {
-          dispatch({ type: 'NAVIGATE', payload: view });
-        }
+      const raw = window.location.hash.replace(/^#\/?/, '').split('/')[0];
+      const view = normalizeRoute(raw);
+      if (raw === 'composer' || raw === 'compose' || raw === 'start' || raw === 'export') {
+        window.history.replaceState(null, '', `#/` + view);
       }
+      dispatch({ type: 'NAVIGATE', payload: view });
     };
+
+    handleHashChange();
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  const navigate = (view: ComposerView) => {
+    if (window.location.hash !== `#/${view}`) {
+      window.location.hash = `/${view}`;
+      return;
+    }
+    dispatch({ type: 'NAVIGATE', payload: view });
+  };
+
   return (
-    <ComposerContext.Provider value={{ state, dispatch }}>
+    <ComposerContext.Provider value={{ state, dispatch, navigate }}>
       {children}
     </ComposerContext.Provider>
   );

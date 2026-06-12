@@ -1,7 +1,7 @@
 {
-  "name": "IconCore",
-  "short_name": "IconCore",
-  "description": "Vector asset engine for modern web projects",
+  "name": "Icon Core",
+  "short_name": "Icon Core",
+  "description": "Free open-source icon editing and export utilities",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

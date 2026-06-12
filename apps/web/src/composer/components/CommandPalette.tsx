@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useComposer } from '../ComposerContext';
-import type { ComposerAction } from '../composerReducer';
 
 interface Command {
   id: string;
@@ -12,7 +11,7 @@ interface Command {
 }
 
 export const CommandPalette = () => {
-  const { state, dispatch } = useComposer();
+  const { state, dispatch, navigate } = useComposer();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -21,11 +20,11 @@ export const CommandPalette = () => {
   const commands: Command[] = [
     {
       id: 'new-project',
-      label: 'New Project',
-      description: 'Create a new icon project',
+      label: 'Workspaces',
+      description: 'Return to Workspaces',
       shortcut: '⌘N',
       category: 'navigation',
-      action: () => dispatch({ type: 'NAVIGATE', payload: 'start' })
+      action: () => navigate('workspaces')
     },
     {
       id: 'open-project',
@@ -173,11 +172,11 @@ export const CommandPalette = () => {
     },
     {
       id: 'export',
-      label: 'Export Icons',
+      label: 'Open Export Utilities',
       description: 'Export icons for selected targets',
       shortcut: '⌘E',
       category: 'export',
-      action: () => dispatch({ type: 'NAVIGATE', payload: 'export' })
+      action: () => navigate('export-utilities')
     },
     {
       id: 'variant-default',
@@ -278,7 +277,7 @@ export const CommandPalette = () => {
                 <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-core-muted">
                   {category}
                 </div>
-                {categoryCommands.map((cmd, idx) => {
+                {categoryCommands.map((cmd) => {
                   const globalIdx = filteredCommands.indexOf(cmd);
                   return (
                     <button

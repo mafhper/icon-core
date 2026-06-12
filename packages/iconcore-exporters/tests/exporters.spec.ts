@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { IconCoreProject, Fill } from '@iconcore/shared';
+import type { IconCoreProject } from '@iconcore/shared';
 import type { RenderBackend, RenderContext, ImageHandle } from '@iconcore/renderer';
 import { exportTarget, getAllTargets, getTargetDefinition } from '../src/exportTarget';
 import { generateReport } from '../src/report';
@@ -18,6 +18,18 @@ function createMockBackend(): RenderBackend {
     drawImage: vi.fn(),
     save: vi.fn(),
     restore: vi.fn(),
+    beginPath: vi.fn(),
+    closePath: vi.fn(),
+    rect: vi.fn(),
+    arc: vi.fn(),
+    roundRect: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    bezierCurveTo: vi.fn(),
+    clip: vi.fn(),
+    stroke: vi.fn(),
+    strokeStyle: '',
+    lineWidth: 1,
     canvas: { toBlob: vi.fn((cb: (b: Blob | null) => void) => cb(new Blob(['test'], { type: 'image/png' }))) }
   };
 

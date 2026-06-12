@@ -29,7 +29,7 @@ export const ResultsView = ({
       <section className="empty-state card-surface rounded-2xl border border-core-border bg-core-surface/80 p-8 md:p-10">
         <div className="empty-state-grid">
           <div className="empty-copy">
-            <p className="mono text-[11px] uppercase tracking-[0.16em] text-core-muted">IconCore workflow</p>
+            <p className="mono text-[11px] uppercase tracking-[0.16em] text-core-muted">Icon Core workflow</p>
             <h2 className="font-display text-2xl leading-tight md:text-3xl">{t('emptyTitle')}</h2>
             <ul className="space-y-2 text-sm text-core-muted">
               <li>{t('emptyStep1')}</li>

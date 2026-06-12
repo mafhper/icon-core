@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useComposer } from '../ComposerContext';
 
 export const useKeyboardShortcuts = () => {
-  const { state, dispatch } = useComposer();
+  const { state, dispatch, navigate } = useComposer();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,7 +55,7 @@ export const useKeyboardShortcuts = () => {
 
       if (isMod && e.key === 'e') {
         e.preventDefault();
-        dispatch({ type: 'NAVIGATE', payload: 'export' });
+        navigate('export-utilities');
         return;
       }
 
@@ -82,6 +82,33 @@ export const useKeyboardShortcuts = () => {
           e.preventDefault();
           dispatch({ type: 'REMOVE_LAYER', payload: { id: state.activeLayerId } });
         }
+        return;
+      }
+
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && state.activeLayerId && state.project) {
+        const layer = state.project.layers.find((item) => item.id === state.activeLayerId);
+        if (!layer || layer.locked) return;
+        e.preventDefault();
+        const amount = e.shiftKey ? 10 : 1;
+        const delta = {
+          ArrowUp: { x: 0, y: -amount },
+          ArrowDown: { x: 0, y: amount },
+          ArrowLeft: { x: -amount, y: 0 },
+          ArrowRight: { x: amount, y: 0 }
+        }[e.key]!;
+        dispatch({
+          type: 'UPDATE_LAYER',
+          payload: {
+            id: layer.id,
+            changes: {
+              transform: {
+                ...layer.transform,
+                x: layer.transform.x + delta.x,
+                y: layer.transform.y + delta.y
+              }
+            }
+          }
+        });
         return;
       }
 
@@ -112,5 +139,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state, dispatch]);
+  }, [state, dispatch, navigate]);
 };

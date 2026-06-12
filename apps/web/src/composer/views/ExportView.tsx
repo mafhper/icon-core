@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react';
 import { ArrowLeft, Download, Check, Loader2, FileText, AlertTriangle } from 'lucide-react';
 import { createCanvasBackend } from '@iconcore/renderer';
 import { exportTarget, generateReport, getAllTargets } from '@iconcore/exporters';
-import type { IconTarget } from '@iconcore/shared';
+import type { IconTarget, IconVariant } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
 const TARGETS = getAllTargets();
+const VARIANTS: IconVariant[] = ['default', 'light', 'dark', 'mono'];
 
 type ExportPhase = 'idle' | 'exporting' | 'archiving' | 'complete' | 'error';
 
@@ -33,7 +34,7 @@ const generateReadme = (projectName: string, targets: typeof TARGETS, selected: 
   const selectedTargets = targets.filter(t => selected.has(t.id));
   return `# ${projectName} - Icon Pack
 
-Generated with IconCore Composer
+Generated with Icon Core Export Utilities
 
 ## Contents
 
@@ -69,13 +70,14 @@ Place the icons in your \`src-tauri/icons/\` directory and reference them in \`t
 Place the icons in your project's build resources directory.
 
 ## License
-Generated assets are free to use in personal and commercial projects.
+Generated assets are yours to use. Icon Core itself is free and open-source.
 `;
 };
 
 export const ExportView = () => {
-  const { state, dispatch } = useComposer();
-  const [selectedTargets, setSelectedTargets] = useState<Set<IconTarget>>(new Set(['web-favicon']));
+  const { state, dispatch, navigate } = useComposer();
+  const [selectedTargets, setSelectedTargets] = useState<Set<IconTarget>>(() => new Set(state.enabledTargets));
+  const [selectedVariants, setSelectedVariants] = useState<Set<IconVariant>>(() => new Set([state.activeVariant]));
   const [progress, setProgress] = useState<ExportProgress>({ phase: 'idle', currentTask: 0, totalTasks: 0, currentTarget: '', currentSize: 0 });
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +89,16 @@ export const ExportView = () => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      dispatch({ type: 'SET_ACTIVE_TARGET', payload: { target: id, enabled: next.has(id) } });
+      return next;
+    });
+  };
+
+  const toggleVariant = (id: IconVariant) => {
+    setSelectedVariants((prev) => {
+      const next = new Set(prev);
+      if (next.has(id) && next.size > 1) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -97,22 +109,17 @@ export const ExportView = () => {
   );
 
   const totalTasks = useMemo(
-    () => selectedDefinitions.reduce((sum, t) => sum + t.tasks.length, 0),
-    [selectedDefinitions]
+    () => selectedDefinitions.reduce((sum, t) => sum + t.tasks.length, 0) * selectedVariants.size,
+    [selectedDefinitions, selectedVariants.size]
   );
 
   const totalFilesLabel = useMemo(
-    () => selectedDefinitions.reduce((sum, t) => sum + t.tasks.length + 1 + (t.manifest ? 1 : 0), 0),
-    [selectedDefinitions]
-  );
-
-  const selectedTargetLabels = useMemo(
-    () => new Map(TARGETS.map((target) => [target.id, target.name])),
-    [selectedTargets]
+    () => selectedDefinitions.reduce((sum, t) => sum + t.tasks.length + 1 + (t.manifest ? 1 : 0), 0) * selectedVariants.size,
+    [selectedDefinitions, selectedVariants.size]
   );
 
   const handleExport = async () => {
-    if (!state.project || selectedTargets.size === 0) return;
+    if (!state.project || selectedTargets.size === 0 || selectedVariants.size === 0) return;
 
     setError(null);
     setProgress({ phase: 'exporting', currentTask: 0, totalTasks, currentTarget: '', currentSize: 0 });
@@ -128,31 +135,33 @@ export const ExportView = () => {
       const allWarnings: string[] = [];
 
       try {
-        for (const target of selectedDefinitions) {
-          setProgress({
-            phase: 'exporting',
-            currentTask: completed,
-            totalTasks,
-            currentTarget: target.name,
-            currentSize: 0
-          });
+        for (const variant of selectedVariants) {
+          for (const target of selectedDefinitions) {
+            setProgress({
+              phase: 'exporting',
+              currentTask: completed,
+              totalTasks,
+              currentTarget: `${target.name} / ${variant}`,
+              currentSize: 0
+            });
 
-          const result = await exportTarget(state.project, target.id, state.activeVariant, backend);
-          const folder = zip.folder(target.id)!;
+            const result = await exportTarget(state.project, target.id, variant, backend);
+            const folder = zip.folder(`${target.id}/${variant}`)!;
 
-          for (const file of result.files) {
-            folder.file(file.path, file.blob);
+            for (const file of result.files) {
+              folder.file(file.path, file.blob);
+            }
+
+            if (result.manifest) {
+              folder.file(getManifestFileName(target.id), JSON.stringify(result.manifest, null, 2));
+            }
+
+            const report = generateReport(result, state.project, variant);
+            folder.file('iconcore-report.json', JSON.stringify(report, null, 2));
+            allWarnings.push(...result.warnings.map((warning) => `${target.name} (${variant}): ${warning}`));
+
+            completed += target.tasks.length;
           }
-
-          if (result.manifest) {
-            folder.file(getManifestFileName(target.id), JSON.stringify(result.manifest, null, 2));
-          }
-
-          const report = generateReport(result, state.project, state.activeVariant);
-          folder.file('iconcore-report.json', JSON.stringify(report, null, 2));
-          allWarnings.push(...result.warnings.map((warning) => `${target.name}: ${warning}`));
-
-          completed += target.tasks.length;
         }
       } finally {
         backend.destroy();
@@ -187,20 +196,45 @@ export const ExportView = () => {
       <div className="max-w-2xl mx-auto space-y-6">
         <button
           type="button"
-          onClick={() => dispatch({ type: 'NAVIGATE', payload: 'compose' })}
+          onClick={() => navigate('edit-space')}
           className="inline-flex items-center gap-2 text-sm text-core-muted hover:text-core-text transition"
         >
           <ArrowLeft size={16} />
-          Back to Composer
+          Back to Edit Space
         </button>
 
         <div>
           <h1 className="font-display text-2xl uppercase tracking-[0.18em] mb-2">
-            Export Icons
+            Export Utilities
           </h1>
           <p className="text-sm text-core-muted">
-            Select the targets you want to export. You will receive a ZIP with PNGs, a manifest, and usage instructions.
+            Select targets and variants. You will receive a ZIP with rendered assets, manifests, reports, and usage notes.
           </p>
+        </div>
+
+        <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 space-y-3">
+          <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">
+            Variants
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {VARIANTS.map((variant) => (
+              <label
+                key={variant}
+                className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border cursor-pointer ${
+                  selectedVariants.has(variant)
+                    ? 'border-core-accent bg-core-accent/10'
+                    : 'border-core-border hover:border-core-accent/50'
+                }`}
+              >
+                <span className="text-xs font-semibold uppercase tracking-[0.08em]">{variant}</span>
+                <input
+                  type="checkbox"
+                  checked={selectedVariants.has(variant)}
+                  onChange={() => toggleVariant(variant)}
+                />
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 space-y-4">

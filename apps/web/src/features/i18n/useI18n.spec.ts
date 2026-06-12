@@ -12,7 +12,7 @@ describe('i18n locale resolution', () => {
 
   it('exposes mandatory translation keys', () => {
     const t = makeTranslator('es-ES');
-    expect(t('appTitle')).toBe('IconCore');
+    expect(t('appTitle')).toBe('Icon Core');
     expect(t('generate')).toBe('Generar paquete');
   });
 });

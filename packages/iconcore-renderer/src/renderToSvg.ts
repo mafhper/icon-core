@@ -1,11 +1,24 @@
-import type { IconCoreProject, IconVariant } from '@iconcore/shared';
+import type { IconCoreProject, IconLayer, IconVariant } from '@iconcore/shared';
+
+const resolveLayer = (layer: IconLayer, variant: IconVariant): IconLayer => {
+  const override = layer.variantOverrides?.[variant];
+  if (!override) return layer;
+  return {
+    ...layer,
+    ...override,
+    source: override.source ? { ...layer.source, ...override.source } : layer.source,
+    transform: override.transform ? { ...layer.transform, ...override.transform } : layer.transform,
+    text: override.text ? { ...layer.text, ...override.text } as IconLayer['text'] : layer.text,
+    effects: override.effects ?? layer.effects
+  };
+};
 
 export const renderToSvg = (
   project: IconCoreProject,
   variant: IconVariant
 ): string => {
   const size = project.canvas.size;
-  const bg = project.canvas.background;
+  const bg = project.variants[variant]?.canvas?.background ?? project.canvas.background;
 
   let bgColor = '#ffffff';
   if (bg.kind === 'solid' && bg.color) {
@@ -13,20 +26,23 @@ export const renderToSvg = (
   }
 
   const visible = project.layers
+    .map((layer) => resolveLayer(layer, variant))
     .filter(l => l.visible)
     .sort((a, b) => a.zIndex - b.zIndex);
 
   let svgLayers = '';
 
   for (const layer of visible) {
-    const variantOverrides = layer.variantOverrides?.[variant];
-    const opacity = variantOverrides?.opacity ?? layer.opacity;
+    const opacity = layer.opacity;
     const transform = layer.transform;
     const tx = transform?.x ?? 0;
     const ty = transform?.y ?? 0;
     const s = transform?.scale ?? 1;
 
-    if (layer.source.type === 'inline' && layer.source.data && layer.source.mimeType === 'image/svg+xml') {
+    if (layer.kind === 'text' && layer.text) {
+      const color = layer.fill?.kind === 'solid' ? layer.fill.color ?? '#111827' : '#111827';
+      svgLayers += `<text x="${size / 2 + tx}" y="${size / 2 + ty}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${color}" opacity="${opacity}" transform="rotate(${transform.rotation},${size / 2 + tx},${size / 2 + ty}) scale(${s})">${layer.text.content}</text>\n`;
+    } else if (layer.source.type === 'inline' && layer.source.data && layer.source.mimeType === 'image/svg+xml') {
       try {
         const svgContent = atob(layer.source.data);
         svgLayers += `<g opacity="${opacity}" transform="translate(${tx},${ty}) scale(${s})">${svgContent}</g>\n`;

@@ -1,27 +1,19 @@
 import { ComposerProvider, useComposer } from './ComposerContext';
-import { Topbar } from './components/Topbar';
-import { LayerList } from './components/LayerList';
-import { LayerInspector } from './components/LayerInspector';
-import { PreviewCanvas } from './components/PreviewCanvas';
-import { SizeStrip } from './components/SizeStrip';
-import { StartView } from './views/StartView';
 import { ComposeView } from './views/ComposeView';
 import { ExportView } from './views/ExportView';
 import { CommandPalette } from './components/CommandPalette';
-import { PresetsCatalog } from './components/PresetsCatalog';
+import { WorkspacesView } from './views/WorkspacesView';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { useState } from 'react';
 
 const ComposerShell = () => {
   const { state } = useComposer();
   useKeyboardShortcuts();
-  const [showPresets, setShowPresets] = useState(false);
 
-  if (state.view === 'start' || !state.project) {
-    return <StartView onOpenPresets={() => setShowPresets(true)} />;
+  if (state.view === 'workspaces' || !state.project) {
+    return <WorkspacesView />;
   }
 
-  if (state.view === 'export') {
+  if (state.view === 'export-utilities') {
     return <ExportView />;
   }
 
@@ -29,7 +21,6 @@ const ComposerShell = () => {
     <>
       <ComposeView />
       <CommandPalette />
-      {showPresets && <PresetsCatalog onClose={() => setShowPresets(false)} />}
     </>
   );
 };

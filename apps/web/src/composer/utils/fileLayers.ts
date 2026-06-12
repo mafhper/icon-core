@@ -2,6 +2,8 @@ export interface FileLayerAsset {
   name: string;
   mimeType: string;
   data: string;
+  width: number;
+  height: number;
 }
 
 const SUPPORTED_MIME_TYPES = new Set([
@@ -43,12 +45,25 @@ const readFileAsDataUrl = (file: File): Promise<string> => {
   });
 };
 
+const readImageSize = async (file: File): Promise<{ width: number; height: number }> => {
+  if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
+    return { width: 512, height: 512 };
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    return { width: bitmap.width, height: bitmap.height };
+  } catch {
+    return { width: 512, height: 512 };
+  }
+};
+
 export const fileToLayerAsset = async (file: File): Promise<FileLayerAsset> => {
   if (!isSupportedLayerFile(file)) {
     throw new Error(`Unsupported file type: ${file.name}`);
   }
 
-  const dataUrl = await readFileAsDataUrl(file);
+  const [dataUrl, dimensions] = await Promise.all([readFileAsDataUrl(file), readImageSize(file)]);
   const separator = dataUrl.indexOf(',');
   if (separator === -1) {
     throw new Error(`Invalid data URL for ${file.name}`);
@@ -57,7 +72,9 @@ export const fileToLayerAsset = async (file: File): Promise<FileLayerAsset> => {
   return {
     name: file.name.replace(/\.[^.]+$/, '') || file.name,
     mimeType: inferMimeType(file),
-    data: dataUrl.slice(separator + 1)
+    data: dataUrl.slice(separator + 1),
+    width: dimensions.width,
+    height: dimensions.height
   };
 };
 

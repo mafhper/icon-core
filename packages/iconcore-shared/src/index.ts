@@ -64,6 +64,13 @@ export interface Transform2D {
   rotation: number;
 }
 
+export interface TextDefinition {
+  content: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: number;
+}
+
 export interface ShapeDefinition {
   kind: ShapeKind;
   width: number;
@@ -94,6 +101,7 @@ export interface IconLayer {
   fill?: Fill;
   stroke?: Stroke;
   effects?: LayerEffect[];
+  text?: TextDefinition;
   variantOverrides?: Partial<Record<IconVariant, Partial<Omit<IconLayer, 'id' | 'variantOverrides'>>>>;
 }
 

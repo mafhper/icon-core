@@ -1,4 +1,4 @@
-import type { Fill, IconVariant, IconLayer, ShapeKind, Stroke, BlendMode } from '@iconcore/shared';
+import type { Fill, IconLayer, ShapeKind, Stroke, BlendMode } from '@iconcore/shared';
 
 export interface ImageHandle {
   width: number;
@@ -32,6 +32,10 @@ export interface ResolvedLayer extends Omit<IconLayer, 'variantOverrides'> {
   resolvedOpacity: number;
   resolvedVisible: boolean;
   resolvedBlendMode: BlendMode;
+  resolvedSource: IconLayer['source'];
+  resolvedTransform: IconLayer['transform'];
+  resolvedText?: IconLayer['text'];
+  resolvedEffects?: IconLayer['effects'];
 }
 
 export { composeLayers } from './composeLayers';

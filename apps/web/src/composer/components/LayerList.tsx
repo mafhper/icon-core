@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Upload } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Upload, Type } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { fileToLayerAsset, isSupportedLayerFile, sortLayerFiles } from '../utils/fileLayers';
 
@@ -12,7 +12,7 @@ export const LayerList = () => {
   const handleAddLayer = () => {
     dispatch({
       type: 'ADD_LAYER',
-      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+      payload: { shape: { kind: 'squircle', width: 220, height: 220, cornerRadius: 48 } }
     });
   };
 
@@ -44,6 +44,14 @@ export const LayerList = () => {
             title="Add shape layer"
           >
             <Plus size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'ADD_LAYER', payload: { text: true } })}
+            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
+            title="Add text layer"
+          >
+            <Type size={16} />
           </button>
           <label className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text cursor-pointer" title="Upload image">
             <input type="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp" className="hidden" multiple onChange={handleFileUpload} />

@@ -3,7 +3,7 @@ import { useComposer } from '../ComposerContext';
 import { VariantSwitcher } from './VariantSwitcher';
 
 export const Topbar = () => {
-  const { state, dispatch } = useComposer();
+  const { state, dispatch, navigate } = useComposer();
 
   const handleSave = () => {
     if (!state.project) return;
@@ -43,7 +43,7 @@ export const Topbar = () => {
           <Layers size={20} className="text-core-accent" />
           <div>
             <p className="font-display text-sm uppercase tracking-[0.18em]">
-              {state.project?.metadata.name ?? 'IconCore Composer'}
+              {state.project?.metadata.name ?? 'Icon Core'}
             </p>
             {state.isDirty && (
               <p className="text-xs text-core-muted">Unsaved changes</p>
@@ -112,12 +112,12 @@ export const Topbar = () => {
           </button>
           <button
             type="button"
-            onClick={() => dispatch({ type: 'NAVIGATE', payload: 'export' })}
+            onClick={() => navigate('export-utilities')}
             disabled={!state.project}
             className="core-btn core-btn-primary inline-flex items-center gap-2 rounded-xl border border-core-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] disabled:opacity-50"
           >
             <Download size={14} />
-            Export
+            Export Utilities
           </button>
         </div>
       </div>

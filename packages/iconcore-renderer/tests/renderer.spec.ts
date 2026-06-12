@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { IconCoreProject, Fill, ShapeKind, SafeArea } from '@iconcore/shared';
 import type { RenderBackend, RenderContext, ImageHandle } from '../src/types';
 
@@ -24,11 +24,23 @@ function createMockBackend(): RenderBackend {
     drawImage: vi.fn(),
     save: vi.fn(),
     restore: vi.fn(),
+    beginPath: vi.fn(),
+    closePath: vi.fn(),
+    rect: vi.fn(),
+    arc: vi.fn(),
+    roundRect: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    bezierCurveTo: vi.fn(),
+    clip: vi.fn(),
+    stroke: vi.fn(),
+    strokeStyle: '',
+    lineWidth: 1,
     canvas: { toBlob: vi.fn((cb: (b: Blob | null) => void) => cb(new Blob([], { type: 'image/png' }))) }
   };
 
   return {
-    loadImage: vi.fn(async (source: string | Blob): Promise<ImageHandle> => ({
+    loadImage: vi.fn(async (_source: string | Blob): Promise<ImageHandle> => ({
       width: 128,
       height: 128,
       native: {}
@@ -530,6 +542,42 @@ describe('composeLayers edge cases', () => {
     const blob = await composeLayers(layers, 128, solidFill, 'default', undefined, backend);
     expect(blob).toBeDefined();
     expect(backend.applyTransform).toHaveBeenCalled();
+    backend.destroy();
+  });
+
+  it('resolves variant source, transform, opacity, visibility, blend, fill, and effects before rendering', async () => {
+    const { composeLayers } = await import('../src/composeLayers');
+    const backend = createMockBackend();
+    const layers = [{
+      id: 'variant-layer',
+      name: 'Variant Layer',
+      kind: 'shape' as const,
+      visible: false,
+      zIndex: 0,
+      source: { type: 'reference' as const, path: '', shape: { kind: 'circle' as const, width: 40, height: 40 } },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      opacity: 1,
+      blendMode: 'normal' as const,
+      fill: { kind: 'solid' as const, color: '#ff0000' },
+      variantOverrides: {
+        dark: {
+          visible: true,
+          source: { type: 'reference' as const, path: '', shape: { kind: 'rounded-rectangle' as const, width: 64, height: 64, cornerRadius: 16 } },
+          transform: { x: 10, y: 14, scale: 1.5, rotation: 12 },
+          opacity: 0.5,
+          blendMode: 'multiply' as const,
+          fill: { kind: 'solid' as const, color: '#00ff00' },
+          effects: [{ kind: 'depth-shadow' as const, enabled: true, params: { x: 0, y: 4, blur: 12, color: 'rgba(0,0,0,0.3)' } }]
+        }
+      }
+    }];
+
+    const blob = await composeLayers(layers, 128, solidFill, 'dark', undefined, backend);
+    expect(blob).toBeDefined();
+    expect(backend.applyTransform).toHaveBeenCalledWith(expect.anything(), { x: 10, y: 14, scale: 1.5, rotation: 12 });
+    expect(backend.applyOpacity).toHaveBeenCalledWith(expect.anything(), 0.5);
+    expect(backend.applyBlendMode).toHaveBeenCalledWith(expect.anything(), 'multiply');
+    expect(backend.applyFill).toHaveBeenCalledWith(expect.anything(), { kind: 'solid', color: '#00ff00' }, 32, 32, 64, 64);
     backend.destroy();
   });
 
