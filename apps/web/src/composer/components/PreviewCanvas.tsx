@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { ZoomIn, ZoomOut, Grid, Circle, Square, RectangleHorizontal, Loader2 } from 'lucide-react';
 import { renderProject, createCanvasBackend } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
+import { DropZone } from './DropZone';
 
 export const PreviewCanvas = () => {
   const { state, dispatch } = useComposer();
@@ -25,9 +26,11 @@ export const PreviewCanvas = () => {
           backend
         );
         if (!cancelled) {
-          if (imageUrl) URL.revokeObjectURL(imageUrl);
           const url = URL.createObjectURL(blob);
-          setImageUrl(url);
+          setImageUrl((previousUrl) => {
+            if (previousUrl) URL.revokeObjectURL(previousUrl);
+            return url;
+          });
           setIsRendering(false);
         }
         backend.destroy();
@@ -120,7 +123,9 @@ export const PreviewCanvas = () => {
           backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
         }}
       >
-        {isRendering ? (
+        {state.project.layers.length === 0 ? (
+          <DropZone />
+        ) : isRendering ? (
           <div className="flex flex-col items-center gap-3">
             <div
               className="composer-shimmer rounded-2xl"

@@ -40,6 +40,43 @@ const BLEND_MODE_MAP: Record<BlendMode, GlobalCompositeOperation> = {
   'lighten': 'lighten'
 };
 
+const applyAlphaMask = (
+  native: CanvasRenderingContext2D,
+  shape: ShapeKind,
+  size: number,
+  inset: number = 0
+): void => {
+  const x = inset;
+  const y = inset;
+  const width = Math.max(0, size - inset * 2);
+  const height = Math.max(0, size - inset * 2);
+
+  native.save();
+  native.globalCompositeOperation = 'destination-in';
+  native.fillStyle = '#000000';
+  native.beginPath();
+
+  if (shape === 'circle') {
+    native.arc(size / 2, size / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
+  } else if (shape === 'rounded-rectangle') {
+    native.roundRect(x, y, width, height, size * 0.2);
+  } else if (shape === 'squircle') {
+    const curvature = 0.6;
+    const offset = width * (1 - curvature) / 2;
+    native.moveTo(x + offset, y);
+    native.bezierCurveTo(x + width - offset, y, x + width, y + offset, x + width, y + height - offset);
+    native.bezierCurveTo(x + width, y + height - offset, x + width - offset, y + height, x + offset, y + height);
+    native.bezierCurveTo(x + offset, y + height, x, y + height - offset, x, y + offset);
+    native.bezierCurveTo(x, y + offset, x + offset, y, x + offset, y);
+  } else {
+    native.rect(x, y, width, height);
+  }
+
+  native.closePath();
+  native.fill();
+  native.restore();
+};
+
 export const createCanvasBackend = (): RenderBackend => {
   const cleanup: Array<() => void> = [];
 
@@ -73,7 +110,7 @@ export const createCanvasBackend = (): RenderBackend => {
     },
 
     applyMask(ctx: RenderContext, shape: ShapeKind, size: number, radius?: number): void {
-      // Delegated to masks/applyMask module
+      applyAlphaMask(ctx.native as CanvasRenderingContext2D, shape, size, radius);
     },
 
     applyFill(ctx: RenderContext, fill: Fill, x: number, y: number, width: number, height: number): void {

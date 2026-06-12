@@ -1,16 +1,23 @@
 import { useCallback } from 'react';
 import { Upload } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
+import { fileToLayerAsset, isSupportedLayerFile, sortLayerFiles } from '../utils/fileLayers';
 
 export const DropZone = () => {
   const { dispatch } = useComposer();
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-    files.forEach((file) => {
-      dispatch({ type: 'ADD_LAYER', payload: { file } });
-    });
+    const files = sortLayerFiles(Array.from(e.dataTransfer.files).filter(isSupportedLayerFile));
+
+    for (const file of files) {
+      try {
+        const asset = await fileToLayerAsset(file);
+        dispatch({ type: 'ADD_LAYER', payload: { asset } });
+      } catch (err) {
+        console.error('Failed to import layer:', err);
+      }
+    }
   }, [dispatch]);
 
   const handleDragOver = (e: React.DragEvent) => {

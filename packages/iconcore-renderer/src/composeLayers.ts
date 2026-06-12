@@ -16,6 +16,22 @@ const resolveLayerForVariant = (
   };
 };
 
+const getContainedRect = (
+  sourceWidth: number,
+  sourceHeight: number,
+  canvasSize: number
+): { x: number; y: number; width: number; height: number } => {
+  const scale = Math.min(canvasSize / sourceWidth, canvasSize / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+  return {
+    x: (canvasSize - width) / 2,
+    y: (canvasSize - height) / 2,
+    width,
+    height
+  };
+};
+
 export const composeLayers = async (
   layers: IconLayer[],
   canvasSize: number,
@@ -55,7 +71,14 @@ export const composeLayers = async (
     if (layer.source.shape) {
       const shape = layer.source.shape;
       if (layer.resolvedFill) {
-        backend.applyFill(ctx, layer.resolvedFill, 0, 0, shape.width, shape.height);
+        backend.applyFill(
+          ctx,
+          layer.resolvedFill,
+          (canvasSize - shape.width) / 2,
+          (canvasSize - shape.height) / 2,
+          shape.width,
+          shape.height
+        );
       }
     }
 
@@ -67,8 +90,8 @@ export const composeLayers = async (
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         const blob = new Blob([bytes], { type: mimeType });
         const img = await backend.loadImage(blob);
-        const scale = layer.transform?.scale ?? 1;
-        backend.drawImage(ctx, img, 0, 0, img.width * scale, img.height * scale);
+        const rect = getContainedRect(img.width, img.height, canvasSize);
+        backend.drawImage(ctx, img, rect.x, rect.y, rect.width, rect.height);
       } catch {
         // Skip layers that fail to load
       }
@@ -77,8 +100,8 @@ export const composeLayers = async (
     if (layer.source.type === 'reference' && layer.source.path) {
       try {
         const img = await backend.loadImage(layer.source.path);
-        const scale = layer.transform?.scale ?? 1;
-        backend.drawImage(ctx, img, 0, 0, img.width * scale, img.height * scale);
+        const rect = getContainedRect(img.width, img.height, canvasSize);
+        backend.drawImage(ctx, img, rect.x, rect.y, rect.width, rect.height);
       } catch {
         // Skip layers that fail to load
       }

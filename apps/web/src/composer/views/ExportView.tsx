@@ -1,17 +1,13 @@
 import { useState, useMemo } from 'react';
 import { ArrowLeft, Download, Check, Loader2, FileText, AlertTriangle } from 'lucide-react';
-import { renderProject, createCanvasBackend } from '@iconcore/renderer';
+import { createCanvasBackend } from '@iconcore/renderer';
+import { exportTarget, generateReport, getAllTargets } from '@iconcore/exporters';
+import type { IconTarget } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
-const TARGETS = [
-  { id: 'web-favicon', name: 'Web Favicon', sizes: [16, 32, 48, 180] },
-  { id: 'pwa', name: 'PWA Icons', sizes: [192, 512] },
-  { id: 'tauri', name: 'Tauri App', sizes: [32, 128, 256, 512] },
-  { id: 'electron', name: 'Electron', sizes: [256, 512] },
-  { id: 'marketing', name: 'Marketing', sizes: [256, 512, 1024] }
-] as const;
+const TARGETS = getAllTargets();
 
 type ExportPhase = 'idle' | 'exporting' | 'archiving' | 'complete' | 'error';
 
@@ -23,7 +19,17 @@ interface ExportProgress {
   currentSize: number;
 }
 
-const generateReadme = (projectName: string, targets: readonly { id: string; name: string; sizes: readonly number[] }[], selected: Set<string>) => {
+const getTargetSizes = (target: (typeof TARGETS)[number]): number[] => {
+  return [...new Set(target.tasks.map((task) => task.width))].sort((a, b) => a - b);
+};
+
+const getManifestFileName = (target: IconTarget): string => {
+  if (target === 'web-favicon') return 'site.webmanifest';
+  if (target === 'pwa') return 'manifest.webmanifest';
+  return 'manifest.json';
+};
+
+const generateReadme = (projectName: string, targets: typeof TARGETS, selected: Set<IconTarget>) => {
   const selectedTargets = targets.filter(t => selected.has(t.id));
   return `# ${projectName} - Icon Pack
 
@@ -31,7 +37,7 @@ Generated with IconCore Composer
 
 ## Contents
 
-${selectedTargets.map(t => `- **${t.name}** (${t.sizes.map(s => `${s}x${s}`).join(', ')})`).join('\n')}
+${selectedTargets.map(t => `- **${t.name}** (${getTargetSizes(t).map(s => `${s}x${s}`).join(', ')})`).join('\n')}
 
 ## Usage
 
@@ -69,14 +75,14 @@ Generated assets are free to use in personal and commercial projects.
 
 export const ExportView = () => {
   const { state, dispatch } = useComposer();
-  const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set(['web-favicon']));
+  const [selectedTargets, setSelectedTargets] = useState<Set<IconTarget>>(new Set(['web-favicon']));
   const [progress, setProgress] = useState<ExportProgress>({ phase: 'idle', currentTask: 0, totalTasks: 0, currentTarget: '', currentSize: 0 });
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const projectName = state.project?.metadata.name ?? 'icon';
 
-  const toggleTarget = (id: string) => {
+  const toggleTarget = (id: IconTarget) => {
     setSelectedTargets((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -85,8 +91,23 @@ export const ExportView = () => {
     });
   };
 
-  const totalSizes = useMemo(
-    () => TARGETS.filter(t => selectedTargets.has(t.id)).reduce((sum, t) => sum + t.sizes.length, 0),
+  const selectedDefinitions = useMemo(
+    () => TARGETS.filter(t => selectedTargets.has(t.id)),
+    [selectedTargets]
+  );
+
+  const totalTasks = useMemo(
+    () => selectedDefinitions.reduce((sum, t) => sum + t.tasks.length, 0),
+    [selectedDefinitions]
+  );
+
+  const totalFilesLabel = useMemo(
+    () => selectedDefinitions.reduce((sum, t) => sum + t.tasks.length + 1 + (t.manifest ? 1 : 0), 0),
+    [selectedDefinitions]
+  );
+
+  const selectedTargetLabels = useMemo(
+    () => new Map(TARGETS.map((target) => [target.id, target.name])),
     [selectedTargets]
   );
 
@@ -94,7 +115,7 @@ export const ExportView = () => {
     if (!state.project || selectedTargets.size === 0) return;
 
     setError(null);
-    setProgress({ phase: 'exporting', currentTask: 0, totalTasks: totalSizes, currentTarget: '', currentSize: 0 });
+    setProgress({ phase: 'exporting', currentTask: 0, totalTasks, currentTarget: '', currentSize: 0 });
     setElapsed(0);
 
     const startTime = Date.now();
@@ -103,52 +124,53 @@ export const ExportView = () => {
     try {
       const zip = new JSZip();
       const backend = createCanvasBackend();
-      const targets = TARGETS.filter(t => selectedTargets.has(t.id));
       let completed = 0;
+      const allWarnings: string[] = [];
 
-      for (const target of targets) {
-        const folder = zip.folder(target.id)!;
+      try {
+        for (const target of selectedDefinitions) {
+          setProgress({
+            phase: 'exporting',
+            currentTask: completed,
+            totalTasks,
+            currentTarget: target.name,
+            currentSize: 0
+          });
 
-        for (const size of target.sizes) {
-          setProgress({ phase: 'exporting', currentTask: completed, totalTasks: totalSizes, currentTarget: target.name, currentSize: size });
+          const result = await exportTarget(state.project, target.id, state.activeVariant, backend);
+          const folder = zip.folder(target.id)!;
 
-          const blob = await renderProject(
-            state.project!,
-            state.activeVariant,
-            size,
-            backend
-          );
+          for (const file of result.files) {
+            folder.file(file.path, file.blob);
+          }
 
-          const filename = `icon-${size}x${size}.png`;
-          folder.file(filename, blob);
-          completed++;
+          if (result.manifest) {
+            folder.file(getManifestFileName(target.id), JSON.stringify(result.manifest, null, 2));
+          }
+
+          const report = generateReport(result, state.project, state.activeVariant);
+          folder.file('iconcore-report.json', JSON.stringify(report, null, 2));
+          allWarnings.push(...result.warnings.map((warning) => `${target.name}: ${warning}`));
+
+          completed += target.tasks.length;
         }
+      } finally {
+        backend.destroy();
       }
 
-      setProgress({ phase: 'archiving', currentTask: totalSizes, totalTasks: totalSizes, currentTarget: '', currentSize: 0 });
-
-      const manifest = {
-        name: projectName,
-        short_name: state.project.metadata.shortName,
-        icons: targets.flatMap(t =>
-          t.sizes.map(s => ({
-            src: `${t.id}/icon-${s}x${s}.png`,
-            sizes: `${s}x${s}`,
-            type: 'image/png'
-          }))
-        )
-      };
-      zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+      setProgress({ phase: 'archiving', currentTask: totalTasks, totalTasks, currentTarget: '', currentSize: 0 });
       zip.file('README.md', generateReadme(projectName, TARGETS, selectedTargets));
+      if (allWarnings.length > 0) {
+        zip.file('WARNINGS.txt', allWarnings.join('\n'));
+      }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       saveAs(zipBlob, `${state.project.exportProfile.outputBaseName}-icons.zip`);
 
-      setProgress({ phase: 'complete', currentTask: totalSizes, totalTasks: totalSizes, currentTarget: '', currentSize: 0 });
-      backend.destroy();
+      setProgress({ phase: 'complete', currentTask: totalTasks, totalTasks, currentTarget: '', currentSize: 0 });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed');
-      setProgress({ phase: 'error', currentTask: 0, totalTasks: totalSizes, currentTarget: '', currentSize: 0 });
+      setProgress({ phase: 'error', currentTask: 0, totalTasks, currentTarget: '', currentSize: 0 });
     } finally {
       clearInterval(timer);
     }
@@ -194,7 +216,7 @@ export const ExportView = () => {
                 } else if (val === 'web') {
                   setSelectedTargets(new Set(['web-favicon', 'pwa']));
                 } else if (val === 'desktop') {
-                  setSelectedTargets(new Set(['tauri', 'electron']));
+                  setSelectedTargets(new Set(['tauri', 'electron', 'desktop-generic']));
                 } else {
                   setSelectedTargets(new Set(['web-favicon']));
                 }
@@ -227,7 +249,7 @@ export const ExportView = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{target.name}</p>
                   <p className="text-xs text-core-muted">
-                    {target.sizes.length} sizes
+                    {target.tasks.length} files
                   </p>
                 </div>
                 {selectedTargets.has(target.id) && (
@@ -246,24 +268,24 @@ export const ExportView = () => {
                 {progress.phase === 'archiving' && <FileText size={20} className="text-core-accent composer-pulse" />}
                 <div>
                   <p className="text-sm font-semibold">
-                    {progress.phase === 'exporting' && `Exporting ${progress.currentTarget} (${progress.currentSize}px)`}
+                    {progress.phase === 'exporting' && `Exporting ${progress.currentTarget}`}
                     {progress.phase === 'archiving' && 'Packaging ZIP archive...'}
                     {progress.phase === 'error' && 'Export failed'}
                   </p>
                   <p className="text-xs text-core-muted">
-                    {progress.currentTask} / {progress.totalTasks} icons
+                    {progress.currentTask} / {progress.totalTasks} render tasks
                     {elapsed > 0 && ` · ${formatElapsed(elapsed)}`}
                   </p>
                 </div>
               </div>
               <span className="text-sm font-mono tabular-nums">
-                {totalSizes > 0 ? Math.round((progress.currentTask / totalSizes) * 100) : 0}%
+                {totalTasks > 0 ? Math.round((progress.currentTask / totalTasks) * 100) : 0}%
               </span>
             </div>
             <div className="w-full bg-core-elevated rounded-full h-2 overflow-hidden">
               <div
                 className="bg-core-accent h-2 rounded-full transition-all duration-300"
-                style={{ width: `${totalSizes > 0 ? (progress.currentTask / totalSizes) * 100 : 0}%` }}
+                style={{ width: `${totalTasks > 0 ? (progress.currentTask / totalTasks) * 100 : 0}%` }}
               />
             </div>
           </div>
@@ -278,7 +300,7 @@ export const ExportView = () => {
               <div>
                 <p className="text-sm font-semibold">Export complete!</p>
                 <p className="text-xs text-core-muted">
-                  {totalSizes} icons exported · {formatElapsed(elapsed)}
+                  {totalFilesLabel} files exported · {formatElapsed(elapsed)}
                 </p>
               </div>
             </div>
@@ -305,7 +327,7 @@ export const ExportView = () => {
             ? 'Exporting...'
             : progress.phase === 'complete'
               ? 'Export Again'
-              : `Export ZIP (${totalSizes} icons)`}
+              : `Export ZIP (${totalFilesLabel} files)`}
         </button>
       </div>
     </div>

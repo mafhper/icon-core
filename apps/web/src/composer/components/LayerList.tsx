@@ -1,5 +1,6 @@
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Upload } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
+import { fileToLayerAsset, isSupportedLayerFile, sortLayerFiles } from '../utils/fileLayers';
 
 export const LayerList = () => {
   const { state, dispatch } = useComposer();
@@ -15,10 +16,17 @@ export const LayerList = () => {
     });
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      dispatch({ type: 'ADD_LAYER', payload: { file } });
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = sortLayerFiles(Array.from(e.target.files ?? []).filter(isSupportedLayerFile));
+    e.currentTarget.value = '';
+
+    for (const file of files) {
+      try {
+        const asset = await fileToLayerAsset(file);
+        dispatch({ type: 'ADD_LAYER', payload: { asset } });
+      } catch (err) {
+        console.error('Failed to import layer:', err);
+      }
     }
   };
 
@@ -38,8 +46,8 @@ export const LayerList = () => {
             <Plus size={16} />
           </button>
           <label className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text cursor-pointer" title="Upload image">
-            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <input type="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp" className="hidden" multiple onChange={handleFileUpload} />
+            <Upload size={16} />
           </label>
         </div>
       </div>
@@ -61,7 +69,12 @@ export const LayerList = () => {
             </span>
           </div>
         )}
-        {layers.map((layer, idx) => (
+        {layers.map((layer, idx) => {
+          const previewUrl = layer.source.type === 'inline' && layer.source.data && layer.source.mimeType
+            ? `data:${layer.source.mimeType};base64,${layer.source.data}`
+            : null;
+
+          return (
           <div
             key={layer.id}
             onClick={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } })}
@@ -72,8 +85,12 @@ export const LayerList = () => {
             }`}
             style={{ animationDelay: `${idx * 30}ms` }}
           >
-            <div className="w-8 h-8 rounded bg-core-elevated flex items-center justify-center text-xs">
-              {layer.source.shape?.kind === 'circle' ? '●' : layer.source.shape?.kind === 'rectangle' ? '■' : '◆'}
+            <div className="w-8 h-8 rounded bg-core-elevated flex items-center justify-center overflow-hidden text-xs">
+              {previewUrl ? (
+                <img src={previewUrl} alt="" className="h-full w-full object-contain" />
+              ) : (
+                layer.source.shape?.kind === 'circle' ? '●' : layer.source.shape?.kind === 'rectangle' ? '■' : '◆'
+              )}
             </div>
             <span className="flex-1 text-xs truncate">{layer.name}</span>
             <button
@@ -97,7 +114,8 @@ export const LayerList = () => {
               {layer.locked ? <Lock size={12} /> : <Unlock size={12} />}
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {state.activeLayerId && (

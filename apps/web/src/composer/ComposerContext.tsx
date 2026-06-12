@@ -22,7 +22,9 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
           history: [project],
           historyIndex: 0
         };
-      } catch {}
+      } catch (err) {
+        console.warn('Failed to restore saved IconCore Composer project:', err);
+      }
     }
     return init;
   });

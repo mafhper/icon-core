@@ -6,6 +6,7 @@ import type {
   Fill,
   ShapeDefinition
 } from '@iconcore/shared';
+import type { FileLayerAsset } from './utils/fileLayers';
 
 export type ComposerView = 'start' | 'compose' | 'variants' | 'preview' | 'export' | 'audit';
 
@@ -27,7 +28,7 @@ export interface ComposerState {
 export type ComposerAction =
   | { type: 'NEW_PROJECT'; payload: { name: string; size: number } }
   | { type: 'LOAD_PROJECT'; payload: IconCoreProject }
-  | { type: 'ADD_LAYER'; payload: { file?: File; shape?: ShapeDefinition } }
+  | { type: 'ADD_LAYER'; payload: { asset?: FileLayerAsset; shape?: ShapeDefinition } }
   | { type: 'UPDATE_LAYER'; payload: { id: string; changes: Partial<IconLayer> } }
   | { type: 'REMOVE_LAYER'; payload: { id: string } }
   | { type: 'REORDER_LAYER'; payload: { id: string; newIndex: number } }
@@ -115,17 +116,20 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
     case 'ADD_LAYER': {
       if (!state.project) return state;
       const id = `layer-${Date.now()}`;
+      const asset = action.payload.asset;
+      const shape = action.payload.shape;
       const newLayer: IconLayer = {
         id,
-        name: action.payload.file?.name ?? `Layer ${state.project.layers.length + 1}`,
-        kind: 'image',
+        name: asset?.name ?? `Layer ${state.project.layers.length + 1}`,
+        kind: shape ? 'shape' : asset?.mimeType === 'image/svg+xml' ? 'svg' : 'image',
         visible: true,
         zIndex: state.project.layers.length,
-        source: action.payload.file
-          ? { type: 'inline', mimeType: action.payload.file.type || 'image/png', data: '' }
-          : { type: 'reference', path: '', shape: action.payload.shape },
+        source: asset
+          ? { type: 'inline', mimeType: asset.mimeType, data: asset.data }
+          : { type: 'reference', path: '', shape },
         transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-        opacity: 1
+        opacity: 1,
+        ...(shape ? { fill: { kind: 'solid' as const, color: '#4da3ff' } } : {})
       };
       const updatedProject = {
         ...state.project,
