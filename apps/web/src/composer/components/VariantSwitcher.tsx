@@ -12,7 +12,7 @@ export const VariantSwitcher = () => {
   const { state, dispatch } = useComposer();
 
   return (
-    <div className="flex items-center gap-1 border-l border-core-border pl-2">
+    <div className="ic-variant-switcher" aria-label="Icon variants">
       {VARIANTS.map((v) => (
         <button
           key={v.id}

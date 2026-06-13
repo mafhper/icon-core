@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useRef, type ReactNode } from 'react';
 import type { IconCoreProject } from '@iconcore/shared';
 import {
   composerReducer,
@@ -8,6 +8,9 @@ import {
   type ComposerAction,
   type ComposerView
 } from './composerReducer';
+import { useToast } from './toast/ToastContext';
+
+const STORAGE_KEY = 'iconcore-composer-project';
 
 interface ComposerContextValue {
   state: ComposerState;
@@ -17,31 +20,45 @@ interface ComposerContextValue {
 
 const ComposerContext = createContext<ComposerContextValue | null>(null);
 
+const restoreInitialState = (): { init: ComposerState; failed: boolean } => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return { init: initialState, failed: false };
+  try {
+    const project = JSON.parse(saved) as IconCoreProject;
+    return {
+      init: {
+        ...initialState,
+        project,
+        view: 'edit-space',
+        history: [project],
+        historyIndex: 0,
+        enabledTargets: new Set(project.targets.filter((target) => target.enabled).map((target) => target.target))
+      },
+      failed: false
+    };
+  } catch (err) {
+    console.warn('Failed to restore saved Icon Core project:', err);
+    localStorage.removeItem(STORAGE_KEY);
+    return { init: initialState, failed: true };
+  }
+};
+
 export const ComposerProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(composerReducer, initialState, (init) => {
-    const saved = localStorage.getItem('iconcore-composer-project');
-    if (saved) {
-      try {
-        const project = JSON.parse(saved) as IconCoreProject;
-        return {
-          ...init,
-          project,
-          view: 'edit-space' as const,
-          history: [project],
-          historyIndex: 0,
-          enabledTargets: new Set(project.targets.filter((target) => target.enabled).map((target) => target.target))
-        };
-      } catch (err) {
-        console.warn('Failed to restore saved Icon Core project:', err);
-      }
+  const toast = useToast();
+  const restoredRef = useRef<{ init: ComposerState; failed: boolean } | null>(null);
+  if (restoredRef.current === null) restoredRef.current = restoreInitialState();
+  const [state, dispatch] = useReducer(composerReducer, restoredRef.current.init);
+
+  useEffect(() => {
+    if (restoredRef.current?.failed) {
+      toast.error('Could not restore your saved project. Starting with a clean workspace.');
     }
-    return init;
-  });
+  }, [toast]);
 
   useEffect(() => {
     if (state.project && state.isDirty) {
       const timer = setTimeout(() => {
-        localStorage.setItem('iconcore-composer-project', JSON.stringify(state.project));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.project));
         dispatch({ type: 'SET_DIRTY', payload: false });
       }, 2000);
       return () => clearTimeout(timer);
@@ -62,6 +79,10 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  useEffect(() => {
+    requestAnimationFrame(() => window.scrollTo({ left: 0, top: 0, behavior: 'auto' }));
+  }, [state.view]);
 
   const navigate = (view: ComposerView) => {
     if (window.location.hash !== `#/${view}`) {

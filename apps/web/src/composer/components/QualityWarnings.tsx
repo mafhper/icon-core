@@ -26,7 +26,7 @@ export const QualityWarnings = () => {
   };
 
   return (
-    <div className="border-t border-core-border bg-core-surface p-3 space-y-2">
+    <div className="ic-quality-panel">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-core-muted">
           Quality ({result.score}/100)

@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
 import { ArrowLeft, Download, Check, Loader2, FileText, AlertTriangle } from 'lucide-react';
-import { createCanvasBackend } from '@iconcore/renderer';
-import { exportTarget, generateReport, getAllTargets } from '@iconcore/exporters';
 import type { IconTarget, IconVariant } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
-import JSZip from 'jszip';
+import { useToast } from '../toast/ToastContext';
+import {
+  EXPORT_TARGETS,
+  EXPORT_VARIANTS,
+  buildIconPackage,
+  countExportFiles,
+  countExportTasks
+} from '../utils/exportPackage';
 import { saveAs } from 'file-saver';
-
-const TARGETS = getAllTargets();
-const VARIANTS: IconVariant[] = ['default', 'light', 'dark', 'mono'];
 
 type ExportPhase = 'idle' | 'exporting' | 'archiving' | 'complete' | 'error';
 
@@ -20,69 +22,14 @@ interface ExportProgress {
   currentSize: number;
 }
 
-const getTargetSizes = (target: (typeof TARGETS)[number]): number[] => {
-  return [...new Set(target.tasks.map((task) => task.width))].sort((a, b) => a - b);
-};
-
-const getManifestFileName = (target: IconTarget): string => {
-  if (target === 'web-favicon') return 'site.webmanifest';
-  if (target === 'pwa') return 'manifest.webmanifest';
-  return 'manifest.json';
-};
-
-const generateReadme = (projectName: string, targets: typeof TARGETS, selected: Set<IconTarget>) => {
-  const selectedTargets = targets.filter(t => selected.has(t.id));
-  return `# ${projectName} - Icon Pack
-
-Generated with Icon Core Export Utilities
-
-## Contents
-
-${selectedTargets.map(t => `- **${t.name}** (${getTargetSizes(t).map(s => `${s}x${s}`).join(', ')})`).join('\n')}
-
-## Usage
-
-### Web
-Add the favicon and PWA icons to your site's <head>:
-\`\`\`html
-<link rel="icon" type="image/png" sizes="32x32" href="/web-favicon/icon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/web-favicon/icon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/web-favicon/icon-180x180.png">
-<link rel="manifest" href="/manifest.json">
-\`\`\`
-
-### PWA
-Reference the icons in your \`manifest.json\`:
-\`\`\`json
-{
-  "name": "${projectName}",
-  "icons": [
-    { "src": "/pwa/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/pwa/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
-  ]
-}
-\`\`\`
-
-### Tauri
-Place the icons in your \`src-tauri/icons/\` directory and reference them in \`tauri.conf.json\`.
-
-### Electron
-Place the icons in your project's build resources directory.
-
-## License
-Generated assets are yours to use. Icon Core itself is free and open-source.
-`;
-};
-
 export const ExportView = () => {
   const { state, dispatch, navigate } = useComposer();
+  const toast = useToast();
   const [selectedTargets, setSelectedTargets] = useState<Set<IconTarget>>(() => new Set(state.enabledTargets));
   const [selectedVariants, setSelectedVariants] = useState<Set<IconVariant>>(() => new Set([state.activeVariant]));
   const [progress, setProgress] = useState<ExportProgress>({ phase: 'idle', currentTask: 0, totalTasks: 0, currentTarget: '', currentSize: 0 });
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
-
-  const projectName = state.project?.metadata.name ?? 'icon';
 
   const toggleTarget = (id: IconTarget) => {
     setSelectedTargets((prev) => {
@@ -103,19 +50,14 @@ export const ExportView = () => {
     });
   };
 
-  const selectedDefinitions = useMemo(
-    () => TARGETS.filter(t => selectedTargets.has(t.id)),
-    [selectedTargets]
-  );
-
   const totalTasks = useMemo(
-    () => selectedDefinitions.reduce((sum, t) => sum + t.tasks.length, 0) * selectedVariants.size,
-    [selectedDefinitions, selectedVariants.size]
+    () => countExportTasks([...selectedTargets], [...selectedVariants]),
+    [selectedTargets, selectedVariants]
   );
 
   const totalFilesLabel = useMemo(
-    () => selectedDefinitions.reduce((sum, t) => sum + t.tasks.length + 1 + (t.manifest ? 1 : 0), 0) * selectedVariants.size,
-    [selectedDefinitions, selectedVariants.size]
+    () => countExportFiles([...selectedTargets], [...selectedVariants]),
+    [selectedTargets, selectedVariants]
   );
 
   const handleExport = async () => {
@@ -129,57 +71,30 @@ export const ExportView = () => {
     const timer = setInterval(() => setElapsed(Date.now() - startTime), 100);
 
     try {
-      const zip = new JSZip();
-      const backend = createCanvasBackend();
-      let completed = 0;
-      const allWarnings: string[] = [];
-
-      try {
-        for (const variant of selectedVariants) {
-          for (const target of selectedDefinitions) {
-            setProgress({
-              phase: 'exporting',
-              currentTask: completed,
-              totalTasks,
-              currentTarget: `${target.name} / ${variant}`,
-              currentSize: 0
-            });
-
-            const result = await exportTarget(state.project, target.id, variant, backend);
-            const folder = zip.folder(`${target.id}/${variant}`)!;
-
-            for (const file of result.files) {
-              folder.file(file.path, file.blob);
-            }
-
-            if (result.manifest) {
-              folder.file(getManifestFileName(target.id), JSON.stringify(result.manifest, null, 2));
-            }
-
-            const report = generateReport(result, state.project, variant);
-            folder.file('iconcore-report.json', JSON.stringify(report, null, 2));
-            allWarnings.push(...result.warnings.map((warning) => `${target.name} (${variant}): ${warning}`));
-
-            completed += target.tasks.length;
-          }
+      const { blob } = await buildIconPackage(
+        state.project,
+        [...selectedTargets],
+        [...selectedVariants],
+        {
+          onProgress: (info) => setProgress({
+            phase: 'exporting',
+            currentTask: info.completed,
+            totalTasks: info.total,
+            currentTarget: info.label,
+            currentSize: 0
+          }),
+          onArchiveStart: () => setProgress({ phase: 'archiving', currentTask: totalTasks, totalTasks, currentTarget: '', currentSize: 0 })
         }
-      } finally {
-        backend.destroy();
-      }
+      );
 
-      setProgress({ phase: 'archiving', currentTask: totalTasks, totalTasks, currentTarget: '', currentSize: 0 });
-      zip.file('README.md', generateReadme(projectName, TARGETS, selectedTargets));
-      if (allWarnings.length > 0) {
-        zip.file('WARNINGS.txt', allWarnings.join('\n'));
-      }
-
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      saveAs(zipBlob, `${state.project.exportProfile.outputBaseName}-icons.zip`);
-
+      saveAs(blob, `${state.project.exportProfile.outputBaseName}-icons.zip`);
       setProgress({ phase: 'complete', currentTask: totalTasks, totalTasks, currentTarget: '', currentSize: 0 });
+      toast.success(`Exported ${totalFilesLabel} files`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Export failed');
+      const message = err instanceof Error ? err.message : 'Export failed';
+      setError(message);
       setProgress({ phase: 'error', currentTask: 0, totalTasks, currentTarget: '', currentSize: 0 });
+      toast.error(`Export failed: ${message}`);
     } finally {
       clearInterval(timer);
     }
@@ -217,7 +132,7 @@ export const ExportView = () => {
             Variants
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {VARIANTS.map((variant) => (
+            {EXPORT_VARIANTS.map((variant) => (
               <label
                 key={variant}
                 className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border cursor-pointer ${
@@ -246,7 +161,7 @@ export const ExportView = () => {
               onChange={(e) => {
                 const val = e.target.value;
                 if (val === 'all') {
-                  setSelectedTargets(new Set(TARGETS.map(t => t.id)));
+                  setSelectedTargets(new Set(EXPORT_TARGETS.map((t) => t.id)));
                 } else if (val === 'web') {
                   setSelectedTargets(new Set(['web-favicon', 'pwa']));
                 } else if (val === 'desktop') {
@@ -265,7 +180,7 @@ export const ExportView = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {TARGETS.map((target) => (
+            {EXPORT_TARGETS.map((target) => (
               <label
                 key={target.id}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all ${

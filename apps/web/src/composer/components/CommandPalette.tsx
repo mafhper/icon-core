@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useComposer } from '../ComposerContext';
+import { useToast } from '../toast/ToastContext';
+import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
+import { parseProjectFile } from '../utils/projectGuard';
 
 interface Command {
   id: string;
@@ -12,6 +15,7 @@ interface Command {
 
 export const CommandPalette = () => {
   const { state, dispatch, navigate } = useComposer();
+  const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -39,13 +43,13 @@ export const CommandPalette = () => {
         input.onchange = async (e) => {
           const file = (e.target as HTMLInputElement).files?.[0];
           if (!file) return;
-          const text = await file.text();
-          try {
-            const project = JSON.parse(text);
-            dispatch({ type: 'LOAD_PROJECT', payload: project });
-          } catch (err) {
-            console.error('Failed to parse project file:', err);
+          const project = parseProjectFile(await file.text());
+          if (!project) {
+            toast.error(`"${file.name}" is not a valid Icon Core project file.`);
+            return;
           }
+          dispatch({ type: 'LOAD_PROJECT', payload: project });
+          toast.success(`Opened ${project.metadata.name}`);
         };
         input.click();
       }
@@ -67,6 +71,7 @@ export const CommandPalette = () => {
         a.click();
         URL.revokeObjectURL(url);
         dispatch({ type: 'SET_DIRTY', payload: false });
+        toast.success('Project saved');
       }
     },
     {
@@ -131,7 +136,7 @@ export const CommandPalette = () => {
       description: 'Increase preview zoom',
       shortcut: '⌘+',
       category: 'view',
-      action: () => dispatch({ type: 'SET_ZOOM', payload: Math.min(4, state.zoom + 0.25) })
+      action: () => dispatch({ type: 'SET_ZOOM', payload: Math.min(ZOOM_MAX, state.zoom + ZOOM_STEP) })
     },
     {
       id: 'zoom-out',
@@ -139,7 +144,7 @@ export const CommandPalette = () => {
       description: 'Decrease preview zoom',
       shortcut: '⌘-',
       category: 'view',
-      action: () => dispatch({ type: 'SET_ZOOM', payload: Math.max(0.25, state.zoom - 0.25) })
+      action: () => dispatch({ type: 'SET_ZOOM', payload: Math.max(ZOOM_MIN, state.zoom - ZOOM_STEP) })
     },
     {
       id: 'zoom-reset',

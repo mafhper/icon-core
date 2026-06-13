@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
 import { useComposer } from '../ComposerContext';
+import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
+import { resolveLayerVariant } from '../utils/layerResolve';
+import { scopedLayerDispatch } from '../utils/layerEdit';
 
 export const useKeyboardShortcuts = () => {
   const { state, dispatch, navigate } = useComposer();
@@ -61,13 +64,13 @@ export const useKeyboardShortcuts = () => {
 
       if (isMod && e.key === '=') {
         e.preventDefault();
-        dispatch({ type: 'SET_ZOOM', payload: Math.min(4, state.zoom + 0.25) });
+        dispatch({ type: 'SET_ZOOM', payload: Math.min(ZOOM_MAX, state.zoom + ZOOM_STEP) });
         return;
       }
 
       if (isMod && e.key === '-') {
         e.preventDefault();
-        dispatch({ type: 'SET_ZOOM', payload: Math.max(0.25, state.zoom - 0.25) });
+        dispatch({ type: 'SET_ZOOM', payload: Math.max(ZOOM_MIN, state.zoom - ZOOM_STEP) });
         return;
       }
 
@@ -86,9 +89,10 @@ export const useKeyboardShortcuts = () => {
       }
 
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && state.activeLayerId && state.project) {
-        const layer = state.project.layers.find((item) => item.id === state.activeLayerId);
-        if (!layer || layer.locked) return;
+        const baseLayer = state.project.layers.find((item) => item.id === state.activeLayerId);
+        if (!baseLayer || baseLayer.locked) return;
         e.preventDefault();
+        const layer = resolveLayerVariant(baseLayer, state.activeVariant);
         const amount = e.shiftKey ? 10 : 1;
         const delta = {
           ArrowUp: { x: 0, y: -amount },
@@ -96,17 +100,11 @@ export const useKeyboardShortcuts = () => {
           ArrowLeft: { x: -amount, y: 0 },
           ArrowRight: { x: amount, y: 0 }
         }[e.key]!;
-        dispatch({
-          type: 'UPDATE_LAYER',
-          payload: {
-            id: layer.id,
-            changes: {
-              transform: {
-                ...layer.transform,
-                x: layer.transform.x + delta.x,
-                y: layer.transform.y + delta.y
-              }
-            }
+        scopedLayerDispatch(dispatch, state.activeVariant, baseLayer.id, {
+          transform: {
+            ...layer.transform,
+            x: layer.transform.x + delta.x,
+            y: layer.transform.y + delta.y
           }
         });
         return;

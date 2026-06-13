@@ -1,9 +1,12 @@
 import { Download, Save, FolderOpen, Undo2, Redo2, Layers } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
+import { useToast } from '../toast/ToastContext';
+import { parseProjectFile } from '../utils/projectGuard';
 import { VariantSwitcher } from './VariantSwitcher';
 
 export const Topbar = () => {
   const { state, dispatch, navigate } = useComposer();
+  const toast = useToast();
 
   const handleSave = () => {
     if (!state.project) return;
@@ -16,6 +19,7 @@ export const Topbar = () => {
     a.click();
     URL.revokeObjectURL(url);
     dispatch({ type: 'SET_DIRTY', payload: false });
+    toast.success('Project saved');
   };
 
   const handleOpen = () => {
@@ -25,33 +29,31 @@ export const Topbar = () => {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      const text = await file.text();
-      try {
-        const project = JSON.parse(text);
-        dispatch({ type: 'LOAD_PROJECT', payload: project });
-      } catch (err) {
-        console.error('Failed to parse project file:', err);
+      const project = parseProjectFile(await file.text());
+      if (!project) {
+        toast.error(`"${file.name}" is not a valid Icon Core project file.`);
+        return;
       }
+      dispatch({ type: 'LOAD_PROJECT', payload: project });
+      toast.success(`Opened ${project.metadata.name}`);
     };
     input.click();
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-core-border bg-core-bg/88 backdrop-blur-xl">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3">
+    <header className="ic-topbar">
+      <div className="ic-topbar-inner">
+        <div className="ic-topbar-brand">
           <Layers size={20} className="text-core-accent" />
           <div>
-            <p className="font-display text-sm uppercase tracking-[0.18em]">
+            <p>
               {state.project?.metadata.name ?? 'Icon Core'}
             </p>
-            {state.isDirty && (
-              <p className="text-xs text-core-muted">Unsaved changes</p>
-            )}
+            <p className={`text-xs text-core-muted ${state.isDirty ? '' : 'invisible'}`}>Unsaved changes</p>
           </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-4 text-xs text-core-muted">
+        <div className="ic-topbar-shortcuts">
           <span className="flex items-center gap-1.5">
             <span className="text-core-accent">Layer:</span>
             <span className="flex items-center gap-0.5">
@@ -73,7 +75,7 @@ export const Topbar = () => {
 
         <VariantSwitcher />
 
-        <div className="flex items-center gap-2">
+        <div className="ic-topbar-actions">
           <button
             type="button"
             onClick={() => dispatch({ type: 'UNDO' })}
@@ -99,7 +101,7 @@ export const Topbar = () => {
             className="core-btn inline-flex items-center gap-2 rounded-xl border border-core-border bg-core-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em]"
           >
             <FolderOpen size={14} />
-            Open
+            <span>Open</span>
           </button>
           <button
             type="button"
@@ -108,7 +110,7 @@ export const Topbar = () => {
             className="core-btn inline-flex items-center gap-2 rounded-xl border border-core-border bg-core-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] disabled:opacity-50"
           >
             <Save size={14} />
-            Save
+            <span>Save</span>
           </button>
           <button
             type="button"
@@ -117,7 +119,8 @@ export const Topbar = () => {
             className="core-btn core-btn-primary inline-flex items-center gap-2 rounded-xl border border-core-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] disabled:opacity-50"
           >
             <Download size={14} />
-            Export Utilities
+            <span className="ic-export-label-full">Export Utilities</span>
+            <span className="ic-export-label-short">Export</span>
           </button>
         </div>
       </div>

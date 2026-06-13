@@ -1,8 +1,18 @@
 import { useMemo, useRef, useState } from 'react';
-import { ZoomIn, ZoomOut, Grid, Circle, Square, RectangleHorizontal, RotateCcw } from 'lucide-react';
-import type { Fill, IconLayer, IconVariant } from '@iconcore/shared';
+import { ZoomIn, ZoomOut, Grid, Circle, Square, RectangleHorizontal, RotateCcw, Crosshair } from 'lucide-react';
+import type { IconLayer } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
+import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
+import { resolveLayerVariant } from '../utils/layerResolve';
+import { scopedLayerDispatch } from '../utils/layerEdit';
+import { computeSnap, type SnapGuide } from '../utils/snapping';
+import { borderRadiusForLayer, clipPathForLayer, fillToCss, layerSize, shadowCssForLayer } from '../utils/layerStyle';
+
+const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
+import { QualityWarnings } from './QualityWarnings';
+import { VariantPanel } from './VariantPanel';
+import { KeylineOverlay } from './KeylineOverlay';
 
 type DragMode = 'move' | 'scale' | 'rotate';
 
@@ -16,58 +26,51 @@ interface DragState {
   originRotation: number;
 }
 
-const resolveLayer = (layer: IconLayer, variant: IconVariant): IconLayer => {
-  const override = layer.variantOverrides?.[variant];
-  if (!override) return layer;
-  return {
-    ...layer,
-    ...override,
-    source: override.source ? { ...layer.source, ...override.source } : layer.source,
-    transform: override.transform ? { ...layer.transform, ...override.transform } : layer.transform,
-    text: override.text ? { ...layer.text, ...override.text } as IconLayer['text'] : layer.text,
-    effects: override.effects ?? layer.effects
-  };
-};
+const layerTransform = (layer: IconLayer, zoom: number): string =>
+  `translate(-50%, -50%) translate(${layer.transform.x * zoom}px, ${layer.transform.y * zoom}px) rotate(${layer.transform.rotation}deg) scale(${layer.transform.scale})`;
 
-const fillToCss = (fill?: Fill): string => {
-  if (!fill) return 'transparent';
-  if (fill.kind === 'solid') return fill.color ?? '#111827';
-  if (fill.kind === 'linear-gradient') {
-    const stops = (fill.stops ?? []).map((stop) => `${stop.color} ${Math.round(stop.offset * 100)}%`).join(', ');
-    return `linear-gradient(${fill.angle ?? 135}deg, ${stops || '#f3d18a, #6bb7d8'})`;
+const renderLayerContent = (layer: IconLayer, zoom: number) => {
+  const dataUrl = layer.source.type === 'inline' && layer.source.data && layer.source.mimeType
+    ? `data:${layer.source.mimeType};base64,${layer.source.data}`
+    : null;
+
+  if (layer.kind === 'text') {
+    return (
+      <div
+        className="ic-layer-text"
+        style={{
+          color: layer.fill?.kind === 'solid' ? layer.fill.color : '#111827',
+          fontFamily: layer.text?.fontFamily,
+          fontSize: (layer.text?.fontSize ?? 64) * zoom,
+          fontWeight: layer.text?.fontWeight,
+          textShadow: shadowCssForLayer(layer)
+        }}
+      >
+        {layer.text?.content ?? 'Text'}
+      </div>
+    );
   }
-  const stops = (fill.stops ?? []).map((stop) => `${stop.color} ${Math.round(stop.offset * 100)}%`).join(', ');
-  return `radial-gradient(circle, ${stops || '#f3d18a, #6bb7d8'})`;
-};
 
-const layerSize = (layer: IconLayer, canvasSize: number) => {
-  const shape = layer.source.shape;
-  if (shape) return { width: shape.width, height: shape.height };
-  return { width: Math.round(canvasSize * 0.7), height: Math.round(canvasSize * 0.7) };
-};
+  if (dataUrl) return <img src={dataUrl} alt={layer.name} draggable={false} />;
 
-const borderRadiusForLayer = (layer: IconLayer) => {
-  const shape = layer.source.shape;
-  if (!shape) return '0px';
-  if (shape.kind === 'circle') return '999px';
-  if (shape.kind === 'squircle') return '28%';
-  if (shape.kind === 'rounded-rectangle') return `${shape.cornerRadius ?? 32}px`;
-  return '0px';
-};
-
-const shadowForLayer = (layer: IconLayer) => {
-  const effect = layer.effects?.find((item) => item.kind === 'depth-shadow' && item.enabled);
-  if (!effect) return undefined;
-  const x = Number(effect.params.x ?? 0);
-  const y = Number(effect.params.y ?? 14);
-  const blur = Number(effect.params.blur ?? 28);
-  const color = String(effect.params.color ?? 'rgba(15, 23, 42, 0.28)');
-  return `${x}px ${y}px ${blur}px ${color}`;
+  return (
+    <div
+      className="ic-layer-shape"
+      style={{
+        background: fillToCss(layer.fill),
+        borderRadius: borderRadiusForLayer(layer),
+        clipPath: clipPathForLayer(layer),
+        boxShadow: shadowCssForLayer(layer),
+        border: layer.stroke ? `${Math.max(1, layer.stroke.width * zoom)}px solid ${layer.stroke.color}` : undefined
+      }}
+    />
+  );
 };
 
 export const PreviewCanvas = () => {
   const { state, dispatch } = useComposer();
   const [menu, setMenu] = useState<{ x: number; y: number; layerId: string } | null>(null);
+  const [guides, setGuides] = useState<SnapGuide[]>([]);
   const dragRef = useRef<DragState | null>(null);
   const frameRef = useRef<number | null>(null);
   const pendingTransformRef = useRef<{ id: string; transform: IconLayer['transform'] } | null>(null);
@@ -82,6 +85,7 @@ export const PreviewCanvas = () => {
 
   const canvasSize = project.canvas.size;
   const displaySize = canvasSize * state.zoom;
+  const variantBackground = project.variants?.[state.activeVariant]?.canvas?.background ?? project.canvas.background;
 
   const scheduleTransform = (id: string, transform: IconLayer['transform']) => {
     pendingTransformRef.current = { id, transform };
@@ -89,7 +93,7 @@ export const PreviewCanvas = () => {
     frameRef.current = requestAnimationFrame(() => {
       const pending = pendingTransformRef.current;
       if (pending) {
-        dispatch({ type: 'UPDATE_LAYER', payload: { id: pending.id, changes: { transform: pending.transform }, transient: true } });
+        scopedLayerDispatch(dispatch, state.activeVariant, pending.id, { transform: pending.transform }, { transient: true });
         pendingTransformRef.current = null;
       }
       frameRef.current = null;
@@ -125,11 +129,32 @@ export const PreviewCanvas = () => {
     const dy = (event.clientY - drag.startY) / state.zoom;
 
     if (drag.mode === 'move') {
-      scheduleTransform(drag.id, {
-        ...drag.origin,
-        x: Math.round(drag.origin.x + dx),
-        y: Math.round(drag.origin.y + dy)
-      });
+      const rawX = drag.origin.x + dx;
+      const rawY = drag.origin.y + dy;
+      const baseLayer = project.layers.find((item) => item.id === drag.id);
+      if (baseLayer) {
+        const dragged = resolveLayerVariant(baseLayer, state.activeVariant);
+        const size = layerSize(dragged, canvasSize);
+        const others = project.layers
+          .filter((item) => item.id !== drag.id && item.visible)
+          .map((item) => resolveLayerVariant(item, state.activeVariant))
+          .map((item) => {
+            const s = layerSize(item, canvasSize);
+            return { x: item.transform.x, y: item.transform.y, width: s.width * item.transform.scale, height: s.height * item.transform.scale };
+          });
+        const safeInset = project.canvas.safeArea ? project.canvas.safeArea.inset * canvasSize : 0;
+        const snap = computeSnap(
+          { x: rawX, y: rawY, width: size.width * drag.originScale, height: size.height * drag.originScale },
+          others,
+          canvasSize,
+          safeInset,
+          SNAP_THRESHOLD_PX / state.zoom
+        );
+        setGuides(snap.guides);
+        scheduleTransform(drag.id, { ...drag.origin, x: Math.round(snap.x), y: Math.round(snap.y) });
+      } else {
+        scheduleTransform(drag.id, { ...drag.origin, x: Math.round(rawX), y: Math.round(rawY) });
+      }
       return;
     }
 
@@ -155,25 +180,26 @@ export const PreviewCanvas = () => {
     frameRef.current = null;
     const pending = pendingTransformRef.current;
     if (pending) {
-      dispatch({ type: 'UPDATE_LAYER', payload: { id: pending.id, changes: { transform: pending.transform }, transient: true } });
+      scopedLayerDispatch(dispatch, state.activeVariant, pending.id, { transform: pending.transform }, { transient: true });
       pendingTransformRef.current = null;
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     dragRef.current = null;
+    setGuides([]);
     dispatch({ type: 'COMMIT_HISTORY' });
   };
 
   const activeLayer = menu ? project.layers.find((layer) => layer.id === menu.layerId) : null;
 
   return (
-    <div className="flex-1 flex flex-col bg-core-bg">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-core-border bg-core-surface">
-        <div className="flex items-center gap-2">
+    <div className="ic-preview-panel">
+      <div className="ic-canvas-toolbar">
+        <div className="ic-toolbar-group">
           <button
             type="button"
-            onClick={() => dispatch({ type: 'SET_ZOOM', payload: Math.max(0.25, state.zoom - 0.25) })}
+            onClick={() => dispatch({ type: 'SET_ZOOM', payload: Math.max(ZOOM_MIN, state.zoom - ZOOM_STEP) })}
             className="p-1.5 rounded hover:bg-core-elevated"
             title="Zoom out"
           >
@@ -182,7 +208,7 @@ export const PreviewCanvas = () => {
           <span className="text-xs font-mono tabular-nums">{(state.zoom * 100).toFixed(0)}%</span>
           <button
             type="button"
-            onClick={() => dispatch({ type: 'SET_ZOOM', payload: Math.min(4, state.zoom + 0.25) })}
+            onClick={() => dispatch({ type: 'SET_ZOOM', payload: Math.min(ZOOM_MAX, state.zoom + ZOOM_STEP) })}
             className="p-1.5 rounded hover:bg-core-elevated"
             title="Zoom in"
           >
@@ -198,7 +224,7 @@ export const PreviewCanvas = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="ic-toolbar-group">
           <button
             type="button"
             onClick={() => dispatch({ type: 'TOGGLE_GRID' })}
@@ -207,7 +233,15 @@ export const PreviewCanvas = () => {
           >
             <Grid size={16} />
           </button>
-          <div className="flex gap-1 border-l border-core-border pl-2">
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
+            className={`p-1.5 rounded ${state.showKeylines ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
+            title="Toggle Apple keyline grid"
+          >
+            <Crosshair size={16} />
+          </button>
+          <div className="ic-mask-controls">
             <button
               type="button"
               onClick={() => dispatch({ type: 'SET_MASK_SHAPE', payload: 'square' })}
@@ -246,6 +280,8 @@ export const PreviewCanvas = () => {
           dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: null } });
         }}
       >
+        <QualityWarnings />
+        <VariantPanel />
         {layers.length === 0 ? (
           <DropZone />
         ) : (
@@ -255,18 +291,16 @@ export const PreviewCanvas = () => {
               width: displaySize,
               height: displaySize,
               borderRadius: state.maskShape === 'circle' ? '50%' : state.maskShape === 'rounded-rectangle' ? '24px' : '4px',
-              background: fillToCss(project.canvas.background)
+              background: fillToCss(variantBackground)
             }}
           >
             {state.showGrid && <div className="ic-canvas-grid" />}
+            {state.showKeylines && <KeylineOverlay />}
             {layers.map((baseLayer) => {
-              const layer = resolveLayer(baseLayer, state.activeVariant);
+              const layer = resolveLayerVariant(baseLayer, state.activeVariant);
               if (!layer.visible) return null;
               const selected = state.activeLayerId === layer.id;
               const size = layerSize(layer, canvasSize);
-              const dataUrl = layer.source.type === 'inline' && layer.source.data && layer.source.mimeType
-                ? `data:${layer.source.mimeType};base64,${layer.source.data}`
-                : null;
               const width = size.width * state.zoom;
               const height = size.height * state.zoom;
 
@@ -278,7 +312,7 @@ export const PreviewCanvas = () => {
                     width,
                     height,
                     opacity: layer.opacity,
-                    transform: `translate(-50%, -50%) translate(${layer.transform.x * state.zoom}px, ${layer.transform.y * state.zoom}px) rotate(${layer.transform.rotation}deg) scale(${layer.transform.scale})`,
+                    transform: layerTransform(layer, state.zoom),
                     mixBlendMode: layer.blendMode ?? 'normal'
                   }}
                   onPointerDown={(event) => startDrag(event, layer, 'move')}
@@ -293,32 +327,7 @@ export const PreviewCanvas = () => {
                     setMenu({ x: event.clientX, y: event.clientY, layerId: layer.id });
                   }}
                 >
-                  {layer.kind === 'text' ? (
-                    <div
-                      className="ic-layer-text"
-                      style={{
-                        color: layer.fill?.kind === 'solid' ? layer.fill.color : '#111827',
-                        fontFamily: layer.text?.fontFamily,
-                        fontSize: (layer.text?.fontSize ?? 64) * state.zoom,
-                        fontWeight: layer.text?.fontWeight,
-                        textShadow: shadowForLayer(layer)
-                      }}
-                    >
-                      {layer.text?.content ?? 'Text'}
-                    </div>
-                  ) : dataUrl ? (
-                    <img src={dataUrl} alt={layer.name} draggable={false} />
-                  ) : (
-                    <div
-                      className="ic-layer-shape"
-                      style={{
-                        background: fillToCss(layer.fill),
-                        borderRadius: borderRadiusForLayer(layer),
-                        boxShadow: shadowForLayer(layer),
-                        border: layer.stroke ? `${Math.max(1, layer.stroke.width * state.zoom)}px solid ${layer.stroke.color}` : undefined
-                      }}
-                    />
-                  )}
+                  {renderLayerContent(layer, state.zoom)}
                   {selected && !layer.locked && (
                     <>
                       <button
@@ -338,6 +347,36 @@ export const PreviewCanvas = () => {
                 </div>
               );
             })}
+            {state.compareDefault && state.activeVariant !== 'default' && (
+              <div className="ic-ghost-overlay" aria-hidden="true">
+                {layers.map((baseLayer) => {
+                  if (!baseLayer.visible) return null;
+                  const size = layerSize(baseLayer, canvasSize);
+                  return (
+                    <div
+                      key={baseLayer.id}
+                      className="ic-canvas-layer"
+                      style={{
+                        width: size.width * state.zoom,
+                        height: size.height * state.zoom,
+                        opacity: baseLayer.opacity,
+                        transform: layerTransform(baseLayer, state.zoom),
+                        mixBlendMode: baseLayer.blendMode ?? 'normal'
+                      }}
+                    >
+                      {renderLayerContent(baseLayer, state.zoom)}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {guides.map((guide, index) => (
+              <div
+                key={`${guide.axis}-${guide.pos}-${index}`}
+                className={`ic-snap-guide ${guide.axis === 'x' ? 'is-vertical' : 'is-horizontal'}`}
+                style={guide.axis === 'x' ? { left: guide.pos * state.zoom } : { top: guide.pos * state.zoom }}
+              />
+            ))}
           </div>
         )}
 
@@ -347,8 +386,8 @@ export const PreviewCanvas = () => {
             <button
               type="button"
               onClick={() => {
-                const name = window.prompt('Rename layer', activeLayer.name);
-                if (name?.trim()) dispatch({ type: 'UPDATE_LAYER', payload: { id: activeLayer.id, changes: { name: name.trim() } } });
+                dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: activeLayer.id } });
+                dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: activeLayer.id } });
                 setMenu(null);
               }}
             >

@@ -1,13 +1,46 @@
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Upload, Type } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Upload, Type, Triangle, Minus, SquareStack } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
+import { useToast } from '../toast/ToastContext';
 import { fileToLayerAsset, isSupportedLayerFile, sortLayerFiles } from '../utils/fileLayers';
 
 export const LayerList = () => {
   const { state, dispatch } = useComposer();
+  const toast = useToast();
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
-  if (!state.project) return null;
+  const project = state.project;
+  // Displayed top-to-bottom in descending zIndex (top of the list = front-most).
+  const layers = useMemo(
+    () => (project ? [...project.layers].sort((a, b) => b.zIndex - a.zIndex) : []),
+    [project]
+  );
 
-  const layers = [...state.project.layers].sort((a, b) => b.zIndex - a.zIndex);
+  if (!project) return null;
+
+  const reorder = (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+    const order = layers.map((layer) => layer.id);
+    const from = order.indexOf(draggedId);
+    const to = order.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+
+    const next = [...order];
+    next.splice(from, 1);
+    const targetIndex = next.indexOf(targetId);
+    // Dragging downward drops after the target; upward drops before it.
+    next.splice(from < to ? targetIndex + 1 : targetIndex, 0, draggedId);
+
+    // The list is descending, REORDER_LAYER expects an ascending zIndex slot.
+    const newIndex = next.length - 1 - next.indexOf(draggedId);
+    dispatch({ type: 'REORDER_LAYER', payload: { id: draggedId, newIndex } });
+  };
+
+  const endDrag = () => {
+    setDraggingId(null);
+    setDragOverId(null);
+  };
 
   const handleAddLayer = () => {
     dispatch({
@@ -16,22 +49,40 @@ export const LayerList = () => {
     });
   };
 
+  const commitRename = (id: string, value: string) => {
+    const name = value.trim();
+    if (name) dispatch({ type: 'UPDATE_LAYER', payload: { id, changes: { name } } });
+    dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: null } });
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = sortLayerFiles(Array.from(e.target.files ?? []).filter(isSupportedLayerFile));
+    const selected = Array.from(e.target.files ?? []);
+    const files = sortLayerFiles(selected.filter(isSupportedLayerFile));
     e.currentTarget.value = '';
 
+    if (selected.length > 0 && files.length === 0) {
+      toast.error('Unsupported file type. Use an SVG, PNG, JPEG or WebP.');
+      return;
+    }
+
+    let failures = 0;
     for (const file of files) {
       try {
         const asset = await fileToLayerAsset(file);
         dispatch({ type: 'ADD_LAYER', payload: { asset } });
       } catch (err) {
+        failures++;
         console.error('Failed to import layer:', err);
       }
+    }
+
+    if (failures > 0) {
+      toast.error(`Could not import ${failures} file${failures > 1 ? 's' : ''}.`);
     }
   };
 
   return (
-    <aside className="w-[280px] border-r border-core-border bg-core-surface p-4 flex flex-col">
+    <aside className="ic-layer-list">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">
           Layers
@@ -47,11 +98,35 @@ export const LayerList = () => {
           </button>
           <button
             type="button"
+            onClick={() => dispatch({ type: 'ADD_LAYER', payload: { shape: { kind: 'triangle', width: 220, height: 220 } } })}
+            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
+            title="Add triangle layer"
+          >
+            <Triangle size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'ADD_LAYER', payload: { shape: { kind: 'line', width: 280, height: 40 } } })}
+            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
+            title="Add line layer"
+          >
+            <Minus size={16} />
+          </button>
+          <button
+            type="button"
             onClick={() => dispatch({ type: 'ADD_LAYER', payload: { text: true } })}
             className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
             title="Add text layer"
           >
             <Type size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'ADD_LAYER', payload: { background: true } })}
+            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
+            title="Add background fill layer"
+          >
+            <SquareStack size={16} />
           </button>
           <label className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text cursor-pointer" title="Upload image">
             <input type="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp" className="hidden" multiple onChange={handleFileUpload} />
@@ -85,8 +160,23 @@ export const LayerList = () => {
           return (
           <div
             key={layer.id}
+            draggable={state.renamingLayerId !== layer.id}
+            onDragStart={(e) => {
+              setDraggingId(layer.id);
+              e.dataTransfer.effectAllowed = 'move';
+            }}
+            onDragEnter={() => setDragOverId(layer.id)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (draggingId) reorder(draggingId, layer.id);
+              endDrag();
+            }}
+            onDragEnd={endDrag}
             onClick={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } })}
-            className={`composer-layer-enter flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
+            className={`ic-layer-row composer-layer-enter flex items-center gap-2 px-3 py-2 rounded-lg cursor-grab transition ${
+              draggingId === layer.id ? 'is-dragging' : ''
+            } ${dragOverId === layer.id && draggingId && draggingId !== layer.id ? 'is-drag-over' : ''} ${
               state.activeLayerId === layer.id
                 ? 'bg-core-accent/20 border border-core-accent/50'
                 : 'hover:bg-core-elevated border border-transparent'
@@ -100,7 +190,32 @@ export const LayerList = () => {
                 layer.source.shape?.kind === 'circle' ? '●' : layer.source.shape?.kind === 'rectangle' ? '■' : '◆'
               )}
             </div>
-            <span className="flex-1 text-xs truncate">{layer.name}</span>
+            {state.renamingLayerId === layer.id ? (
+              <input
+                type="text"
+                defaultValue={layer.name}
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={(e) => commitRename(layer.id, e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitRename(layer.id, e.currentTarget.value);
+                  if (e.key === 'Escape') dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: null } });
+                }}
+                className="flex-1 min-w-0 text-xs px-1 py-0.5 rounded bg-core-elevated border border-core-accent focus:outline-none"
+              />
+            ) : (
+              <span
+                className="flex-1 text-xs truncate"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: layer.id } });
+                }}
+                title="Double-click to rename"
+              >
+                {layer.name}
+              </span>
+            )}
             <button
               type="button"
               onClick={(e) => {
@@ -126,26 +241,30 @@ export const LayerList = () => {
         })}
       </div>
 
-      {state.activeLayerId && (
-        <div className="mt-4 pt-4 border-t border-core-border flex gap-2">
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'DUPLICATE_LAYER', payload: { id: state.activeLayerId! } })}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-core-elevated text-xs hover:bg-core-border"
-          >
-            <Copy size={12} />
-            Duplicate
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'REMOVE_LAYER', payload: { id: state.activeLayerId! } })}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-core-danger/20 text-core-danger text-xs hover:bg-core-danger/30"
-          >
-            <Trash2 size={12} />
-            Delete
-          </button>
-        </div>
-      )}
+      <div
+        className="mt-4 pt-4 border-t border-core-border flex gap-2"
+        style={{ visibility: state.activeLayerId ? 'visible' : 'hidden' }}
+        aria-hidden={!state.activeLayerId}
+      >
+        <button
+          type="button"
+          disabled={!state.activeLayerId}
+          onClick={() => state.activeLayerId && dispatch({ type: 'DUPLICATE_LAYER', payload: { id: state.activeLayerId } })}
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-core-elevated text-xs hover:bg-core-border"
+        >
+          <Copy size={12} />
+          Duplicate
+        </button>
+        <button
+          type="button"
+          disabled={!state.activeLayerId}
+          onClick={() => state.activeLayerId && dispatch({ type: 'REMOVE_LAYER', payload: { id: state.activeLayerId } })}
+          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-core-danger/20 text-core-danger text-xs hover:bg-core-danger/30"
+        >
+          <Trash2 size={12} />
+          Delete
+        </button>
+      </div>
     </aside>
   );
 };

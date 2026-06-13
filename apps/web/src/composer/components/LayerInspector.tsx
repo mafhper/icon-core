@@ -1,71 +1,110 @@
-import { useMemo, useState } from 'react';
-import type { IconLayer, LayerEffect, Fill } from '@iconcore/shared';
+import { useMemo } from 'react';
+import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
+import { brandGradientFill } from '../constants';
+import { resolveLayerVariant } from '../utils/layerResolve';
+import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
+import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
+import { GradientEditor } from './GradientEditor';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
-
-const getShadow = (layer: IconLayer): LayerEffect => (
-  layer.effects?.find((effect) => effect.kind === 'depth-shadow') ?? {
-    kind: 'depth-shadow',
-    enabled: false,
-    params: { x: 0, y: 18, blur: 34, color: 'rgba(15, 23, 42, 0.28)' }
-  }
-);
-
-const setShadow = (layer: IconLayer, shadow: LayerEffect): LayerEffect[] => {
-  const effects = layer.effects ?? [];
-  const exists = effects.some((effect) => effect.kind === 'depth-shadow');
-  return exists
-    ? effects.map((effect) => effect.kind === 'depth-shadow' ? shadow : effect)
-    : [...effects, shadow];
-};
-
-const fillColor = (fill?: Fill) => fill?.kind === 'solid' ? fill.color ?? '#111827' : '#111827';
+const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'squircle', 'triangle', 'line', 'star'];
 
 export const LayerInspector = () => {
   const { state, dispatch } = useComposer();
-  const [variantOnly, setVariantOnly] = useState(false);
 
   const baseLayer = state.project?.layers.find((layer) => layer.id === state.activeLayerId);
-  const variantOverride = baseLayer?.variantOverrides?.[state.activeVariant];
-  const layer = useMemo<IconLayer | null>(() => {
-    if (!baseLayer) return null;
-    if (!variantOverride) return baseLayer;
-    return {
-      ...baseLayer,
-      ...variantOverride,
-      source: variantOverride.source ? { ...baseLayer.source, ...variantOverride.source } : baseLayer.source,
-      transform: variantOverride.transform ? { ...baseLayer.transform, ...variantOverride.transform } : baseLayer.transform,
-      text: variantOverride.text ? { ...baseLayer.text, ...variantOverride.text } as IconLayer['text'] : baseLayer.text,
-      effects: variantOverride.effects ?? baseLayer.effects
-    };
-  }, [baseLayer, variantOverride]);
+  const activeVariant = state.activeVariant;
+  const layer = useMemo<IconLayer | null>(
+    () => (baseLayer ? resolveLayerVariant(baseLayer, activeVariant) : null),
+    [baseLayer, activeVariant]
+  );
 
-  if (!state.project || !layer || !baseLayer) {
+  if (!state.project) {
     return (
       <aside className="ic-inspector">
-        <p className="text-xs text-core-muted text-center py-8">
-          Select a layer to edit its properties.
-        </p>
+        <p className="text-xs text-core-muted text-center py-8">No project open.</p>
       </aside>
     );
   }
 
+  if (!layer || !baseLayer) {
+    const bg = state.project.canvas.background;
+    const bgSolid = bg.kind === 'solid' ? bg.color ?? '#ffffff' : '#ffffff';
+    const setCanvasBg = (background: Fill, transient = false) =>
+      dispatch({ type: 'SET_CANVAS_BACKGROUND', payload: { background, transient } });
+    return (
+      <aside className="ic-inspector">
+        <div className="ic-inspector-head">
+          <div>
+            <p>Edit Space</p>
+            <h2>Canvas</h2>
+          </div>
+        </div>
+        <p className="ic-variant-scope-note">No layer selected — editing the <strong>canvas background</strong>.</p>
+        <div className="ic-field-stack">
+          <label className="ic-field">
+            <span>Background color</span>
+            <input type="color" value={bgSolid} onChange={(event) => setCanvasBg({ kind: 'solid', color: event.target.value })} />
+          </label>
+          <label className="ic-field">
+            <span>Fill type</span>
+            <select
+              value={bg.kind}
+              onChange={(event) => {
+                const kind = event.target.value as Fill['kind'];
+                if (kind === 'solid') { setCanvasBg({ kind: 'solid', color: bgSolid }); return; }
+                const preset = brandGradientFill();
+                setCanvasBg({ ...preset, kind, stops: bg.stops && bg.stops.length >= 2 ? bg.stops : preset.stops });
+              }}
+            >
+              <option value="solid">Solid color</option>
+              <option value="linear-gradient">Linear gradient</option>
+              <option value="radial-gradient">Radial gradient</option>
+            </select>
+          </label>
+          {bg.kind !== 'solid' && (
+            <GradientEditor
+              fill={bg}
+              onChange={(next) => setCanvasBg(next, true)}
+              onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
+            />
+          )}
+        </div>
+      </aside>
+    );
+  }
+
+  const scoped = activeVariant !== 'default';
   const commit = () => dispatch({ type: 'COMMIT_HISTORY' });
 
-  const updateLayer = (changes: Partial<IconLayer>, transient = false) => {
-    if (variantOnly && state.activeVariant !== 'default') {
-      dispatch({
-        type: 'UPDATE_LAYER_VARIANT',
-        payload: { id: layer.id, variant: state.activeVariant, changes, transient }
-      });
-      return;
-    }
-    dispatch({ type: 'UPDATE_LAYER', payload: { id: layer.id, changes, transient } });
+  // Appearance edits auto-scope to the active variant; identity (name) stays on the base layer.
+  const updateLayer = (changes: ScopedLayerChanges, transient = false) => {
+    scopedLayerDispatch(dispatch, activeVariant, layer.id, changes, { transient });
   };
 
   const updateTransform = (changes: Partial<IconLayer['transform']>, transient = true) => {
     updateLayer({ transform: { ...layer.transform, ...changes } }, transient);
+  };
+
+  // Shape geometry is structural → always written to the base layer (like name).
+  const shape = baseLayer.source.shape;
+  const updateShape = (patch: Partial<ShapeDefinition>, transient = false) => {
+    if (!shape) return;
+    dispatch({
+      type: 'UPDATE_LAYER',
+      payload: { id: baseLayer.id, changes: { source: { ...baseLayer.source, shape: { ...shape, ...patch } } }, transient }
+    });
+  };
+
+  const setFillKind = (kind: Fill['kind']) => {
+    if (kind === 'solid') {
+      updateLayer({ fill: { kind: 'solid', color: solidColor } });
+      return;
+    }
+    const preset = brandGradientFill();
+    const stops = layer.fill?.stops && layer.fill.stops.length >= 2 ? layer.fill.stops : preset.stops;
+    updateLayer({ fill: { ...preset, kind, stops, angle: layer.fill?.angle ?? preset.angle } });
   };
 
   const shadow = getShadow(layer);
@@ -78,23 +117,22 @@ export const LayerInspector = () => {
           <p>Edit Space</p>
           <h2>Layer Properties</h2>
         </div>
-        <span>{state.activeVariant}</span>
+        <span>{activeVariant}</span>
       </div>
 
-      <label className="ic-switch-row">
-        <span>Variant override only</span>
-        <input
-          type="checkbox"
-          checked={variantOnly && state.activeVariant !== 'default'}
-          disabled={state.activeVariant === 'default'}
-          onChange={(event) => setVariantOnly(event.target.checked)}
-        />
-      </label>
+      {scoped && (
+        <p className="ic-variant-scope-note">
+          Editing the <strong>{activeVariant}</strong> variant — changes stay here, not the default.
+        </p>
+      )}
 
       <div className="ic-field-stack">
         <label className="ic-field">
           <span>Name</span>
-          <input value={baseLayer.name} onChange={(event) => updateLayer({ name: event.target.value })} />
+          <input
+            value={baseLayer.name}
+            onChange={(event) => dispatch({ type: 'UPDATE_LAYER', payload: { id: baseLayer.id, changes: { name: event.target.value } } })}
+          />
         </label>
 
         {layer.kind === 'text' && (
@@ -170,6 +208,31 @@ export const LayerInspector = () => {
           />
         </label>
 
+        {baseLayer.kind === 'shape' && shape && (
+          <>
+            <label className="ic-field">
+              <span>Shape</span>
+              <select value={shape.kind} onChange={(event) => updateShape({ kind: event.target.value as ShapeKind })}>
+                {shapeKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+              </select>
+            </label>
+            {shape.kind === 'rounded-rectangle' && (
+              <label className="ic-field">
+                <span>Corner radius ({Math.round(shape.cornerRadius ?? 32)})</span>
+                <input
+                  type="range"
+                  min="0"
+                  max={Math.round(Math.min(shape.width, shape.height) / 2)}
+                  value={Math.round(shape.cornerRadius ?? 32)}
+                  onChange={(event) => updateShape({ cornerRadius: Number(event.target.value) }, true)}
+                  onPointerUp={commit}
+                  onKeyUp={commit}
+                />
+              </label>
+            )}
+          </>
+        )}
+
         <div className="ic-field-grid">
           <label className="ic-field">
             <span>Fill</span>
@@ -192,30 +255,24 @@ export const LayerInspector = () => {
         </div>
 
         <label className="ic-field">
-          <span>Gradient preset</span>
+          <span>Fill type</span>
           <select
-            value={layer.fill?.kind === 'linear-gradient' ? 'gold-cyan' : 'solid'}
-            onChange={(event) => {
-              if (event.target.value === 'solid') {
-                updateLayer({ fill: { kind: 'solid', color: solidColor } });
-                return;
-              }
-              updateLayer({
-                fill: {
-                  kind: 'linear-gradient',
-                  angle: 135,
-                  stops: [
-                    { offset: 0, color: '#f3d18a' },
-                    { offset: 1, color: '#6bb7d8' }
-                  ]
-                }
-              });
-            }}
+            value={layer.fill?.kind ?? 'solid'}
+            onChange={(event) => setFillKind(event.target.value as Fill['kind'])}
           >
             <option value="solid">Solid color</option>
-            <option value="gold-cyan">Gold / cyan glass</option>
+            <option value="linear-gradient">Linear gradient</option>
+            <option value="radial-gradient">Radial gradient</option>
           </select>
         </label>
+
+        {layer.fill && layer.fill.kind !== 'solid' && (
+          <GradientEditor
+            fill={layer.fill}
+            onChange={(next) => updateLayer({ fill: next }, true)}
+            onCommit={commit}
+          />
+        )}
 
         <label className="ic-field">
           <span>Blend mode</span>

@@ -1,5 +1,6 @@
 import type { IconCoreProject, IconLayer, IconTarget } from '@iconcore/shared';
 import type { FileLayerAsset } from './fileLayers';
+import { brandGradientFill } from '../constants';
 
 const slugify = (value: string) =>
   value
@@ -87,14 +88,7 @@ export const createShapeLayer = (canvasSize: number, zIndex: number): IconLayer 
   },
   transform: { x: 0, y: 0, scale: 1, rotation: 0 },
   opacity: 1,
-  fill: {
-    kind: 'linear-gradient',
-    angle: 135,
-    stops: [
-      { offset: 0, color: '#f3d18a' },
-      { offset: 1, color: '#6bb7d8' }
-    ]
-  },
+  fill: brandGradientFill(),
   effects: [
     { kind: 'depth-shadow', enabled: true, params: { x: 0, y: 18, blur: 34, color: 'rgba(15, 23, 42, 0.28)' } }
   ]

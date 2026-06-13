@@ -4,6 +4,8 @@ import { ExportView } from './views/ExportView';
 import { CommandPalette } from './components/CommandPalette';
 import { WorkspacesView } from './views/WorkspacesView';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { ToastProvider } from './toast/ToastContext';
+import { ToastViewport } from './toast/ToastViewport';
 
 const ComposerShell = () => {
   const { state } = useComposer();
@@ -27,10 +29,13 @@ const ComposerShell = () => {
 
 export const ComposerApp = () => {
   return (
-    <ComposerProvider>
-      <div className="min-h-screen text-core-text bg-core-bg composer-enter">
-        <ComposerShell />
-      </div>
-    </ComposerProvider>
+    <ToastProvider>
+      <ComposerProvider>
+        <div className="min-h-screen text-core-text bg-core-bg composer-enter">
+          <ComposerShell />
+        </div>
+      </ComposerProvider>
+      <ToastViewport />
+    </ToastProvider>
   );
 };

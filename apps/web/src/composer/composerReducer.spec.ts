@@ -57,4 +57,19 @@ describe('Icon Core workspaces state', () => {
     expect(updated.project!.layers[0].variantOverrides?.dark?.transform?.x).toBe(12);
     expect(updated.project!.layers[0].variantOverrides?.dark?.opacity).toBe(0.72);
   });
+
+  it('generates and clears variant presets across layers', () => {
+    const created = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'T', size: 512 } });
+    const withLayer = composerReducer(created, {
+      type: 'ADD_LAYER',
+      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+    });
+
+    const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
+    expect(generated.project!.layers[0].variantOverrides?.dark?.fill).toBeDefined();
+    expect(generated.project!.variants.dark?.canvas?.background?.color).toBe('#0f172a');
+
+    const cleared = composerReducer(generated, { type: 'CLEAR_VARIANT', payload: { variant: 'dark' } });
+    expect(cleared.project!.layers[0].variantOverrides?.dark).toBeUndefined();
+  });
 });

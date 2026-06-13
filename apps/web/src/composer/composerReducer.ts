@@ -7,6 +7,8 @@ import type {
   ShapeDefinition
 } from '@iconcore/shared';
 import type { FileLayerAsset } from './utils/fileLayers';
+import { clampZoom } from './constants';
+import { generateVariantPreset, isGeneratableVariant } from './utils/variantPresets';
 import {
   createBlankProject,
   createLayerFromAsset,
@@ -23,6 +25,7 @@ export interface ComposerState {
   view: ComposerView;
   project: IconCoreProject | null;
   activeLayerId: string | null;
+  renamingLayerId: string | null;
   activeVariant: IconVariant;
   activeTarget: IconTarget;
   enabledTargets: Set<IconTarget>;
@@ -30,6 +33,8 @@ export interface ComposerState {
   zoom: number;
   showGrid: boolean;
   maskShape: 'square' | 'circle' | 'rounded-rectangle' | 'squircle';
+  compareDefault: boolean;
+  showKeylines: boolean;
   history: IconCoreProject[];
   historyIndex: number;
 }
@@ -37,7 +42,7 @@ export interface ComposerState {
 export type ComposerAction =
   | { type: 'NEW_PROJECT'; payload: { name: string; size: number; view?: ComposerView } }
   | { type: 'LOAD_PROJECT'; payload: { project: IconCoreProject; view?: ComposerView } | IconCoreProject }
-  | { type: 'ADD_LAYER'; payload: { asset?: FileLayerAsset; shape?: ShapeDefinition; text?: boolean } }
+  | { type: 'ADD_LAYER'; payload: { asset?: FileLayerAsset; shape?: ShapeDefinition; text?: boolean; background?: boolean } }
   | { type: 'UPDATE_LAYER'; payload: { id: string; changes: Partial<IconLayer>; transient?: boolean } }
   | { type: 'UPDATE_LAYER_VARIANT'; payload: { id: string; variant: IconVariant; changes: Partial<Omit<IconLayer, 'id' | 'variantOverrides'>>; transient?: boolean } }
   | { type: 'COMMIT_HISTORY' }
@@ -49,21 +54,28 @@ export type ComposerAction =
   | { type: 'TOGGLE_LAYER_VISIBILITY'; payload: { id: string } }
   | { type: 'TOGGLE_LAYER_LOCK'; payload: { id: string } }
   | { type: 'SET_ACTIVE_LAYER'; payload: { id: string | null } }
+  | { type: 'SET_RENAMING_LAYER'; payload: { id: string | null } }
   | { type: 'SET_ACTIVE_VARIANT'; payload: IconVariant }
+  | { type: 'GENERATE_VARIANT'; payload: { variant: IconVariant } }
+  | { type: 'CLEAR_VARIANT'; payload: { variant: IconVariant } }
+  | { type: 'PROMOTE_VARIANT'; payload: { variant: IconVariant } }
+  | { type: 'TOGGLE_COMPARE_DEFAULT' }
   | { type: 'SET_ACTIVE_TARGET'; payload: { target: IconTarget; enabled: boolean } }
-  | { type: 'SET_CANVAS_BACKGROUND'; payload: Fill }
+  | { type: 'SET_CANVAS_BACKGROUND'; payload: { background: Fill; transient?: boolean } }
   | { type: 'NAVIGATE'; payload: ComposerView }
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'SET_DIRTY'; payload: boolean }
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'TOGGLE_GRID' }
+  | { type: 'TOGGLE_KEYLINES' }
   | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' };
 
 export const initialState: ComposerState = {
   view: 'workspaces',
   project: null,
   activeLayerId: null,
+  renamingLayerId: null,
   activeVariant: 'default',
   activeTarget: 'web-favicon',
   enabledTargets: new Set(['web-favicon', 'pwa']),
@@ -71,6 +83,8 @@ export const initialState: ComposerState = {
   zoom: 1,
   showGrid: true,
   maskShape: 'rounded-rectangle',
+  compareDefault: false,
+  showKeylines: false,
   history: [],
   historyIndex: -1
 };
@@ -168,6 +182,21 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'ADD_LAYER': {
       if (!state.project) return state;
+
+      if (action.payload.background) {
+        const size = state.project.canvas.size;
+        const bgLayer: IconLayer = {
+          ...createShapeLayer(size, 0),
+          name: 'Background',
+          source: { type: 'reference', path: '', shape: { kind: 'rectangle', width: size, height: size } },
+          transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+          effects: []
+        };
+        const shifted = state.project.layers.map((entry) => ({ ...entry, zIndex: entry.zIndex + 1 }));
+        const project = { ...state.project, layers: [bgLayer, ...shifted] };
+        return { ...commitProject(state, project), activeLayerId: bgLayer.id };
+      }
+
       const zIndex = state.project.layers.length;
       const layer = action.payload.asset
         ? createLayerFromAsset(action.payload.asset, state.project.canvas.size, zIndex)
@@ -235,7 +264,8 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       };
       return {
         ...commitProject(state, project),
-        activeLayerId: state.activeLayerId === action.payload.id ? null : state.activeLayerId
+        activeLayerId: state.activeLayerId === action.payload.id ? null : state.activeLayerId,
+        renamingLayerId: state.renamingLayerId === action.payload.id ? null : state.renamingLayerId
       };
     }
 
@@ -310,8 +340,73 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
     case 'SET_ACTIVE_LAYER':
       return { ...state, activeLayerId: action.payload.id };
 
+    case 'SET_RENAMING_LAYER':
+      return { ...state, renamingLayerId: action.payload.id };
+
     case 'SET_ACTIVE_VARIANT':
       return { ...state, activeVariant: action.payload };
+
+    case 'GENERATE_VARIANT': {
+      if (!state.project || !isGeneratableVariant(action.payload.variant)) return state;
+      const variant = action.payload.variant;
+      const preset = generateVariantPreset(state.project, variant);
+      const project: IconCoreProject = {
+        ...state.project,
+        layers: state.project.layers.map((layer) => ({
+          ...layer,
+          variantOverrides: {
+            ...layer.variantOverrides,
+            [variant]: { ...layer.variantOverrides?.[variant], fill: preset.layerFills[layer.id] }
+          }
+        })),
+        variants: {
+          ...state.project.variants,
+          [variant]: {
+            ...state.project.variants[variant],
+            canvas: { ...state.project.variants[variant]?.canvas, background: preset.background }
+          }
+        }
+      };
+      return commitProject(state, project);
+    }
+
+    case 'CLEAR_VARIANT': {
+      if (!state.project || action.payload.variant === 'default') return state;
+      const variant = action.payload.variant;
+      const project: IconCoreProject = {
+        ...state.project,
+        layers: state.project.layers.map((layer) => {
+          if (!layer.variantOverrides?.[variant]) return layer;
+          const nextOverrides = { ...layer.variantOverrides };
+          delete nextOverrides[variant];
+          return { ...layer, variantOverrides: nextOverrides };
+        }),
+        variants: { ...state.project.variants, [variant]: {} }
+      };
+      return commitProject(state, project);
+    }
+
+    case 'PROMOTE_VARIANT': {
+      if (!state.project || action.payload.variant === 'default') return state;
+      const variant = action.payload.variant;
+      const variantCanvasBg = state.project.variants[variant]?.canvas?.background;
+      const project: IconCoreProject = {
+        ...state.project,
+        layers: state.project.layers.map((layer) => {
+          const override = layer.variantOverrides?.[variant];
+          if (!override) return layer;
+          const nextOverrides = { ...layer.variantOverrides };
+          delete nextOverrides[variant];
+          return { ...applyLayerChanges(layer, override), variantOverrides: nextOverrides };
+        }),
+        canvas: variantCanvasBg ? { ...state.project.canvas, background: variantCanvasBg } : state.project.canvas,
+        variants: { ...state.project.variants, [variant]: {} }
+      };
+      return commitProject(state, project);
+    }
+
+    case 'TOGGLE_COMPARE_DEFAULT':
+      return { ...state, compareDefault: !state.compareDefault };
 
     case 'SET_ACTIVE_TARGET': {
       const enabledTargets = new Set(state.enabledTargets);
@@ -331,10 +426,13 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'SET_CANVAS_BACKGROUND': {
       if (!state.project) return state;
-      return commitProject(state, {
+      const project = {
         ...state.project,
-        canvas: { ...state.project.canvas, background: action.payload }
-      });
+        canvas: { ...state.project.canvas, background: action.payload.background }
+      };
+      return action.payload.transient
+        ? { ...state, project, isDirty: true }
+        : commitProject(state, project);
     }
 
     case 'NAVIGATE':
@@ -366,10 +464,13 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       return { ...state, isDirty: action.payload };
 
     case 'SET_ZOOM':
-      return { ...state, zoom: action.payload };
+      return { ...state, zoom: clampZoom(action.payload) };
 
     case 'TOGGLE_GRID':
       return { ...state, showGrid: !state.showGrid };
+
+    case 'TOGGLE_KEYLINES':
+      return { ...state, showKeylines: !state.showKeylines };
 
     case 'SET_MASK_SHAPE':
       return { ...state, maskShape: action.payload };
