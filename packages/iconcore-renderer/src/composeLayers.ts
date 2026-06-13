@@ -111,6 +111,12 @@ export const composeLayers = async (
     const ctxAny = ctx.native as CanvasRenderingContext2D;
     ctxAny.save();
 
+    // Combined CSS filter (image color adjustments + surface blur). Saved/restored with the context.
+    const blurEffect = layer.resolvedEffects?.find((effect) => effect.kind === 'surface-blur' && effect.enabled);
+    const blurPx = blurEffect ? Number(blurEffect.params.radius ?? 0) : 0;
+    const filterStr = [imageFilterToCss(layer.imageFilter), blurPx > 0 ? `blur(${blurPx}px)` : ''].filter(Boolean).join(' ');
+    if (filterStr) ctxAny.filter = filterStr;
+
     if (layer.resolvedBlendMode && layer.resolvedBlendMode !== 'normal') {
       backend.applyBlendMode(ctx, layer.resolvedBlendMode);
     }
@@ -159,8 +165,6 @@ export const composeLayers = async (
       }
     }
 
-    const imageFilter = imageFilterToCss(layer.imageFilter);
-
     if (layer.resolvedSource.type === 'inline' && layer.resolvedSource.data) {
       try {
         const mimeType = layer.resolvedSource.mimeType ?? 'image/png';
@@ -170,9 +174,7 @@ export const composeLayers = async (
         const blob = new Blob([bytes], { type: mimeType });
         const img = await backend.loadImage(blob);
         const rect = getContainedRect(img.width, img.height, canvasSize);
-        if (imageFilter) ctxAny.filter = imageFilter;
         backend.drawImage(ctx, img, rect.x, rect.y, rect.width, rect.height);
-        if (imageFilter) ctxAny.filter = 'none';
       } catch {
         // Skip layers that fail to load
       }
@@ -182,9 +184,7 @@ export const composeLayers = async (
       try {
         const img = await backend.loadImage(layer.resolvedSource.path);
         const rect = getContainedRect(img.width, img.height, canvasSize);
-        if (imageFilter) ctxAny.filter = imageFilter;
         backend.drawImage(ctx, img, rect.x, rect.y, rect.width, rect.height);
-        if (imageFilter) ctxAny.filter = 'none';
       } catch {
         // Skip layers that fail to load
       }

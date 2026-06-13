@@ -1043,6 +1043,22 @@ input[type='range'] {
   color: var(--core-muted);
 }
 
+.ic-section-head {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 760;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--core-accent);
+}
+
+.ic-field-stack > .ic-section-head:not(:first-child),
+.ic-field-stack > .ic-image-filters {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--core-border);
+}
+
 .ic-image-filters {
   padding-top: 12px;
   border-top: 1px solid var(--core-border);

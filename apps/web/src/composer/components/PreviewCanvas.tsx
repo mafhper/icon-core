@@ -7,7 +7,7 @@ import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
-import { borderRadiusForLayer, clipPathForLayer, fillToCss, layerSize, shadowCssForLayer } from '../utils/layerStyle';
+import { borderRadiusForLayer, clipPathForLayer, fillToCss, layerBlurPx, layerSize, shadowCssForLayer } from '../utils/layerStyle';
 
 const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
@@ -34,6 +34,8 @@ const renderLayerContent = (layer: IconLayer, zoom: number) => {
   const dataUrl = layer.source.type === 'inline' && layer.source.data && layer.source.mimeType
     ? `data:${layer.source.mimeType};base64,${layer.source.data}`
     : null;
+  const blur = layerBlurPx(layer) * zoom;
+  const blurCss = blur > 0 ? `blur(${blur}px)` : '';
 
   if (layer.kind === 'text') {
     return (
@@ -44,7 +46,8 @@ const renderLayerContent = (layer: IconLayer, zoom: number) => {
           fontFamily: layer.text?.fontFamily,
           fontSize: (layer.text?.fontSize ?? 64) * zoom,
           fontWeight: layer.text?.fontWeight,
-          textShadow: shadowCssForLayer(layer)
+          textShadow: shadowCssForLayer(layer),
+          filter: blurCss || undefined
         }}
       >
         {layer.text?.content ?? 'Text'}
@@ -52,7 +55,10 @@ const renderLayerContent = (layer: IconLayer, zoom: number) => {
     );
   }
 
-  if (dataUrl) return <img src={dataUrl} alt={layer.name} draggable={false} style={{ filter: imageFilterToCss(layer.imageFilter) || undefined }} />;
+  if (dataUrl) {
+    const imageFilter = [imageFilterToCss(layer.imageFilter), blurCss].filter(Boolean).join(' ');
+    return <img src={dataUrl} alt={layer.name} draggable={false} style={{ filter: imageFilter || undefined }} />;
+  }
 
   return (
     <div
@@ -62,6 +68,7 @@ const renderLayerContent = (layer: IconLayer, zoom: number) => {
         borderRadius: borderRadiusForLayer(layer),
         clipPath: clipPathForLayer(layer),
         boxShadow: shadowCssForLayer(layer),
+        filter: blurCss || undefined,
         border: layer.stroke ? `${Math.max(1, layer.stroke.width * zoom)}px solid ${layer.stroke.color}` : undefined
       }}
     />

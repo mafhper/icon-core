@@ -59,6 +59,12 @@ export const shadowCssForLayer = (layer: IconLayer): string | undefined => {
   return `${x}px ${y}px ${blur}px ${color}`;
 };
 
+/** Surface-blur radius (px) for a layer, 0 when none/disabled. */
+export const layerBlurPx = (layer: IconLayer): number => {
+  const effect = layer.effects?.find((item) => item.kind === 'surface-blur' && item.enabled);
+  return effect ? Number(effect.params.radius ?? 0) : 0;
+};
+
 /** The layer's depth-shadow effect, or a disabled default for the inspector. */
 export const getShadow = (layer: IconLayer): LayerEffect =>
   layer.effects?.find((effect) => effect.kind === 'depth-shadow') ?? {

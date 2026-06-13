@@ -117,6 +117,17 @@ export const LayerInspector = () => {
   const updateImageFilter = (patch: Partial<typeof imageFilter>, transient = false) =>
     updateLayer({ imageFilter: { ...imageFilter, ...patch } }, transient);
 
+  const blurRadius = Number(layer.effects?.find((effect) => effect.kind === 'surface-blur')?.params.radius ?? 0);
+  const setBlur = (radius: number, transient = false) => {
+    const effects = layer.effects ?? [];
+    const next = radius <= 0
+      ? effects.filter((effect) => effect.kind !== 'surface-blur')
+      : effects.some((effect) => effect.kind === 'surface-blur')
+        ? effects.map((effect) => (effect.kind === 'surface-blur' ? { ...effect, enabled: true, params: { radius } } : effect))
+        : [...effects, { kind: 'surface-blur' as const, enabled: true, params: { radius } }];
+    updateLayer({ effects: next }, transient);
+  };
+
   return (
     <aside className="ic-inspector">
       <div className="ic-inspector-head">
@@ -134,6 +145,7 @@ export const LayerInspector = () => {
       )}
 
       <div className="ic-field-stack">
+        <h3 className="ic-section-head">Layer</h3>
         <label className="ic-field">
           <span>Name</span>
           <input
@@ -176,6 +188,7 @@ export const LayerInspector = () => {
           </>
         )}
 
+        <h3 className="ic-section-head">Composition</h3>
         <div className="ic-field-grid">
           <label className="ic-field">
             <span>X</span>
@@ -217,6 +230,7 @@ export const LayerInspector = () => {
 
         {baseLayer.kind === 'shape' && shape && (
           <>
+            <h3 className="ic-section-head">Geometry</h3>
             <label className="ic-field">
               <span>Shape</span>
               <select value={shape.kind} onChange={(event) => updateShape({ kind: event.target.value as ShapeKind })}>
@@ -240,6 +254,7 @@ export const LayerInspector = () => {
           </>
         )}
 
+        <h3 className="ic-section-head">Color</h3>
         <div className="ic-field-grid">
           <label className="ic-field">
             <span>Fill</span>
@@ -291,6 +306,7 @@ export const LayerInspector = () => {
           </select>
         </label>
 
+        <h3 className="ic-section-head">Effects</h3>
         <label className="ic-switch-row">
           <span>Depth shadow</span>
           <input
@@ -311,6 +327,19 @@ export const LayerInspector = () => {
               effects: setShadow(layer, { ...shadow, params: { ...shadow.params, blur: Number(event.target.value) } })
             }, true)}
             onPointerUp={commit}
+          />
+        </label>
+
+        <label className="ic-field">
+          <span>Layer blur ({blurRadius})</span>
+          <input
+            type="range"
+            min="0"
+            max="60"
+            value={blurRadius}
+            onChange={(event) => setBlur(Number(event.target.value), true)}
+            onPointerUp={commit}
+            onKeyUp={commit}
           />
         </label>
 
