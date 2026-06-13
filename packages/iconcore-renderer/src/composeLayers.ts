@@ -1,4 +1,5 @@
 import type { Fill, IconLayer, IconVariant, ShapeKind } from '@iconcore/shared';
+import { imageFilterToCss } from '@iconcore/shared';
 import type { RenderBackend, ResolvedLayer } from './types';
 
 const resolveLayerForVariant = (
@@ -158,6 +159,8 @@ export const composeLayers = async (
       }
     }
 
+    const imageFilter = imageFilterToCss(layer.imageFilter);
+
     if (layer.resolvedSource.type === 'inline' && layer.resolvedSource.data) {
       try {
         const mimeType = layer.resolvedSource.mimeType ?? 'image/png';
@@ -167,7 +170,9 @@ export const composeLayers = async (
         const blob = new Blob([bytes], { type: mimeType });
         const img = await backend.loadImage(blob);
         const rect = getContainedRect(img.width, img.height, canvasSize);
+        if (imageFilter) ctxAny.filter = imageFilter;
         backend.drawImage(ctx, img, rect.x, rect.y, rect.width, rect.height);
+        if (imageFilter) ctxAny.filter = 'none';
       } catch {
         // Skip layers that fail to load
       }
@@ -177,7 +182,9 @@ export const composeLayers = async (
       try {
         const img = await backend.loadImage(layer.resolvedSource.path);
         const rect = getContainedRect(img.width, img.height, canvasSize);
+        if (imageFilter) ctxAny.filter = imageFilter;
         backend.drawImage(ctx, img, rect.x, rect.y, rect.width, rect.height);
+        if (imageFilter) ctxAny.filter = 'none';
       } catch {
         // Skip layers that fail to load
       }

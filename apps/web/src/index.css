@@ -1035,6 +1035,100 @@ input[type='range'] {
   background: var(--core-elevated);
 }
 
+.ic-section-label {
+  font-size: 0.68rem;
+  font-weight: 720;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--core-muted);
+}
+
+.ic-image-filters {
+  padding-top: 12px;
+  border-top: 1px solid var(--core-border);
+}
+
+.ic-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.ic-modal {
+  width: min(420px, 100%);
+  border: 1px solid var(--core-border);
+  border-radius: 16px;
+  background: var(--core-surface);
+  box-shadow: 0 24px 60px var(--core-shadow);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.ic-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ic-modal-head h2 {
+  margin: 0;
+  font-size: 0.96rem;
+  letter-spacing: -0.01em;
+}
+
+.ic-modal-head button {
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--core-muted);
+}
+
+.ic-modal-head button:hover {
+  color: var(--core-text);
+  background: var(--core-elevated);
+}
+
+.ic-bg-remove-preview {
+  display: grid;
+  place-items: center;
+  min-height: 200px;
+  overflow: hidden;
+  border: 1px solid var(--core-border);
+  border-radius: 12px;
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #d9d9d9 25%, transparent 25%),
+    linear-gradient(-45deg, #d9d9d9 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #d9d9d9 75%),
+    linear-gradient(-45deg, transparent 75%, #d9d9d9 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+.ic-bg-remove-preview img {
+  max-width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+}
+
+.ic-modal-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--core-muted);
+}
+
+.ic-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .ic-gradient-preview {
   height: 26px;
   border-radius: 8px;

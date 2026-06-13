@@ -95,6 +95,25 @@ export interface LayerSource {
   shape?: ShapeDefinition;
 }
 
+/** Color adjustments for image/svg layers. Percentages are CSS-filter style (100 = unchanged). */
+export interface ImageFilter {
+  hue?: number;        // degrees, -180..180
+  saturation?: number; // %, 0..200 (100 = normal)
+  brightness?: number; // %, 0..200 (100 = normal)
+  contrast?: number;   // %, 0..200 (100 = normal)
+}
+
+/** Build a CSS `filter` string from an ImageFilter (empty when no effective adjustment). */
+export const imageFilterToCss = (filter?: ImageFilter): string => {
+  if (!filter) return '';
+  const parts: string[] = [];
+  if (filter.hue) parts.push(`hue-rotate(${filter.hue}deg)`);
+  if (filter.saturation !== undefined && filter.saturation !== 100) parts.push(`saturate(${filter.saturation}%)`);
+  if (filter.brightness !== undefined && filter.brightness !== 100) parts.push(`brightness(${filter.brightness}%)`);
+  if (filter.contrast !== undefined && filter.contrast !== 100) parts.push(`contrast(${filter.contrast}%)`);
+  return parts.join(' ');
+};
+
 export interface IconLayer {
   id: string;
   name: string;
@@ -110,6 +129,7 @@ export interface IconLayer {
   stroke?: Stroke;
   effects?: LayerEffect[];
   text?: TextDefinition;
+  imageFilter?: ImageFilter;
   variantOverrides?: Partial<Record<IconVariant, Partial<Omit<IconLayer, 'id' | 'variantOverrides'>>>>;
 }
 

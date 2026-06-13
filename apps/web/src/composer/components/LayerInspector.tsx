@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { Eraser } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
 import { brandGradientFill } from '../constants';
@@ -6,12 +7,14 @@ import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
 import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
 import { GradientEditor } from './GradientEditor';
+import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
 const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'squircle', 'triangle', 'line', 'star'];
 
 export const LayerInspector = () => {
   const { state, dispatch } = useComposer();
+  const [showBgRemoval, setShowBgRemoval] = useState(false);
 
   const baseLayer = state.project?.layers.find((layer) => layer.id === state.activeLayerId);
   const activeVariant = state.activeVariant;
@@ -109,6 +112,10 @@ export const LayerInspector = () => {
 
   const shadow = getShadow(layer);
   const solidColor = fillColor(layer.fill);
+  const isImage = baseLayer.kind === 'image' || baseLayer.kind === 'svg';
+  const imageFilter = layer.imageFilter ?? {};
+  const updateImageFilter = (patch: Partial<typeof imageFilter>, transient = false) =>
+    updateLayer({ imageFilter: { ...imageFilter, ...patch } }, transient);
 
   return (
     <aside className="ic-inspector">
@@ -307,6 +314,38 @@ export const LayerInspector = () => {
           />
         </label>
 
+        {isImage && (
+          <div className="ic-field-stack ic-image-filters">
+            <span className="ic-section-label">Image adjustments</span>
+            <label className="ic-field">
+              <span>Hue ({imageFilter.hue ?? 0}°)</span>
+              <input type="range" min="-180" max="180" value={imageFilter.hue ?? 0}
+                onChange={(event) => updateImageFilter({ hue: Number(event.target.value) }, true)} onPointerUp={commit} onKeyUp={commit} />
+            </label>
+            <label className="ic-field">
+              <span>Saturation ({imageFilter.saturation ?? 100}%)</span>
+              <input type="range" min="0" max="200" value={imageFilter.saturation ?? 100}
+                onChange={(event) => updateImageFilter({ saturation: Number(event.target.value) }, true)} onPointerUp={commit} onKeyUp={commit} />
+            </label>
+            <label className="ic-field">
+              <span>Brightness ({imageFilter.brightness ?? 100}%)</span>
+              <input type="range" min="0" max="200" value={imageFilter.brightness ?? 100}
+                onChange={(event) => updateImageFilter({ brightness: Number(event.target.value) }, true)} onPointerUp={commit} onKeyUp={commit} />
+            </label>
+            <label className="ic-field">
+              <span>Contrast ({imageFilter.contrast ?? 100}%)</span>
+              <input type="range" min="0" max="200" value={imageFilter.contrast ?? 100}
+                onChange={(event) => updateImageFilter({ contrast: Number(event.target.value) }, true)} onPointerUp={commit} onKeyUp={commit} />
+            </label>
+            {baseLayer.source.type === 'inline' && baseLayer.source.mimeType !== 'image/svg+xml' && (
+              <button type="button" className="ic-button inline-flex items-center justify-center gap-2" onClick={() => setShowBgRemoval(true)}>
+                <Eraser size={14} />
+                Remove background
+              </button>
+            )}
+          </div>
+        )}
+
         <button
           type="button"
           className="ic-danger-button"
@@ -315,6 +354,8 @@ export const LayerInspector = () => {
           Delete selected layer
         </button>
       </div>
+
+      {showBgRemoval && <BackgroundRemovalModal layer={baseLayer} onClose={() => setShowBgRemoval(false)} />}
     </aside>
   );
 };

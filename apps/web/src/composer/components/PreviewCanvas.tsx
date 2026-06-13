@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ZoomIn, ZoomOut, Grid, Circle, Square, RectangleHorizontal, RotateCcw, Crosshair } from 'lucide-react';
 import type { IconLayer } from '@iconcore/shared';
+import { imageFilterToCss } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
@@ -51,7 +52,7 @@ const renderLayerContent = (layer: IconLayer, zoom: number) => {
     );
   }
 
-  if (dataUrl) return <img src={dataUrl} alt={layer.name} draggable={false} />;
+  if (dataUrl) return <img src={dataUrl} alt={layer.name} draggable={false} style={{ filter: imageFilterToCss(layer.imageFilter) || undefined }} />;
 
   return (
     <div
