@@ -1,137 +1,103 @@
-# IconCore
+# Icon Core
 
 [English](README.md) | [Português (Brasil)](README.pt-BR.md) | [Español](README.es-ES.md)
 
-IconCore es un motor open source y local-first para la generación determinística de paquetes de iconos para proyectos web y desktop.
+Icon Core es un workspace gratuito y open source para iconos de aplicaciones. Empieza con un lienzo vacío o importa un archivo SVG/PNG/JPG/WebP, ajusta el icono y exporta assets listos para web y desktop.
 
-## Enlaces
+Todo se ejecuta localmente en el navegador o en la app desktop. No requiere cuenta, servicio de subida ni backend.
 
-- Repositorio: https://github.com/mafhper/icon-core
-- Sitio promocional: https://mafhper.github.io/icon-core/
-- Aplicación web: https://mafhper.github.io/icon-core/app/
+![Workspaces, Edit Space y Export Utilities de Icon Core](docs/assets/icon-core-overview.png)
+
+## Probar
+
+- App web: https://mafhper.github.io/icon-core/app/
+- Landing page: https://mafhper.github.io/icon-core/
 - Releases desktop: https://github.com/mafhper/icon-core/releases
+- Repositorio: https://github.com/mafhper/icon-core
 
-## Resumen
+## Workspaces
 
-IconCore ayuda a los equipos a generar assets consistentes de aplicación a partir de un único logo. Soporta output por defecto de tema único y output temático explícito light/dark, con nombres de archivo y estructura de carpetas determinísticos.
+| Workspace | Úsalo cuando |
+| --- | --- |
+| Create in Edit Space | Quieres construir un icono con capas, texto, formas e imágenes. |
+| Upload to Export Utilities | Ya tienes el archivo final y solo necesitas generar los assets. |
+| Upload, Adjust, Export | Quieres importar un archivo, ajustarlo y luego exportar el paquete final. |
 
-El proyecto es completamente local-first: la generación se ejecuta en el cliente (web) o en la máquina local (desktop), sin backend obligatorio.
+## Funcionalidades
 
-## Aplicación Web vs Aplicación Desktop
+- Edición por capas para imágenes, SVG, formas y texto
+- Controles de posición, escala, rotación, opacidad, color, gradiente, blend mode y sombra
+- Ajustes por variante para iconos default, light, dark y mono
+- Exportación para favicon, PWA, Tauri, Electron y desktop genérico
+- ZIP con archivos renderizados, manifiestos, reportes y notas de uso
+- Apps web y desktop basadas en el mismo modelo de proyecto
 
-| Modo | Mejor para | Notas |
-| --- | --- | --- |
-| Aplicación web | Uso rápido en el navegador | Sin instalación, exporta paquetes ZIP |
-| Aplicación desktop | Flujos con filesystem local | Diálogos nativos y exportación directa a carpeta |
+## Desarrollo
 
-## Funcionalidades Principales
-
-- Pipeline de generación determinístico (modos de output `default` y `themed`)
-- Generación de manifiesto con resolución consistente de rutas de iconos
-- Manejo de fuentes por asset (master/light/dark/variantes de favicon)
-- Exportación estructurada para flujos web y desktop
-- Temas de interfaz y controles de configuración por proyecto
-- Interfaz localizada (`pt-BR`, `en-US`, `es-ES`)
-
-## Estructura del Monorepo
-
-```text
-apps/
-  web/        Aplicación web principal
-  promo/      Sitio promocional/landing page
-  desktop/    Shell desktop en Tauri
-packages/
-  iconcore-engine/  Reglas de planificación de generación y manifiesto/output
-  iconcore-shared/  Tipos, contratos y utilidades de locale compartidas
-scripts/
-  assemble-pages.mjs  Combina builds de promo + web para GitHub Pages
-```
-
-## Inicio Rápido
-
-### Requisitos
+Requisitos:
 
 - Bun 1.3+
-- Node.js 20+ (recomendado para el ecosistema de tooling)
-- Toolchain de Rust (solo para build desktop)
+- Node.js 20+
+- Toolchain de Rust para builds desktop
 
-### Instalación
+Instala dependencias:
 
 ```bash
 bun install
 ```
 
-### Ejecutar Aplicación Web
+Ejecuta la app web:
 
 ```bash
 bun run dev:web
 ```
 
-### Ejecutar Sitio Promo
+Ejecuta la landing page:
 
 ```bash
 bun run dev:promo
 ```
 
-### Ejecutar Desktop (dev)
-
-```bash
-bun run --filter @iconcore/desktop tauri:dev
-```
-
-## Build y Deploy
-
-### Build de todas las apps y artefacto de Pages
+Genera el build para GitHub Pages:
 
 ```bash
 bun run build
 ```
 
-Destino en GitHub Pages:
+Ejecuta la validación:
 
-- Sitio promo en `/icon-core/`
-- Aplicación web en `/icon-core/app/`
+```bash
+bun audit --audit-level=high
+bun run lint
+bun run typecheck
+bun run test
+```
 
-### Build de instaladores desktop
+Genera los bundles desktop:
 
 ```bash
 bun run build:desktop
 ```
 
-## Checks de Calidad y Seguridad
+## Repositorio
 
-```bash
-bun run lint
-bun run typecheck
-bun run test
-bun run build
-bun audit
+```text
+apps/
+  promo/      Landing page pública
+  web/        App del navegador
+  desktop/    Shell desktop en Tauri
+packages/
+  iconcore-shared/     Tipos compartidos del proyecto
+  iconcore-renderer/   Renderización Canvas/SVG
+  iconcore-exporters/  Targets de assets y entradas del ZIP
+  iconcore-engine/     Planificación y utilidades de schema
+  iconcore-validator/  Validación de proyectos
+  iconcore-cli/        Herramientas de línea de comando
 ```
-
-El CI incluye auditoría de dependencias (`bun audit`) como gate de merge.
-
-## Seguridad
-
-- Local-first por diseño (sin procesamiento externo obligatorio)
-- Generación de output estructurada para evitar empaquetado ad-hoc
-- Auditoría de dependencias obligatoria en CI
-
-Si encuentras un problema de seguridad, abre un reporte privado al mantenedor antes de la divulgación pública.
 
 ## Contribución
 
-Las contribuciones son bienvenidas.
-
-Flujo recomendado:
-
-1. Haz un fork del repositorio
-2. Crea una rama de feature
-3. Ejecuta los checks de calidad localmente
-4. Abre un PR con alcance claro y notas de validación
-
-## Mantenedor
-
-Creado y mantenido por [mafhper](https://github.com/mafhper).
+Issues, correcciones y experimentos son bienvenidos. Mantén los cambios enfocados, ejecuta los checks relevantes e incluye notas de validación en los pull requests.
 
 ## Licencia
 
