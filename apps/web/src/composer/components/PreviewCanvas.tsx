@@ -207,6 +207,16 @@ export const PreviewCanvas = () => {
         <div className="ic-toolbar-group">
           <button
             type="button"
+            className="ic-bg-swatch"
+            style={{ background: fillToCss(variantBackground) }}
+            onClick={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: null } })}
+            title="Edit canvas background"
+            aria-label="Edit canvas background"
+          />
+        </div>
+        <div className="ic-toolbar-group">
+          <button
+            type="button"
             onClick={() => dispatch({ type: 'SET_ZOOM', payload: Math.max(ZOOM_MIN, state.zoom - ZOOM_STEP) })}
             className="p-1.5 rounded hover:bg-core-elevated"
             title="Zoom out"

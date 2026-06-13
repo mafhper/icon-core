@@ -741,6 +741,18 @@ input[type='range'] {
   color: var(--core-gold);
 }
 
+.ic-bg-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--core-border);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.ic-bg-swatch:hover {
+  border-color: var(--core-accent);
+}
+
 .ic-snap-guide {
   position: absolute;
   pointer-events: none;
