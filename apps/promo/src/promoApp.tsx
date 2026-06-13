@@ -6,6 +6,8 @@ const publicLabel = (value: string): string => value.replace(/\bIconCore\b/g, 'I
 
 type Platform = 'Windows' | 'macOS' | 'Linux';
 
+type ReleaseStatus = 'loading' | 'ready' | 'error';
+
 interface DesktopLinks {
   windows: string | null;
   macos: string | null;
@@ -72,7 +74,11 @@ const pickAssetByHints = (
   return usable.find((asset) => hints.some((hint) => asset.name.toLowerCase().includes(hint)))?.browser_download_url ?? null;
 };
 
-const PlatformButton = ({ platform, href }: { platform: Platform; href: string | null }) => {
+const PlatformButton = ({ platform, href, status }: { platform: Platform; href: string | null; status: ReleaseStatus }) => {
+  if (status === 'loading') {
+    return <button type="button" className="promo-download is-loading" disabled>{platform} · checking…</button>;
+  }
+
   if (!href) {
     return <button type="button" className="promo-download is-disabled" disabled>{platform} unavailable</button>;
   }
@@ -157,6 +163,7 @@ const WorkflowMini = ({ index }: { index: number }) => {
 export const PromoApp = () => {
   const [latestCommit, setLatestCommit] = useState('Checking latest update...');
   const [commitLink, setCommitLink] = useState(`https://github.com/${repo}/commits`);
+  const [releaseStatus, setReleaseStatus] = useState<ReleaseStatus>('loading');
   const [desktopLinks, setDesktopLinks] = useState<DesktopLinks>({
     windows: null,
     macos: null,
@@ -207,8 +214,10 @@ export const PromoApp = () => {
           releaseUrl: release.html_url || `https://github.com/${repo}/releases/latest`,
           versionLabel: publicLabel(release.name?.trim() || release.tag_name || 'Latest release')
         });
+        setReleaseStatus('ready');
       } catch {
         setDesktopLinks((previous) => ({ ...previous, windows: null, macos: null, linux: null }));
+        setReleaseStatus('error');
       }
     };
 
@@ -302,12 +311,15 @@ export const PromoApp = () => {
             <h2>Use it online or download the desktop build.</h2>
             <p>The desktop app is also free and open-source, with native file access for local workflows.</p>
           </div>
-          <p className="release-line">{desktopLinks.versionLabel}</p>
+          <p className="release-line">{releaseStatus === 'loading' ? 'Checking the latest release…' : desktopLinks.versionLabel}</p>
           <div className="download-grid">
-            <PlatformButton platform="Windows" href={desktopLinks.windows} />
-            <PlatformButton platform="macOS" href={desktopLinks.macos} />
-            <PlatformButton platform="Linux" href={desktopLinks.linux} />
+            <PlatformButton platform="Windows" href={desktopLinks.windows} status={releaseStatus} />
+            <PlatformButton platform="macOS" href={desktopLinks.macos} status={releaseStatus} />
+            <PlatformButton platform="Linux" href={desktopLinks.linux} status={releaseStatus} />
           </div>
+          {releaseStatus === 'error' && (
+            <p className="release-error" role="status">Could not reach GitHub right now. You can still browse the downloads directly.</p>
+          )}
           <a className="text-link" href={desktopLinks.releaseUrl} target="_blank" rel="noreferrer">View all release assets</a>
         </section>
 

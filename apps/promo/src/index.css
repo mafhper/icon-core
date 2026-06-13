@@ -585,6 +585,17 @@ main {
   opacity: 0.46;
 }
 
+.promo-download.is-loading {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.release-error {
+  margin: -8px 0 16px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .community-section {
   padding: 34px;
   display: grid;
@@ -741,5 +752,24 @@ main {
   .promo-footer {
     border-radius: 22px;
     padding: 22px;
+  }
+}
+
+/* --- Keyboard focus visibility --- */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .button,
+  .text-link {
+    transition: none;
   }
 }
