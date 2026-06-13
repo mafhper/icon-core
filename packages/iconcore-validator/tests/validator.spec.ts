@@ -109,6 +109,24 @@ describe('auditProject', () => {
     expect(result.issues.some(i => i.code === 'THIN_STROKE')).toBe(true);
   });
 
+  it('reports info to avoid text layers (Apple HIG)', () => {
+    const project = createProject({
+      layers: [{
+        id: 'layer1',
+        name: 'Wordmark',
+        kind: 'text',
+        visible: true,
+        zIndex: 0,
+        source: { type: 'reference', path: '' },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        text: { content: 'Hi', fontFamily: 'Inter', fontSize: 64, fontWeight: 700 }
+      }]
+    });
+    const result = auditProject(project);
+    expect(result.issues.some(i => i.code === 'AVOID_TEXT')).toBe(true);
+  });
+
   it('calculates score based on issues', () => {
     const project = createProject({ metadata: { name: '', shortName: '' } });
     const result = auditProject(project);

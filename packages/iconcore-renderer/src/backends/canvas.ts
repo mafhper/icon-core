@@ -136,9 +136,9 @@ export const createCanvasBackend = (): RenderBackend => {
         native.fillStyle = gradient;
         native.fillRect(x, y, width, height);
       } else if (fill.kind === 'radial-gradient') {
-        const cx = x + width / 2;
-        const cy = y + height / 2;
-        const radius = Math.max(width, height) / 2;
+        const cx = x + width * (fill.centerX ?? 0.5);
+        const cy = y + height * (fill.centerY ?? 0.5);
+        const radius = Math.max(width, height) * (fill.radius ?? 0.5);
         const gradient = native.createRadialGradient(cx, cy, 0, cx, cy, radius);
         for (const stop of fill.stops ?? []) {
           gradient.addColorStop(stop.offset, stop.color);

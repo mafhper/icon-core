@@ -57,6 +57,26 @@ const traceShapePath = (
     native.bezierCurveTo(x + width, y + height - offset, x + width - offset, y + height, x + width / 2, y + height);
     native.bezierCurveTo(x + offset, y + height, x, y + height - offset, x, y + height / 2);
     native.bezierCurveTo(x, y + offset, x + offset, y, x + offset, y);
+  } else if (shape.kind === 'triangle') {
+    native.moveTo(x + width / 2, y);
+    native.lineTo(x + width, y + height);
+    native.lineTo(x, y + height);
+  } else if (shape.kind === 'line') {
+    native.roundRect(x, y, width, height, Math.min(width, height) / 2);
+  } else if (shape.kind === 'star') {
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+    const outer = Math.min(width, height) / 2;
+    const inner = outer * (shape.innerRatio ?? 0.5);
+    const count = shape.pointCount ?? 5;
+    for (let i = 0; i < count * 2; i++) {
+      const r = i % 2 === 0 ? outer : inner;
+      const angle = (Math.PI / count) * i - Math.PI / 2;
+      const px = cx + Math.cos(angle) * r;
+      const py = cy + Math.sin(angle) * r;
+      if (i === 0) native.moveTo(px, py);
+      else native.lineTo(px, py);
+    }
   } else if (shape.kind === 'polygon' && shape.points?.length) {
     native.moveTo(x + shape.points[0].x, y + shape.points[0].y);
     for (const point of shape.points.slice(1)) {

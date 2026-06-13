@@ -113,6 +113,23 @@ const checkStrokeWidth = (project: IconCoreProject): ValidationIssue[] => {
   return issues;
 };
 
+const checkText = (project: IconCoreProject): ValidationIssue[] => {
+  const issues: ValidationIssue[] = [];
+
+  for (const layer of project.layers) {
+    if (layer.visible && layer.kind === 'text') {
+      issues.push({
+        severity: 'info',
+        code: 'AVOID_TEXT',
+        message: `Layer "${layer.name}" is text. Apple's guidelines recommend avoiding text in app icons — it is hard to read at small sizes.`,
+        layerId: layer.id
+      });
+    }
+  }
+
+  return issues;
+};
+
 const checkMetadata = (project: IconCoreProject): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
 
@@ -164,7 +181,8 @@ export const auditProject = (project: IconCoreProject): ValidationResult => {
     ...checkLayers(project),
     ...checkContrast(project),
     ...checkSafeArea(project),
-    ...checkStrokeWidth(project)
+    ...checkStrokeWidth(project),
+    ...checkText(project)
   ];
 
   const errors = issues.filter(i => i.severity === 'error').length;

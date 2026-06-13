@@ -20,13 +20,18 @@ export type IconTarget =
 
 export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten';
 
-export type ShapeKind = 'circle' | 'rectangle' | 'rounded-rectangle' | 'squircle' | 'polygon';
+export type ShapeKind = 'circle' | 'rectangle' | 'rounded-rectangle' | 'squircle' | 'polygon' | 'triangle' | 'line' | 'star';
 
 export interface Fill {
   kind: 'solid' | 'linear-gradient' | 'radial-gradient';
   color?: string;
   stops?: Array<{ offset: number; color: string }>;
   angle?: number;
+  /** Radial gradient center, 0..1 of the bounds (default 0.5/0.5). */
+  centerX?: number;
+  centerY?: number;
+  /** Radial gradient radius as a fraction of the max dimension (default 0.5). */
+  radius?: number;
 }
 
 export interface Stroke {
@@ -77,6 +82,9 @@ export interface ShapeDefinition {
   height: number;
   cornerRadius?: number;
   points?: Array<{ x: number; y: number }>;
+  /** star: number of points (default 5) and inner/outer radius ratio (default 0.5). */
+  pointCount?: number;
+  innerRatio?: number;
 }
 
 export interface LayerSource {

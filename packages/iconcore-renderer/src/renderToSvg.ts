@@ -60,6 +60,23 @@ export const renderToSvg = (
         svgLayers += `<rect x="0" y="0" width="${shape.width}" height="${shape.height}" rx="${rx}" fill="${fillColor}" opacity="${opacity}" transform="translate(${tx},${ty}) scale(${s})"/>\n`;
       } else if (shape.kind === 'squircle') {
         svgLayers += `<rect x="0" y="0" width="${shape.width}" height="${shape.height}" rx="${shape.width * 0.25}" fill="${fillColor}" opacity="${opacity}" transform="translate(${tx},${ty}) scale(${s})"/>\n`;
+      } else if (shape.kind === 'triangle') {
+        svgLayers += `<polygon points="${shape.width / 2},0 ${shape.width},${shape.height} 0,${shape.height}" fill="${fillColor}" opacity="${opacity}" transform="translate(${tx},${ty}) scale(${s})"/>\n`;
+      } else if (shape.kind === 'line') {
+        svgLayers += `<rect x="0" y="0" width="${shape.width}" height="${shape.height}" rx="${Math.min(shape.width, shape.height) / 2}" fill="${fillColor}" opacity="${opacity}" transform="translate(${tx},${ty}) scale(${s})"/>\n`;
+      } else if (shape.kind === 'star') {
+        const cx = shape.width / 2;
+        const cy = shape.height / 2;
+        const outer = Math.min(shape.width, shape.height) / 2;
+        const inner = outer * (shape.innerRatio ?? 0.5);
+        const count = shape.pointCount ?? 5;
+        const pts: string[] = [];
+        for (let i = 0; i < count * 2; i++) {
+          const r = i % 2 === 0 ? outer : inner;
+          const a = (Math.PI / count) * i - Math.PI / 2;
+          pts.push(`${cx + Math.cos(a) * r},${cy + Math.sin(a) * r}`);
+        }
+        svgLayers += `<polygon points="${pts.join(' ')}" fill="${fillColor}" opacity="${opacity}" transform="translate(${tx},${ty}) scale(${s})"/>\n`;
       }
     }
   }
