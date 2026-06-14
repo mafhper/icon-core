@@ -137,7 +137,7 @@ jobs:
           prerelease: false
 
   update-release-notes:
-    needs: build
+    needs: [resolve-release, build]
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ needs.resolve-release.outputs.release_tag }}
