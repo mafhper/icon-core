@@ -1,55 +1,69 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Upload } from 'lucide-react';
-import { useComposer } from '../ComposerContext';
-import { useToast } from '../toast/ToastContext';
-import { fileToLayerAsset, isSupportedLayerFile, sortLayerFiles } from '../utils/fileLayers';
+import { useLayerImport } from '../hooks/useLayerImport';
+
+const ACCEPT = '.svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp';
 
 export const DropZone = () => {
-  const { dispatch } = useComposer();
-  const toast = useToast();
+  const importFiles = useLayerImport();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const openPicker = useCallback(() => {
+    inputRef.current?.click();
+  }, []);
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
-    const dropped = Array.from(e.dataTransfer.files);
-    const files = sortLayerFiles(dropped.filter(isSupportedLayerFile));
+    setIsDragging(false);
+    await importFiles(e.dataTransfer.files);
+  }, [importFiles]);
 
-    if (dropped.length > 0 && files.length === 0) {
-      toast.error('Unsupported file type. Drop an SVG, PNG, JPEG or WebP.');
-      return;
+  const handleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await importFiles(e.target.files);
+    // Allow re-selecting the same file after it has been imported.
+    e.target.value = '';
+  }, [importFiles]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openPicker();
     }
-
-    let failures = 0;
-    for (const file of files) {
-      try {
-        const asset = await fileToLayerAsset(file);
-        dispatch({ type: 'ADD_LAYER', payload: { asset } });
-      } catch (err) {
-        failures++;
-        console.error('Failed to import layer:', err);
-      }
-    }
-
-    if (failures > 0) {
-      toast.error(`Could not import ${failures} file${failures > 1 ? 's' : ''}.`);
-    }
-  }, [dispatch, toast]);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  }, [openPicker]);
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label="Add layers: drop SVG, PNG, JPEG or WebP files, or click to browse"
+      onClick={openPicker}
+      onKeyDown={handleKeyDown}
       onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      className="ic-drop-zone"
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!isDragging) setIsDragging(true);
+      }}
+      onDragLeave={(e) => {
+        // Only clear when the cursor actually leaves the drop zone.
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+      }}
+      className={`ic-drop-zone${isDragging ? ' is-dragging' : ''}`}
     >
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPT}
+        multiple
+        className="hidden"
+        onChange={handleChange}
+      />
       <Upload size={48} className="mx-auto mb-4 text-core-muted" />
       <p className="text-sm text-core-muted mb-2">
         Drop SVG, PNG or WebP files here
       </p>
       <p className="text-xs text-core-muted">
-        or use the upload button in the Layers panel
+        or click to browse your files
       </p>
     </div>
   );

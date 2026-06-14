@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Upload, Type, Triangle, Minus, SquareStack } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
-import { useToast } from '../toast/ToastContext';
-import { fileToLayerAsset, isSupportedLayerFile, sortLayerFiles } from '../utils/fileLayers';
+import { useLayerImport } from '../hooks/useLayerImport';
 
 export const LayerList = () => {
   const { state, dispatch } = useComposer();
-  const toast = useToast();
+  const importFiles = useLayerImport();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
@@ -56,29 +55,8 @@ export const LayerList = () => {
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files ?? []);
-    const files = sortLayerFiles(selected.filter(isSupportedLayerFile));
-    e.currentTarget.value = '';
-
-    if (selected.length > 0 && files.length === 0) {
-      toast.error('Unsupported file type. Use an SVG, PNG, JPEG or WebP.');
-      return;
-    }
-
-    let failures = 0;
-    for (const file of files) {
-      try {
-        const asset = await fileToLayerAsset(file);
-        dispatch({ type: 'ADD_LAYER', payload: { asset } });
-      } catch (err) {
-        failures++;
-        console.error('Failed to import layer:', err);
-      }
-    }
-
-    if (failures > 0) {
-      toast.error(`Could not import ${failures} file${failures > 1 ? 's' : ''}.`);
-    }
+    await importFiles(e.target.files);
+    e.target.value = '';
   };
 
   return (

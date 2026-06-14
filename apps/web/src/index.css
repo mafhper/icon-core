@@ -708,12 +708,20 @@ input[type='range'] {
   border-radius: 18px;
   padding: clamp(24px, 5vw, 48px);
   text-align: center;
+  cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease;
 }
 
-.ic-drop-zone:hover {
+.ic-drop-zone:hover,
+.ic-drop-zone:focus-visible,
+.ic-drop-zone.is-dragging {
   border-color: var(--core-accent);
   background: color-mix(in srgb, var(--core-surface) 26%, transparent 74%);
+  outline: none;
+}
+
+.ic-drop-zone.is-dragging {
+  border-style: solid;
 }
 
 .ic-canvas-frame {
