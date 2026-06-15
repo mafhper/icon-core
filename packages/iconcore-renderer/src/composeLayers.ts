@@ -1,6 +1,7 @@
 import type { Fill, IconLayer, IconVariant, ShapeKind } from '@iconcore/shared';
 import { imageFilterToCss } from '@iconcore/shared';
 import type { RenderBackend, ResolvedLayer } from './types';
+import { layerBaseRect } from './geometry';
 
 const resolveLayerForVariant = (
   layer: IconLayer,
@@ -19,22 +20,6 @@ const resolveLayerForVariant = (
     resolvedTransform: overrides?.transform ? { ...layer.transform, ...overrides.transform } : layer.transform,
     resolvedText: overrides?.text ? { ...layer.text, ...overrides.text } as IconLayer['text'] : layer.text,
     resolvedEffects: overrides?.effects ?? layer.effects
-  };
-};
-
-const getContainedRect = (
-  sourceWidth: number,
-  sourceHeight: number,
-  canvasSize: number
-): { x: number; y: number; width: number; height: number } => {
-  const scale = Math.min(canvasSize / sourceWidth, canvasSize / sourceHeight);
-  const width = sourceWidth * scale;
-  const height = sourceHeight * scale;
-  return {
-    x: (canvasSize - width) / 2,
-    y: (canvasSize - height) / 2,
-    width,
-    height
   };
 };
 
@@ -173,8 +158,8 @@ export const composeLayers = async (
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         const blob = new Blob([bytes], { type: mimeType });
         const img = await backend.loadImage(blob);
-        const rect = getContainedRect(img.width, img.height, canvasSize);
-        backend.drawImage(ctx, img, rect.x, rect.y, rect.width, rect.height);
+        const rect = layerBaseRect({ source: layer.resolvedSource }, canvasSize, img);
+        backend.drawImage(ctx, img, rect.cx - rect.w / 2, rect.cy - rect.h / 2, rect.w, rect.h);
       } catch {
         // Skip layers that fail to load
       }
@@ -183,8 +168,8 @@ export const composeLayers = async (
     if (layer.resolvedSource.type === 'reference' && layer.resolvedSource.path) {
       try {
         const img = await backend.loadImage(layer.resolvedSource.path);
-        const rect = getContainedRect(img.width, img.height, canvasSize);
-        backend.drawImage(ctx, img, rect.x, rect.y, rect.width, rect.height);
+        const rect = layerBaseRect({ source: layer.resolvedSource }, canvasSize, img);
+        backend.drawImage(ctx, img, rect.cx - rect.w / 2, rect.cy - rect.h / 2, rect.w, rect.h);
       } catch {
         // Skip layers that fail to load
       }

@@ -5,4 +5,6 @@ export { sanitizeSvg } from './sanitizeSvg';
 export { createCanvasBackend } from './backends/canvas';
 export { createNodeBackend } from './backends/node';
 export { applyMask } from './masks/applyMask';
-export type { RenderBackend, RenderContext, ImageHandle, ResolvedLayer } from './types';
+export { layerBaseRect, containSize } from './geometry';
+export type { LayerRect } from './geometry';
+export type { RenderBackend, RenderContext, ImageHandle, ResolvedLayer, RenderOptions } from './types';

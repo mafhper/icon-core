@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react';
 import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Upload, Type, Triangle, Minus, SquareStack } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { useLayerImport } from '../hooks/useLayerImport';
+import { QualityWarnings } from './QualityWarnings';
+import { LayerContextMenu } from './LayerContextMenu';
 
 export const LayerList = () => {
   const { state, dispatch } = useComposer();
   const importFiles = useLayerImport();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; layerId: string } | null>(null);
 
   const project = state.project;
   // Displayed top-to-bottom in descending zIndex (top of the list = front-most).
@@ -152,6 +155,11 @@ export const LayerList = () => {
             }}
             onDragEnd={endDrag}
             onClick={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } })}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
+              setMenu({ x: e.clientX, y: e.clientY, layerId: layer.id });
+            }}
             className={`ic-layer-row composer-layer-enter flex items-center gap-2 px-3 py-2 rounded-lg cursor-grab transition ${
               draggingId === layer.id ? 'is-dragging' : ''
             } ${dragOverId === layer.id && draggingId && draggingId !== layer.id ? 'is-drag-over' : ''} ${
@@ -243,6 +251,12 @@ export const LayerList = () => {
           Delete
         </button>
       </div>
+
+      <QualityWarnings />
+
+      {menu && (
+        <LayerContextMenu x={menu.x} y={menu.y} layerId={menu.layerId} onClose={() => setMenu(null)} />
+      )}
     </aside>
   );
 };

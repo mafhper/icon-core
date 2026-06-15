@@ -149,10 +149,32 @@ export interface TargetConfig {
   includeManifest?: boolean;
 }
 
+/** Raster output format for rendered icon files. */
+export type OutputFormat = 'png' | 'webp' | 'jpeg';
+
+/** Folder layout for an exported icon pack. */
+export type ExportStructure = 'nested' | 'flat';
+
+/** ZIP archive compression strategy. */
+export type ZipCompression = 'store' | 'deflate';
+
 export interface ExportProfile {
   outputBaseName: string;
+  /** 0..1 encode quality, applied to lossy formats (webp/jpeg); ignored for png. */
   quality: number;
   generateReport: boolean;
+  /** Raster file format. Defaults to 'png'. */
+  format?: OutputFormat;
+  /** Folder layout: nested `{target}/{variant}/` or flat. Defaults to 'nested'. */
+  structure?: ExportStructure;
+  /** Package as a single ZIP. Defaults to true (web download). */
+  zip?: boolean;
+  /** ZIP compression strategy. Defaults to 'deflate'. */
+  compression?: ZipCompression;
+  /** DEFLATE level 0..9. Defaults to 6. */
+  compressionLevel?: number;
+  /** Include a standalone preview.html contact sheet. Defaults to true. */
+  includePreview?: boolean;
 }
 
 export interface IconCoreProject {

@@ -6,7 +6,11 @@ Icon Core is a free, open-source workspace for app icons. Start from a blank can
 
 Everything runs locally in the browser or desktop app. No account, upload service, or backend is required.
 
-![Icon Core workspaces, edit space, and export utilities](docs/assets/icon-core-overview.png)
+![Icon Core Edit Space](docs/assets/app-editor.png)
+
+| Start a new icon | Export Utilities |
+| --- | --- |
+| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.png) |
 
 ## Try It
 
@@ -14,6 +18,8 @@ Everything runs locally in the browser or desktop app. No account, upload servic
 - Landing page: https://mafhper.github.io/icon-core/
 - Desktop releases: https://github.com/mafhper/icon-core/releases
 - Repository: https://github.com/mafhper/icon-core
+
+[![Icon Core landing page](docs/assets/promo.png)](https://mafhper.github.io/icon-core/)
 
 ## Workflows
 
@@ -25,11 +31,12 @@ Everything runs locally in the browser or desktop app. No account, upload servic
 
 ## Features
 
-- Layer editing for images, SVG, shapes, and text
-- Position, scale, rotation, opacity, color, gradient, blend mode, and shadow controls
-- Variant-specific overrides for default, light, dark, and mono icons
+- **WYSIWYG canvas** — the live preview renders through the exact same engine as export, so what you see is what you ship
+- Layer editing for images, SVG, shapes, and text, with position, scale, rotation, opacity, color, gradient, blend mode, and shadow controls
+- Appearance and platform previews (default / light / dark / mono · square / rounded / circle) and per-variant overrides
+- Safe area shown as a guide only — icons stay full-bleed so each platform applies its own mask
 - Export targets for favicon, PWA, Tauri, Electron, and generic desktop assets
-- ZIP output with rendered files, manifests, reports, and usage notes
+- Flexible output: PNG / WebP / JPEG, quality, nested or flat structure, ZIP or a chosen folder (desktop), compression, an HTML preview sheet, and per-target reports
 - Web and desktop apps built from the same project model
 
 ## Development

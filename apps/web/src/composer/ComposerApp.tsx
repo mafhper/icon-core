@@ -2,7 +2,7 @@ import { ComposerProvider, useComposer } from './ComposerContext';
 import { ComposeView } from './views/ComposeView';
 import { ExportView } from './views/ExportView';
 import { CommandPalette } from './components/CommandPalette';
-import { WorkspacesView } from './views/WorkspacesView';
+import { WelcomeModal } from './components/WelcomeModal';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { ToastProvider } from './toast/ToastContext';
 import { ToastViewport } from './toast/ToastViewport';
@@ -11,18 +11,22 @@ const ComposerShell = () => {
   const { state } = useComposer();
   useKeyboardShortcuts();
 
-  if (state.view === 'workspaces' || !state.project) {
-    return <WorkspacesView />;
-  }
-
-  if (state.view === 'export-utilities') {
-    return <ExportView />;
-  }
+  // The editor is always mounted; the welcome experience is a modal layered on
+  // top of it — shown automatically when there is no project, and on demand
+  // (dismissible) when navigating Home with a project open.
+  const showWelcome = !state.project || state.view === 'workspaces';
 
   return (
     <>
-      <ComposeView />
-      <CommandPalette />
+      {state.view === 'export-utilities' && state.project ? (
+        <ExportView />
+      ) : (
+        <>
+          <ComposeView />
+          <CommandPalette />
+        </>
+      )}
+      {showWelcome && <WelcomeModal dismissible={Boolean(state.project)} />}
     </>
   );
 };

@@ -4,7 +4,8 @@ import type {
   IconVariant,
   IconTarget,
   Fill,
-  ShapeDefinition
+  ShapeDefinition,
+  ExportProfile
 } from '@iconcore/shared';
 import type { FileLayerAsset } from './utils/fileLayers';
 import { clampZoom } from './constants';
@@ -62,6 +63,7 @@ export type ComposerAction =
   | { type: 'TOGGLE_COMPARE_DEFAULT' }
   | { type: 'SET_ACTIVE_TARGET'; payload: { target: IconTarget; enabled: boolean } }
   | { type: 'SET_CANVAS_BACKGROUND'; payload: { background: Fill; transient?: boolean } }
+  | { type: 'UPDATE_EXPORT_PROFILE'; payload: Partial<ExportProfile> }
   | { type: 'NAVIGATE'; payload: ComposerView }
   | { type: 'UNDO' }
   | { type: 'REDO' }
@@ -433,6 +435,15 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       return action.payload.transient
         ? { ...state, project, isDirty: true }
         : commitProject(state, project);
+    }
+
+    case 'UPDATE_EXPORT_PROFILE': {
+      if (!state.project) return state;
+      const project = {
+        ...state.project,
+        exportProfile: { ...state.project.exportProfile, ...action.payload }
+      };
+      return { ...state, project, isDirty: true };
     }
 
     case 'NAVIGATE':

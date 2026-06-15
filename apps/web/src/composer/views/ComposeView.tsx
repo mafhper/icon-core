@@ -2,7 +2,7 @@ import { Topbar } from '../components/Topbar';
 import { LayerList } from '../components/LayerList';
 import { LayerInspector } from '../components/LayerInspector';
 import { PreviewCanvas } from '../components/PreviewCanvas';
-import { SizeStrip } from '../components/SizeStrip';
+import { AppearanceBar } from '../components/AppearanceBar';
 
 export const ComposeView = () => {
   return (
@@ -12,7 +12,7 @@ export const ComposeView = () => {
         <LayerList />
         <div className="ic-editor-main">
           <PreviewCanvas />
-          <SizeStrip />
+          <AppearanceBar />
         </div>
         <LayerInspector />
       </div>

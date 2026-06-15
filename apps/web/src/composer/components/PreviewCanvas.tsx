@@ -1,19 +1,19 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ZoomIn, ZoomOut, Grid, Circle, Square, RectangleHorizontal, RotateCcw, Crosshair } from 'lucide-react';
-import type { IconLayer } from '@iconcore/shared';
-import { imageFilterToCss } from '@iconcore/shared';
+import type { IconLayer, IconVariant, IconCoreProject } from '@iconcore/shared';
+import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
-import { borderRadiusForLayer, clipPathForLayer, fillToCss, layerBlurPx, layerSize, shadowCssForLayer } from '../utils/layerStyle';
+import { fillToCss, layerSize } from '../utils/layerStyle';
 
 const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
-import { QualityWarnings } from './QualityWarnings';
 import { VariantPanel } from './VariantPanel';
 import { KeylineOverlay } from './KeylineOverlay';
+import { LayerContextMenu } from './LayerContextMenu';
 
 type DragMode = 'move' | 'scale' | 'rotate';
 
@@ -30,49 +30,53 @@ interface DragState {
 const layerTransform = (layer: IconLayer, zoom: number): string =>
   `translate(-50%, -50%) translate(${layer.transform.x * zoom}px, ${layer.transform.y * zoom}px) rotate(${layer.transform.rotation}deg) scale(${layer.transform.scale})`;
 
-const renderLayerContent = (layer: IconLayer, zoom: number) => {
-  const dataUrl = layer.source.type === 'inline' && layer.source.data && layer.source.mimeType
-    ? `data:${layer.source.mimeType};base64,${layer.source.data}`
-    : null;
-  const blur = layerBlurPx(layer) * zoom;
-  const blurCss = blur > 0 ? `blur(${blur}px)` : '';
+/**
+ * Render the project through the SAME Canvas2D pipeline used for export, so the
+ * live preview is pixel-identical to the exported asset. Returns an object URL
+ * for the rendered PNG, re-rendered (RAF-coalesced) whenever the project or
+ * variant changes. `enabled` lets callers skip the (compare) ghost render.
+ */
+const useRenderedIcon = (
+  project: IconCoreProject | null,
+  variant: IconVariant,
+  enabled = true
+): string | null => {
+  const [url, setUrl] = useState<string | null>(null);
+  const urlRef = useRef<string | null>(null);
 
-  if (layer.kind === 'text') {
-    return (
-      <div
-        className="ic-layer-text"
-        style={{
-          color: layer.fill?.kind === 'solid' ? layer.fill.color : '#111827',
-          fontFamily: layer.text?.fontFamily,
-          fontSize: (layer.text?.fontSize ?? 64) * zoom,
-          fontWeight: layer.text?.fontWeight,
-          textShadow: shadowCssForLayer(layer),
-          filter: blurCss || undefined
-        }}
-      >
-        {layer.text?.content ?? 'Text'}
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!project || !enabled || project.layers.length === 0) {
+      setUrl(null);
+      return;
+    }
 
-  if (dataUrl) {
-    const imageFilter = [imageFilterToCss(layer.imageFilter), blurCss].filter(Boolean).join(' ');
-    return <img src={dataUrl} alt={layer.name} draggable={false} style={{ filter: imageFilter || undefined }} />;
-  }
+    let cancelled = false;
+    const backend = createCanvasBackend();
+    const raf = requestAnimationFrame(async () => {
+      try {
+        const blob = await renderProject(project, variant, project.canvas.size, backend);
+        if (cancelled) return;
+        const next = URL.createObjectURL(blob);
+        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+        urlRef.current = next;
+        setUrl(next);
+      } catch (err) {
+        console.error('Live preview render failed:', err);
+      }
+    });
 
-  return (
-    <div
-      className="ic-layer-shape"
-      style={{
-        background: fillToCss(layer.fill),
-        borderRadius: borderRadiusForLayer(layer),
-        clipPath: clipPathForLayer(layer),
-        boxShadow: shadowCssForLayer(layer),
-        filter: blurCss || undefined,
-        border: layer.stroke ? `${Math.max(1, layer.stroke.width * zoom)}px solid ${layer.stroke.color}` : undefined
-      }}
-    />
-  );
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      backend.destroy();
+    };
+  }, [project, variant, enabled]);
+
+  useEffect(() => () => {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+  }, []);
+
+  return url;
 };
 
 export const PreviewCanvas = () => {
@@ -89,11 +93,19 @@ export const PreviewCanvas = () => {
     [project]
   );
 
+  const previewUrl = useRenderedIcon(project, state.activeVariant);
+  const ghostUrl = useRenderedIcon(
+    project,
+    'default',
+    state.compareDefault && state.activeVariant !== 'default'
+  );
+
   if (!project) return null;
 
   const canvasSize = project.canvas.size;
   const displaySize = canvasSize * state.zoom;
   const variantBackground = project.variants?.[state.activeVariant]?.canvas?.background ?? project.canvas.background;
+  const frameRadius = state.maskShape === 'circle' ? '50%' : state.maskShape === 'rounded-rectangle' ? '24px' : '4px';
 
   const scheduleTransform = (id: string, transform: IconLayer['transform']) => {
     pendingTransformRef.current = { id, transform };
@@ -199,8 +211,6 @@ export const PreviewCanvas = () => {
     dispatch({ type: 'COMMIT_HISTORY' });
   };
 
-  const activeLayer = menu ? project.layers.find((layer) => layer.id === menu.layerId) : null;
-
   return (
     <div className="ic-preview-panel">
       <div className="ic-canvas-toolbar">
@@ -298,7 +308,6 @@ export const PreviewCanvas = () => {
           dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: null } });
         }}
       >
-        <QualityWarnings />
         <VariantPanel />
         {layers.length === 0 ? (
           <DropZone />
@@ -308,19 +317,24 @@ export const PreviewCanvas = () => {
             style={{
               width: displaySize,
               height: displaySize,
-              borderRadius: state.maskShape === 'circle' ? '50%' : state.maskShape === 'rounded-rectangle' ? '24px' : '4px',
-              background: fillToCss(variantBackground)
+              borderRadius: frameRadius
             }}
           >
+            {previewUrl && (
+              <img className="ic-canvas-render" src={previewUrl} alt="" draggable={false} style={{ width: displaySize, height: displaySize }} />
+            )}
+            {ghostUrl && (
+              <img className="ic-canvas-ghost" src={ghostUrl} alt="" draggable={false} style={{ width: displaySize, height: displaySize }} />
+            )}
             {state.showGrid && <div className="ic-canvas-grid" />}
             {state.showKeylines && <KeylineOverlay />}
             {layers.map((baseLayer) => {
               const layer = resolveLayerVariant(baseLayer, state.activeVariant);
               if (!layer.visible) return null;
               const selected = state.activeLayerId === layer.id;
-              const size = layerSize(layer, canvasSize);
-              const width = size.width * state.zoom;
-              const height = size.height * state.zoom;
+              const rect = layerBaseRect(layer, canvasSize);
+              const width = rect.w * state.zoom;
+              const height = rect.h * state.zoom;
 
               return (
                 <div
@@ -329,9 +343,7 @@ export const PreviewCanvas = () => {
                   style={{
                     width,
                     height,
-                    opacity: layer.opacity,
-                    transform: layerTransform(layer, state.zoom),
-                    mixBlendMode: layer.blendMode ?? 'normal'
+                    transform: layerTransform(layer, state.zoom)
                   }}
                   onPointerDown={(event) => startDrag(event, layer, 'move')}
                   onClick={(event) => {
@@ -345,7 +357,6 @@ export const PreviewCanvas = () => {
                     setMenu({ x: event.clientX, y: event.clientY, layerId: layer.id });
                   }}
                 >
-                  {renderLayerContent(layer, state.zoom)}
                   {selected && !layer.locked && (
                     <>
                       <button
@@ -365,29 +376,6 @@ export const PreviewCanvas = () => {
                 </div>
               );
             })}
-            {state.compareDefault && state.activeVariant !== 'default' && (
-              <div className="ic-ghost-overlay" aria-hidden="true">
-                {layers.map((baseLayer) => {
-                  if (!baseLayer.visible) return null;
-                  const size = layerSize(baseLayer, canvasSize);
-                  return (
-                    <div
-                      key={baseLayer.id}
-                      className="ic-canvas-layer"
-                      style={{
-                        width: size.width * state.zoom,
-                        height: size.height * state.zoom,
-                        opacity: baseLayer.opacity,
-                        transform: layerTransform(baseLayer, state.zoom),
-                        mixBlendMode: baseLayer.blendMode ?? 'normal'
-                      }}
-                    >
-                      {renderLayerContent(baseLayer, state.zoom)}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
             {guides.map((guide, index) => (
               <div
                 key={`${guide.axis}-${guide.pos}-${index}`}
@@ -398,29 +386,8 @@ export const PreviewCanvas = () => {
           </div>
         )}
 
-        {menu && activeLayer && (
-          <div className="ic-context-menu" style={{ left: menu.x, top: menu.y }} onClick={(event) => event.stopPropagation()}>
-            <strong>{activeLayer.name}</strong>
-            <button
-              type="button"
-              onClick={() => {
-                dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: activeLayer.id } });
-                dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: activeLayer.id } });
-                setMenu(null);
-              }}
-            >
-              Rename
-            </button>
-            <button type="button" onClick={() => { dispatch({ type: 'DUPLICATE_LAYER', payload: { id: activeLayer.id } }); setMenu(null); }}>Duplicate</button>
-            <button type="button" onClick={() => { dispatch({ type: 'MOVE_LAYER', payload: { id: activeLayer.id, direction: 'front' } }); setMenu(null); }}>Bring to Front</button>
-            <button type="button" onClick={() => { dispatch({ type: 'MOVE_LAYER', payload: { id: activeLayer.id, direction: 'forward' } }); setMenu(null); }}>Bring Forward</button>
-            <button type="button" onClick={() => { dispatch({ type: 'MOVE_LAYER', payload: { id: activeLayer.id, direction: 'backward' } }); setMenu(null); }}>Send Backward</button>
-            <button type="button" onClick={() => { dispatch({ type: 'MOVE_LAYER', payload: { id: activeLayer.id, direction: 'back' } }); setMenu(null); }}>Send to Back</button>
-            <button type="button" onClick={() => { dispatch({ type: 'TOGGLE_LAYER_LOCK', payload: { id: activeLayer.id } }); setMenu(null); }}>{activeLayer.locked ? 'Unlock' : 'Lock'}</button>
-            <button type="button" onClick={() => { dispatch({ type: 'TOGGLE_LAYER_VISIBILITY', payload: { id: activeLayer.id } }); setMenu(null); }}>{activeLayer.visible ? 'Hide' : 'Show'}</button>
-            <button type="button" onClick={() => { dispatch({ type: 'RESET_LAYER_TRANSFORM', payload: { id: activeLayer.id } }); setMenu(null); }}>Reset Transform</button>
-            <button type="button" className="is-danger" onClick={() => { dispatch({ type: 'REMOVE_LAYER', payload: { id: activeLayer.id } }); setMenu(null); }}>Delete</button>
-          </div>
+        {menu && (
+          <LayerContextMenu x={menu.x} y={menu.y} layerId={menu.layerId} onClose={() => setMenu(null)} />
         )}
       </div>
     </div>

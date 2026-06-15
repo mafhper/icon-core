@@ -1,8 +1,8 @@
-import { Download, Save, FolderOpen, Undo2, Redo2, Layers } from 'lucide-react';
+import { Download, Save, FolderOpen, Undo2, Redo2 } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import { parseProjectFile } from '../utils/projectGuard';
-import { VariantSwitcher } from './VariantSwitcher';
+import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 
 export const Topbar = () => {
   const { state, dispatch, navigate } = useComposer();
@@ -43,84 +43,57 @@ export const Topbar = () => {
   return (
     <header className="ic-topbar">
       <div className="ic-topbar-inner">
-        <div className="ic-topbar-brand">
-          <Layers size={20} className="text-core-accent" />
-          <div>
-            <p>
-              {state.project?.metadata.name ?? 'Icon Core'}
-            </p>
-            <p className={`text-xs text-core-muted ${state.isDirty ? '' : 'invisible'}`}>Unsaved changes</p>
-          </div>
-        </div>
-
-        <div className="ic-topbar-shortcuts">
-          <span className="flex items-center gap-1.5">
-            <span className="text-core-accent">Layer:</span>
-            <span className="flex items-center gap-0.5">
-              <span className="kbd">L</span> add
-            </span>
-            <span className="flex items-center gap-0.5">
-              <span className="kbd">⌘</span><span className="kbd">D</span> dup
-            </span>
-            <span className="flex items-center gap-0.5">
-              <span className="kbd">⌫</span> del
-            </span>
-          </span>
-          <span className="w-px h-4 bg-core-border" />
-          <span className="flex items-center gap-0.5">
-            <span className="kbd">⌘</span><span className="kbd">K</span>
-          </span>
-          <span>Commands</span>
-        </div>
-
-        <VariantSwitcher />
+        <button
+          type="button"
+          className="ic-topbar-brand"
+          onClick={() => navigate('workspaces')}
+          title="Home — start or open a project"
+        >
+          <AnimatedIconCoreLogo className="ic-topbar-logo" animated={false} />
+          <span className="ic-topbar-title">{state.project?.metadata.name ?? 'Icon Core'}</span>
+          {state.isDirty && <span className="ic-topbar-dirty" title="Unsaved changes" aria-label="Unsaved changes" />}
+        </button>
 
         <div className="ic-topbar-actions">
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'UNDO' })}
-            disabled={state.historyIndex <= 0}
-            className="core-btn inline-flex items-center gap-1 rounded-lg border border-core-border bg-core-surface px-2 py-1.5 text-xs disabled:opacity-50"
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'REDO' })}
-            disabled={state.historyIndex >= state.history.length - 1}
-            className="core-btn inline-flex items-center gap-1 rounded-lg border border-core-border bg-core-surface px-2 py-1.5 text-xs disabled:opacity-50"
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            <Redo2 size={14} />
-          </button>
+          <div className="ic-topbar-cluster">
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'UNDO' })}
+              disabled={state.historyIndex <= 0}
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo"
+            >
+              <Undo2 size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'REDO' })}
+              disabled={state.historyIndex >= state.history.length - 1}
+              title="Redo (Ctrl+Shift+Z)"
+              aria-label="Redo"
+            >
+              <Redo2 size={15} />
+            </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={handleOpen}
-            className="core-btn inline-flex items-center gap-2 rounded-xl border border-core-border bg-core-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em]"
-          >
-            <FolderOpen size={14} />
-            <span>Open</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!state.project}
-            className="core-btn inline-flex items-center gap-2 rounded-xl border border-core-border bg-core-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] disabled:opacity-50"
-          >
-            <Save size={14} />
-            <span>Save</span>
-          </button>
+          <div className="ic-topbar-cluster">
+            <button type="button" onClick={handleOpen} title="Open project…" aria-label="Open project">
+              <FolderOpen size={15} />
+            </button>
+            <button type="button" onClick={handleSave} disabled={!state.project} title="Save project" aria-label="Save project">
+              <Save size={15} />
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => navigate('export-utilities')}
             disabled={!state.project}
-            className="core-btn core-btn-primary inline-flex items-center gap-2 rounded-xl border border-core-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] disabled:opacity-50"
+            className="ic-topbar-export"
+            title="Export icon pack"
           >
-            <Download size={14} />
-            <span className="ic-export-label-full">Export Utilities</span>
-            <span className="ic-export-label-short">Export</span>
+            <Download size={15} />
+            <span>Export</span>
           </button>
         </div>
       </div>

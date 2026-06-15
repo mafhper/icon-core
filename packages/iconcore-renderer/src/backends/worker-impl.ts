@@ -79,7 +79,7 @@ self.onmessage = async (event: MessageEvent<IncomingMessage>) => {
         break;
       }
       case 'resize': {
-        const blob = await backend.resize(args[0] as Blob, args[1] as number, args[2] as number);
+        const blob = await backend.resize(args[0] as Blob, args[1] as number, args[2] as number, args[3] as string | undefined, args[4] as number | undefined);
         result = blob;
         break;
       }

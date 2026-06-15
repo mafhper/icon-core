@@ -31,6 +31,14 @@ const loadImageBrowser = async (source: string | Blob): Promise<ImageHandle> => 
   }
 };
 
+/** Normalize a format token ('png' | 'webp' | 'jpeg'/'jpg' | 'image/*') to a MIME type. */
+const mimeFor = (format: string): string => {
+  if (format.startsWith('image/')) return format === 'image/jpg' ? 'image/jpeg' : format;
+  if (format === 'jpg' || format === 'jpeg') return 'image/jpeg';
+  if (format === 'webp') return 'image/webp';
+  return 'image/png';
+};
+
 const BLEND_MODE_MAP: Record<BlendMode, GlobalCompositeOperation> = {
   'normal': 'source-over',
   'multiply': 'multiply',
@@ -168,13 +176,13 @@ export const createCanvasBackend = (): RenderBackend => {
             if (blob) resolve(blob);
             else reject(new Error('Canvas toBlob failed'));
           },
-          format === 'jpg' ? 'image/jpeg' : `image/${format}`,
+          mimeFor(format),
           quality
         );
       });
     },
 
-    async resize(source: Blob, targetW: number, targetH: number): Promise<Blob> {
+    async resize(source: Blob, targetW: number, targetH: number, format: string = 'png', quality?: number): Promise<Blob> {
       const img = await loadImageBrowser(source);
       const canvas = document.createElement('canvas');
       canvas.width = targetW;
@@ -189,7 +197,8 @@ export const createCanvasBackend = (): RenderBackend => {
             if (blob) resolve(blob);
             else reject(new Error('Resize toBlob failed'));
           },
-          'image/png'
+          mimeFor(format),
+          quality
         );
       });
     },

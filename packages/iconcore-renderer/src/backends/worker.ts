@@ -11,7 +11,7 @@ type WorkerMessage =
   | { id: number; method: 'applyOpacity'; args: [number, number] }
   | { id: number; method: 'applyBlendMode'; args: [number, BlendMode] }
   | { id: number; method: 'toBlob'; args: [number, string, number?] }
-  | { id: number; method: 'resize'; args: [Blob, number, number] }
+  | { id: number; method: 'resize'; args: [Blob, number, number, string?, number?] }
   | { id: number; method: 'destroy'; args: [] };
 
 type WorkerResponse =
@@ -73,7 +73,7 @@ export const createWorkerBackend = (): WorkerBackend => {
       call<void>('applyBlendMode', (ctx.native as { id: number }).id, mode);
     },
     toBlob: (ctx: RenderContext, format: string, quality?: number) => call<Blob>('toBlob', (ctx.native as { id: number }).id, format, quality),
-    resize: (source: Blob, targetW: number, targetH: number) => call<Blob>('resize', source, targetW, targetH),
+    resize: (source: Blob, targetW: number, targetH: number, format?: string, quality?: number) => call<Blob>('resize', source, targetW, targetH, format, quality),
     destroy: () => {
       call<void>('destroy');
     },

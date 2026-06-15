@@ -6,7 +6,11 @@ Icon Core es un workspace gratuito y open source para iconos de aplicaciones. Em
 
 Todo se ejecuta localmente en el navegador o en la app desktop. No requiere cuenta, servicio de subida ni backend.
 
-![Workspaces, Edit Space y Export Utilities de Icon Core](docs/assets/icon-core-overview.png)
+![Edit Space de Icon Core](docs/assets/app-editor.png)
+
+| Empezar un nuevo icono | Export Utilities |
+| --- | --- |
+| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.png) |
 
 ## Probar
 
@@ -14,6 +18,8 @@ Todo se ejecuta localmente en el navegador o en la app desktop. No requiere cuen
 - Landing page: https://mafhper.github.io/icon-core/
 - Releases desktop: https://github.com/mafhper/icon-core/releases
 - Repositorio: https://github.com/mafhper/icon-core
+
+[![Landing page de Icon Core](docs/assets/promo.png)](https://mafhper.github.io/icon-core/)
 
 ## Workspaces
 
@@ -25,11 +31,12 @@ Todo se ejecuta localmente en el navegador o en la app desktop. No requiere cuen
 
 ## Funcionalidades
 
-- Edición por capas para imágenes, SVG, formas y texto
-- Controles de posición, escala, rotación, opacidad, color, gradiente, blend mode y sombra
-- Ajustes por variante para iconos default, light, dark y mono
+- **Lienzo WYSIWYG** — la vista previa en vivo usa el mismo motor que la exportación, así que lo que ves es lo que exportas
+- Edición por capas para imágenes, SVG, formas y texto, con controles de posición, escala, rotación, opacidad, color, gradiente, blend mode y sombra
+- Vistas previas de apariencia y plataforma (default / light / dark / mono · cuadrado / redondeado / círculo) y ajustes por variante
+- Safe area solo como guía — los iconos quedan full-bleed y cada plataforma aplica su propia máscara
 - Exportación para favicon, PWA, Tauri, Electron y desktop genérico
-- ZIP con archivos renderizados, manifiestos, reportes y notas de uso
+- Salida flexible: PNG / WebP / JPEG, calidad, estructura anidada o plana, ZIP o carpeta elegida (desktop), compresión, hoja de prueba HTML y reportes por target
 - Apps web y desktop basadas en el mismo modelo de proyecto
 
 ## Desarrollo

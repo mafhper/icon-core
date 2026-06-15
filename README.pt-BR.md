@@ -6,7 +6,11 @@ Icon Core é um workspace gratuito e open source para ícones de aplicativos. Co
 
 Tudo roda localmente no navegador ou no app desktop. Não exige conta, serviço de upload ou backend.
 
-![Workspaces, Edit Space e Export Utilities do Icon Core](docs/assets/icon-core-overview.png)
+![Edit Space do Icon Core](docs/assets/app-editor.png)
+
+| Começar um novo ícone | Export Utilities |
+| --- | --- |
+| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.png) |
 
 ## Teste
 
@@ -14,6 +18,8 @@ Tudo roda localmente no navegador ou no app desktop. Não exige conta, serviço 
 - Landing page: https://mafhper.github.io/icon-core/
 - Releases desktop: https://github.com/mafhper/icon-core/releases
 - Repositório: https://github.com/mafhper/icon-core
+
+[![Landing page do Icon Core](docs/assets/promo.png)](https://mafhper.github.io/icon-core/)
 
 ## Workspaces
 
@@ -25,11 +31,12 @@ Tudo roda localmente no navegador ou no app desktop. Não exige conta, serviço 
 
 ## Funcionalidades
 
-- Edição em camadas para imagens, SVG, formas e texto
-- Controles de posição, escala, rotação, opacidade, cor, gradiente, blend mode e sombra
-- Ajustes por variante para ícones default, light, dark e mono
+- **Canvas WYSIWYG** — o preview ao vivo usa o mesmo motor da exportação, então o que você vê é o que você exporta
+- Edição em camadas para imagens, SVG, formas e texto, com controles de posição, escala, rotação, opacidade, cor, gradiente, blend mode e sombra
+- Pré-visualização de aparência e plataforma (default / light / dark / mono · quadrado / arredondado / círculo) e ajustes por variante
+- Safe area apenas como guia — os ícones ficam full-bleed e cada plataforma aplica a própria máscara
 - Exportação para favicon, PWA, Tauri, Electron e desktop genérico
-- ZIP com arquivos renderizados, manifestos, relatórios e notas de uso
+- Saída flexível: PNG / WebP / JPEG, qualidade, estrutura aninhada ou plana, ZIP ou pasta escolhida (desktop), compressão, página de teste HTML e relatórios por target
 - Apps web e desktop usando o mesmo modelo de projeto
 
 ## Desenvolvimento

@@ -1,35 +1,83 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, Download, Check, Loader2, FileText, AlertTriangle } from 'lucide-react';
-import type { IconTarget, IconVariant } from '@iconcore/shared';
+import { ArrowLeft, Download, Check, Loader2, FileText, AlertTriangle, FolderOpen } from 'lucide-react';
+import type { IconTarget, IconVariant, OutputFormat, ExportStructure, ZipCompression } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import {
   EXPORT_TARGETS,
   EXPORT_VARIANTS,
   buildIconPackage,
-  countExportFiles,
-  countExportTasks
+  zipFiles,
+  countExportTasks,
+  countExportFiles
 } from '../utils/exportPackage';
+import { isDesktopRuntime, exportToDesktop } from '../../lib/desktopExport';
 import { saveAs } from 'file-saver';
 
 type ExportPhase = 'idle' | 'exporting' | 'archiving' | 'complete' | 'error';
+type Destination = 'zip' | 'files' | 'folder';
 
 interface ExportProgress {
   phase: ExportPhase;
   currentTask: number;
   totalTasks: number;
   currentTarget: string;
-  currentSize: number;
 }
+
+interface SegmentedProps<T extends string> {
+  value: T;
+  options: Array<{ id: T; label: string }>;
+  onChange: (value: T) => void;
+}
+
+const Segmented = <T extends string>({ value, options, onChange }: SegmentedProps<T>) => (
+  <div className="ic-segmented">
+    {options.map((option) => (
+      <button
+        key={option.id}
+        type="button"
+        className={value === option.id ? 'is-active' : ''}
+        onClick={() => onChange(option.id)}
+      >
+        {option.label}
+      </button>
+    ))}
+  </div>
+);
 
 export const ExportView = () => {
   const { state, dispatch, navigate } = useComposer();
   const toast = useToast();
+  const profile = state.project?.exportProfile;
+  const desktop = isDesktopRuntime();
+
   const [selectedTargets, setSelectedTargets] = useState<Set<IconTarget>>(() => new Set(state.enabledTargets));
   const [selectedVariants, setSelectedVariants] = useState<Set<IconVariant>>(() => new Set([state.activeVariant]));
-  const [progress, setProgress] = useState<ExportProgress>({ phase: 'idle', currentTask: 0, totalTasks: 0, currentTarget: '', currentSize: 0 });
+
+  const [format, setFormat] = useState<OutputFormat>(profile?.format ?? 'png');
+  const [quality, setQuality] = useState<number>(profile?.quality ?? 0.92);
+  const [structure, setStructure] = useState<ExportStructure>(profile?.structure ?? 'nested');
+  const [destination, setDestination] = useState<Destination>(profile?.zip === false ? 'files' : 'zip');
+  const [compression, setCompression] = useState<ZipCompression>(profile?.compression ?? 'deflate');
+  const [compressionLevel, setCompressionLevel] = useState<number>(profile?.compressionLevel ?? 6);
+  const [includePreview, setIncludePreview] = useState<boolean>(profile?.includePreview ?? true);
+  const [includeReport, setIncludeReport] = useState<boolean>(profile?.generateReport ?? true);
+
+  const [progress, setProgress] = useState<ExportProgress>({ phase: 'idle', currentTask: 0, totalTasks: 0, currentTarget: '' });
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const persist = () => {
+    dispatch({
+      type: 'UPDATE_EXPORT_PROFILE',
+      payload: {
+        format, quality, structure,
+        zip: destination !== 'files',
+        compression, compressionLevel,
+        includePreview, generateReport: includeReport
+      }
+    });
+  };
 
   const toggleTarget = (id: IconTarget) => {
     setSelectedTargets((prev) => {
@@ -60,40 +108,63 @@ export const ExportView = () => {
     [selectedTargets, selectedVariants]
   );
 
+  const isLossy = format !== 'png';
+
   const handleExport = async () => {
     if (!state.project || selectedTargets.size === 0 || selectedVariants.size === 0) return;
 
+    persist();
     setError(null);
-    setProgress({ phase: 'exporting', currentTask: 0, totalTasks, currentTarget: '', currentSize: 0 });
+    setProgress({ phase: 'exporting', currentTask: 0, totalTasks, currentTarget: '' });
     setElapsed(0);
 
     const startTime = Date.now();
     const timer = setInterval(() => setElapsed(Date.now() - startTime), 100);
 
     try {
-      const { blob } = await buildIconPackage(
+      const { files } = await buildIconPackage(
         state.project,
         [...selectedTargets],
         [...selectedVariants],
         {
+          format,
+          quality,
+          structure,
+          includeReport,
+          includePreview,
           onProgress: (info) => setProgress({
             phase: 'exporting',
             currentTask: info.completed,
             totalTasks: info.total,
-            currentTarget: info.label,
-            currentSize: 0
-          }),
-          onArchiveStart: () => setProgress({ phase: 'archiving', currentTask: totalTasks, totalTasks, currentTarget: '', currentSize: 0 })
+            currentTarget: info.label
+          })
         }
       );
 
-      saveAs(blob, `${state.project.exportProfile.outputBaseName}-icons.zip`);
-      setProgress({ phase: 'complete', currentTask: totalTasks, totalTasks, currentTarget: '', currentSize: 0 });
-      toast.success(`Exported ${totalFilesLabel} files`);
+      const baseName = state.project.exportProfile.outputBaseName || 'iconcore';
+
+      if (destination === 'folder') {
+        setProgress({ phase: 'archiving', currentTask: totalTasks, totalTasks, currentTarget: '' });
+        const ok = await exportToDesktop(files);
+        if (!ok) throw new Error('Folder export is only available in the desktop app.');
+        toast.success(`Wrote ${files.length} files to the chosen folder`);
+      } else if (destination === 'files') {
+        for (const file of files) {
+          saveAs(file.blob, file.path.replace(/[\\/]/g, '-'));
+        }
+        toast.success(`Downloaded ${files.length} files`);
+      } else {
+        setProgress({ phase: 'archiving', currentTask: totalTasks, totalTasks, currentTarget: '' });
+        const blob = await zipFiles(files, { compression, level: compressionLevel });
+        saveAs(blob, `${baseName}-icons.zip`);
+        toast.success(`Exported ${files.length} files`);
+      }
+
+      setProgress({ phase: 'complete', currentTask: totalTasks, totalTasks, currentTarget: '' });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Export failed';
       setError(message);
-      setProgress({ phase: 'error', currentTask: 0, totalTasks, currentTarget: '', currentSize: 0 });
+      setProgress({ phase: 'error', currentTask: 0, totalTasks, currentTarget: '' });
       toast.error(`Export failed: ${message}`);
     } finally {
       clearInterval(timer);
@@ -105,6 +176,11 @@ export const ExportView = () => {
     const m = Math.floor(s / 60);
     return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
   };
+
+  const busy = progress.phase === 'exporting' || progress.phase === 'archiving';
+  const destinationOptions: Array<{ id: Destination; label: string }> = desktop
+    ? [{ id: 'zip', label: 'ZIP archive' }, { id: 'folder', label: 'Folder…' }, { id: 'files', label: 'Separate files' }]
+    : [{ id: 'zip', label: 'ZIP archive' }, { id: 'files', label: 'Separate files' }];
 
   return (
     <div className="min-h-screen p-8">
@@ -123,7 +199,7 @@ export const ExportView = () => {
             Export Utilities
           </h1>
           <p className="text-sm text-core-muted">
-            Select targets and variants. You will receive a ZIP with rendered assets, manifests, reports, and usage notes.
+            Pick targets, variants and output settings. Everything renders through the same engine you see on the canvas.
           </p>
         </div>
 
@@ -166,7 +242,7 @@ export const ExportView = () => {
                   setSelectedTargets(new Set(['web-favicon', 'pwa']));
                 } else if (val === 'desktop') {
                   setSelectedTargets(new Set(['tauri', 'electron', 'desktop-generic']));
-                } else {
+                } else if (val === 'minimal') {
                   setSelectedTargets(new Set(['web-favicon']));
                 }
               }}
@@ -176,6 +252,7 @@ export const ExportView = () => {
               <option value="all">All targets</option>
               <option value="web">Web only (favicon + PWA)</option>
               <option value="desktop">Desktop (Tauri + Electron)</option>
+              <option value="minimal">Favicon only</option>
             </select>
           </div>
 
@@ -209,7 +286,87 @@ export const ExportView = () => {
           </div>
         </div>
 
-        {(progress.phase !== 'idle' && progress.phase !== 'complete') && (
+        <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 space-y-5">
+          <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">
+            Output
+          </h2>
+
+          <div className="ic-export-field">
+            <label>Format</label>
+            <Segmented
+              value={format}
+              onChange={setFormat}
+              options={[{ id: 'png', label: 'PNG' }, { id: 'webp', label: 'WebP' }, { id: 'jpeg', label: 'JPEG' }]}
+            />
+          </div>
+
+          {isLossy && (
+            <div className="ic-export-field">
+              <label>Quality <span className="text-core-muted">({Math.round(quality * 100)}%)</span></label>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                value={Math.round(quality * 100)}
+                onChange={(e) => setQuality(Number(e.target.value) / 100)}
+                className="w-full"
+              />
+            </div>
+          )}
+
+          <div className="ic-export-field">
+            <label>Folder structure</label>
+            <Segmented
+              value={structure}
+              onChange={setStructure}
+              options={[{ id: 'nested', label: 'Nested (target/variant)' }, { id: 'flat', label: 'Flat' }]}
+            />
+          </div>
+
+          <div className="ic-export-field">
+            <label>Destination</label>
+            <Segmented value={destination} onChange={setDestination} options={destinationOptions} />
+            {destination === 'files' && (
+              <p className="text-xs text-core-muted mt-1.5">Each file downloads separately (paths flattened into the filename).</p>
+            )}
+            {destination === 'folder' && (
+              <p className="text-xs text-core-muted mt-1.5">You'll be asked to choose a folder; the full tree is written there, uncompressed.</p>
+            )}
+          </div>
+
+          {destination === 'zip' && (
+            <div className="ic-export-field">
+              <label>Compression</label>
+              <Segmented
+                value={compression}
+                onChange={setCompression}
+                options={[{ id: 'deflate', label: 'Deflate' }, { id: 'store', label: 'Store (none)' }]}
+              />
+              {compression === 'deflate' && (
+                <input
+                  type="range"
+                  min={0}
+                  max={9}
+                  value={compressionLevel}
+                  onChange={(e) => setCompressionLevel(Number(e.target.value))}
+                  className="w-full mt-2"
+                  title={`Deflate level ${compressionLevel}`}
+                />
+              )}
+            </div>
+          )}
+
+          <label className="ic-export-toggle">
+            <input type="checkbox" checked={includePreview} onChange={(e) => setIncludePreview(e.target.checked)} />
+            <span>Include <code>preview.html</code> test sheet</span>
+          </label>
+          <label className="ic-export-toggle">
+            <input type="checkbox" checked={includeReport} onChange={(e) => setIncludeReport(e.target.checked)} />
+            <span>Include per-target <code>iconcore-report.json</code></span>
+          </label>
+        </div>
+
+        {busy && (
           <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 composer-scale-in">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -217,9 +374,8 @@ export const ExportView = () => {
                 {progress.phase === 'archiving' && <FileText size={20} className="text-core-accent composer-pulse" />}
                 <div>
                   <p className="text-sm font-semibold">
-                    {progress.phase === 'exporting' && `Exporting ${progress.currentTarget}`}
-                    {progress.phase === 'archiving' && 'Packaging ZIP archive...'}
-                    {progress.phase === 'error' && 'Export failed'}
+                    {progress.phase === 'exporting' && `Rendering ${progress.currentTarget}`}
+                    {progress.phase === 'archiving' && (destination === 'folder' ? 'Writing files…' : 'Packaging archive…')}
                   </p>
                   <p className="text-xs text-core-muted">
                     {progress.currentTask} / {progress.totalTasks} render tasks
@@ -249,7 +405,7 @@ export const ExportView = () => {
               <div>
                 <p className="text-sm font-semibold">Export complete!</p>
                 <p className="text-xs text-core-muted">
-                  {totalFilesLabel} files exported · {formatElapsed(elapsed)}
+                  {formatElapsed(elapsed)}
                 </p>
               </div>
             </div>
@@ -268,15 +424,19 @@ export const ExportView = () => {
         <button
           type="button"
           onClick={handleExport}
-          disabled={selectedTargets.size === 0 || progress.phase === 'exporting' || progress.phase === 'archiving'}
+          disabled={selectedTargets.size === 0 || busy}
           className="w-full core-btn core-btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-core-border px-4 py-3 text-sm font-semibold uppercase tracking-[0.08em] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Download size={16} />
-          {progress.phase === 'exporting' || progress.phase === 'archiving'
+          {destination === 'folder' ? <FolderOpen size={16} /> : <Download size={16} />}
+          {busy
             ? 'Exporting...'
             : progress.phase === 'complete'
               ? 'Export Again'
-              : `Export ZIP (${totalFilesLabel} files)`}
+              : destination === 'folder'
+                ? `Export to folder (≈${totalFilesLabel} files)`
+                : destination === 'files'
+                  ? `Download ${totalFilesLabel} files`
+                  : `Export ZIP (≈${totalFilesLabel} files)`}
         </button>
       </div>
     </div>

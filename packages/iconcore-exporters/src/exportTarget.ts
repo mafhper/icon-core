@@ -1,5 +1,5 @@
 import type { IconTarget, IconVariant, IconCoreProject } from '@iconcore/shared';
-import type { RenderBackend } from '@iconcore/renderer';
+import type { RenderBackend, RenderOptions } from '@iconcore/renderer';
 import { renderProject } from '@iconcore/renderer';
 import { auditProject } from '@iconcore/validator';
 import type { ExportResult, ExportFile, TargetDefinition } from './types';
@@ -31,7 +31,8 @@ export const exportTarget = async (
   project: IconCoreProject,
   target: IconTarget,
   variant: IconVariant,
-  backend: RenderBackend
+  backend: RenderBackend,
+  options?: RenderOptions
 ): Promise<ExportResult> => {
   const definition = TARGET_REGISTRY[target];
   if (!definition) {
@@ -48,7 +49,7 @@ export const exportTarget = async (
 
   for (const task of definition.tasks) {
     try {
-      const blob = await renderProject(project, variant, task.width, backend);
+      const blob = await renderProject(project, variant, task.width, backend, options);
       files.push({
         path: task.path,
         blob,
@@ -75,11 +76,12 @@ export const exportAllTargets = async (
   project: IconCoreProject,
   variant: IconVariant,
   targets: IconTarget[],
-  backend: RenderBackend
+  backend: RenderBackend,
+  options?: RenderOptions
 ): Promise<ExportResult[]> => {
   const results: ExportResult[] = [];
   for (const target of targets) {
-    const result = await exportTarget(project, target, variant, backend);
+    const result = await exportTarget(project, target, variant, backend, options);
     results.push(result);
   }
   return results;

@@ -12,6 +12,13 @@ export interface RenderContext {
   native: unknown;
 }
 
+/** Final-encode options for a rendered icon (format + lossy quality). */
+export interface RenderOptions {
+  format?: 'png' | 'webp' | 'jpeg';
+  /** 0..1, applied to lossy formats only. */
+  quality?: number;
+}
+
 export interface RenderBackend {
   loadImage(source: string | Blob): Promise<ImageHandle>;
   createCanvas(width: number, height: number): RenderContext;
@@ -22,7 +29,7 @@ export interface RenderBackend {
   applyOpacity(ctx: RenderContext, opacity: number): void;
   applyBlendMode(ctx: RenderContext, mode: BlendMode): void;
   toBlob(ctx: RenderContext, format: string, quality?: number): Promise<Blob>;
-  resize(source: Blob, targetW: number, targetH: number): Promise<Blob>;
+  resize(source: Blob, targetW: number, targetH: number, format?: string, quality?: number): Promise<Blob>;
   destroy(): void;
 }
 
@@ -44,3 +51,5 @@ export { renderToSvg } from './renderToSvg';
 export { sanitizeSvg } from './sanitizeSvg';
 export { createCanvasBackend } from './backends/canvas';
 export { applyMask } from './masks/applyMask';
+export { layerBaseRect, containSize } from './geometry';
+export type { LayerRect } from './geometry';

@@ -1,4 +1,5 @@
 import type { Fill, IconLayer, LayerEffect } from '@iconcore/shared';
+import { layerBaseRect } from '@iconcore/renderer';
 
 const DEFAULT_GRADIENT_STOPS = '#f3d18a, #6bb7d8';
 
@@ -20,11 +21,14 @@ export const fillToCss = (fill?: Fill): string => {
 export const fillColor = (fill?: Fill): string =>
   fill?.kind === 'solid' ? fill.color ?? '#111827' : '#111827';
 
-/** Pixel footprint of a layer on the canvas (shape size, or 70% of canvas). */
+/**
+ * Pixel footprint of a layer on the canvas, before its transform scale.
+ * Delegates to the shared renderer geometry so the editor overlay, snapping and
+ * the exporter agree on every layer's size.
+ */
 export const layerSize = (layer: IconLayer, canvasSize: number) => {
-  const shape = layer.source.shape;
-  if (shape) return { width: shape.width, height: shape.height };
-  return { width: Math.round(canvasSize * 0.7), height: Math.round(canvasSize * 0.7) };
+  const rect = layerBaseRect(layer, canvasSize);
+  return { width: rect.w, height: rect.h };
 };
 
 /** CSS border-radius for a shape layer based on its shape kind. */
