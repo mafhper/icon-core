@@ -6,7 +6,7 @@ authors = ["IconCore"]
 license = "MIT"
 repository = "https://github.com/mafhper/icon-core"
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.88"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
