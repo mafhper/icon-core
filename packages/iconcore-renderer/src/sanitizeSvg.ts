@@ -121,7 +121,7 @@ const sanitizeAttributes = (tag: string, nameEnd: number): string => {
     const segmentStart = index;
     while (index < contentEnd && isWhitespace(tag[index])) index += 1;
 
-    if (index >= contentEnd || tag[index] === '/') {
+    if (index >= contentEnd || (tag[index] === '/' && index === contentEnd - 1)) {
       sanitized += tag.slice(segmentStart, contentEnd);
       break;
     }
