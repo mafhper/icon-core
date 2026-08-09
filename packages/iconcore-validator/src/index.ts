@@ -1,4 +1,4 @@
-import type { IconCoreProject, IconLayer, Fill } from '@iconcore/shared';
+import type { IconCoreProject } from '@iconcore/shared';
 
 export interface ValidationIssue {
   severity: 'error' | 'warning' | 'info';
@@ -66,8 +66,6 @@ const checkSafeArea = (project: IconCoreProject): ValidationIssue[] => {
   if (!safeArea) return issues;
 
   const insetPx = safeArea.inset * size;
-  const safeSize = size - insetPx * 2;
-
   for (const layer of project.layers) {
     if (!layer.visible || !layer.source.shape) continue;
 

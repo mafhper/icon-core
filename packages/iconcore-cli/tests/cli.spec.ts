@@ -74,7 +74,7 @@ describe('CLI commands', () => {
 
     try {
       await auditCommand([projectPath]);
-    } catch (e) {
+    } catch {
       // Expected exit
     }
 

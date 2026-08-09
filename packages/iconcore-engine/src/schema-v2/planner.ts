@@ -1,4 +1,4 @@
-import type { IconTarget, IconVariant, Fill } from '@iconcore/shared';
+import type { IconTarget, IconVariant } from '@iconcore/shared';
 import type { IconCoreProject } from '@iconcore/shared';
 import { TARGET_REGISTRY } from './targets';
 import type { TargetDefinition } from './targets';
@@ -23,12 +23,6 @@ export interface TargetPlan {
   manifestFiles: ManifestEntry[];
   warnings: string[];
 }
-
-const resolveBackground = (project: IconCoreProject, variant: IconVariant): Fill => {
-  const overridden = project.variants[variant]?.canvas?.background;
-  if (overridden) return overridden;
-  return project.canvas.background;
-};
 
 const resolveTransparent = (target: TargetDefinition, variant: IconVariant): boolean => {
   if (target.id === 'marketing') return true;
@@ -193,7 +187,6 @@ export const buildTargetPlan = (
 
   if (target.id === 'marketing') {
     const has1024 = sizes.includes(1024);
-    const has512 = sizes.includes(512);
     if (!has1024) {
       warnings.push('Marketing target typically includes 1024px size');
     }

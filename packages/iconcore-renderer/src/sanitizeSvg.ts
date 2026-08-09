@@ -1,9 +1,3 @@
-const DANGEROUS_SVG_TAGS = new Set([
-  'script', 'iframe', 'object', 'embed', 'applet', 'form',
-  'input', 'button', 'select', 'textarea', 'link', 'meta',
-  'style', 'title', 'noscript'
-]);
-
 const DANGEROUS_ATTRS = [
   /^on/i,
   /^href\s*=\s*["']?javascript:/i,
