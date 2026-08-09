@@ -33,6 +33,7 @@ const isNameCharacter = (character: string): boolean => {
     (code >= 48 && code <= 57) ||
     (code >= 65 && code <= 90) ||
     (code >= 97 && code <= 122) ||
+    code >= 0x80 ||
     character === '-' ||
     character === '_' ||
     character === ':' ||

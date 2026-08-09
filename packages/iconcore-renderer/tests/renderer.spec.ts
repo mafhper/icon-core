@@ -216,6 +216,15 @@ describe('sanitizeSvg', () => {
     expect(result).toContain('fill="red"');
   });
 
+  it('keeps parsing after quoted Unicode-named attributes', async () => {
+    const { sanitizeSvg } = await import('../src/sanitizeSvg');
+    const input = '<svg é="x/y" onload="alert(1)"><rect/></svg>';
+    const result = sanitizeSvg(input);
+    expect(result).toContain('é="x/y"');
+    expect(result.toLowerCase()).not.toContain('onload');
+    expect(result).toContain('<rect');
+  });
+
   it('removes iframe tags', async () => {
     const { sanitizeSvg } = await import('../src/sanitizeSvg');
     const input = '<svg><iframe src="evil.com"></iframe><circle/></svg>';
