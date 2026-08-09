@@ -206,11 +206,13 @@ describe('sanitizeSvg', () => {
   it('removes executable attributes while preserving safe attributes', async () => {
     const { sanitizeSvg } = await import('../src/sanitizeSvg');
     const input =
-      '<svg><a href="javascript:alert(1)"><rect onload="alert(2)" fill="red"/></a><use xlink:href="java&Tab;script&colon;alert(3)"/></svg>';
+      '<svg><a href="javascript:alert(1)"><rect onload="alert(2)" fill="red"/></a><use xlink:href="java&Tab;script&colon;alert(3)"/><image href="data:text/html,&lt;script&gt;alert(4)&lt;/script&gt;"/><image href="data:image/png;base64,AAAA"/></svg>';
     const result = sanitizeSvg(input);
     expect(result.toLowerCase()).not.toContain('javascript:');
     expect(result.toLowerCase()).not.toContain('xlink:href');
     expect(result.toLowerCase()).not.toContain('onload');
+    expect(result.toLowerCase()).not.toContain('data:text/html');
+    expect(result).toContain('data:image/png;base64,AAAA');
     expect(result).toContain('fill="red"');
   });
 

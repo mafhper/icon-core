@@ -16,6 +16,14 @@ const DANGEROUS_TAGS = new Set([
   'noscript'
 ]);
 
+const SAFE_DATA_IMAGE_PREFIXES = [
+  'data:image/png;base64,',
+  'data:image/jpeg;base64,',
+  'data:image/gif;base64,',
+  'data:image/webp;base64,',
+  'data:image/avif;base64,'
+];
+
 const isWhitespace = (character: string): boolean =>
   character === ' ' || character === '\t' || character === '\n' || character === '\r' || character === '\f';
 
@@ -88,7 +96,11 @@ const isDangerousUrl = (value: string): boolean => {
     .replaceAll('&colon;', ':')
     .replaceAll('&tab;', '')
     .replaceAll('&newline;', '');
-  return normalized.startsWith('javascript:') || normalized.startsWith('vbscript:') || normalized.startsWith('data:text/html');
+  if (normalized.startsWith('javascript:') || normalized.startsWith('vbscript:')) return true;
+  if (normalized.startsWith('data:')) {
+    return !SAFE_DATA_IMAGE_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+  }
+  return false;
 };
 
 const sanitizeAttributes = (tag: string, nameEnd: number): string => {
