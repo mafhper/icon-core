@@ -20,7 +20,7 @@
     "@iconcore/validator": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.19.21",
+    "@types/node": "^26.1.1",
     "typescript": "^5.9.2",
     "vitest": "^4.1.8"
   }
