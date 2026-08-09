@@ -79,6 +79,14 @@ const findTagEnd = (input: string, start: number): { end: number; nested: boolea
   return { end: input.length, nested: false };
 };
 
+const findLiteralSectionEnd = (input: string, start: number): number | undefined => {
+  const closingMarker = input.startsWith('<!--', start) ? '-->' : input.startsWith('<![CDATA[', start) ? ']]>' : '';
+  if (!closingMarker) return undefined;
+
+  const end = input.indexOf(closingMarker, start + 4);
+  return end === -1 ? input.length : end + closingMarker.length;
+};
+
 const decodeNumericReferences = (value: string): string =>
   value.replace(/&#(?:x([0-9a-f]{1,6})|([0-9]{1,7}));?/gi, (reference, hex, decimal) => {
     const codePoint = Number.parseInt(hex ?? decimal, hex ? 16 : 10);
@@ -166,6 +174,13 @@ export const sanitizeSvg = (svgString: string): string => {
     }
 
     sanitized += svgString.slice(cursor, tagStart);
+    const literalSectionEnd = findLiteralSectionEnd(svgString, tagStart);
+    if (literalSectionEnd !== undefined) {
+      sanitized += svgString.slice(tagStart, literalSectionEnd);
+      cursor = literalSectionEnd;
+      continue;
+    }
+
     const { end, nested } = findTagEnd(svgString, tagStart);
     if (nested) {
       cursor = tagStart + 1;

@@ -225,6 +225,12 @@ describe('sanitizeSvg', () => {
     expect(result).toContain('<rect');
   });
 
+  it('preserves comments and CDATA as literal sections', async () => {
+    const { sanitizeSvg } = await import('../src/sanitizeSvg');
+    const input = '<svg><!-- <rect/> --><![CDATA[<script>not markup</script>]]><circle/></svg>';
+    expect(sanitizeSvg(input)).toBe(input);
+  });
+
   it('removes iframe tags', async () => {
     const { sanitizeSvg } = await import('../src/sanitizeSvg');
     const input = '<svg><iframe src="evil.com"></iframe><circle/></svg>';
