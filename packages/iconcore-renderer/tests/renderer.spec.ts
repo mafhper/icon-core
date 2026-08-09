@@ -195,6 +195,42 @@ describe('sanitizeSvg', () => {
     expect(result).toContain('<rect');
   });
 
+  it('does not recreate dangerous tags from nested markup', async () => {
+    const { sanitizeSvg } = await import('../src/sanitizeSvg');
+    const input = '<svg><scrip<script>t>alert("xss")</script><rect/></svg>';
+    const result = sanitizeSvg(input);
+    expect(result.toLowerCase()).not.toContain('<script');
+    expect(result).toContain('<rect');
+  });
+
+  it('removes executable attributes while preserving safe attributes', async () => {
+    const { sanitizeSvg } = await import('../src/sanitizeSvg');
+    const input =
+      '<svg><a href="javascript:alert(1)"><rect onload="alert(2)" fill="red"/></a><use xlink:href="java&Tab;script&colon;alert(3)"/><image href="data:text/html,&lt;script&gt;alert(4)&lt;/script&gt;"/><image href="data:image/png;base64,AAAA"/></svg>';
+    const result = sanitizeSvg(input);
+    expect(result.toLowerCase()).not.toContain('javascript:');
+    expect(result.toLowerCase()).not.toContain('xlink:href');
+    expect(result.toLowerCase()).not.toContain('onload');
+    expect(result.toLowerCase()).not.toContain('data:text/html');
+    expect(result).toContain('data:image/png;base64,AAAA');
+    expect(result).toContain('fill="red"');
+  });
+
+  it('keeps parsing after quoted Unicode-named attributes', async () => {
+    const { sanitizeSvg } = await import('../src/sanitizeSvg');
+    const input = '<svg é="x/y" onload="alert(1)"><rect/></svg>';
+    const result = sanitizeSvg(input);
+    expect(result).toContain('é="x/y"');
+    expect(result.toLowerCase()).not.toContain('onload');
+    expect(result).toContain('<rect');
+  });
+
+  it('preserves comments and CDATA as literal sections', async () => {
+    const { sanitizeSvg } = await import('../src/sanitizeSvg');
+    const input = '<svg><!-- <rect/> --><![CDATA[<script>not markup</script>]]><circle/></svg>';
+    expect(sanitizeSvg(input)).toBe(input);
+  });
+
   it('removes iframe tags', async () => {
     const { sanitizeSvg } = await import('../src/sanitizeSvg');
     const input = '<svg><iframe src="evil.com"></iframe><circle/></svg>';
