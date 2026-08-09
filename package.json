@@ -24,7 +24,7 @@
     "typecheck": "bun run typecheck:packages && bun run typecheck:web && bun run typecheck:promo",
     "test": "bun run --filter @iconcore/shared test && bun run --filter @iconcore/engine test && bun run --filter @iconcore/renderer test && bun run --filter @iconcore/validator test && bun run --filter @iconcore/exporters test && bun run --filter @iconcore/cli test && bun run --filter @iconcore/web test",
     "test:e2e": "playwright test",
-    "lint": "eslint apps packages tests --ext .ts,.tsx",
+    "lint": "eslint apps packages tests --ext .ts,.tsx --max-warnings 0",
     "desktop:smoke": "bun run --filter @iconcore/desktop tauri:build --debug"
   },
   "devDependencies": {

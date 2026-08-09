@@ -1,4 +1,4 @@
-import type { Fill, ShapeKind } from '@iconcore/shared';
+import type { ShapeKind } from '@iconcore/shared';
 import type { RenderContext } from '../types';
 
 const clipCircle = (ctx: CanvasRenderingContext2D, size: number): void => {

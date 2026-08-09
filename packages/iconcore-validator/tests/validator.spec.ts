@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { IconCoreProject, Fill } from '@iconcore/shared';
+import type { IconCoreProject } from '@iconcore/shared';
 import { auditProject } from '../src/index';
 
 const createProject = (overrides?: Partial<IconCoreProject>): IconCoreProject => ({

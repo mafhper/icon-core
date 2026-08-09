@@ -1,4 +1,4 @@
-import type { Fill, IconTarget, IconVariant, ProjectConfig } from '@iconcore/shared';
+import type { Fill, IconTarget, ProjectConfig } from '@iconcore/shared';
 import type { IconCoreProject } from '@iconcore/shared';
 
 const DEFAULT_BACKGROUND: Fill = {

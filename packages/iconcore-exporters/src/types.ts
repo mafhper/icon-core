@@ -1,5 +1,4 @@
-import type { IconTarget, IconVariant, IconCoreProject } from '@iconcore/shared';
-import type { RenderBackend } from '@iconcore/renderer';
+import type { IconTarget, IconCoreProject } from '@iconcore/shared';
 
 export interface ExportFile {
   path: string;

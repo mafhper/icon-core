@@ -53,6 +53,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return <ToastContext.Provider value={api}>{children}</ToastContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- The context hook belongs to this provider module.
 export const useToast = (): ToastApi => {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used within ToastProvider');

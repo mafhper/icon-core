@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useComposer } from '../ComposerContext';
-import type { IconCoreProject, Fill, IconLayer, ShapeDefinition } from '@iconcore/shared';
+import type { IconCoreProject, Fill, ShapeDefinition } from '@iconcore/shared';
 
 interface VisualPreset {
   id: string;

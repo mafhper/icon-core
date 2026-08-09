@@ -99,6 +99,7 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- The context hook belongs to this provider module.
 export const useComposer = (): ComposerContextValue => {
   const ctx = useContext(ComposerContext);
   if (!ctx) throw new Error('useComposer must be used within ComposerProvider');
