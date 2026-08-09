@@ -216,6 +216,25 @@ describe('sanitizeSvg', () => {
     expect(result).toContain('fill="red"');
   });
 
+  it('removes executable URLs hidden by long numeric references', async () => {
+    const { sanitizeSvg } = await import('../src/sanitizeSvg');
+    const input =
+      '<svg><a href="&#0000000000106;avascript:alert(1)"><rect/></a><a href="&#x00000000000006a;avascript:alert(2)"><circle/></a><use href="&#0000000000035;shape"/></svg>';
+    const result = sanitizeSvg(input);
+    expect(result.toLowerCase()).not.toContain('avascript:');
+    expect(result).toContain('href="&#0000000000035;shape"');
+  });
+
+  it('removes executable href aliases while preserving safe namespaced links', async () => {
+    const { sanitizeSvg } = await import('../src/sanitizeSvg');
+    const input =
+      '<svg xmlns:q="http://www.w3.org/1999/xlink"><a q:href="javascript:alert(1)"><rect/></a><use q:href="#shape"/></svg>';
+    const result = sanitizeSvg(input);
+    expect(result.toLowerCase()).not.toContain('javascript:');
+    expect(result).toContain('xmlns:q="http://www.w3.org/1999/xlink"');
+    expect(result).toContain('q:href="#shape"');
+  });
+
   it('keeps parsing after quoted Unicode-named attributes', async () => {
     const { sanitizeSvg } = await import('../src/sanitizeSvg');
     const input = '<svg é="x/y" onload="alert(1)"><rect/></svg>';
