@@ -88,7 +88,7 @@ const findLiteralSectionEnd = (input: string, start: number): number | undefined
 };
 
 const decodeNumericReferences = (value: string): string =>
-  value.replace(/&#(?:x([0-9a-f]{1,6})|([0-9]{1,7}));?/gi, (reference, hex, decimal) => {
+  value.replace(/&#(?:x([0-9a-f]+)|([0-9]+));?/gi, (reference, hex, decimal) => {
     const codePoint = Number.parseInt(hex ?? decimal, hex ? 16 : 10);
     return Number.isFinite(codePoint) && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : reference;
   });
@@ -155,7 +155,7 @@ const sanitizeAttributes = (tag: string, nameEnd: number): string => {
 
     const executableAttribute =
       attributeName.startsWith('on') ||
-      ((attributeName === 'href' || attributeName === 'xlink:href') && isDangerousUrl(value));
+      (attributeName.slice(attributeName.lastIndexOf(':') + 1) === 'href' && isDangerousUrl(value));
     if (!executableAttribute) sanitized += tag.slice(segmentStart, index);
   }
 
