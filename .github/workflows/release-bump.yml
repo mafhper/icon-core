@@ -77,10 +77,10 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:$GITHUB_TOKEN" | base64)"
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
           git add -A
           git commit -m "chore(release): bump version to v${VERSION}" --allow-empty
-          git push -u origin "release/v${VERSION}"
+          git push "$REPO_URL" "release/v${VERSION}"
           PR_URL="$(gh pr create \
             --base main \
             --head "release/v${VERSION}" \
