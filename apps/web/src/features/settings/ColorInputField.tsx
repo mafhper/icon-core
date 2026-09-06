@@ -66,9 +66,9 @@ const hslToHex = (h: number, s: number, l: number) => {
   const x = c * (1 - Math.abs(((hh / 60) % 2) - 1));
   const m = ll - c / 2;
 
-  let rp = 0;
-  let gp = 0;
-  let bp = 0;
+  let rp: number;
+  let gp: number;
+  let bp: number;
 
   if (hh < 60) [rp, gp, bp] = [c, x, 0];
   else if (hh < 120) [rp, gp, bp] = [x, c, 0];

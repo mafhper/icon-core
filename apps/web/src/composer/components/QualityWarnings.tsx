@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { AlertTriangle, Info, XCircle, CheckCircle2, ChevronUp } from 'lucide-react';
+import { TriangleAlert, Info, CircleX, CircleCheck, ChevronUp } from 'lucide-react';
 import { auditProject, type ValidationIssue } from '@iconcore/validator';
 import { useComposer } from '../ComposerContext';
 
@@ -29,8 +29,8 @@ export const QualityWarnings = () => {
 
   const iconFor = (severity: ValidationIssue['severity']) => {
     switch (severity) {
-      case 'error': return <XCircle size={14} className="text-core-danger" />;
-      case 'warning': return <AlertTriangle size={14} className="text-yellow-500" />;
+      case 'error': return <CircleX size={14} className="text-core-danger" />;
+      case 'warning': return <TriangleAlert size={14} className="text-yellow-500" />;
       case 'info': return <Info size={14} className="text-core-muted" />;
     }
   };
@@ -60,7 +60,7 @@ export const QualityWarnings = () => {
                   onClick={() => setDismissed((prev) => new Set([...prev, issue.code]))}
                   aria-label="Dismiss"
                 >
-                  <XCircle size={12} />
+                  <CircleX size={12} />
                 </button>
               </div>
             ))}
@@ -76,10 +76,10 @@ export const QualityWarnings = () => {
         title="Icon quality check"
       >
         {tone === 'ok'
-          ? <CheckCircle2 size={14} className="text-core-success" />
+          ? <CircleCheck size={14} className="text-core-success" />
           : tone === 'error'
-            ? <XCircle size={14} className="text-core-danger" />
-            : <AlertTriangle size={14} className="text-yellow-500" />}
+            ? <CircleX size={14} className="text-core-danger" />
+            : <TriangleAlert size={14} className="text-yellow-500" />}
         <span className="ic-quality-score">{result.score}</span>
         {visibleIssues.length > 0 && (
           <span className="ic-quality-count">{visibleIssues.length}</span>

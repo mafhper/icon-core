@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, Download, Check, Loader2, FileText, AlertTriangle, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Download, Check, LoaderCircle, FileText, TriangleAlert, FolderOpen } from 'lucide-react';
 import type { IconTarget, IconVariant, OutputFormat, ExportStructure, ZipCompression } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
@@ -370,7 +370,7 @@ export const ExportView = () => {
           <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 composer-scale-in">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                {progress.phase === 'exporting' && <Loader2 size={20} className="animate-spin text-core-accent" />}
+                {progress.phase === 'exporting' && <LoaderCircle size={20} className="animate-spin text-core-accent" />}
                 {progress.phase === 'archiving' && <FileText size={20} className="text-core-accent composer-pulse" />}
                 <div>
                   <p className="text-sm font-semibold">
@@ -415,7 +415,7 @@ export const ExportView = () => {
         {error && (
           <div className="card-surface rounded-2xl border border-core-danger/50 bg-core-surface p-6 composer-scale-in">
             <div className="flex items-center gap-3">
-              <AlertTriangle size={20} className="text-core-danger" />
+              <TriangleAlert size={20} className="text-core-danger" />
               <p className="text-sm">{error}</p>
             </div>
           </div>

@@ -1,6 +1,21 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-core-bg: var(--core-bg);
+  --color-core-surface: var(--core-surface);
+  --color-core-elevated: var(--core-elevated);
+  --color-core-border: var(--core-border);
+  --color-core-text: var(--core-text);
+  --color-core-muted: var(--core-muted);
+  --color-core-accent: var(--core-accent);
+  --color-core-success: var(--core-success);
+  --color-core-warning: var(--core-warning);
+  --color-core-danger: var(--core-danger);
+  --font-display: "Sora", sans-serif;
+  --font-body: "Sora", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --shadow-panel: 0 20px 40px rgba(0, 0, 0, 0.32);
+}
 
 :root,
 [data-theme='dark'] {
