@@ -85,8 +85,7 @@ jobs:
             --base main \
             --head "release/v${VERSION}" \
             --title "chore(release): bump version to v${VERSION}" \
-            --body "Bumps the version to v${VERSION} and prepares the per-version release notes. Merging this PR tags v${VERSION} and publishes the desktop release." \
-            --json url --jq .url)"
+            --body "Bumps the version to v${VERSION} and prepares the per-version release notes. Merging this PR tags v${VERSION} and publishes the desktop release.")"
           echo "opened $PR_URL"
           if gh pr merge "$PR_URL" --auto --squash --delete-branch >/dev/null 2>&1; then
             echo "auto-merge enabled; the release will follow once the PR merges."
