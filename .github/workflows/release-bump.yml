@@ -73,7 +73,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --global --add http.https://github.com/.extraheader "AUTHORIZATION: bearer $GITHUB_TOKEN"
+          git config --global --add http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:$GITHUB_TOKEN" | base64)"
           git add -A
           git commit -m "chore(release): bump version to v${VERSION}" --allow-empty
           git tag -a "v${VERSION}" -m "Release v${VERSION}"
