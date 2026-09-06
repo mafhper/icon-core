@@ -12,10 +12,11 @@ GitHub Release body for the desktop app. Files are named after the tag, e.g.
    the end of the release page.
 2. **Bump.** Dispatch the `release-bump` workflow with the target version (e.g. `1.3.1`).
    It updates the version in `package.json`, `apps/desktop/package.json`,
-   `apps/desktop/src-tauri/tauri.conf.json`, `Cargo.toml` and `Cargo.lock`, commits
-   `chore(release): bump version to vX.Y.Z`, creates the annotated tag `vX.Y.Z` and
-   triggers `release-desktop`.
-3. **Build.** `release-desktop` builds installers on Windows, Linux and macOS and
+   `apps/desktop/src-tauri/tauri.conf.json`, `Cargo.toml` and `Cargo.lock`, prepares the
+   release-notes file and opens a PR `chore(release): bump version to vX.Y.Z`.
+3. **Merge.** Merging that PR triggers `release-tag`, which creates the annotated tag
+   `vX.Y.Z` on main and dispatches `release-desktop`.
+4. **Build.** `release-desktop` builds installers on Windows, Linux and macOS and
    uploads them to the `vX.Y.Z` GitHub Release. The release body includes:
    - a banner image (`public/releases/release-feed-VERSION.png`) when the file exists
      on the tag — see below;
