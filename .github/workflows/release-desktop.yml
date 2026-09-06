@@ -140,5 +140,6 @@ jobs:
           tagName: v__VERSION__
           releaseName: "IconCore v__VERSION__"
           releaseId: ${{ steps.create-release.outputs.release_id }}
+          generateReleaseNotes: false
           releaseDraft: false
           prerelease: false
