@@ -33,6 +33,8 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_HEAD_REF#release/v}"
           REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git tag -l "v${VERSION}" | grep -q .; then
             echo "tag v${VERSION} already exists; skipping"
             exit 1
