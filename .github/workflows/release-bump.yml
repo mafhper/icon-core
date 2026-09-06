@@ -1,7 +1,7 @@
-# Bumps the version across the workspace, prepares the per-version release notes,
-# commits + tags vX.Y.Z on main and triggers release-desktop.yml.
-# To include custom notes, fill the "notes" input or commit .github/release-notes/vX.Y.Z.md
-# on main before dispatching (the file is kept if it already exists).
+# Bumps the version across the workspace, prepares the per-version release notes
+# and opens a PR so the bump can be reviewed before it lands on main.
+# Merging a pull request from a release/vX.Y.Z branch triggers release-tag.yml,
+# which tags vX.Y.Z and publishes the desktop release via release-desktop.yml.
 name: release-bump
 
 on:
@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
   actions: write
 
 concurrency:
@@ -48,6 +49,9 @@ jobs:
           esac
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
+      - name: Create release branch
+        run: git checkout -b "release/v${VERSION}"
+
       - name: Bump version files
         run: bun scripts/release-bump.mjs "$VERSION"
 
@@ -66,7 +70,7 @@ jobs:
             echo "keeping existing $notes_file"
           fi
 
-      - name: Commit and tag
+      - name: Commit, push branch and open PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -76,11 +80,16 @@ jobs:
           git config --global --add http.https://github.com/.extraheader "AUTHORIZATION: basic $(printf '%s' "x-access-token:$GITHUB_TOKEN" | base64)"
           git add -A
           git commit -m "chore(release): bump version to v${VERSION}" --allow-empty
-          git tag -a "v${VERSION}" -m "Release v${VERSION}"
-          git push origin HEAD:main
-          git push origin "v${VERSION}"
-
-      - name: Trigger release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run release-desktop.yml -f tag="v${VERSION}"
+          git push -u origin "release/v${VERSION}"
+          PR_URL="$(gh pr create \
+            --base main \
+            --head "release/v${VERSION}" \
+            --title "chore(release): bump version to v${VERSION}" \
+            --body "Bumps the version to v${VERSION} and prepares the per-version release notes. Merging this PR tags v${VERSION} and publishes the desktop release." \
+            --json url --jq .url)"
+          echo "opened $PR_URL"
+          if gh pr merge "$PR_URL" --auto --squash --delete-branch >/dev/null 2>&1; then
+            echo "auto-merge enabled; the release will follow once the PR merges."
+          else
+            echo "auto-merge not enabled; merge the PR to publish the release."
+          fi
