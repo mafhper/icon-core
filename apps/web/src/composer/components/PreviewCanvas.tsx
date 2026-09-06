@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ZoomIn, ZoomOut, Grid, Circle, Square, RectangleHorizontal, RotateCcw, Crosshair } from 'lucide-react';
+import { ZoomIn, ZoomOut, Grid3x3, Circle, Square, RectangleHorizontal, RotateCcw, Crosshair } from 'lucide-react';
 import type { IconLayer, IconVariant, IconCoreProject } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
@@ -259,7 +259,7 @@ export const PreviewCanvas = () => {
             className={`p-1.5 rounded ${state.showGrid ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
             title="Toggle grid"
           >
-            <Grid size={16} />
+            <Grid3x3 size={16} />
           </button>
           <button
             type="button"

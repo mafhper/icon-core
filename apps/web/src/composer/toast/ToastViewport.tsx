@@ -1,9 +1,9 @@
-import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
+import { TriangleAlert, CircleCheck, Info, X } from 'lucide-react';
 import { useToast, type ToastVariant } from './ToastContext';
 
 const icons: Record<ToastVariant, typeof Info> = {
-  success: CheckCircle2,
-  error: AlertTriangle,
+  success: CircleCheck,
+  error: TriangleAlert,
   info: Info
 };
 
