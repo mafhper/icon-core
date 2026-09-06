@@ -1,108 +1,35 @@
+# Desktop installers + GitHub Release are created only when a version tag is pushed
+# (e.g. the release-bump workflow, or `git tag -a v1.3.1 -m "Release v1.3.1" && git push origin v1.3.1`).
+# Pushes to main update GitHub Pages but do not create a new Release.
 name: release-desktop
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release (e.g. v1.0.1)"
+        description: 'Tag to release (e.g. v1.3.1)'
         required: true
         type: string
 
-permissions: {}
+permissions:
+  contents: write
 
 concurrency:
-  group: desktop-release-${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
+  group: desktop-release-${{ github.event.inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  resolve-release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      release_tag: ${{ steps.resolve-tag.outputs.release_tag }}
-      should_release: ${{ steps.decide.outputs.should_release }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Resolve release tag
-        id: resolve-tag
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
-          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            TAG="${GITHUB_REF_NAME}"
-          else
-            VERSION=$(node -e "const fs=require('fs');const raw=fs.readFileSync('apps/desktop/src-tauri/tauri.conf.json','utf8');const data=JSON.parse(raw);process.stdout.write(data.version)")
-            TAG="v${VERSION}"
-          fi
-
-          echo "release_tag=${TAG}" >> "$GITHUB_OUTPUT"
-
-      - name: Check if release already exists
-        id: check-release
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          RELEASE_TAG: ${{ steps.resolve-tag.outputs.release_tag }}
-        with:
-          script: |
-            const tag = process.env.RELEASE_TAG;
-            try {
-              await github.rest.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag,
-              });
-              core.setOutput("exists", "true");
-            } catch (error) {
-              if (error.status === 404) {
-                core.setOutput("exists", "false");
-              } else {
-                throw error;
-              }
-            }
-
-      - name: Decide whether release build should run
-        id: decide
-        shell: bash
-        run: |
-          SHOULD="false"
-          EVENT="${{ github.event_name }}"
-          EXISTS="${{ steps.check-release.outputs.exists }}"
-
-          if [ "$EVENT" = "release" ] || [ "$EVENT" = "workflow_dispatch" ] || [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            SHOULD="true"
-          elif [ "$EVENT" = "push" ] && [ "${GITHUB_REF_NAME}" = "main" ] && [ "$EXISTS" = "false" ]; then
-            SHOULD="true"
-          fi
-
-          echo "should_release=${SHOULD}" >> "$GITHUB_OUTPUT"
-
-  build:
-    needs: resolve-release
-    if: needs.resolve-release.outputs.should_release == 'true'
-    permissions:
-      contents: write
+  release:
     strategy:
       fail-fast: false
       matrix:
         platform: [macos-latest, ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.platform }}
     env:
-      RELEASE_TAG: ${{ needs.resolve-release.outputs.release_tag }}
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -129,91 +56,89 @@ jobs:
             patchelf \
             libssl-dev
 
+      - name: Build release body
+        id: build-body
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          notes_file=".github/release-notes/${RELEASE_TAG}.md"
+          body_file="$RUNNER_TEMP/release-body.md"
+          {
+            if [ -f "public/releases/release-feed-${version}.png" ]; then
+              printf '%s\n' '<p align="center">'
+              printf '%s\n' "  <img src=\"https://raw.githubusercontent.com/mafhper/icon-core/${RELEASE_TAG}/public/releases/release-feed-${version}.png\" alt=\"IconCore ${version}\" width=\"960\">"
+              printf '%s\n' '</p>'
+              printf '%s\n' ''
+            fi
+            printf '%s\n' 'IconCore é um editor de ícones: importe imagens, ajuste cores e exporte em múltiplos formatos, inclusive icon fonts.'
+            if [ -f "$notes_file" ]; then
+              printf '%s\n' ''
+              printf '%s\n' '## O que tem de novo nesta versão'
+              cat "$notes_file"
+            fi
+            printf '%s\n' ''
+            printf '%s\n' '## Instalação'
+            printf '%s\n' ''
+            printf '%s\n' '| Sistema | Arquivo recomendado | Uso |'
+            printf '%s\n' '| --- | --- | --- |'
+            printf '%s\n' '| Windows | `IconCore_*_x64-setup.exe` | Instalação comum, sem exigir privilégios de administrador |'
+            printf '%s\n' '| Windows | `IconCore_*_x64.msi` | Ambientes gerenciados |'
+            printf '%s\n' '| Linux | `iconcore_*_amd64.deb` | Ubuntu, Debian e derivados |'
+            printf '%s\n' '| macOS | `IconCore_*_aarch64.dmg` | Macs com Apple Silicon |'
+            printf '%s\n' ''
+            printf '%s\n' '<details>'
+            printf '%s\n' '<summary>Outros detalhes de instalação</summary>'
+            printf '%s\n' ''
+            printf '%s\n' '- O instalador EXE é a opção recomendada para a maioria das pessoas no Windows.'
+            printf '%s\n' '- O MSI atende ambientes gerenciados; no macOS, arraste o IconCore para a pasta Aplicativos.'
+            printf '%s\n' '- No Linux, além do DEB também há AppImage e arquivos compactados entre os arquivos da versão.'
+            printf '%s\n' ''
+            printf '%s\n' '</details>'
+            printf '%s\n' ''
+            printf '%s\n' '---'
+          } > "$body_file"
+          generated="$(gh api "repos/${{ github.repository }}/releases/generate-notes" -f tag_name="$RELEASE_TAG" -f target_commitish="main" --jq '.body' 2>/dev/null || true)"
+          if [ -n "$generated" ]; then
+            {
+              printf '%s\n' ''
+              printf '%s\n' '<details>'
+              printf '%s\n' '<summary>Lista de mudanças (gerada automaticamente)</summary>'
+              printf '%s\n' ''
+              printf '%s\n' "$generated"
+              printf '%s\n' ''
+              printf '%s\n' '</details>'
+            } >> "$body_file"
+          fi
+
+      - name: Resolve or create the release
+        id: create-release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 24); do
+            if id="$(gh release view "$RELEASE_TAG" --json id --jq '.id' 2>/dev/null)"; then
+              echo "release_id=$id" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            gh release create "$RELEASE_TAG" --target main --title "IconCore $RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-body.md" >/dev/null 2>&1 || true
+            sleep 5
+          done
+          echo "could not resolve or create release $RELEASE_TAG" >&2
+          exit 1
+
       - name: Build desktop bundle
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/desktop
-          tagName: ${{ env.RELEASE_TAG }}
-          releaseName: IconCore ${{ env.RELEASE_TAG }}
-          releaseBody: |
-            Automated desktop release for IconCore ${{ env.RELEASE_TAG }}.
-            Direct download links are finalized after all platform bundles are uploaded.
+          tagName: v__VERSION__
+          releaseName: "IconCore v__VERSION__"
+          releaseId: ${{ steps.create-release.outputs.release_id }}
           releaseDraft: false
           prerelease: false
-
-  update-release-notes:
-    needs: [resolve-release, build]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      RELEASE_TAG: ${{ needs.resolve-release.outputs.release_tag }}
-    steps:
-      - name: Build release body with platform links
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ env.RELEASE_TAG }}
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          import subprocess
-
-          repo = os.environ["REPO"]
-          tag = os.environ["TAG"]
-          release = json.loads(subprocess.check_output(["gh", "api", f"repos/{repo}/releases/tags/{tag}"], text=True))
-          assets = release.get("assets", [])
-
-          def is_signature(name: str) -> bool:
-              lower = name.lower()
-              return (
-                  lower.endswith(".sig")
-                  or lower.endswith(".sigstore")
-                  or lower.endswith(".sha256")
-                  or lower.endswith(".sha256sum")
-                  or lower.endswith(".json")
-              )
-
-          def pick(extensions, hints):
-              usable = [asset for asset in assets if not is_signature(asset["name"])]
-              for extension in extensions:
-                  for asset in usable:
-                      if asset["name"].lower().endswith(extension):
-                          return f"[{asset['name']}]({asset['browser_download_url']})"
-              for hint in hints:
-                  for asset in usable:
-                      if hint in asset["name"].lower():
-                          return f"[{asset['name']}]({asset['browser_download_url']})"
-              return "Not available in this release."
-
-          windows = pick([".msi", ".exe"], ["windows", "win64", "win32"])
-          macos = pick([".dmg", ".pkg", ".app.tar.gz"], ["macos", "darwin", "mac"])
-          linux = pick([".appimage", ".deb", ".rpm", ".tar.xz", ".tar.gz"], ["linux"])
-
-          body = "\n".join(
-              [
-                  f"Desktop release for **{tag}**.",
-                  "",
-                  "## Downloads",
-                  f"- Windows: {windows}",
-                  f"- macOS: {macos}",
-                  f"- Linux: {linux}",
-                  "",
-                  "## All assets",
-                  f"- [Open release page]({release['html_url']})",
-              ]
-          )
-
-          with open("release-body.md", "w", encoding="utf-8") as file:
-              file.write(body)
-          PY
-
-      - name: Update release title and notes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ env.RELEASE_TAG }}
-        run: gh release edit "$TAG" --repo "$REPO" --title "IconCore $TAG" --notes-file release-body.md
