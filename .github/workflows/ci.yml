@@ -31,6 +31,9 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Third-party asset guard
+        run: bun scripts/check-third-party-assets.mjs
+
       - name: Typecheck
         run: bun run typecheck
 
