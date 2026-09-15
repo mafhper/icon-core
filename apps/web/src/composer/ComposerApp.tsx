@@ -4,12 +4,14 @@ import { ExportView } from './views/ExportView';
 import { CommandPalette } from './components/CommandPalette';
 import { WelcomeModal } from './components/WelcomeModal';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useTheme } from './hooks/useTheme';
 import { ToastProvider } from './toast/ToastContext';
 import { ToastViewport } from './toast/ToastViewport';
 
 const ComposerShell = () => {
   const { state } = useComposer();
   useKeyboardShortcuts();
+  useTheme();
 
   // The editor is always mounted; the welcome experience is a modal layered on
   // top of it — shown automatically when there is no project, and on demand
