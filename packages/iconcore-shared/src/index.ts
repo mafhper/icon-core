@@ -235,3 +235,183 @@ export const detectLocale = (input?: string): Locale => {
   if (candidate.startsWith('pt')) return 'pt-BR';
   return 'en-US';
 };
+
+// --- UI/UX 2026 engineering contracts (PR-04) ---
+// Fixed by the redesign sprint master plan (.dev/docs/redesign-uiux-2026-plan.md, §6).
+// These types are the compilation-time surface of the editor + library contracts;
+// implementations land incrementally (path parser/editor, iconcore-library, reducer
+// integration) without changing existing behavior.
+
+// --- 6.1 State boundaries ---
+
+/**
+ * Contract: every editor field belongs to exactly one state section.
+ * - persistent: saved in `.iconcore.json` (document + project metadata).
+ * - transient: never enters history, dies with the gesture (drag, preview, hover).
+ * - ui: localStorage only, never part of the document (theme, panels, tool, zoom, …).
+ */
+export type StateSection = 'persistent' | 'transient' | 'ui';
+
+export const PERSISTENT_FIELDS = [
+  'document',
+  'projectMetadata',
+  'layers',
+  'variants',
+  'canvasSize',
+  'themeOverrides'
+] as const;
+
+export const TRANSIENT_FIELDS = [
+  'dragging',
+  'previewTransform',
+  'hoveredPath',
+  'hoveredLayer'
+] as const;
+
+export const UI_FIELDS = [
+  'theme',
+  'panelWidths',
+  'activePanel',
+  'libraryQuery',
+  'libraryFilter',
+  'inspectorSections',
+  'activeTool',
+  'zoom',
+  'pan'
+] as const;
+
+export const stateSection = (field: string): StateSection | null => {
+  if ((PERSISTENT_FIELDS as readonly string[]).includes(field)) return 'persistent';
+  if ((TRANSIENT_FIELDS as readonly string[]).includes(field)) return 'transient';
+  if ((UI_FIELDS as readonly string[]).includes(field)) return 'ui';
+  return null;
+};
+
+// --- 6.2 InteractionTransaction ---
+
+export type InteractionPhase = 'begin' | 'preview' | 'commit' | 'cancel';
+
+export interface InteractionTransactionHooks<TInput, TPreview, TCommit> {
+  /** Runs once when `begin` is called. Optional. */
+  onBegin?: (input: TInput) => void;
+  /** Runs on every `preview` with the transformed input. Optional. */
+  onPreview?: (input: TInput, preview: TPreview) => void;
+  /**
+   * Contract: `commit` invokes `onCommit` **exactly once** per gesture and
+   * returns a single semantic history operation (MoveLayer, ResizeLayer, …).
+   * `preview` never commits; `cancel` discards.
+   */
+  onCommit: (input: TInput) => TCommit;
+}
+
+/**
+ * begin(preview) → [preview(RAF)] → commit
+ *
+ * One gesture = one semantic operation in history. Consumed by move, resize,
+ * rotate, scrub, path editing and continuous color/opacity/stroke input.
+ */
+export class InteractionTransaction<TInput, TPreview, TCommit> {
+  private active = false;
+  private committed = false;
+  private input!: TInput;
+  private readonly hooks: InteractionTransactionHooks<TInput, TPreview, TCommit>;
+
+  constructor(hooks: InteractionTransactionHooks<TInput, TPreview, TCommit>) {
+    this.hooks = hooks;
+  }
+
+  get isActive(): boolean {
+    return this.active;
+  }
+
+  begin(input: TInput): void {
+    if (this.active) return;
+    this.active = true;
+    this.committed = false;
+    this.input = input;
+    this.hooks.onBegin?.(input);
+  }
+
+  preview(transform: (input: TInput) => TPreview): void {
+    if (!this.active) return;
+    const preview = transform(this.input);
+    this.hooks.onPreview?.(this.input, preview);
+  }
+
+  /** Invokes `onCommit` exactly once per gesture. Returns null when inactive. */
+  commit(): TCommit | null {
+    if (!this.active || this.committed) return null;
+    this.committed = true;
+    this.active = false;
+    return this.hooks.onCommit(this.input);
+  }
+
+  cancel(): void {
+    this.active = false;
+    this.committed = false;
+  }
+}
+
+// --- 6.3 Path Editor MVP contract ---
+
+/**
+ * SVG string → parser → normalized PathCommand[] → editor → serializer → SVG.
+ * Supported: M / L / C / Q / Z. Normalization: H / V → L (T / S as the parser
+ * requires). Never edit `d` as a string. Accept by geometric equivalence.
+ */
+export type PathCommand =
+  | MoveCommand
+  | LineCommand
+  | CubicCommand
+  | QuadraticCommand
+  | CloseCommand;
+
+export interface MoveCommand { type: 'M'; x: number; y: number }
+export interface LineCommand { type: 'L'; x: number; y: number }
+export interface CubicCommand { type: 'C'; x1: number; y1: number; x2: number; y2: number; x: number; y: number }
+export interface QuadraticCommand { type: 'Q'; x1: number; y1: number; x: number; y: number }
+export interface CloseCommand { type: 'Z' }
+
+export type PathData = PathCommand[];
+
+/** Semantic history operations produced by one InteractionTransaction commit. */
+export type HistoryableOperation =
+  | { kind: 'MoveLayer' }
+  | { kind: 'ResizeLayer' }
+  | { kind: 'RotateLayer' }
+  | { kind: 'EditPath' }
+  | { kind: 'ChangeFill' }
+  | { kind: 'ChangeStroke' };
+
+// --- 6.4 Library API contract ---
+
+export type IconCategory = string;
+export type IconVariantId = 'normal' | 'duotone' | 'fill' | 'brand' | 'color';
+
+export interface LibraryQuery {
+  query?: string;
+  category?: IconCategory;
+  variant?: IconVariantId;
+  limit?: number;
+}
+
+export interface LibraryIcon {
+  id: string;
+  name: string;
+  category: IconCategory;
+  tags: string[];
+  /** Serialized SVG source (unmodified on ingestion). */
+  data: string;
+  variants: IconVariantId[];
+}
+
+/**
+ * IconCore library is a domain/data-only API: search, read, filter. Editorial
+ * operations (insert/replace/detach) belong to the Composer via commands.
+ */
+export interface IconLibrary {
+  searchIcons(query: LibraryQuery): Promise<LibraryIcon[]>;
+  getIcon(id: string): Promise<LibraryIcon | undefined>;
+  getIconsByCategory(category: IconCategory): Promise<LibraryIcon[]>;
+  getIconVariants(id: string): Promise<IconVariantId[]>;
+}
