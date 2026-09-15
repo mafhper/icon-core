@@ -768,6 +768,114 @@ input[type='range'] {
   overflow: hidden;
 }
 
+/* ---- Composer AppShell (PR-05) ---- */
+
+.ic-app-shell {
+  height: 100dvh;
+  min-height: 100dvh;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ic-app-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns:
+    44px
+    clamp(224px, 22vw, 280px)
+    minmax(320px, 1fr)
+    clamp(260px, 24vw, 308px);
+  overflow: hidden;
+}
+
+.ic-app-main,
+.ic-app-panel {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ic-tool-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 6px;
+  border-right: 1px solid var(--core-border);
+  background: var(--core-surface);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.ic-tool-rail-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ic-tool-rail-button {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--core-muted);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.ic-tool-rail-button:hover:not(:disabled) {
+  background: var(--core-elevated);
+  color: var(--core-text);
+}
+
+.ic-tool-rail-button.is-active {
+  background: var(--core-accent);
+  color: var(--core-on-accent);
+}
+
+.ic-tool-rail-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ic-action-bar {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--core-border);
+  background: color-mix(in srgb, var(--core-bg) 88%, transparent 12%);
+  backdrop-filter: blur(18px);
+}
+
+.ic-action-bar-inner {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 16px;
+}
+
+.ic-action-bar-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--core-muted);
+  font-size: 0.75rem;
+}
+
+.ic-action-bar-tool-label {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .ic-preview-panel {
   flex: 1 1 auto;
   background: var(--core-bg);

@@ -36,6 +36,7 @@ export interface ComposerState {
   maskShape: 'square' | 'circle' | 'rounded-rectangle' | 'squircle';
   compareDefault: boolean;
   showKeylines: boolean;
+  showSnapping: boolean;
   history: IconCoreProject[];
   historyIndex: number;
 }
@@ -71,6 +72,7 @@ export type ComposerAction =
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_KEYLINES' }
+  | { type: 'TOGGLE_SNAPPING' }
   | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' };
 
 export const initialState: ComposerState = {
@@ -87,6 +89,7 @@ export const initialState: ComposerState = {
   maskShape: 'rounded-rectangle',
   compareDefault: false,
   showKeylines: false,
+  showSnapping: true,
   history: [],
   historyIndex: -1
 };
@@ -482,6 +485,9 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'TOGGLE_KEYLINES':
       return { ...state, showKeylines: !state.showKeylines };
+
+    case 'TOGGLE_SNAPPING':
+      return { ...state, showSnapping: !state.showSnapping };
 
     case 'SET_MASK_SHAPE':
       return { ...state, maskShape: action.payload };

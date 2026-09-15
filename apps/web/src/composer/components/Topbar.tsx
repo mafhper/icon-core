@@ -1,4 +1,4 @@
-import { Download, Save, FolderOpen, Undo2, Redo2, Info } from 'lucide-react';
+import { Save, FolderOpen, Info } from 'lucide-react';
 import { useState } from 'react';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
@@ -59,27 +59,6 @@ export const Topbar = () => {
 
         <div className="ic-topbar-actions">
           <div className="ic-topbar-cluster">
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'UNDO' })}
-              disabled={state.historyIndex <= 0}
-              title="Undo (Ctrl+Z)"
-              aria-label="Undo"
-            >
-              <Undo2 size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'REDO' })}
-              disabled={state.historyIndex >= state.history.length - 1}
-              title="Redo (Ctrl+Shift+Z)"
-              aria-label="Redo"
-            >
-              <Redo2 size={15} />
-            </button>
-          </div>
-
-          <div className="ic-topbar-cluster">
             <button type="button" onClick={handleOpen} title="Open project…" aria-label="Open project">
               <FolderOpen size={15} />
             </button>
@@ -87,17 +66,6 @@ export const Topbar = () => {
               <Save size={15} />
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => navigate('export-utilities')}
-            disabled={!state.project}
-            className="ic-topbar-export"
-            title="Export icon pack"
-          >
-            <Download size={15} />
-            <span>Export</span>
-          </button>
 
           <button
             type="button"
