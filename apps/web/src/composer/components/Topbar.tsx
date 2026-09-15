@@ -1,4 +1,4 @@
-import { Save, FolderOpen, Info } from 'lucide-react';
+import { Save, FolderOpen, Info, Menu } from 'lucide-react';
 import { useState } from 'react';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
@@ -6,7 +6,13 @@ import { parseProjectFile } from '../utils/projectGuard';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 import { AboutModal } from './AboutModal';
 
-export const Topbar = () => {
+interface TopbarProps {
+  onToggleLeft?: () => void;
+  leftOpen?: boolean;
+  showLeftToggle?: boolean;
+}
+
+export const Topbar = ({ onToggleLeft, leftOpen, showLeftToggle = false }: TopbarProps) => {
   const { state, dispatch, navigate } = useComposer();
   const toast = useToast();
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -46,16 +52,30 @@ export const Topbar = () => {
   return (
     <header className="ic-topbar">
       <div className="ic-topbar-inner">
-        <button
-          type="button"
-          className="ic-topbar-brand"
-          onClick={() => navigate('workspaces')}
-          title="Home — start or open a project"
-        >
-          <AnimatedIconCoreLogo className="ic-topbar-logo" animated={false} />
-          <span className="ic-topbar-title">{state.project?.metadata.name ?? 'Icon Core'}</span>
-          {state.isDirty && <span className="ic-topbar-dirty" title="Unsaved changes" aria-label="Unsaved changes" />}
-        </button>
+        <div className="ic-topbar-leading">
+          {showLeftToggle && (
+            <button
+              type="button"
+              className="ic-topbar-icon-button ic-topbar-panel-toggle"
+              onClick={onToggleLeft}
+              title="Toggle Layers panel"
+              aria-label="Toggle Layers panel"
+              aria-expanded={leftOpen ?? false}
+            >
+              <Menu size={17} />
+            </button>
+          )}
+          <button
+            type="button"
+            className="ic-topbar-brand"
+            onClick={() => navigate('workspaces')}
+            title="Home — start or open a project"
+          >
+            <AnimatedIconCoreLogo className="ic-topbar-logo" animated={false} />
+            <span className="ic-topbar-title">{state.project?.metadata.name ?? 'Icon Core'}</span>
+            {state.isDirty && <span className="ic-topbar-dirty" title="Unsaved changes" aria-label="Unsaved changes" />}
+          </button>
+        </div>
 
         <div className="ic-topbar-actions">
           <div className="ic-topbar-cluster">

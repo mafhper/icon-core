@@ -1,15 +1,26 @@
-import { Download, Grid3x3, Magnet, MousePointer2, Redo2, RotateCcw, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Download, Grid3x3, Magnet, MousePointer2, PanelRightOpen, Redo2, RotateCcw, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
+
+interface ActionBarProps {
+  onToggleInspector?: () => void;
+  inspectorOpen?: boolean;
+  showInspectorToggle?: boolean;
+}
 
 /**
  * Contextual action bar at the bottom of the Composer AppShell.
  *
  * Owns the global document actions (undo/redo), the active-tool readout and
  * the view controls (zoom, grid, snapping) plus the Export entry point, so the
- * header stays focused on project identity/file actions.
+ * header stays focused on project identity/file actions. On viewports below
+ * 1180px it also hosts the Inspector sheet toggle.
  */
-export const ActionBar = () => {
+export const ActionBar = ({
+  onToggleInspector,
+  inspectorOpen,
+  showInspectorToggle = false
+}: ActionBarProps) => {
   const { state, dispatch, navigate } = useComposer();
 
   return (
@@ -90,6 +101,18 @@ export const ActionBar = () => {
           >
             <Magnet size={15} />
           </button>
+          {showInspectorToggle && (
+            <button
+              type="button"
+              onClick={onToggleInspector}
+              className={`p-1.5 rounded ${inspectorOpen ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
+              title="Toggle Inspector panel"
+              aria-label="Toggle Inspector panel"
+              aria-expanded={inspectorOpen ?? false}
+            >
+              <PanelRightOpen size={15} />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => navigate('export-utilities')}
