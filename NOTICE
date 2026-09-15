@@ -1,0 +1,28 @@
+Icon Core
+
+Copyright (C) 2026 Icon Core contributors
+
+Third-party notices
+===================
+
+Apache License 2.0 components
+-----------------------------
+
+Rune Icons
+  Copyright 2026 Runeicons
+  Licensed under the Apache License, Version 2.0.
+  Source: https://github.com/RuneIcons/rune-icons
+  License text: LICENSES/runeicons-LICENSE.txt
+
+  This product includes icons from Rune Icons, distributed under the
+  Apache License, Version 2.0. The icon SVGs are used as the initial stock
+  for the built-in icon library of Icon Core.
+
+ISC components
+--------------
+
+Lucide
+  Copyright (c) Lucide Contributors
+  Licensed under the ISC License.
+  Source: https://lucide.dev
+  License: https://github.com/lucide-icons/lucide/blob/main/LICENSE

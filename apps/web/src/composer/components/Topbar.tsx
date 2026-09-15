@@ -1,12 +1,15 @@
-import { Download, Save, FolderOpen, Undo2, Redo2 } from 'lucide-react';
+import { Download, Save, FolderOpen, Undo2, Redo2, Info } from 'lucide-react';
+import { useState } from 'react';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import { parseProjectFile } from '../utils/projectGuard';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
+import { AboutModal } from './AboutModal';
 
 export const Topbar = () => {
   const { state, dispatch, navigate } = useComposer();
   const toast = useToast();
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   const handleSave = () => {
     if (!state.project) return;
@@ -95,8 +98,19 @@ export const Topbar = () => {
             <Download size={15} />
             <span>Export</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setIsAboutOpen(true)}
+            className="ic-topbar-icon-button"
+            title="About — version and third-party licenses"
+            aria-label="About Icon Core"
+          >
+            <Info size={15} />
+          </button>
         </div>
       </div>
+      {isAboutOpen && <AboutModal onClose={() => setIsAboutOpen(false)} />}
     </header>
   );
 };
