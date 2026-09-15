@@ -768,9 +768,10 @@ input[type='range'] {
   overflow: hidden;
 }
 
-/* ---- Composer AppShell (PR-05) ---- */
+/* ---- Composer AppShell (PR-05/PR-06) ---- */
 
 .ic-app-shell {
+  position: relative;
   height: 100dvh;
   min-height: 100dvh;
   min-width: 0;
@@ -781,14 +782,11 @@ input[type='range'] {
 
 .ic-app-body {
   flex: 1 1 auto;
+  position: relative;
   min-height: 0;
   min-width: 0;
   display: grid;
-  grid-template-columns:
-    44px
-    clamp(224px, 22vw, 280px)
-    minmax(320px, 1fr)
-    clamp(260px, 24vw, 308px);
+  grid-template-columns: 44px var(--panel-left, 240px) minmax(320px, 1fr) var(--panel-right, 288px);
   overflow: hidden;
 }
 
@@ -799,6 +797,56 @@ input[type='range'] {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.ic-app-main {
+  position: relative;
+}
+
+/* Resizable panel strips */
+
+.ic-panel-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  z-index: 10;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.ic-panel-resizer.is-left {
+  left: -4px;
+}
+
+.ic-panel-resizer.is-right {
+  right: -4px;
+}
+
+.ic-panel-resizer:hover,
+.ic-panel-resizer:active,
+.ic-panel-resizer:focus-visible {
+  background: color-mix(in srgb, var(--core-accent) 28%, transparent);
+  outline: none;
+}
+
+/* Overlay backdrop (drawer/sheet modes) */
+
+.ic-app-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  background: color-mix(in srgb, #000 45%, transparent);
+  animation: ic-backdrop-in 0.18s ease both;
+}
+
+@keyframes ic-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .ic-tool-rail {
@@ -875,6 +923,128 @@ input[type='range'] {
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* Topbar leading (hamburger + brand) */
+
+.ic-topbar-leading {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ic-topbar-panel-toggle {
+  display: none;
+}
+
+/* ---- Responsive-by-collapse (PR-06) ---- */
+
+/* Medium: 900–1179px — Inspector becomes a right-hand sheet */
+@media (max-width: 1179.98px) {
+  .ic-app-body {
+    grid-template-columns: 44px var(--panel-left, 240px) minmax(320px, 1fr);
+  }
+
+  .ic-panel-resizer.is-right {
+    display: none;
+  }
+
+  .ic-right-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(88vw, var(--panel-right, 320px));
+    z-index: 40;
+    transform: translateX(105%);
+    visibility: hidden;
+    transition: transform 0.18s ease, visibility 0s 0.18s;
+    background: var(--core-surface);
+    border-left: 1px solid var(--core-border);
+    box-shadow: -16px 0 32px rgba(0, 0, 0, 0.28);
+  }
+
+  .ic-right-panel[data-open] {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.18s ease;
+  }
+}
+
+/* Small: < 900px — Layers drawer + bottom tool rail; Inspector stays a sheet */
+@media (max-width: 899.98px) {
+  .ic-app-body {
+    grid-template-columns: minmax(320px, 1fr);
+  }
+
+  .ic-panel-resizer {
+    display: none;
+  }
+
+  .ic-topbar-panel-toggle {
+    display: inline-flex;
+  }
+
+  .ic-left-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: min(84vw, var(--panel-left, 260px));
+    z-index: 40;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform 0.18s ease, visibility 0s 0.18s;
+    background: var(--core-surface);
+    border-right: 1px solid var(--core-border);
+    box-shadow: 16px 0 32px rgba(0, 0, 0, 0.28);
+  }
+
+  .ic-left-panel[data-open],
+  .ic-right-panel[data-open] {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.18s ease;
+  }
+
+  /* Tool rail moves to the bottom edge */
+  .ic-tool-rail {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 44px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 6px 8px;
+    border-right: none;
+    border-top: 1px solid var(--core-border);
+    z-index: 5;
+    overflow: hidden;
+  }
+
+  .ic-tool-rail-group {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .ic-app-main {
+    padding-bottom: 44px;
+  }
+}
+
+/* Large: >= 1180px — full columns (default base styles already apply) */
+
+@media (prefers-reduced-motion: reduce) {
+  .ic-left-panel,
+  .ic-right-panel,
+  .ic-app-backdrop {
+    transition: none;
+    animation: none;
+  }
 }
 
 .ic-preview-panel {
