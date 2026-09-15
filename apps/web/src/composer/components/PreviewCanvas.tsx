@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ZoomIn, ZoomOut, Grid3x3, Circle, Square, RectangleHorizontal, RotateCcw, Crosshair } from 'lucide-react';
+import { Circle, Square, RectangleHorizontal, Crosshair } from 'lucide-react';
 import type { IconLayer, IconVariant, IconCoreProject } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
-import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
@@ -163,13 +162,15 @@ export const PreviewCanvas = () => {
             return { x: item.transform.x, y: item.transform.y, width: s.width * item.transform.scale, height: s.height * item.transform.scale };
           });
         const safeInset = project.canvas.safeArea ? project.canvas.safeArea.inset * canvasSize : 0;
-        const snap = computeSnap(
-          { x: rawX, y: rawY, width: size.width * drag.originScale, height: size.height * drag.originScale },
-          others,
-          canvasSize,
-          safeInset,
-          SNAP_THRESHOLD_PX / state.zoom
-        );
+        const snap = state.showSnapping
+          ? computeSnap(
+              { x: rawX, y: rawY, width: size.width * drag.originScale, height: size.height * drag.originScale },
+              others,
+              canvasSize,
+              safeInset,
+              SNAP_THRESHOLD_PX / state.zoom
+            )
+          : { x: rawX, y: rawY, guides: [] as SnapGuide[] };
         setGuides(snap.guides);
         scheduleTransform(drag.id, { ...drag.origin, x: Math.round(snap.x), y: Math.round(snap.y) });
       } else {
@@ -225,42 +226,6 @@ export const PreviewCanvas = () => {
           />
         </div>
         <div className="ic-toolbar-group">
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'SET_ZOOM', payload: Math.max(ZOOM_MIN, state.zoom - ZOOM_STEP) })}
-            className="p-1.5 rounded hover:bg-core-elevated"
-            title="Zoom out"
-          >
-            <ZoomOut size={16} />
-          </button>
-          <span className="text-xs font-mono tabular-nums">{(state.zoom * 100).toFixed(0)}%</span>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'SET_ZOOM', payload: Math.min(ZOOM_MAX, state.zoom + ZOOM_STEP) })}
-            className="p-1.5 rounded hover:bg-core-elevated"
-            title="Zoom in"
-          >
-            <ZoomIn size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'SET_ZOOM', payload: 1 })}
-            className="p-1.5 rounded hover:bg-core-elevated"
-            title="Reset zoom"
-          >
-            <RotateCcw size={16} />
-          </button>
-        </div>
-
-        <div className="ic-toolbar-group">
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'TOGGLE_GRID' })}
-            className={`p-1.5 rounded ${state.showGrid ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-            title="Toggle grid"
-          >
-            <Grid3x3 size={16} />
-          </button>
           <button
             type="button"
             onClick={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
