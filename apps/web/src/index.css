@@ -1151,8 +1151,39 @@ input[type='range'] {
   justify-content: center;
   overflow: auto;
   padding: 40px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--core-bg) 92%, #fff 8%), var(--core-bg));
+  background: var(--core-bg);
+}
+
+/* Work area backdrop — pleasant, subtle, and clearly DISTINCT from the icon
+   image so the desk always reads as the desk. User-customizable via the
+   Sidebar → Canvas inspector (SET_EDITOR_BACKDROP). */
+.ic-edit-stage[data-editor-backdrop='dots'] {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--core-fg) 18%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 22px 22px;
+}
+
+.ic-edit-stage[data-editor-backdrop='grid'] {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--core-fg) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--core-fg) 12%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.ic-edit-stage[data-editor-backdrop='plain'] {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--core-bg) 92%, #e6ecf5 8%),
+    color-mix(in srgb, var(--core-bg) 84%, #e6ecf5 16%)
+  );
+}
+
+.ic-edit-stage[data-editor-backdrop='dots' i],
+.ic-edit-stage[data-editor-backdrop='plain' i] {
+  background-size: auto;
 }
 
 .ic-drop-zone {
@@ -2148,7 +2179,40 @@ input[type='range'] {
     padding: 16px;
   }
 
-  .ic-drop-zone {
+.ic-edit-stage[data-editor-backdrop='dots'],
+.ic-edit-stage[data-editor-backdrop='grid'],
+.ic-edit-stage[data-editor-backdrop='plain'] {
+  background-color: color-mix(in srgb, var(--core-bg) 88%, #d8dee9 12%);
+}
+
+/* Work area patterns — distinct from the icon image so the editable stage
+   always reads as the "desk", never as the asset itself. */
+.ic-edit-stage[data-editor-backdrop='dots'] {
+  background-image:
+    radial-gradient(color-mix(in srgb, var(--core-fg) 16%, transparent) 1px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+
+.ic-edit-stage[data-editor-backdrop='grid'] {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--core-fg) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--core-fg) 7%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.ic-edit-stage[data-editor-backdrop='plain'] {
+  background-color: color-mix(in srgb, var(--core-bg) 78%, #dfe7f2 22%);
+  background-image: none;
+}
+
+/* The default (no explicit data-editor-backdrop) keeps a subtle plain mid-tone
+   without fighting the icon */
+.ic-edit-stage:not([data-editor-backdrop]) {
+  background-image: none;
+  background-color: color-mix(in srgb, var(--core-bg) 94%, #cbd6e4 6%);
+}
+
+.ic-drop-zone {
     padding: 24px 18px;
   }
 

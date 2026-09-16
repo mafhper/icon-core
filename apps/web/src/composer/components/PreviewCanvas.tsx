@@ -6,14 +6,13 @@ import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
-import { fillToCss, layerSize } from '../utils/layerStyle';
+import { layerSize } from '../utils/layerStyle';
 
 const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
 import { VariantPanel } from './VariantPanel';
 import { KeylineOverlay } from './KeylineOverlay';
 import { LayerContextMenu } from './LayerContextMenu';
-import { AppearanceSwitcher } from './AppearanceSwitcher';
 
 type DragMode = 'move' | 'scale' | 'rotate';
 
@@ -104,7 +103,6 @@ export const PreviewCanvas = () => {
 
   const canvasSize = project.canvas.size;
   const displaySize = canvasSize * state.zoom;
-  const variantBackground = project.variants?.[state.activeVariant]?.canvas?.background ?? project.canvas.background;
   const frameRadius = state.maskShape === 'circle' ? '50%' : state.maskShape === 'rounded-rectangle' ? '24px' : '4px';
 
   const scheduleTransform = (id: string, transform: IconLayer['transform']) => {
@@ -215,18 +213,7 @@ export const PreviewCanvas = () => {
 
   return (
     <div className="ic-preview-panel">
-<div className="ic-canvas-toolbar">
-        <div className="ic-toolbar-group">
-          <button
-            type="button"
-            className="ic-bg-swatch"
-            style={{ background: fillToCss(variantBackground) }}
-            onClick={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: null } })}
-            title="Edit canvas background"
-            aria-label="Edit canvas background"
-          />
-        </div>
-
+      <div className="ic-canvas-toolbar">
         <div className="ic-toolbar-group">
           <button
             type="button"
@@ -241,6 +228,7 @@ export const PreviewCanvas = () => {
       </div>
       <div
         className="ic-edit-stage"
+        data-editor-backdrop={state.editorBackdrop}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
@@ -330,8 +318,6 @@ export const PreviewCanvas = () => {
         {menu && (
           <LayerContextMenu x={menu.x} y={menu.y} layerId={menu.layerId} onClose={() => setMenu(null)} />
         )}
-
-        <AppearanceSwitcher />
       </div>
     </div>
   );

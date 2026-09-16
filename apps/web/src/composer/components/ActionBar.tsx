@@ -2,6 +2,7 @@ import { Circle, Download, Grid3x3, Magnet, PanelLeftOpen, PanelRightOpen, Recta
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { SizePreview } from './SizePreview';
+import { AppearanceSwitcher } from './AppearanceSwitcher';
 
 const PLATFORM_LABELS: Record<string, string> = {
   square: 'Square',
@@ -140,6 +141,7 @@ export const ActionBar = ({
                 ? <Square size={15} />
                 : <RectangleHorizontal size={15} />}
           </button>
+          {state.project && <AppearanceSwitcher />}
           {state.project && <SizePreview />}
           {showInspectorToggle && (
             <button

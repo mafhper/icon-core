@@ -1,95 +1,38 @@
-import { useEffect, useRef, useState } from 'react';
-import type { IconCoreProject, IconVariant } from '@iconcore/shared';
-import { renderProject, createCanvasBackend } from '@iconcore/renderer';
+import { Contrast, Image, Moon, Sun } from 'lucide-react';
+import type { IconVariant } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
 
-const APPEARANCES: Array<{ id: IconVariant; label: string }> = [
-  { id: 'default', label: 'Default' },
-  { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
-  { id: 'mono', label: 'Mono' }
+const APPEARANCES: Array<{ id: IconVariant; label: string; icon: typeof Sun }> = [
+  { id: 'default', label: 'Appearance: Default', icon: Image },
+  { id: 'light', label: 'Appearance: Light', icon: Sun },
+  { id: 'dark', label: 'Appearance: Dark', icon: Moon },
+  { id: 'mono', label: 'Appearance: Mono', icon: Contrast }
 ];
 
-const THUMB_RENDER = 32;
-
 /**
- * Render one thumbnail per appearance variant through the SAME Canvas2D
- * pipeline used for export, so the previews match the exported asset.
- */
-const useVariantThumbs = (project: IconCoreProject | null): Map<IconVariant, string> => {
-  const [urls, setUrls] = useState<Map<IconVariant, string>>(new Map());
-  const ref = useRef<Map<IconVariant, string>>(new Map());
-
-  useEffect(() => {
-    if (!project || project.layers.length === 0) {
-      setUrls(new Map());
-      return;
-    }
-    let cancelled = false;
-    const backend = createCanvasBackend();
-
-    const run = async () => {
-      const entries: Array<[IconVariant, string]> = [];
-      for (const { id } of APPEARANCES) {
-        try {
-          const blob = await renderProject(project, id, THUMB_RENDER, backend);
-          entries.push([id, URL.createObjectURL(blob)]);
-        } catch (err) {
-          console.error(`Appearance thumb ${id} failed:`, err);
-        }
-      }
-      if (cancelled) {
-        entries.forEach(([, url]) => URL.revokeObjectURL(url));
-        return;
-      }
-      ref.current.forEach((url) => URL.revokeObjectURL(url));
-      const map = new Map(entries);
-      ref.current = map;
-      setUrls(map);
-    };
-
-    const timer = setTimeout(() => void run(), 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      backend.destroy();
-    };
-  }, [project]);
-
-  useEffect(() => () => { ref.current.forEach((url) => URL.revokeObjectURL(url)); }, []);
-  return urls;
-};
-
-/**
- * Floating appearance switcher, docked to the bottom of the canvas stage
- * (RuneIcons-style mini toolbar). The active variant is highlighted; the
- * others are dimmed to indicate only one mode is being edited at a time.
+ * Appearance variant switcher for the app action bar (RuneIcons-style).
+ * Uses distinct SVG icons per mode — default (image), light (sun), dark
+ * (moon), mono (contrast) — so each variant is recognizable at a glance,
+ * unlike rendered thumbnails which all looked identical.
  */
 export const AppearanceSwitcher = () => {
   const { state, dispatch } = useComposer();
-  const thumbs = useVariantThumbs(state.project);
-
-  if (!state.project) return null;
 
   return (
-    <div className="ic-floating-appearance" role="group" aria-label="Icon appearance variants">
-      {APPEARANCES.map((appearance) => {
-        const active = state.activeVariant === appearance.id;
+    <div className="ic-toolbar-group" role="group" aria-label="Icon appearance variants">
+      {APPEARANCES.map(({ id, label, icon: Icon }) => {
+        const active = state.activeVariant === id;
         return (
           <button
-            key={appearance.id}
+            key={id}
             type="button"
-            className={`ic-appearance-thumb ${active ? 'is-active' : ''}`}
-            onClick={() => dispatch({ type: 'SET_ACTIVE_VARIANT', payload: appearance.id })}
-            title={appearance.label}
-            aria-label={appearance.label}
+            onClick={() => dispatch({ type: 'SET_ACTIVE_VARIANT', payload: id })}
+            className={`p-1.5 rounded ${active ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
+            title={label}
+            aria-label={label}
             aria-pressed={active}
           >
-            <span className="ic-thumb-frame">
-              {thumbs.get(appearance.id)
-                ? <img src={thumbs.get(appearance.id)} alt="" />
-                : <span className="ic-thumb-pending" />}
-            </span>
+            <Icon size={15} />
           </button>
         );
       })}
