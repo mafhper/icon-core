@@ -20,18 +20,23 @@
 :root,
 [data-theme='dark'] {
   color-scheme: dark;
-  --core-bg: #0a0b0d;
-  --core-bg-top: #0d0e11;
-  --core-bg-bottom: #07080a;
+  --core-bg: #0b0c0e;
+  --core-bg-top: #0f1013;
+  --core-bg-bottom: #08090b;
   --core-glow-1: rgba(255, 255, 255, 0.05);
   --core-glow-2: rgba(255, 255, 255, 0.02);
-  --core-surface: #101114;
-  --core-elevated: #16171a;
-  --core-border: rgba(255, 255, 255, 0.1);
+  --core-surface: #131418;
+  --core-elevated: #1b1d22;
+  --core-overlay: #23252b;
+  --core-border: rgba(255, 255, 255, 0.08);
   --core-border-soft: rgba(255, 255, 255, 0.06);
-  --core-text: #edeef0;
-  --core-muted: #91959c;
-  --core-accent: #3d6fe0;
+  --core-text: #e6e7ea;
+  --core-muted: #9a9ca3;
+  --core-faint: #6b6d74;
+  --core-accent: #4a7cf0;
+  --core-accent-hover: #5c8bf5;
+  --core-accent-soft: color-mix(in oklab, var(--core-accent) 14%, transparent);
+  --core-accent-ring: color-mix(in oklab, var(--core-accent) 70%, transparent);
   --core-on-accent: #ffffff;
   --core-success: #7fb899;
   --core-warning: #d0a35e;
@@ -50,18 +55,23 @@
 
 [data-theme='light'] {
   color-scheme: light;
-  --core-bg: #f1f1f2;
+  --core-bg: #f2f2f3;
   --core-bg-top: #fafafa;
-  --core-bg-bottom: #e9e9ea;
+  --core-bg-bottom: #ececef;
   --core-glow-1: rgba(255, 255, 255, 0.7);
   --core-glow-2: rgba(0, 0, 0, 0.04);
   --core-surface: #ffffff;
-  --core-elevated: #f6f6f7;
-  --core-border: rgba(0, 0, 0, 0.1);
-  --core-border-soft: rgba(0, 0, 0, 0.06);
-  --core-text: #141518;
-  --core-muted: #6b6e74;
-  --core-accent: #2f5ed6;
+  --core-elevated: #eff0f2;
+  --core-overlay: #ffffff;
+  --core-border: rgba(0, 0, 0, 0.08);
+  --core-border-soft: rgba(23, 25, 38, 0.06);
+  --core-text: #16171a;
+  --core-muted: #6a6d73;
+  --core-faint: #8f9297;
+  --core-accent: #3a6ce5;
+  --core-accent-hover: #2f5ed6;
+  --core-accent-soft: color-mix(in oklab, var(--core-accent) 14%, transparent);
+  --core-accent-ring: color-mix(in oklab, var(--core-accent) 70%, transparent);
   --core-on-accent: #ffffff;
   --core-success: #2f6e4a;
   --core-warning: #8f6b2f;
@@ -148,7 +158,7 @@ button {
 }
 
 .card-surface {
-  background: linear-gradient(165deg, color-mix(in srgb, var(--core-surface) 88%, #fff 12%), var(--core-surface));
+  background: var(--core-surface);
   border-color: var(--core-border);
   box-shadow:
     inset 0 1px 0 var(--core-inset-top),
@@ -162,7 +172,7 @@ button {
     inset 0 1px 0 var(--core-inset-top),
     inset 0 -1px 0 var(--core-inset-bottom),
     0 10px 24px var(--core-shadow);
-  transition: transform 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), border-color 0.18s cubic-bezier(0.2, 0, 0, 1), filter 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .core-btn:hover {
@@ -287,8 +297,7 @@ input[type='range'] {
 .ic-inspector,
 .ic-context-menu {
   border: 1px solid var(--core-border);
-  background:
-    linear-gradient(155deg, color-mix(in srgb, var(--core-surface) 82%, #fff 18%), var(--core-surface));
+  background: var(--core-surface);
   box-shadow:
     inset 0 1px 0 var(--core-inset-top),
     inset 0 -1px 0 var(--core-inset-bottom),
@@ -354,7 +363,7 @@ input[type='range'] {
   background: color-mix(in srgb, var(--core-elevated) 86%, #fff 14%);
   font-size: 0.82rem;
   font-weight: 740;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), border-color 0.18s cubic-bezier(0.2, 0, 0, 1), background 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-button:hover,
@@ -365,9 +374,9 @@ input[type='range'] {
 
 .ic-button-primary {
   color: var(--core-on-accent);
-  border-color: color-mix(in srgb, var(--core-accent) 72%, var(--core-gold) 28%);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--core-accent) 76%, #fff 24%), var(--core-gold));
+  border-color: var(--core-accent-hover);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--core-accent), #fff 10%), var(--core-accent));
+  background: linear-gradient(in oklab 180deg, color-mix(in oklab, var(--core-accent), white 10%), var(--core-accent));
 }
 
 .ic-workspace-device {
@@ -489,8 +498,7 @@ input[type='range'] {
 }
 
 .ic-workspace-card-featured {
-  background:
-    linear-gradient(155deg, color-mix(in srgb, var(--core-surface) 70%, var(--core-gold) 30%), var(--core-surface));
+  background: var(--core-surface);
 }
 
 .ic-card-icon {
@@ -566,7 +574,7 @@ input[type='range'] {
   background: color-mix(in srgb, var(--core-bg) 62%, transparent);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  animation: ic-modal-fade 0.18s ease;
+  animation: ic-modal-fade 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
 
 @keyframes ic-modal-fade {
@@ -582,8 +590,7 @@ input[type='range'] {
   border: 1px solid var(--core-border);
   border-radius: 24px;
   padding: clamp(22px, 3.5vw, 34px);
-  background:
-    linear-gradient(155deg, color-mix(in srgb, var(--core-surface) 82%, #fff 18%), var(--core-surface));
+  background: var(--core-surface);
   box-shadow:
     inset 0 1px 0 var(--core-inset-top),
     0 30px 80px var(--core-shadow);
@@ -664,8 +671,7 @@ input[type='range'] {
 }
 
 .ic-welcome-card.is-primary {
-  background:
-    linear-gradient(155deg, color-mix(in srgb, var(--core-surface) 70%, var(--core-gold) 24%), var(--core-surface));
+  background: var(--core-surface);
 }
 
 .ic-welcome-card h2 {
@@ -797,6 +803,8 @@ input[type='range'] {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* physical-panel trick: catches light at the top edge instead of a gradient */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .ic-app-main {
@@ -837,7 +845,7 @@ input[type='range'] {
   inset: 0;
   z-index: 35;
   background: color-mix(in srgb, #000 45%, transparent);
-  animation: ic-backdrop-in 0.18s ease both;
+  animation: ic-backdrop-in 0.18s cubic-bezier(0.2, 0, 0, 1) both;
 }
 
 @keyframes ic-backdrop-in {
@@ -877,7 +885,7 @@ input[type='range'] {
   justify-content: center;
   border-radius: 8px;
   color: var(--core-muted);
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: background 0.12s cubic-bezier(0.2, 0, 0, 1), color 0.12s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-tool-rail-button:hover:not(:disabled) {
@@ -959,7 +967,7 @@ input[type='range'] {
     z-index: 40;
     transform: translateX(105%);
     visibility: hidden;
-    transition: transform 0.18s ease, visibility 0s 0.18s;
+    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.18s;
     background: var(--core-surface);
     border-left: 1px solid var(--core-border);
     box-shadow: -16px 0 32px rgba(0, 0, 0, 0.28);
@@ -968,7 +976,7 @@ input[type='range'] {
   .ic-right-panel[data-open] {
     transform: translateX(0);
     visibility: visible;
-    transition: transform 0.18s ease;
+    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 }
 
@@ -995,7 +1003,7 @@ input[type='range'] {
     z-index: 40;
     transform: translateX(-105%);
     visibility: hidden;
-    transition: transform 0.18s ease, visibility 0s 0.18s;
+    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.18s;
     background: var(--core-surface);
     border-right: 1px solid var(--core-border);
     box-shadow: 16px 0 32px rgba(0, 0, 0, 0.28);
@@ -1005,7 +1013,7 @@ input[type='range'] {
   .ic-right-panel[data-open] {
     transform: translateX(0);
     visibility: visible;
-    transition: transform 0.18s ease;
+    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 
   /* Tool rail moves to the bottom edge */
@@ -1145,7 +1153,7 @@ input[type='range'] {
   background: transparent;
   color: var(--core-muted);
   cursor: pointer;
-  transition: background 0.16s ease, color 0.16s ease;
+  transition: background 0.16s cubic-bezier(0.2, 0, 0, 1), color 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-topbar-cluster button:hover:not(:disabled) {
@@ -1165,15 +1173,15 @@ input[type='range'] {
   min-height: 34px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--core-accent) 72%, var(--core-gold) 28%);
+  border: 1px solid var(--core-accent-hover);
   color: var(--core-on-accent);
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--core-accent) 76%, #fff 24%), var(--core-gold));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--core-accent), #fff 10%), var(--core-accent));
+  background: linear-gradient(in oklab 180deg, color-mix(in oklab, var(--core-accent), white 10%), var(--core-accent));
   font-size: 0.78rem;
   font-weight: 740;
   letter-spacing: 0.02em;
   cursor: pointer;
-  transition: transform 0.16s ease, opacity 0.16s ease;
+  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1), opacity 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-topbar-export:hover:not(:disabled) {
@@ -1246,7 +1254,7 @@ input[type='range'] {
   padding: clamp(24px, 5vw, 48px);
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.18s ease, background 0.18s ease;
+  transition: border-color 0.18s cubic-bezier(0.2, 0, 0, 1), background 0.18s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-drop-zone:hover,
@@ -1545,7 +1553,7 @@ input[type='range'] {
   font-size: 0.78rem;
   font-weight: 640;
   white-space: nowrap;
-  transition: background 0.16s ease, color 0.16s ease;
+  transition: background 0.16s cubic-bezier(0.2, 0, 0, 1), color 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-segmented button:hover {
@@ -1623,7 +1631,7 @@ input[type='range'] {
 }
 
 .ic-quality-caret {
-  transition: transform 0.16s ease;
+  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-quality-caret.is-open {
@@ -1737,7 +1745,7 @@ input[type='range'] {
   color: var(--core-text);
   font-size: 11px;
   font-weight: 600;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition: border-color 0.15s cubic-bezier(0.2, 0, 0, 1), background 0.15s cubic-bezier(0.2, 0, 0, 1), color 0.15s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-variant-action:hover {
@@ -1902,7 +1910,7 @@ input[type='range'] {
   height: 18px;
   border-radius: 6px;
   border: 1px solid var(--core-border);
-  transition: transform 0.12s ease, border-color 0.12s ease;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), border-color 0.12s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-gradient-preset:hover {
@@ -2039,7 +2047,7 @@ input[type='range'] {
     linear-gradient(-45deg, transparent 75%, #e9edf3 75%) 0 0 / 12px 12px,
     #ffffff;
   box-shadow: 0 0 0 1px var(--core-border);
-  transition: box-shadow 0.16s ease;
+  transition: box-shadow 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-appearance-thumb img {
@@ -2461,7 +2469,7 @@ input[type='range'] {
   padding: 0.72rem 0.85rem;
   font-weight: 700;
   box-shadow: inset 0 1px 0 var(--core-inset-top), inset 0 -1px 0 var(--core-inset-bottom);
-  transition: filter 0.16s ease;
+  transition: filter 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .settings-btn:hover {
@@ -2631,7 +2639,7 @@ input[type='range'] {
   padding: 2px;
   border-radius: 6px;
   color: var(--core-muted);
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s cubic-bezier(0.2, 0, 0, 1), background 0.15s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-toast-close:hover {
@@ -2694,7 +2702,7 @@ textarea:focus-visible,
   background: var(--core-surface);
   color: var(--core-muted);
   cursor: pointer;
-  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+  transition: background 0.16s cubic-bezier(0.2, 0, 0, 1), color 0.16s cubic-bezier(0.2, 0, 0, 1), border-color 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ic-topbar-icon-button:hover {
