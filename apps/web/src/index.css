@@ -791,8 +791,8 @@ input[type='range'] {
   position: relative;
   min-height: 0;
   min-width: 0;
-  display: grid;
-  grid-template-columns: 44px var(--panel-left, 240px) minmax(320px, 1fr) var(--panel-right, 288px);
+  display: flex;
+  align-items: stretch;
   overflow: hidden;
 }
 
@@ -807,8 +807,35 @@ input[type='range'] {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/* Side panels are always visible columns that can be collapsed independently
+   (PR-08 v2): width is driven by --panel-left/--panel-right, and the shell
+   sets those to 0px when a panel is collapsed. Canvas never moves; it simply
+   reflows into the freed space (Icon Composer-style consistency). */
+.ic-left-panel {
+  flex: 0 0 auto;
+  width: var(--panel-left, 240px);
+  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ic-right-panel {
+  flex: 0 0 auto;
+  width: var(--panel-right, 288px);
+  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ic-left-panel:not([data-open]),
+.ic-right-panel:not([data-open]) {
+  width: 0;
+  opacity: 0;
+  visibility: hidden;
+  border: 0;
+  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.2s;
+}
+
 .ic-app-main {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Resizable panel strips */
@@ -840,24 +867,9 @@ input[type='range'] {
 
 /* Overlay backdrop (drawer/sheet modes) */
 
-.ic-app-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 35;
-  background: color-mix(in srgb, #000 45%, transparent);
-  animation: ic-backdrop-in 0.18s cubic-bezier(0.2, 0, 0, 1) both;
-}
-
-@keyframes ic-backdrop-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 .ic-tool-rail {
+  flex: 0 0 44px;
+  width: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -929,156 +941,33 @@ input[type='range'] {
 }
 
 .ic-topbar-panel-toggle {
-  display: none;
+  display: inline-flex;
 }
 
-/* ---- Responsive-by-collapse (PR-06) + Inspector dock (PR-08) ---- */
+/* ---- Collapsible side panels (PR-08 v2) ----
+   Both side panels are always-visibile columns at every viewport width.
+   Each can be collapsed independently from its toggle; the canvas reflows
+   into the freed space instead of being covered or pushed around. */
 
-/* Medium: 900–1179px — the Inspector becomes a persistent bottom dock below
-   the canvas (Icon Composer pattern): no overlay, always open on entry so the
-   user can tweak controls without reopening it on every adjustment. */
+/* Narrower viewports: cap panel widths so a fully-open panel never eats the
+   whole screen and hide the resize handles (columns still work). */
 @media (max-width: 1179.98px) {
-  .ic-app-body {
-    grid-template-columns: 44px var(--panel-left, 240px) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'rail left main'
-      'rail left inspector';
-  }
-
-  .ic-tool-rail {
-    grid-area: rail;
-  }
-
-  .ic-left-panel {
-    grid-area: left;
-  }
-
-  .ic-app-main {
-    grid-area: main;
-    min-height: 0;
-  }
-
-  .ic-panel-resizer.is-right {
-    display: none;
-  }
-
-  .ic-right-panel {
-    grid-area: inspector;
-    position: static;
-    width: auto;
-    max-height: min(34%, 320px);
-    border-left: 0;
-    border-top: 1px solid var(--core-border);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  }
-
-  .ic-right-panel[data-open] {
-    display: flex;
-  }
-
-  .ic-right-panel:not([data-open]) {
-    display: none;
-  }
-}
-
-/* Small: < 900px — Layers drawer + bottom tool rail; Inspector becomes a
-   floating right-hand sheet again (narrow screens have no room for a dock). */
-@media (max-width: 899.98px) {
-  .ic-app-body {
-    grid-template-columns: minmax(320px, 1fr);
-    grid-template-rows: auto;
-    grid-template-areas: 'main';
-  }
-
-  .ic-tool-rail {
-    grid-area: auto;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 44px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 6px 8px;
-    border-right: none;
-    border-top: 1px solid var(--core-border);
-    z-index: 5;
-    overflow: hidden;
-  }
-
-  .ic-tool-rail-group {
-    flex-direction: row;
-    gap: 8px;
-  }
-
   .ic-panel-resizer {
     display: none;
   }
 
-  .ic-topbar-panel-toggle {
-    display: inline-flex;
+  .ic-left-panel[data-open] {
+    width: min(86vw, var(--panel-left, 240px));
   }
 
-  .ic-left-panel {
-    grid-area: auto;
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: min(84vw, var(--panel-left, 260px));
-    z-index: 40;
-    transform: translateX(-105%);
-    visibility: hidden;
-    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.18s;
-    background: var(--core-surface);
-    border-right: 1px solid var(--core-border);
-    box-shadow: 16px 0 32px rgba(0, 0, 0, 0.28);
-  }
-
-  .ic-app-main {
-    grid-area: main;
-    padding-bottom: 44px;
-  }
-
-  .ic-right-panel {
-    grid-area: auto;
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(88vw, var(--panel-right, 320px));
-    z-index: 40;
-    transform: translateX(105%);
-    visibility: hidden;
-    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.18s;
-    background: var(--core-surface);
-    border-left: 1px solid var(--core-border);
-    border-top: 0;
-    box-shadow: -16px 0 32px rgba(0, 0, 0, 0.28);
-  }
-
-  .ic-left-panel[data-open],
   .ic-right-panel[data-open] {
-    transform: translateX(0);
-    visibility: visible;
-    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  .ic-right-panel:not([data-open]) {
-    display: flex;
-    visibility: hidden;
+    width: min(86vw, var(--panel-right, 288px));
   }
 }
 
-/* Large: >= 1180px — full columns (default base styles already apply) */
-
 @media (prefers-reduced-motion: reduce) {
   .ic-left-panel,
-  .ic-right-panel,
-  .ic-app-backdrop {
+  .ic-right-panel {
     transition: none;
     animation: none;
   }
