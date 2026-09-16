@@ -10,7 +10,11 @@ const RIGHT_MAX = 380;
 
 const readStored = (key: string, fallback: number): number => {
   try {
-    const value = Number(window.localStorage.getItem(key));
+    const raw = window.localStorage.getItem(key);
+    // Number(null) === 0, which would collapse panels to 0px on first run;
+    // a missing key must fall back to the default width.
+    if (raw === null) return fallback;
+    const value = Number(raw);
     return Number.isFinite(value) ? value : fallback;
   } catch {
     return fallback;
