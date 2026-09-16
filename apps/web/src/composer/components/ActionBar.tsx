@@ -1,4 +1,4 @@
-import { Download, Grid3x3, Magnet, MousePointer2, PanelRightOpen, Redo2, RotateCcw, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Download, Grid3x3, Magnet, PanelRightOpen, Redo2, RotateCcw, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 
@@ -47,11 +47,6 @@ export const ActionBar = ({
           >
             <Redo2 size={15} />
           </button>
-        </div>
-
-        <div className="ic-action-bar-context">
-          <MousePointer2 size={14} aria-hidden />
-          <span className="ic-action-bar-tool-label">Select</span>
         </div>
 
         <div className="ic-toolbar-group">

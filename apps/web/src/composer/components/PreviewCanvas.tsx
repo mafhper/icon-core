@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Circle, Square, RectangleHorizontal, Crosshair } from 'lucide-react';
+import { Crosshair } from 'lucide-react';
 import type { IconLayer, IconVariant, IconCoreProject } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
@@ -234,32 +234,6 @@ export const PreviewCanvas = () => {
           >
             <Crosshair size={16} />
           </button>
-          <div className="ic-mask-controls">
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'SET_MASK_SHAPE', payload: 'square' })}
-              className={`p-1.5 rounded ${state.maskShape === 'square' ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-              title="Square preview mask"
-            >
-              <Square size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'SET_MASK_SHAPE', payload: 'circle' })}
-              className={`p-1.5 rounded ${state.maskShape === 'circle' ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-              title="Circle preview mask"
-            >
-              <Circle size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'SET_MASK_SHAPE', payload: 'rounded-rectangle' })}
-              className={`p-1.5 rounded ${state.maskShape === 'rounded-rectangle' ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-              title="Rounded preview mask"
-            >
-              <RectangleHorizontal size={16} />
-            </button>
-          </div>
         </div>
       </div>
 

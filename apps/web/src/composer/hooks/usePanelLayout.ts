@@ -65,8 +65,10 @@ export const usePanelLayout = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [closePanels]);
 
-  // Drawer/sheet should never remain open after resizing into large layout, and
-  // overlays collapse when leaving large (columns) for medium/small viewports.
+  // Drawer/sheet should never remain open after resizing into large layout.
+  // Entering medium opens the persistent Inspector dock (bottom bar below the
+  // canvas) so users are not forced to reopen it for every adjustment; small
+  // viewports keep the Inspector as a collapsible sheet.
   const wasLargeRef = useRef(isLarge);
   useEffect(() => {
     const previousLarge = wasLargeRef.current;
@@ -76,10 +78,14 @@ export const usePanelLayout = () => {
       setInspectorOpen(false);
       return;
     }
+    if (isMedium) {
+      setInspectorOpen(true);
+      return;
+    }
     if (isSmall) {
       setInspectorOpen(false);
     }
-  }, [isLarge, isSmall]);
+  }, [isLarge, isMedium, isSmall]);
 
   const startResize = useCallback(
     (side: 'left' | 'right') =>
@@ -113,8 +119,10 @@ export const usePanelLayout = () => {
     [leftWidth, rightWidth]
   );
 
-  const overlayBackdropVisible =
-    (isSmall && leftOpen) || ((isSmall || isMedium) && inspectorOpen);
+  // Overlay backdrop only matters where panels actually float: the small-mode
+  // Layers drawer and the small-mode Inspector sheet. Medium uses a persistent
+  // bottom dock (no backdrop), large uses full columns.
+  const overlayBackdropVisible = isSmall && (leftOpen || inspectorOpen);
 
   return {
     isSmall,
