@@ -791,8 +791,8 @@ input[type='range'] {
   position: relative;
   min-height: 0;
   min-width: 0;
-  display: grid;
-  grid-template-columns: 44px var(--panel-left, 240px) minmax(320px, 1fr) var(--panel-right, 288px);
+  display: flex;
+  align-items: stretch;
   overflow: hidden;
 }
 
@@ -807,8 +807,35 @@ input[type='range'] {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/* Side panels are always visible columns that can be collapsed independently
+   (PR-08 v2): width is driven by --panel-left/--panel-right, and the shell
+   sets those to 0px when a panel is collapsed. Canvas never moves; it simply
+   reflows into the freed space (Icon Composer-style consistency). */
+.ic-left-panel {
+  flex: 0 0 auto;
+  width: var(--panel-left, 240px);
+  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ic-right-panel {
+  flex: 0 0 auto;
+  width: var(--panel-right, 288px);
+  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ic-left-panel:not([data-open]),
+.ic-right-panel:not([data-open]) {
+  width: 0;
+  opacity: 0;
+  visibility: hidden;
+  border: 0;
+  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.2s;
+}
+
 .ic-app-main {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Resizable panel strips */
@@ -840,24 +867,9 @@ input[type='range'] {
 
 /* Overlay backdrop (drawer/sheet modes) */
 
-.ic-app-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 35;
-  background: color-mix(in srgb, #000 45%, transparent);
-  animation: ic-backdrop-in 0.18s cubic-bezier(0.2, 0, 0, 1) both;
-}
-
-@keyframes ic-backdrop-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 .ic-tool-rail {
+  flex: 0 0 44px;
+  width: 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -919,20 +931,6 @@ input[type='range'] {
   padding: 6px 16px;
 }
 
-.ic-action-bar-context {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--core-muted);
-  font-size: 0.75rem;
-}
-
-.ic-action-bar-tool-label {
-  font-family: var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 /* Topbar leading (hamburger + brand) */
 
 .ic-topbar-leading {
@@ -942,114 +940,30 @@ input[type='range'] {
   gap: 10px;
 }
 
-.ic-topbar-panel-toggle {
-  display: none;
-}
+/* ---- Collapsible side panels (PR-08 v2) ----
+   Both side panels are always-visibile columns at every viewport width.
+   Each can be collapsed independently from its toggle; the canvas reflows
+   into the freed space instead of being covered or pushed around. */
 
-/* ---- Responsive-by-collapse (PR-06) ---- */
-
-/* Medium: 900–1179px — Inspector becomes a right-hand sheet */
+/* Narrower viewports: cap panel widths so a fully-open panel never eats the
+   whole screen and hide the resize handles (columns still work). */
 @media (max-width: 1179.98px) {
-  .ic-app-body {
-    grid-template-columns: 44px var(--panel-left, 240px) minmax(320px, 1fr);
-  }
-
-  .ic-panel-resizer.is-right {
-    display: none;
-  }
-
-  .ic-right-panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(88vw, var(--panel-right, 320px));
-    z-index: 40;
-    transform: translateX(105%);
-    visibility: hidden;
-    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.18s;
-    background: var(--core-surface);
-    border-left: 1px solid var(--core-border);
-    box-shadow: -16px 0 32px rgba(0, 0, 0, 0.28);
-  }
-
-  .ic-right-panel[data-open] {
-    transform: translateX(0);
-    visibility: visible;
-    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
-  }
-}
-
-/* Small: < 900px — Layers drawer + bottom tool rail; Inspector stays a sheet */
-@media (max-width: 899.98px) {
-  .ic-app-body {
-    grid-template-columns: minmax(320px, 1fr);
-  }
-
   .ic-panel-resizer {
     display: none;
   }
 
-  .ic-topbar-panel-toggle {
-    display: inline-flex;
+  .ic-left-panel[data-open] {
+    width: min(86vw, var(--panel-left, 240px));
   }
 
-  .ic-left-panel {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: min(84vw, var(--panel-left, 260px));
-    z-index: 40;
-    transform: translateX(-105%);
-    visibility: hidden;
-    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.18s;
-    background: var(--core-surface);
-    border-right: 1px solid var(--core-border);
-    box-shadow: 16px 0 32px rgba(0, 0, 0, 0.28);
-  }
-
-  .ic-left-panel[data-open],
   .ic-right-panel[data-open] {
-    transform: translateX(0);
-    visibility: visible;
-    transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  /* Tool rail moves to the bottom edge */
-  .ic-tool-rail {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 44px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 6px 8px;
-    border-right: none;
-    border-top: 1px solid var(--core-border);
-    z-index: 5;
-    overflow: hidden;
-  }
-
-  .ic-tool-rail-group {
-    flex-direction: row;
-    gap: 8px;
-  }
-
-  .ic-app-main {
-    padding-bottom: 44px;
+    width: min(86vw, var(--panel-right, 288px));
   }
 }
 
-/* Large: >= 1180px — full columns (default base styles already apply) */
-
 @media (prefers-reduced-motion: reduce) {
   .ic-left-panel,
-  .ic-right-panel,
-  .ic-app-backdrop {
+  .ic-right-panel {
     transition: none;
     animation: none;
   }
@@ -1206,17 +1120,11 @@ input[type='range'] {
   padding: 8px 12px;
 }
 
-.ic-toolbar-group,
-.ic-mask-controls {
+.ic-toolbar-group {
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.ic-mask-controls {
-  border-left: 1px solid var(--core-border);
-  padding-left: 8px;
 }
 
 .ic-layer-list {
@@ -1243,8 +1151,39 @@ input[type='range'] {
   justify-content: center;
   overflow: auto;
   padding: 40px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--core-bg) 92%, #fff 8%), var(--core-bg));
+  background: var(--core-bg);
+}
+
+/* Work area backdrop — pleasant, subtle, and clearly DISTINCT from the icon
+   image so the desk always reads as the desk. User-customizable via the
+   Sidebar → Canvas inspector (SET_EDITOR_BACKDROP). */
+.ic-edit-stage[data-editor-backdrop='dots'] {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in srgb, var(--core-fg) 18%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 22px 22px;
+}
+
+.ic-edit-stage[data-editor-backdrop='grid'] {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--core-fg) 12%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--core-fg) 12%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.ic-edit-stage[data-editor-backdrop='plain'] {
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--core-bg) 92%, #e6ecf5 8%),
+    color-mix(in srgb, var(--core-bg) 84%, #e6ecf5 16%)
+  );
+}
+
+.ic-edit-stage[data-editor-backdrop='dots' i],
+.ic-edit-stage[data-editor-backdrop='plain' i] {
+  background-size: auto;
 }
 
 .ic-drop-zone {
@@ -1987,59 +1926,62 @@ input[type='range'] {
   filter: saturate(0.85);
 }
 
-/* Appearance + Platform preview bar (Icon Composer-style; design + function) */
-.ic-appearance-bar {
-  flex: 0 0 auto;
-  min-width: 0;
+/* Appearance switcher — floating mini-toolbar docked to the bottom of the
+   canvas stage (RuneIcons style). The active variant is highlighted; the
+   others stay dimmed to signal that only one mode is being edited. */
+.ic-floating-appearance {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
   display: flex;
-  align-items: flex-start;
-  gap: 18px;
-  border-top: 1px solid var(--core-border);
-  background: var(--core-surface);
-  padding: 12px 16px;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--core-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--core-surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
 }
 
-.ic-appearance-spacer {
-  flex: 1 1 auto;
+.ic-floating-appearance .ic-appearance-thumb {
+  padding: 2px;
+  border-radius: 8px;
+  opacity: 0.5;
+  filter: saturate(0.55);
+  transition: opacity 0.16s cubic-bezier(0.2, 0, 0, 1), filter 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.ic-appearance-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
+.ic-floating-appearance .ic-appearance-thumb:hover {
+  background: var(--core-elevated);
+  opacity: 0.9;
+  filter: none;
 }
 
-.ic-appearance-label {
-  font-size: 0.64rem;
-  font-weight: 760;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--core-muted);
-}
-
-.ic-appearance-thumbs {
-  display: flex;
-  gap: 10px;
+.ic-floating-appearance .ic-appearance-thumb.is-active {
+  opacity: 1;
+  filter: none;
 }
 
 .ic-appearance-thumb {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  flex: 0 0 auto;
   border: 0;
   background: transparent;
   cursor: pointer;
-  padding: 0;
 }
 
 .ic-thumb-frame {
-  width: 46px;
-  height: 46px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   overflow: hidden;
+  border-radius: 7px;
   background:
     linear-gradient(45deg, #e9edf3 25%, transparent 25%) -6px 0 / 12px 12px,
     linear-gradient(-45deg, #e9edf3 25%, transparent 25%) -6px 0 / 12px 12px,
@@ -2048,12 +1990,6 @@ input[type='range'] {
     #ffffff;
   box-shadow: 0 0 0 1px var(--core-border);
   transition: box-shadow 0.16s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.ic-appearance-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
 }
 
 .ic-appearance-thumb:hover .ic-thumb-frame {
@@ -2065,24 +2001,20 @@ input[type='range'] {
 }
 
 .ic-thumb-label {
-  font-size: 0.62rem;
-  color: var(--core-muted);
-}
-
-.ic-appearance-thumb.is-active .ic-thumb-label {
-  color: var(--core-accent);
+  display: none;
 }
 
 .ic-thumb-pending {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
   background: var(--core-elevated);
 }
 
 .ic-sizes-control {
   position: relative;
   align-self: center;
+  flex: 0 0 auto;
 }
 
 .ic-sizes-button {
@@ -2098,6 +2030,14 @@ input[type='range'] {
   font-size: 0.74rem;
   font-weight: 680;
   cursor: pointer;
+}
+
+.ic-sizes-button span {
+  display: none;
+}
+
+.ic-sizes-button {
+  padding: 0 9px;
 }
 
 .ic-sizes-button:hover,
@@ -2234,16 +2174,45 @@ input[type='range'] {
     width: 100%;
   }
 
-  .ic-mask-controls {
-    margin-left: auto;
-  }
-
   .ic-edit-stage {
     min-height: 360px;
     padding: 16px;
   }
 
-  .ic-drop-zone {
+.ic-edit-stage[data-editor-backdrop='dots'],
+.ic-edit-stage[data-editor-backdrop='grid'],
+.ic-edit-stage[data-editor-backdrop='plain'] {
+  background-color: color-mix(in srgb, var(--core-bg) 88%, #d8dee9 12%);
+}
+
+/* Work area patterns — distinct from the icon image so the editable stage
+   always reads as the "desk", never as the asset itself. */
+.ic-edit-stage[data-editor-backdrop='dots'] {
+  background-image:
+    radial-gradient(color-mix(in srgb, var(--core-fg) 16%, transparent) 1px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+
+.ic-edit-stage[data-editor-backdrop='grid'] {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--core-fg) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--core-fg) 7%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.ic-edit-stage[data-editor-backdrop='plain'] {
+  background-color: color-mix(in srgb, var(--core-bg) 78%, #dfe7f2 22%);
+  background-image: none;
+}
+
+/* The default (no explicit data-editor-backdrop) keeps a subtle plain mid-tone
+   without fighting the icon */
+.ic-edit-stage:not([data-editor-backdrop]) {
+  background-image: none;
+  background-color: color-mix(in srgb, var(--core-bg) 94%, #cbd6e4 6%);
+}
+
+.ic-drop-zone {
     padding: 24px 18px;
   }
 

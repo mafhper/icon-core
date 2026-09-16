@@ -73,6 +73,26 @@ export const LayerInspector = () => {
               onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
             />
           )}
+
+          <div className="ic-inspector-section">
+            <h3 className="ic-section-head">Work area</h3>
+            <p className="ic-field-hint">
+              Editor backdrop around the icon — distinct from the canvas image itself.
+            </p>
+            <div className="ic-segmented" role="group" aria-label="Work area backdrop">
+              {(['dots', 'grid', 'plain'] as const).map((backdrop) => (
+                <button
+                  key={backdrop}
+                  type="button"
+                  className={`ic-seg-btn ${state.editorBackdrop === backdrop ? 'is-active' : ''}`}
+                  onClick={() => dispatch({ type: 'SET_EDITOR_BACKDROP', payload: backdrop })}
+                  aria-pressed={state.editorBackdrop === backdrop}
+                >
+                  {backdrop}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </aside>
     );

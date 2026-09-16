@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useMediaQuery } from './useMediaQuery';
 
 const LEFT_KEY = 'iconcore:panel-left';
@@ -30,13 +30,15 @@ const writeStored = (key: string, value: number): void => {
 };
 
 /**
- * Panel layout state for the Composer AppShell (PR-06):
+ * Panel layout state for the Composer AppShell (PR-08 v2):
  *
- * - Breakpoints: small < 900 (drawer + bottom tool rail), medium 900–1179
- *   (inspector becomes a right-hand sheet), large >= 1180 (full columns).
- * - `leftOpen`/`inspectorOpen` only matter for overlay modes (small drawer,
- *   small+medium sheet); in large mode the panels are always visible columns.
- * - Panel widths are user-resizable and persisted to localStorage.
+ * Always-visible side panels model: Layers and Inspector are permanent
+ * flex columns at every viewport width. `leftOpen`/`inspectorOpen` collapse
+ * a panel to zero width (the shell maps them to `--panel-left`/`--panel-right`
+ * as `0px`), and the canvas reflows into the freed space — content never moves
+ * around or gets covered.
+ * Panel widths are user-resizable on large viewports and persisted to
+ * localStorage.
  */
 export const usePanelLayout = () => {
   const isSmall = useMediaQuery('(max-width: 899px)');
@@ -45,41 +47,11 @@ export const usePanelLayout = () => {
 
   const [leftWidth, setLeftWidth] = useState<number>(() => readStored(LEFT_KEY, 240));
   const [rightWidth, setRightWidth] = useState<number>(() => readStored(RIGHT_KEY, 288));
-  const [leftOpen, setLeftOpen] = useState<boolean>(() => !window.matchMedia('(max-width: 899px)').matches);
-  const [inspectorOpen, setInspectorOpen] = useState<boolean>(() => window.matchMedia('(min-width: 1180px)').matches);
+  const [leftOpen, setLeftOpen] = useState<boolean>(true);
+  const [inspectorOpen, setInspectorOpen] = useState<boolean>(true);
 
   const toggleLeft = useCallback(() => setLeftOpen((open) => !open), []);
   const toggleInspector = useCallback(() => setInspectorOpen((open) => !open), []);
-
-  const closePanels = useCallback(() => {
-    setLeftOpen(false);
-    setInspectorOpen(false);
-  }, []);
-
-  // Escape closes any open overlay (drawer/sheet). No-op when panels are columns.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closePanels();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [closePanels]);
-
-  // Drawer/sheet should never remain open after resizing into large layout, and
-  // overlays collapse when leaving large (columns) for medium/small viewports.
-  const wasLargeRef = useRef(isLarge);
-  useEffect(() => {
-    const previousLarge = wasLargeRef.current;
-    wasLargeRef.current = isLarge;
-    if (!isLarge && previousLarge) {
-      setLeftOpen(false);
-      setInspectorOpen(false);
-      return;
-    }
-    if (isSmall) {
-      setInspectorOpen(false);
-    }
-  }, [isLarge, isSmall]);
 
   const startResize = useCallback(
     (side: 'left' | 'right') =>
@@ -113,9 +85,6 @@ export const usePanelLayout = () => {
     [leftWidth, rightWidth]
   );
 
-  const overlayBackdropVisible =
-    (isSmall && leftOpen) || ((isSmall || isMedium) && inspectorOpen);
-
   return {
     isSmall,
     isMedium,
@@ -126,9 +95,7 @@ export const usePanelLayout = () => {
     inspectorOpen,
     toggleLeft,
     toggleInspector,
-    closePanels,
     startLeftResize: startResize('left'),
-    startRightResize: startResize('right'),
-    overlayBackdropVisible
+    startRightResize: startResize('right')
   };
 };

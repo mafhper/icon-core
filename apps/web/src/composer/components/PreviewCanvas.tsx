@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Circle, Square, RectangleHorizontal, Crosshair } from 'lucide-react';
+import { Crosshair } from 'lucide-react';
 import type { IconLayer, IconVariant, IconCoreProject } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
-import { fillToCss, layerSize } from '../utils/layerStyle';
+import { layerSize } from '../utils/layerStyle';
 
 const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
@@ -103,7 +103,6 @@ export const PreviewCanvas = () => {
 
   const canvasSize = project.canvas.size;
   const displaySize = canvasSize * state.zoom;
-  const variantBackground = project.variants?.[state.activeVariant]?.canvas?.background ?? project.canvas.background;
   const frameRadius = state.maskShape === 'circle' ? '50%' : state.maskShape === 'rounded-rectangle' ? '24px' : '4px';
 
   const scheduleTransform = (id: string, transform: IconLayer['transform']) => {
@@ -218,53 +217,18 @@ export const PreviewCanvas = () => {
         <div className="ic-toolbar-group">
           <button
             type="button"
-            className="ic-bg-swatch"
-            style={{ background: fillToCss(variantBackground) }}
-            onClick={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: null } })}
-            title="Edit canvas background"
-            aria-label="Edit canvas background"
-          />
-        </div>
-        <div className="ic-toolbar-group">
-          <button
-            type="button"
             onClick={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
             className={`p-1.5 rounded ${state.showKeylines ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-            title="Toggle Apple keyline grid"
+            title="Toggle keyline grid"
+            aria-label="Toggle keyline grid"
           >
             <Crosshair size={16} />
           </button>
-          <div className="ic-mask-controls">
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'SET_MASK_SHAPE', payload: 'square' })}
-              className={`p-1.5 rounded ${state.maskShape === 'square' ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-              title="Square preview mask"
-            >
-              <Square size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'SET_MASK_SHAPE', payload: 'circle' })}
-              className={`p-1.5 rounded ${state.maskShape === 'circle' ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-              title="Circle preview mask"
-            >
-              <Circle size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => dispatch({ type: 'SET_MASK_SHAPE', payload: 'rounded-rectangle' })}
-              className={`p-1.5 rounded ${state.maskShape === 'rounded-rectangle' ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-              title="Rounded preview mask"
-            >
-              <RectangleHorizontal size={16} />
-            </button>
-          </div>
         </div>
       </div>
-
       <div
         className="ic-edit-stage"
+        data-editor-backdrop={state.editorBackdrop}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}

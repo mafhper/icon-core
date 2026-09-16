@@ -37,6 +37,8 @@ export interface ComposerState {
   compareDefault: boolean;
   showKeylines: boolean;
   showSnapping: boolean;
+  /** Visual backdrop of the editing stage (work area), distinct from the exported icon image. */
+  editorBackdrop: 'dots' | 'grid' | 'plain';
   history: IconCoreProject[];
   historyIndex: number;
 }
@@ -73,7 +75,8 @@ export type ComposerAction =
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_KEYLINES' }
   | { type: 'TOGGLE_SNAPPING' }
-  | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' };
+  | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' }
+  | { type: 'SET_EDITOR_BACKDROP'; payload: ComposerState['editorBackdrop'] };
 
 export const initialState: ComposerState = {
   view: 'workspaces',
@@ -87,6 +90,7 @@ export const initialState: ComposerState = {
   zoom: 1,
   showGrid: true,
   maskShape: 'rounded-rectangle',
+  editorBackdrop: 'dots',
   compareDefault: false,
   showKeylines: false,
   showSnapping: true,
@@ -491,6 +495,9 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'SET_MASK_SHAPE':
       return { ...state, maskShape: action.payload };
+
+    case 'SET_EDITOR_BACKDROP':
+      return { ...state, editorBackdrop: action.payload };
 
     default:
       return state;

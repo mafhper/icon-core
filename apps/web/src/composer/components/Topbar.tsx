@@ -1,4 +1,4 @@
-import { Save, FolderOpen, Info, Menu } from 'lucide-react';
+import { Save, FolderOpen, Info } from 'lucide-react';
 import { useState } from 'react';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
@@ -6,13 +6,7 @@ import { parseProjectFile } from '../utils/projectGuard';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 import { AboutModal } from './AboutModal';
 
-interface TopbarProps {
-  onToggleLeft?: () => void;
-  leftOpen?: boolean;
-  showLeftToggle?: boolean;
-}
-
-export const Topbar = ({ onToggleLeft, leftOpen, showLeftToggle = false }: TopbarProps) => {
+export const Topbar = () => {
   const { state, dispatch, navigate } = useComposer();
   const toast = useToast();
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -53,18 +47,6 @@ export const Topbar = ({ onToggleLeft, leftOpen, showLeftToggle = false }: Topba
     <header className="ic-topbar">
       <div className="ic-topbar-inner">
         <div className="ic-topbar-leading">
-          {showLeftToggle && (
-            <button
-              type="button"
-              className="ic-topbar-icon-button ic-topbar-panel-toggle"
-              onClick={onToggleLeft}
-              title="Toggle Layers panel"
-              aria-label="Toggle Layers panel"
-              aria-expanded={leftOpen ?? false}
-            >
-              <Menu size={17} />
-            </button>
-          )}
           <button
             type="button"
             className="ic-topbar-brand"
