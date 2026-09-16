@@ -940,10 +940,6 @@ input[type='range'] {
   gap: 10px;
 }
 
-.ic-topbar-panel-toggle {
-  display: inline-flex;
-}
-
 /* ---- Collapsible side panels (PR-08 v2) ----
    Both side panels are always-visibile columns at every viewport width.
    Each can be collapsed independently from its toggle; the canvas reflows
@@ -1899,59 +1895,71 @@ input[type='range'] {
   filter: saturate(0.85);
 }
 
-/* Appearance + Platform preview bar (Icon Composer-style; design + function) */
+/* Appearance + Platform controls — compact strip inside the canvas toolbar
+   (PR-08): relocated from the footer appearance bar into the canvas toolbar,
+   between canvas background and keyline controls. Thumbnails render the real
+   icon mask via the shared renderer. */
 .ic-appearance-bar {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 18px;
-  border-top: 1px solid var(--core-border);
-  background: var(--core-surface);
-  padding: 12px 16px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
 }
 
 .ic-appearance-spacer {
-  flex: 1 1 auto;
+  display: none;
 }
 
 .ic-appearance-group {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
 .ic-appearance-label {
-  font-size: 0.64rem;
+  font-size: 0.6rem;
   font-weight: 760;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--core-muted);
+  letter-spacing: 0.08em;
+  color: var(--core-faint);
+  white-space: nowrap;
 }
 
 .ic-appearance-thumbs {
   display: flex;
-  gap: 10px;
+  gap: 3px;
 }
 
 .ic-appearance-thumb {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  flex: 0 0 auto;
   border: 0;
   background: transparent;
   cursor: pointer;
-  padding: 0;
+  padding: 2px;
+  border-radius: 8px;
+}
+
+.ic-appearance-thumb:hover {
+  background: var(--core-elevated);
 }
 
 .ic-thumb-frame {
-  width: 46px;
-  height: 46px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   overflow: hidden;
+  border-radius: 7px;
   background:
     linear-gradient(45deg, #e9edf3 25%, transparent 25%) -6px 0 / 12px 12px,
     linear-gradient(-45deg, #e9edf3 25%, transparent 25%) -6px 0 / 12px 12px,
@@ -1960,12 +1968,6 @@ input[type='range'] {
     #ffffff;
   box-shadow: 0 0 0 1px var(--core-border);
   transition: box-shadow 0.16s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.ic-appearance-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
 }
 
 .ic-appearance-thumb:hover .ic-thumb-frame {
@@ -1977,24 +1979,20 @@ input[type='range'] {
 }
 
 .ic-thumb-label {
-  font-size: 0.62rem;
-  color: var(--core-muted);
-}
-
-.ic-appearance-thumb.is-active .ic-thumb-label {
-  color: var(--core-accent);
+  display: none;
 }
 
 .ic-thumb-pending {
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
   background: var(--core-elevated);
 }
 
 .ic-sizes-control {
   position: relative;
   align-self: center;
+  flex: 0 0 auto;
 }
 
 .ic-sizes-button {
@@ -2010,6 +2008,14 @@ input[type='range'] {
   font-size: 0.74rem;
   font-weight: 680;
   cursor: pointer;
+}
+
+.ic-sizes-button span {
+  display: none;
+}
+
+.ic-sizes-button {
+  padding: 0 9px;
 }
 
 .ic-sizes-button:hover,

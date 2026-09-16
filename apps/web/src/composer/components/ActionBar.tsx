@@ -1,8 +1,11 @@
-import { Download, Grid3x3, Magnet, PanelRightOpen, Redo2, RotateCcw, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Download, Grid3x3, Magnet, PanelLeftOpen, PanelRightOpen, Redo2, RotateCcw, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 
 interface ActionBarProps {
+  onToggleLeft?: () => void;
+  leftOpen?: boolean;
+  showLeftToggle?: boolean;
   onToggleInspector?: () => void;
   inspectorOpen?: boolean;
   showInspectorToggle?: boolean;
@@ -11,12 +14,14 @@ interface ActionBarProps {
 /**
  * Contextual action bar at the bottom of the Composer AppShell.
  *
- * Owns the global document actions (undo/redo), the active-tool readout and
- * the view controls (zoom, grid, snapping) plus the Export entry point, so the
- * header stays focused on project identity/file actions. On viewports below
- * 1180px it also hosts the Inspector sheet toggle.
+ * Owns the panel toggles (Layers left, Inspector right — symmetric flat
+ * icons beside the document actions), the undo/redo history controls, the
+ * view controls (zoom, grid, snapping) and the Export entry point.
  */
 export const ActionBar = ({
+  onToggleLeft,
+  leftOpen,
+  showLeftToggle = false,
   onToggleInspector,
   inspectorOpen,
   showInspectorToggle = false
@@ -27,6 +32,18 @@ export const ActionBar = ({
     <footer className="ic-action-bar">
       <div className="ic-action-bar-inner">
         <div className="ic-toolbar-group">
+          {showLeftToggle && (
+            <button
+              type="button"
+              onClick={onToggleLeft}
+              className={`p-1.5 rounded ${leftOpen ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
+              title="Toggle Layers panel"
+              aria-label="Toggle Layers panel"
+              aria-expanded={leftOpen ?? false}
+            >
+              <PanelLeftOpen size={15} />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => dispatch({ type: 'UNDO' })}

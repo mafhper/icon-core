@@ -5,7 +5,6 @@ import { ActionBar } from './ActionBar';
 import { LayerList } from './LayerList';
 import { LayerInspector } from './LayerInspector';
 import { PreviewCanvas } from './PreviewCanvas';
-import { AppearanceBar } from './AppearanceBar';
 import { PanelResizer } from './PanelResizer';
 import { usePanelLayout } from '../hooks/usePanelLayout';
 
@@ -46,11 +45,7 @@ export const AppShell = () => {
         } as React.CSSProperties
       }
     >
-      <Topbar
-        onToggleLeft={toggleLeft}
-        leftOpen={leftOpen}
-        showLeftToggle
-      />
+      <Topbar />
       <div className="ic-app-body">
         <ToolRail />
         <section
@@ -64,7 +59,6 @@ export const AppShell = () => {
           {isLarge && <PanelResizer side="left" label="Resize Layers panel" onStart={startLeftResize} />}
           {isLarge && <PanelResizer side="right" label="Resize Inspector panel" onStart={startRightResize} />}
           <PreviewCanvas />
-          <AppearanceBar />
         </div>
         <section
           className="ic-app-panel ic-right-panel"
@@ -75,6 +69,9 @@ export const AppShell = () => {
         </section>
       </div>
       <ActionBar
+        onToggleLeft={toggleLeft}
+        leftOpen={leftOpen}
+        showLeftToggle
         onToggleInspector={toggleInspector}
         inspectorOpen={inspectorOpen}
         showInspectorToggle

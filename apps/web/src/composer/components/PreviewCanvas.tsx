@@ -13,6 +13,7 @@ import { DropZone } from './DropZone';
 import { VariantPanel } from './VariantPanel';
 import { KeylineOverlay } from './KeylineOverlay';
 import { LayerContextMenu } from './LayerContextMenu';
+import { AppearanceBar } from './AppearanceBar';
 
 type DragMode = 'move' | 'scale' | 'rotate';
 
@@ -214,7 +215,7 @@ export const PreviewCanvas = () => {
 
   return (
     <div className="ic-preview-panel">
-      <div className="ic-canvas-toolbar">
+<div className="ic-canvas-toolbar">
         <div className="ic-toolbar-group">
           <button
             type="button"
@@ -225,18 +226,21 @@ export const PreviewCanvas = () => {
             aria-label="Edit canvas background"
           />
         </div>
+
+        <AppearanceBar />
+
         <div className="ic-toolbar-group">
           <button
             type="button"
             onClick={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
             className={`p-1.5 rounded ${state.showKeylines ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-            title="Toggle Apple keyline grid"
+            title="Toggle keyline grid"
+            aria-label="Toggle keyline grid"
           >
             <Crosshair size={16} />
           </button>
         </div>
       </div>
-
       <div
         className="ic-edit-stage"
         onPointerMove={handlePointerMove}
