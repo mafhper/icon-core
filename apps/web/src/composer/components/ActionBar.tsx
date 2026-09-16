@@ -1,6 +1,16 @@
-import { Download, Grid3x3, Magnet, PanelLeftOpen, PanelRightOpen, Redo2, RotateCcw, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Circle, Download, Grid3x3, Magnet, PanelLeftOpen, PanelRightOpen, RectangleHorizontal, Redo2, RotateCcw, Square, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
+import { SizePreview } from './SizePreview';
+
+const PLATFORM_LABELS: Record<string, string> = {
+  square: 'Square',
+  'rounded-rectangle': 'Rounded',
+  circle: 'Circle',
+  squircle: 'Squircle'
+};
+
+const PLATFORM_CYCLE = ['square', 'rounded-rectangle', 'circle'] as const;
 
 interface ActionBarProps {
   onToggleLeft?: () => void;
@@ -113,6 +123,24 @@ export const ActionBar = ({
           >
             <Magnet size={15} />
           </button>
+          <button
+            type="button"
+            className="p-1.5 rounded hover:bg-core-elevated"
+            onClick={() => {
+              const index = PLATFORM_CYCLE.indexOf(state.maskShape as (typeof PLATFORM_CYCLE)[number]);
+              const next = PLATFORM_CYCLE[(index + 1) % PLATFORM_CYCLE.length];
+              dispatch({ type: 'SET_MASK_SHAPE', payload: next });
+            }}
+            title={`Platform: ${PLATFORM_LABELS[state.maskShape] ?? state.maskShape}`}
+            aria-label={`Platform: ${PLATFORM_LABELS[state.maskShape] ?? state.maskShape}`}
+          >
+            {state.maskShape === 'circle'
+              ? <Circle size={15} />
+              : state.maskShape === 'square'
+                ? <Square size={15} />
+                : <RectangleHorizontal size={15} />}
+          </button>
+          {state.project && <SizePreview />}
           {showInspectorToggle && (
             <button
               type="button"

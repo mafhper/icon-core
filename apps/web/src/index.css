@@ -1895,46 +1895,43 @@ input[type='range'] {
   filter: saturate(0.85);
 }
 
-/* Appearance + Platform controls — compact strip inside the canvas toolbar
-   (PR-08): relocated from the footer appearance bar into the canvas toolbar,
-   between canvas background and keyline controls. Thumbnails render the real
-   icon mask via the shared renderer. */
-.ic-appearance-bar {
-  flex: 1 1 auto;
-  min-width: 0;
+/* Appearance switcher — floating mini-toolbar docked to the bottom of the
+   canvas stage (RuneIcons style). The active variant is highlighted; the
+   others stay dimmed to signal that only one mode is being edited. */
+.ic-floating-appearance {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 8px;
-  border: 0;
-  background: transparent;
-  overflow: hidden;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--core-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--core-surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
 }
 
-.ic-appearance-spacer {
-  display: none;
+.ic-floating-appearance .ic-appearance-thumb {
+  padding: 2px;
+  border-radius: 8px;
+  opacity: 0.5;
+  filter: saturate(0.55);
+  transition: opacity 0.16s cubic-bezier(0.2, 0, 0, 1), filter 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.ic-appearance-group {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
+.ic-floating-appearance .ic-appearance-thumb:hover {
+  background: var(--core-elevated);
+  opacity: 0.9;
+  filter: none;
 }
 
-.ic-appearance-label {
-  font-size: 0.6rem;
-  font-weight: 760;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--core-faint);
-  white-space: nowrap;
-}
-
-.ic-appearance-thumbs {
-  display: flex;
-  gap: 3px;
+.ic-floating-appearance .ic-appearance-thumb.is-active {
+  opacity: 1;
+  filter: none;
 }
 
 .ic-appearance-thumb {
@@ -1945,12 +1942,6 @@ input[type='range'] {
   border: 0;
   background: transparent;
   cursor: pointer;
-  padding: 2px;
-  border-radius: 8px;
-}
-
-.ic-appearance-thumb:hover {
-  background: var(--core-elevated);
 }
 
 .ic-thumb-frame {

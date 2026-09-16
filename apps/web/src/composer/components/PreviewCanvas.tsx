@@ -13,7 +13,7 @@ import { DropZone } from './DropZone';
 import { VariantPanel } from './VariantPanel';
 import { KeylineOverlay } from './KeylineOverlay';
 import { LayerContextMenu } from './LayerContextMenu';
-import { AppearanceBar } from './AppearanceBar';
+import { AppearanceSwitcher } from './AppearanceSwitcher';
 
 type DragMode = 'move' | 'scale' | 'rotate';
 
@@ -227,8 +227,6 @@ export const PreviewCanvas = () => {
           />
         </div>
 
-        <AppearanceBar />
-
         <div className="ic-toolbar-group">
           <button
             type="button"
@@ -332,6 +330,8 @@ export const PreviewCanvas = () => {
         {menu && (
           <LayerContextMenu x={menu.x} y={menu.y} layerId={menu.layerId} onClose={() => setMenu(null)} />
         )}
+
+        <AppearanceSwitcher />
       </div>
     </div>
   );
