@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@iconcore/ui/tokens.css";
+@source "../../../packages/iconcore-ui/src";
 
 @theme {
   --color-core-bg: var(--core-bg);
@@ -11,105 +13,63 @@
   --color-core-success: var(--core-success);
   --color-core-warning: var(--core-warning);
   --color-core-danger: var(--core-danger);
+  --color-ic-bg: var(--ic-bg);
+  --color-ic-surface: var(--ic-surface);
+  --color-ic-elevated: var(--ic-elevated);
+  --color-ic-border: var(--ic-border);
+  --color-ic-text: var(--ic-text);
+  --color-ic-text-muted: var(--ic-text-muted);
+  --color-ic-text-faint: var(--ic-text-faint);
+  --color-ic-accent: var(--ic-accent);
+  --color-ic-accent-hover: var(--ic-accent-hover);
+  --color-ic-success: var(--ic-success);
+  --color-ic-warning: var(--ic-warning);
+  --color-ic-danger: var(--ic-danger);
   --font-display: "Sora", sans-serif;
   --font-body: "Sora", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --shadow-panel: 0 20px 40px rgba(0, 0, 0, 0.32);
 }
 
-:root,
-[data-theme='dark'] {
-  color-scheme: dark;
-  --core-bg: #0b0c0e;
-  --core-bg-top: #0f1013;
-  --core-bg-bottom: #08090b;
-  --core-glow-1: rgba(255, 255, 255, 0.05);
-  --core-glow-2: rgba(255, 255, 255, 0.02);
-  --core-surface: #131418;
-  --core-elevated: #1b1d22;
-  --core-overlay: #23252b;
-  --core-border: rgba(255, 255, 255, 0.08);
-  --core-border-soft: rgba(255, 255, 255, 0.06);
-  --core-text: #e6e7ea;
-  --core-muted: #9a9ca3;
-  --core-faint: #6b6d74;
-  --core-accent: #4a7cf0;
-  --core-accent-hover: #5c8bf5;
-  --core-accent-soft: color-mix(in oklab, var(--core-accent) 14%, transparent);
-  --core-accent-ring: color-mix(in oklab, var(--core-accent) 70%, transparent);
-  --core-on-accent: #ffffff;
-  --core-success: #7fb899;
-  --core-warning: #d0a35e;
-  --core-danger: #e38686;
-  --core-shadow: rgba(0, 0, 0, 0.52);
-  --core-inset-top: rgba(255, 255, 255, 0.08);
-  --core-inset-bottom: rgba(0, 0, 0, 0.42);
-  --core-dot: rgba(237, 238, 240, 0.12);
-  --core-scroll-track: rgba(10, 11, 13, 0.52);
-  --core-scroll-thumb: rgba(145, 149, 156, 0.42);
-  --core-scroll-thumb-hover: rgba(145, 149, 156, 0.62);
-  /* Brand accents — theme-independent; defined on :root so they cascade to every theme. */
-  --core-gold: #c99a45;
-  --core-brand-gradient: linear-gradient(135deg, #f3d18a, #6bb7d8);
-}
-
-[data-theme='light'] {
-  color-scheme: light;
-  --core-bg: #f2f2f3;
-  --core-bg-top: #fafafa;
-  --core-bg-bottom: #ececef;
-  --core-glow-1: rgba(255, 255, 255, 0.7);
-  --core-glow-2: rgba(0, 0, 0, 0.04);
-  --core-surface: #ffffff;
-  --core-elevated: #eff0f2;
-  --core-overlay: #ffffff;
-  --core-border: rgba(0, 0, 0, 0.08);
-  --core-border-soft: rgba(23, 25, 38, 0.06);
-  --core-text: #16171a;
-  --core-muted: #6a6d73;
-  --core-faint: #8f9297;
-  --core-accent: #3a6ce5;
-  --core-accent-hover: #2f5ed6;
-  --core-accent-soft: color-mix(in oklab, var(--core-accent) 14%, transparent);
-  --core-accent-ring: color-mix(in oklab, var(--core-accent) 70%, transparent);
-  --core-on-accent: #ffffff;
-  --core-success: #2f6e4a;
-  --core-warning: #8f6b2f;
-  --core-danger: #b3453f;
-  --core-shadow: rgba(20, 21, 24, 0.14);
-  --core-inset-top: rgba(255, 255, 255, 0.9);
-  --core-inset-bottom: rgba(0, 0, 0, 0.06);
-  --core-dot: rgba(20, 21, 24, 0.12);
-  --core-scroll-track: rgba(0, 0, 0, 0.04);
-  --core-scroll-thumb: rgba(0, 0, 0, 0.22);
-  --core-scroll-thumb-hover: rgba(0, 0, 0, 0.34);
-}
-
-[data-theme='gold'] {
-  color-scheme: light;
-  --core-bg: #b39866;
-  --core-bg-top: #cfb98b;
-  --core-bg-bottom: #9f834f;
-  --core-glow-1: rgba(249, 233, 185, 0.36);
-  --core-glow-2: rgba(99, 72, 28, 0.18);
-  --core-surface: #c3a369;
-  --core-elevated: #ceb076;
-  --core-border: #644b23;
-  --core-border-soft: #7a5c2c;
-  --core-text: #2f2614;
-  --core-muted: #3f3118;
-  --core-accent: #3d2f14;
-  --core-on-accent: #f8efd8;
-  --core-success: #3a2d15;
-  --core-warning: #5e451d;
-  --core-danger: #7d302c;
-  --core-shadow: rgba(69, 45, 14, 0.26);
-  --core-inset-top: rgba(250, 232, 183, 0.72);
-  --core-inset-bottom: rgba(138, 101, 43, 0.36);
-  --core-dot: rgba(79, 58, 24, 0.12);
-  --core-scroll-track: rgba(146, 112, 54, 0.32);
-  --core-scroll-thumb: rgba(83, 61, 27, 0.56);
-  --core-scroll-thumb-hover: rgba(63, 45, 19, 0.78);
+/*
+ * Compatibility layer (temporary). The semantic token vocabulary now lives in
+ * @iconcore/ui/tokens.css (`--ic-*`); these aliases keep the legacy `--core-*`
+ * names working until consumers migrate. The [data-theme] blocks of the app
+ * were removed: theme switching is resolved by the package (dark default on
+ * :root, light via [data-theme='light']).
+ * Removed in A6, when the `-core-` counter reaches zero.
+ */
+:root {
+  --core-bg: var(--ic-bg);
+  --core-bg-top: var(--ic-bg-top);
+  --core-bg-bottom: var(--ic-bg-bottom);
+  --core-glow-1: var(--ic-glow-1);
+  --core-glow-2: var(--ic-glow-2);
+  --core-surface: var(--ic-surface);
+  --core-elevated: var(--ic-elevated);
+  --core-overlay: var(--ic-overlay);
+  --core-border: var(--ic-border);
+  --core-border-soft: var(--ic-border-soft);
+  --core-text: var(--ic-text);
+  --core-muted: var(--ic-text-muted);
+  --core-faint: var(--ic-text-faint);
+  --core-accent: var(--ic-accent);
+  --core-accent-hover: var(--ic-accent-hover);
+  --core-accent-soft: var(--ic-accent-soft);
+  --core-accent-ring: var(--ic-accent-ring);
+  --core-on-accent: var(--ic-on-accent);
+  --core-success: var(--ic-success);
+  --core-warning: var(--ic-warning);
+  --core-danger: var(--ic-danger);
+  --core-shadow: var(--ic-shadow);
+  --core-inset-top: var(--ic-inset-top);
+  --core-inset-bottom: var(--ic-inset-bottom);
+  --core-dot: var(--ic-dot);
+  --core-scroll-track: var(--ic-scroll-track);
+  --core-scroll-thumb: var(--ic-scroll-thumb);
+  --core-scroll-thumb-hover: var(--ic-scroll-thumb-hover);
+  --core-gold: var(--ic-gold);
+  --core-brand-gradient: var(--ic-brand-gradient);
 }
 
 * {
