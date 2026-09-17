@@ -1,3 +1,4 @@
+import { TooltipProvider } from '@iconcore/ui';
 import { ComposerProvider, useComposer } from './ComposerContext';
 import { ComposeView } from './views/ComposeView';
 import { ExportView } from './views/ExportView';
@@ -35,13 +36,15 @@ const ComposerShell = () => {
 
 export const ComposerApp = () => {
   return (
-    <ToastProvider>
-      <ComposerProvider>
-        <div className="min-h-screen text-core-text bg-core-bg composer-enter">
-          <ComposerShell />
-        </div>
-      </ComposerProvider>
-      <ToastViewport />
-    </ToastProvider>
+    <TooltipProvider delayDuration={400}>
+      <ToastProvider>
+        <ComposerProvider>
+          <div className="min-h-screen text-core-text bg-core-bg composer-enter">
+            <ComposerShell />
+          </div>
+        </ComposerProvider>
+        <ToastViewport />
+      </ToastProvider>
+    </TooltipProvider>
   );
 };

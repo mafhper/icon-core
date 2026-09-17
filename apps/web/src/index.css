@@ -13,6 +13,9 @@
   --color-core-success: var(--core-success);
   --color-core-warning: var(--core-warning);
   --color-core-danger: var(--core-danger);
+  --radius-ic-sm: var(--ic-radius-sm);
+  --radius-ic-md: var(--ic-radius-md);
+  --radius-ic-lg: var(--ic-radius-lg);
   --color-ic-bg: var(--ic-bg);
   --color-ic-surface: var(--ic-surface);
   --color-ic-elevated: var(--ic-elevated);
@@ -22,6 +25,10 @@
   --color-ic-text-faint: var(--ic-text-faint);
   --color-ic-accent: var(--ic-accent);
   --color-ic-accent-hover: var(--ic-accent-hover);
+  --color-ic-accent-soft: var(--ic-accent-soft);
+  --color-ic-accent-ring: var(--ic-accent-ring);
+  --color-ic-on-accent: var(--ic-on-accent);
+  --color-ic-overlay: var(--ic-overlay);
   --color-ic-success: var(--ic-success);
   --color-ic-warning: var(--ic-warning);
   --color-ic-danger: var(--ic-danger);
@@ -849,32 +856,6 @@ input[type='range'] {
   gap: 6px;
 }
 
-.ic-tool-rail-button {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: var(--core-muted);
-  transition: background 0.12s cubic-bezier(0.2, 0, 0, 1), color 0.12s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.ic-tool-rail-button:hover:not(:disabled) {
-  background: var(--core-elevated);
-  color: var(--core-text);
-}
-
-.ic-tool-rail-button.is-active {
-  background: var(--core-accent);
-  color: var(--core-on-accent);
-}
-
-.ic-tool-rail-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .ic-action-bar {
   flex: 0 0 auto;
   border-top: 1px solid var(--core-border);
@@ -1037,33 +1018,6 @@ input[type='range'] {
 
 .ic-topbar-cluster button:disabled {
   opacity: 0.4;
-  cursor: default;
-}
-
-.ic-topbar-export {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid var(--core-accent-hover);
-  color: var(--core-on-accent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--core-accent), #fff 10%), var(--core-accent));
-  background: linear-gradient(in oklab 180deg, color-mix(in oklab, var(--core-accent), white 10%), var(--core-accent));
-  font-size: 0.78rem;
-  font-weight: 740;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1), opacity 0.16s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.ic-topbar-export:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.ic-topbar-export:disabled {
-  opacity: 0.5;
   cursor: default;
 }
 

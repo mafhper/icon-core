@@ -1,0 +1,17 @@
+{
+  "ratchetSlack": 120,
+  "cssLineBudget": {
+    "apps/web/src/index.css": 2678,
+    "apps/promo/src/index.css": 780
+  },
+  "hexScanDirs": ["apps/web/src", "apps/promo/src", "packages/iconcore-ui/src"],
+  "hexExceptions": [
+    "apps/web/src/composer/constants.ts",
+    "apps/web/src/composer/components/GradientEditor.tsx"
+  ],
+  "orphanCheck": {
+    "css": "apps/web/src/index.css",
+    "scanDirs": ["apps/web/src"],
+    "allow": []
+  }
+}
