@@ -508,6 +508,23 @@ input[type='range'] {
   width: 100%;
 }
 
+/* Explanatory copy under a field/section heading. Without this the hint fell
+   back to the body font/size, which read as a headline next to muted labels. */
+.ic-field-hint {
+  margin: -4px 0 0;
+  color: var(--core-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+/* Groups a heading + controls inside the inspector without breaking the
+   .ic-field-stack direct-child separators. */
+.ic-inspector-section {
+  display: grid;
+  gap: 12px;
+}
+
 .ic-link-button {
   margin-top: auto;
 }
@@ -1042,6 +1059,9 @@ input[type='range'] {
 }
 
 .ic-layer-list {
+  /* Fill the .ic-app-panel column: without flex:1 the surface only reaches
+     the height of its content, leaving the page background visible below. */
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -1074,7 +1094,7 @@ input[type='range'] {
 .ic-edit-stage[data-editor-backdrop='dots'] {
   background-image: radial-gradient(
     circle at 1px 1px,
-    color-mix(in srgb, var(--core-fg) 18%, transparent) 1px,
+    color-mix(in srgb, var(--core-text) 26%, transparent) 1px,
     transparent 1.5px
   );
   background-size: 22px 22px;
@@ -1082,8 +1102,8 @@ input[type='range'] {
 
 .ic-edit-stage[data-editor-backdrop='grid'] {
   background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--core-fg) 12%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--core-fg) 12%, transparent) 1px, transparent 1px);
+    linear-gradient(to right, color-mix(in srgb, var(--core-text) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--core-text) 16%, transparent) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -1093,11 +1113,6 @@ input[type='range'] {
     color-mix(in srgb, var(--core-bg) 92%, #e6ecf5 8%),
     color-mix(in srgb, var(--core-bg) 84%, #e6ecf5 16%)
   );
-}
-
-.ic-edit-stage[data-editor-backdrop='dots' i],
-.ic-edit-stage[data-editor-backdrop='plain' i] {
-  background-size: auto;
 }
 
 .ic-drop-zone {
@@ -1298,6 +1313,9 @@ input[type='range'] {
 }
 
 .ic-inspector {
+  /* Fill the .ic-app-panel column so its surface and scroll area span the
+     full height instead of collapsing to the content height. */
+  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
   min-height: 0;
@@ -1654,6 +1672,7 @@ input[type='range'] {
 }
 
 .ic-field-stack > .ic-section-head:not(:first-child),
+.ic-field-stack > .ic-inspector-section:not(:first-child),
 .ic-field-stack > .ic-image-filters {
   margin-top: 14px;
   padding-top: 14px;
@@ -2092,32 +2111,6 @@ input[type='range'] {
     min-height: 360px;
     padding: 16px;
   }
-
-.ic-edit-stage[data-editor-backdrop='dots'],
-.ic-edit-stage[data-editor-backdrop='grid'],
-.ic-edit-stage[data-editor-backdrop='plain'] {
-  background-color: color-mix(in srgb, var(--core-bg) 88%, #d8dee9 12%);
-}
-
-/* Work area patterns — distinct from the icon image so the editable stage
-   always reads as the "desk", never as the asset itself. */
-.ic-edit-stage[data-editor-backdrop='dots'] {
-  background-image:
-    radial-gradient(color-mix(in srgb, var(--core-fg) 16%, transparent) 1px, transparent 1.5px);
-  background-size: 18px 18px;
-}
-
-.ic-edit-stage[data-editor-backdrop='grid'] {
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--core-fg) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--core-fg) 7%, transparent) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.ic-edit-stage[data-editor-backdrop='plain'] {
-  background-color: color-mix(in srgb, var(--core-bg) 78%, #dfe7f2 22%);
-  background-image: none;
-}
 
 /* The default (no explicit data-editor-backdrop) keeps a subtle plain mid-tone
    without fighting the icon */

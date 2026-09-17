@@ -1,4 +1,4 @@
-import { Circle, Download, Grid3x3, Magnet, PanelLeftOpen, PanelRightOpen, RectangleHorizontal, Redo2, RotateCcw, Square, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Circle, Download, Grid3x3, Magnet, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, RectangleHorizontal, Redo2, RotateCcw, Square, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { Button, ButtonGroup, IconButton, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
@@ -31,6 +31,8 @@ interface ActionBarProps {
  * view controls (zoom, grid, snapping) and the Export entry point.
  *
  * A2: the 11 inline buttons now use the action grammar (@iconcore/ui).
+ * Panel toggles swap between open/close glyphs so their state reads without
+ * relying on color alone (selected tint alone was ambiguous).
  * Undo/Redo keep a native `title` because they can be disabled, and Radix
  * Tooltip does not open over a disabled trigger (004 §9).
  */
@@ -54,7 +56,7 @@ export const ActionBar = ({
               <IconButton
                 selected={leftOpen}
                 onClick={onToggleLeft}
-                icon={<PanelLeftOpen size={15} />}
+                icon={leftOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
                 aria-label="Toggle Layers panel"
                 aria-expanded={leftOpen ?? false}
               />
@@ -139,7 +141,7 @@ export const ActionBar = ({
               <IconButton
                 selected={inspectorOpen}
                 onClick={onToggleInspector}
-                icon={<PanelRightOpen size={15} />}
+                icon={inspectorOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
                 aria-label="Toggle Inspector panel"
                 aria-expanded={inspectorOpen ?? false}
               />
