@@ -10,13 +10,13 @@ asset's `files` are populated, that those files exist).
 
 | Component | License | Source | License text | Attribution |
 |---|---|---|---|---|
-| Rune Icons (icon set) | Apache-2.0 | https://github.com/RuneIcons/rune-icons (fork used for the built-in icon library) | `LICENSES/runeicons-LICENSE.txt` | See `NOTICE` |
+| Rune Icons (icon set) | Apache-2.0 | https://github.com/Nexvyn/runeicons (upstream used for the built-in icon library) | `LICENSES/runeicons-LICENSE.txt` | See `NOTICE` |
 | Lucide (app icons) | ISC | https://lucide.dev (npm `lucide-react`) | https://github.com/lucide-icons/lucide/blob/main/LICENSE | See `NOTICE` |
 
 ### Rune Icons — Apache License 2.0
 
 The built-in icon library (to be ingested in PR-09) is made available from the
-[Rune Icons](https://github.com/RuneIcons/rune-icons) project (Apache-2.0,
+[Rune Icons](https://github.com/Nexvyn/runeicons) project (Apache-2.0,
 Copyright 2026 Runeicons). Redistribution and modifications are governed by the
 terms of the Apache License, Version 2.0, a copy of which is kept at
 `LICENSES/runeicons-LICENSE.txt`.
