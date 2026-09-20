@@ -22,11 +22,22 @@ const css = fs.readFileSync(tokensPath, 'utf8');
 
 // Split into theme blocks. Dark lives in `:root, [data-theme='dark'] {...}`
 // (a second bare `:root {...}` holds theme-independent Layer 3 sizes).
+// Plain indexOf parsing (no dynamic RegExp): first occurrence wins, which is
+// the dark block for `:root` since it precedes the Layer 3 block.
 const block = (selector) => {
-  const esc = selector.replace(/[[\]']/g, '\\$&');
-  const re = new RegExp(`(?:^|\\n)${esc}[^{]*{([^}]*)}`, 's');
-  const m = css.match(re);
-  return m ? m[1] : '';
+  const start = css.indexOf(selector);
+  if (start === -1) return '';
+  const brace = css.indexOf('{', start + selector.length);
+  if (brace === -1) return '';
+  let depth = 0;
+  for (let j = brace; j < css.length; j++) {
+    if (css[j] === '{') depth += 1;
+    else if (css[j] === '}') {
+      depth -= 1;
+      if (depth === 0) return css.slice(brace + 1, j);
+    }
+  }
+  return '';
 };
 
 const parseVars = (body) => {
