@@ -2,6 +2,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // The ui-gallery spec belongs to `ui:shots` (playwright.ui.config.ts, web
+  // server) — it must not run against the promo server here.
+  testIgnore: /ui-gallery\.spec\.ts/,
   webServer: {
     command: process.env.CI
       ? 'bun run --filter @iconcore/promo preview --host 127.0.0.1 --port 4181'

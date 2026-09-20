@@ -4,6 +4,7 @@ import { useComposer } from '../ComposerContext';
 import { fileToLayerAsset, isSupportedLayerFile } from '../utils/fileLayers';
 import { createProjectFromAsset } from '../utils/projectFactory';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
+import { Button, TextField } from '@iconcore/ui';
 
 type UploadMode = 'edit' | 'export';
 
@@ -88,14 +89,14 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
             <div className="ic-card-icon"><PenTool size={18} /></div>
             <h2>Create in Edit Space</h2>
             <p>Build a layered icon from shapes, text, images, variants and precise transforms.</p>
-            <label>
-              Project name
-              <input value={projectName} onChange={(event) => setProjectName(event.target.value)} />
-            </label>
-            <button type="button" className="ic-button ic-button-primary" onClick={createProject}>
-              <PenTool size={16} />
+            <TextField
+              label="Project name"
+              value={projectName}
+              onChange={(event) => setProjectName(event.target.value)}
+            />
+            <Button variant="primary" iconLeft={<PenTool size={16} />} onClick={createProject}>
               Create
-            </button>
+            </Button>
           </article>
 
           <article className="ic-welcome-card">

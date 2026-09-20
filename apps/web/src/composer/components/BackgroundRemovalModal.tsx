@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { IconLayer } from '@iconcore/shared';
+import { Button, ColorField, Slider } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import { detectBorderColor, removeBackground, dataUrlToBase64 } from '../utils/chromaKey';
@@ -62,22 +63,30 @@ export const BackgroundRemovalModal = ({ layer, onClose }: { layer: IconLayer; o
           <img src={preview} alt="Background removal preview" />
         </div>
 
-        <div className="ic-field-grid">
-          <label className="ic-field">
-            <span>Background color</span>
-            <input type="color" value={color} onChange={(event) => setColor(event.target.value)} />
-          </label>
-          <label className="ic-field">
-            <span>Tolerance ({tolerance}%)</span>
-            <input type="range" min="0" max="60" value={tolerance} onChange={(event) => setTolerance(Number(event.target.value))} />
-          </label>
+        <div className="grid grid-cols-2 gap-2.5">
+          <ColorField
+            label="Background color"
+            value={color}
+            onChange={(event) => setColor(event.target.value)}
+          />
+          <Slider
+            label={`Tolerance (${tolerance}%)`}
+            min="0"
+            max="60"
+            value={tolerance}
+            onChange={(event) => setTolerance(Number(event.target.value))}
+          />
         </div>
 
         <p className="ic-modal-hint">Pick the background color (auto-detected from the edges) and adjust tolerance until it reads clean.</p>
 
         <div className="ic-modal-actions">
-          <button type="button" className="ic-button" onClick={onClose}>Cancel</button>
-          <button type="button" className="core-btn core-btn-primary" onClick={apply}>Apply</button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={apply}>
+            Apply
+          </Button>
         </div>
       </div>
     </div>

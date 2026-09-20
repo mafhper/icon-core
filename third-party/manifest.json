@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "description": "Registry of third-party assets distributed by Icon Core. Every redistributed asset must be listed here with license metadata. Validated by scripts/check-third-party-assets.mjs (runs in CI).",
+  "assets": [
+    {
+      "id": "rune-icons",
+      "name": "Rune Icons",
+      "source": "https://github.com/Nexvyn/runeicons",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSES/runeicons-LICENSE.txt",
+      "attribution": "NOTICE",
+      "files": [],
+      "notes": "Initial stock for the built-in icon library (ingested in PR-09). When the SVGs are added under packages/iconcore-library, populate 'files' with their directory paths."
+    },
+    {
+      "id": "lucide",
+      "name": "Lucide",
+      "source": "https://lucide.dev",
+      "license": "ISC",
+      "licenseUrl": "https://github.com/lucide-icons/lucide/blob/main/LICENSE",
+      "attribution": "NOTICE",
+      "files": [],
+      "notes": "App chrome icons via npm lucide-react; distributed inside the web bundle."
+    }
+  ]
+}

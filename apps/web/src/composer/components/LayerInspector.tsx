@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Eraser } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
+import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { brandGradientFill } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
@@ -11,6 +12,12 @@ import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
 const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'squircle', 'triangle', 'line', 'star'];
+
+const BACKDROP_OPTIONS = [
+  { value: 'dots', label: 'Dots' },
+  { value: 'grid', label: 'Grid' },
+  { value: 'plain', label: 'Plain' },
+] as const;
 
 export const LayerInspector = () => {
   const { state, dispatch } = useComposer();
@@ -26,7 +33,7 @@ export const LayerInspector = () => {
   if (!state.project) {
     return (
       <aside className="ic-inspector">
-        <p className="text-xs text-core-muted text-center py-8">No project open.</p>
+        <p className="text-xs text-ic-muted text-center py-8">No project open.</p>
       </aside>
     );
   }
@@ -46,13 +53,14 @@ export const LayerInspector = () => {
         </div>
         <p className="ic-variant-scope-note">No layer selected — editing the <strong>canvas background</strong>.</p>
         <div className="ic-field-stack">
-          <label className="ic-field">
-            <span>Background color</span>
-            <input type="color" value={bgSolid} onChange={(event) => setCanvasBg({ kind: 'solid', color: event.target.value })} />
-          </label>
-          <label className="ic-field">
-            <span>Fill type</span>
-            <select
+          <Section title="Canvas background">
+            <ColorField
+              label="Background color"
+              value={bgSolid}
+              onChange={(event) => setCanvasBg({ kind: 'solid', color: event.target.value })}
+            />
+            <Select
+              label="Fill type"
               value={bg.kind}
               onChange={(event) => {
                 const kind = event.target.value as Fill['kind'];
@@ -64,15 +72,27 @@ export const LayerInspector = () => {
               <option value="solid">Solid color</option>
               <option value="linear-gradient">Linear gradient</option>
               <option value="radial-gradient">Radial gradient</option>
-            </select>
-          </label>
-          {bg.kind !== 'solid' && (
-            <GradientEditor
-              fill={bg}
-              onChange={(next) => setCanvasBg(next, true)}
-              onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
+            </Select>
+            {bg.kind !== 'solid' && (
+              <GradientEditor
+                fill={bg}
+                onChange={(next) => setCanvasBg(next, true)}
+                onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
+              />
+            )}
+          </Section>
+
+          <Section
+            title="Work area"
+            hint="Editor backdrop around the icon — distinct from the canvas image itself."
+          >
+            <SegmentedControl
+              aria-label="Work area backdrop"
+              options={BACKDROP_OPTIONS}
+              value={state.editorBackdrop}
+              onChange={(backdrop) => dispatch({ type: 'SET_EDITOR_BACKDROP', payload: backdrop })}
             />
-          )}
+          </Section>
         </div>
       </aside>
     );
@@ -145,65 +165,56 @@ export const LayerInspector = () => {
       )}
 
       <div className="ic-field-stack">
-        <h3 className="ic-section-head">Layer</h3>
-        <label className="ic-field">
-          <span>Name</span>
-          <input
+        <Section title="Layer">
+          <TextField
+            label="Name"
             value={baseLayer.name}
             onChange={(event) => dispatch({ type: 'UPDATE_LAYER', payload: { id: baseLayer.id, changes: { name: event.target.value } } })}
           />
-        </label>
 
-        {layer.kind === 'text' && (
-          <>
-            <label className="ic-field">
-              <span>Text</span>
-              <input
+          {layer.kind === 'text' && (
+            <>
+              <TextField
+                label="Text"
                 value={layer.text?.content ?? ''}
                 onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
               />
-            </label>
-            <div className="ic-field-grid">
-              <label className="ic-field">
-                <span>Size</span>
-                <input
-                  type="number"
+              <div className="grid grid-cols-2 gap-2.5">
+                <NumberField
+                  label="Size"
                   min="8"
                   value={layer.text?.fontSize ?? 64}
                   onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
                 />
-              </label>
-              <label className="ic-field">
-                <span>Weight</span>
-                <input
-                  type="number"
+                <NumberField
+                  label="Weight"
                   min="100"
                   max="900"
                   step="100"
                   value={layer.text?.fontWeight ?? 700}
                   onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
                 />
-              </label>
-            </div>
-          </>
-        )}
+              </div>
+            </>
+          )}
+        </Section>
 
-        <h3 className="ic-section-head">Composition</h3>
-        <div className="ic-field-grid">
-          <label className="ic-field">
-            <span>X</span>
-            <input type="number" value={Math.round(layer.transform.x)} onChange={(event) => updateTransform({ x: Number(event.target.value) }, false)} />
-          </label>
-          <label className="ic-field">
-            <span>Y</span>
-            <input type="number" value={Math.round(layer.transform.y)} onChange={(event) => updateTransform({ y: Number(event.target.value) }, false)} />
-          </label>
-        </div>
+        <Section title="Composition">
+          <div className="grid grid-cols-2 gap-2.5">
+            <NumberField
+              label="X"
+              value={Math.round(layer.transform.x)}
+              onChange={(event) => updateTransform({ x: Number(event.target.value) }, false)}
+            />
+            <NumberField
+              label="Y"
+              value={Math.round(layer.transform.y)}
+              onChange={(event) => updateTransform({ y: Number(event.target.value) }, false)}
+            />
+          </div>
 
-        <label className="ic-field">
-          <span>Scale ({Math.round(layer.transform.scale * 100)}%)</span>
-          <input
-            type="range"
+          <Slider
+            label={`Scale (${Math.round(layer.transform.scale * 100)}%)`}
             min="0.08"
             max="4"
             step="0.01"
@@ -212,12 +223,9 @@ export const LayerInspector = () => {
             onPointerUp={commit}
             onKeyUp={commit}
           />
-        </label>
 
-        <label className="ic-field">
-          <span>Rotation ({Math.round(layer.transform.rotation)}°)</span>
-          <input
-            type="range"
+          <Slider
+            label={`Rotation (${Math.round(layer.transform.rotation)}°)`}
             min="-180"
             max="180"
             step="1"
@@ -226,100 +234,83 @@ export const LayerInspector = () => {
             onPointerUp={commit}
             onKeyUp={commit}
           />
-        </label>
+        </Section>
 
         {baseLayer.kind === 'shape' && shape && (
-          <>
-            <h3 className="ic-section-head">Geometry</h3>
-            <label className="ic-field">
-              <span>Shape</span>
-              <select value={shape.kind} onChange={(event) => updateShape({ kind: event.target.value as ShapeKind })}>
-                {shapeKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
-              </select>
-            </label>
+          <Section title="Geometry">
+            <Select
+              label="Shape"
+              value={shape.kind}
+              onChange={(event) => updateShape({ kind: event.target.value as ShapeKind })}
+            >
+              {shapeKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+            </Select>
             {shape.kind === 'rounded-rectangle' && (
-              <label className="ic-field">
-                <span>Corner radius ({Math.round(shape.cornerRadius ?? 32)})</span>
-                <input
-                  type="range"
-                  min="0"
-                  max={Math.round(Math.min(shape.width, shape.height) / 2)}
-                  value={Math.round(shape.cornerRadius ?? 32)}
-                  onChange={(event) => updateShape({ cornerRadius: Number(event.target.value) }, true)}
-                  onPointerUp={commit}
-                  onKeyUp={commit}
-                />
-              </label>
+              <Slider
+                label={`Corner radius (${Math.round(shape.cornerRadius ?? 32)})`}
+                min="0"
+                max={Math.round(Math.min(shape.width, shape.height) / 2)}
+                value={Math.round(shape.cornerRadius ?? 32)}
+                onChange={(event) => updateShape({ cornerRadius: Number(event.target.value) }, true)}
+                onPointerUp={commit}
+                onKeyUp={commit}
+              />
             )}
-          </>
+          </Section>
         )}
 
-        <h3 className="ic-section-head">Color</h3>
-        <div className="ic-field-grid">
-          <label className="ic-field">
-            <span>Fill</span>
-            <input
-              type="color"
+        <Section title="Color">
+          <div className="grid grid-cols-2 gap-2.5">
+            <ColorField
+              label="Fill"
               value={solidColor}
               onChange={(event) => updateLayer({ fill: { kind: 'solid', color: event.target.value } })}
             />
-          </label>
-          <label className="ic-field">
-            <span>Opacity</span>
-            <input
-              type="number"
+            <NumberField
+              label="Opacity"
               min="0"
               max="100"
               value={Math.round(layer.opacity * 100)}
               onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
             />
-          </label>
-        </div>
+          </div>
 
-        <label className="ic-field">
-          <span>Fill type</span>
-          <select
+          <Select
+            label="Fill type"
             value={layer.fill?.kind ?? 'solid'}
             onChange={(event) => setFillKind(event.target.value as Fill['kind'])}
           >
             <option value="solid">Solid color</option>
             <option value="linear-gradient">Linear gradient</option>
             <option value="radial-gradient">Radial gradient</option>
-          </select>
-        </label>
+          </Select>
 
-        {layer.fill && layer.fill.kind !== 'solid' && (
-          <GradientEditor
-            fill={layer.fill}
-            onChange={(next) => updateLayer({ fill: next }, true)}
-            onCommit={commit}
-          />
-        )}
+          {layer.fill && layer.fill.kind !== 'solid' && (
+            <GradientEditor
+              fill={layer.fill}
+              onChange={(next) => updateLayer({ fill: next }, true)}
+              onCommit={commit}
+            />
+          )}
 
-        <label className="ic-field">
-          <span>Blend mode</span>
-          <select
+          <Select
+            label="Blend mode"
             value={layer.blendMode ?? 'normal'}
             onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
           >
             {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-          </select>
-        </label>
+          </Select>
+        </Section>
 
-        <h3 className="ic-section-head">Effects</h3>
-        <label className="ic-switch-row">
-          <span>Depth shadow</span>
-          <input
-            type="checkbox"
+        <Section title="Effects">
+          <Switch
+            label="Depth shadow"
             checked={shadow.enabled}
             onChange={(event) => updateLayer({ effects: setShadow(layer, { ...shadow, enabled: event.target.checked }) })}
           />
-        </label>
 
-        <label className="ic-field">
-          <span>Shadow blur ({Number(shadow.params.blur ?? 34)})</span>
-          <input
-            type="range"
+          <Slider
+            label={`Shadow blur (${Number(shadow.params.blur ?? 34)})`}
             min="0"
             max="80"
             value={Number(shadow.params.blur ?? 34)}
@@ -328,12 +319,9 @@ export const LayerInspector = () => {
             }, true)}
             onPointerUp={commit}
           />
-        </label>
 
-        <label className="ic-field">
-          <span>Layer blur ({blurRadius})</span>
-          <input
-            type="range"
+          <Slider
+            label={`Layer blur (${blurRadius})`}
             min="0"
             max="60"
             value={blurRadius}
@@ -341,47 +329,65 @@ export const LayerInspector = () => {
             onPointerUp={commit}
             onKeyUp={commit}
           />
-        </label>
+        </Section>
 
         {isImage && (
-          <div className="ic-field-stack ic-image-filters">
-            <span className="ic-section-label">Image adjustments</span>
-            <label className="ic-field">
-              <span>Hue ({imageFilter.hue ?? 0}°)</span>
-              <input type="range" min="-180" max="180" value={imageFilter.hue ?? 0}
-                onChange={(event) => updateImageFilter({ hue: Number(event.target.value) }, true)} onPointerUp={commit} onKeyUp={commit} />
-            </label>
-            <label className="ic-field">
-              <span>Saturation ({imageFilter.saturation ?? 100}%)</span>
-              <input type="range" min="0" max="200" value={imageFilter.saturation ?? 100}
-                onChange={(event) => updateImageFilter({ saturation: Number(event.target.value) }, true)} onPointerUp={commit} onKeyUp={commit} />
-            </label>
-            <label className="ic-field">
-              <span>Brightness ({imageFilter.brightness ?? 100}%)</span>
-              <input type="range" min="0" max="200" value={imageFilter.brightness ?? 100}
-                onChange={(event) => updateImageFilter({ brightness: Number(event.target.value) }, true)} onPointerUp={commit} onKeyUp={commit} />
-            </label>
-            <label className="ic-field">
-              <span>Contrast ({imageFilter.contrast ?? 100}%)</span>
-              <input type="range" min="0" max="200" value={imageFilter.contrast ?? 100}
-                onChange={(event) => updateImageFilter({ contrast: Number(event.target.value) }, true)} onPointerUp={commit} onKeyUp={commit} />
-            </label>
+          <Section title="Image adjustments">
+            <Slider
+              label={`Hue (${imageFilter.hue ?? 0}°)`}
+              min="-180"
+              max="180"
+              value={imageFilter.hue ?? 0}
+              onChange={(event) => updateImageFilter({ hue: Number(event.target.value) }, true)}
+              onPointerUp={commit}
+              onKeyUp={commit}
+            />
+            <Slider
+              label={`Saturation (${imageFilter.saturation ?? 100}%)`}
+              min="0"
+              max="200"
+              value={imageFilter.saturation ?? 100}
+              onChange={(event) => updateImageFilter({ saturation: Number(event.target.value) }, true)}
+              onPointerUp={commit}
+              onKeyUp={commit}
+            />
+            <Slider
+              label={`Brightness (${imageFilter.brightness ?? 100}%)`}
+              min="0"
+              max="200"
+              value={imageFilter.brightness ?? 100}
+              onChange={(event) => updateImageFilter({ brightness: Number(event.target.value) }, true)}
+              onPointerUp={commit}
+              onKeyUp={commit}
+            />
+            <Slider
+              label={`Contrast (${imageFilter.contrast ?? 100}%)`}
+              min="0"
+              max="200"
+              value={imageFilter.contrast ?? 100}
+              onChange={(event) => updateImageFilter({ contrast: Number(event.target.value) }, true)}
+              onPointerUp={commit}
+              onKeyUp={commit}
+            />
             {baseLayer.source.type === 'inline' && baseLayer.source.mimeType !== 'image/svg+xml' && (
-              <button type="button" className="ic-button inline-flex items-center justify-center gap-2" onClick={() => setShowBgRemoval(true)}>
-                <Eraser size={14} />
+              <Button
+                variant="secondary"
+                iconLeft={<Eraser size={14} />}
+                onClick={() => setShowBgRemoval(true)}
+              >
                 Remove background
-              </button>
+              </Button>
             )}
-          </div>
+          </Section>
         )}
 
-        <button
-          type="button"
-          className="ic-danger-button"
+        <Button
+          variant="secondary"
+          className="border-ic-danger/60 bg-ic-danger/10 text-ic-danger hover:bg-ic-danger/20"
           onClick={() => dispatch({ type: 'REMOVE_LAYER', payload: { id: layer.id } })}
         >
           Delete selected layer
-        </button>
+        </Button>
       </div>
 
       {showBgRemoval && <BackgroundRemovalModal layer={baseLayer} onClose={() => setShowBgRemoval(false)} />}

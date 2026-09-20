@@ -1,0 +1,106 @@
+/*
+ * @iconcore/ui — semantic tokens (Layer 2)
+ *
+ * Primitive raw values live close to the layers that need them (Tailwind
+ * palette, brand hex etc). This file defines the *semantic* vocabulary of the
+ * product UI: `--ic-*` tokens with visual meaning, resolved per theme.
+ *
+ * Theme contract (v1, A1):
+ *   :root (default dark because Icon Core is a dark-first editor)
+ *   [data-theme='light'] — light overrides, reset via `color-scheme`.
+ *
+ * The app layer (`apps/web/src/index.css`) keeps a temporary compatibility
+ * layer aliasing `--core-*` -> `--ic-*` until consumers are migrated (removed
+ * in A6 when the `-core-` counter reaches zero).
+ *
+ * IMPORTANT: this file must NOT change visual output for existing consumers
+ * (A1 acceptance: pixel diff ≈ 0). Values are copied verbatim from the tokens
+ * previously defined in the app's `[data-theme]` blocks.
+ */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ic-bg: #0b0c0e;
+  --ic-bg-top: #0f1013;
+  --ic-bg-bottom: #08090b;
+  --ic-glow-1: rgba(255, 255, 255, 0.05);
+  --ic-glow-2: rgba(255, 255, 255, 0.02);
+  --ic-surface: #131418;
+  --ic-elevated: #1b1d22;
+  --ic-overlay: #23252b;
+  --ic-border: rgba(255, 255, 255, 0.08);
+  --ic-border-soft: rgba(255, 255, 255, 0.06);
+  --ic-text: #e6e7ea;
+  --ic-text-muted: #9a9ca3;
+  --ic-text-faint: #6b6d74;
+  --ic-accent: #3f6ce0;
+  --ic-accent-hover: #4a76e8;
+  --ic-accent-soft: color-mix(in oklab, var(--ic-accent) 20%, transparent);
+  --ic-accent-ring: color-mix(in oklab, var(--ic-accent) 70%, transparent);
+  --ic-on-accent: #ffffff;
+  --ic-success: #7fb899;
+  --ic-warning: #d0a35e;
+  --ic-danger: #e38686;
+  --ic-shadow: rgba(0, 0, 0, 0.52);
+  --ic-inset-top: rgba(255, 255, 255, 0.08);
+  --ic-inset-bottom: rgba(0, 0, 0, 0.42);
+  --ic-dot: rgba(237, 238, 240, 0.12);
+  --ic-scroll-track: rgba(10, 11, 13, 0.52);
+  --ic-scroll-thumb: rgba(145, 149, 156, 0.42);
+  --ic-scroll-thumb-hover: rgba(145, 149, 156, 0.62);
+
+  /* Brand accents — theme-independent; defined on :root so they cascade to every theme. */
+  --ic-gold: #c99a45;
+  --ic-brand-gradient: linear-gradient(135deg, #f3d18a, #6bb7d8);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --ic-bg: #f2f2f3;
+  --ic-bg-top: #fafafa;
+  --ic-bg-bottom: #ececef;
+  --ic-glow-1: rgba(255, 255, 255, 0.7);
+  --ic-glow-2: rgba(0, 0, 0, 0.04);
+  --ic-surface: #ffffff;
+  --ic-elevated: #eff0f2;
+  --ic-overlay: #ffffff;
+  --ic-border: rgba(0, 0, 0, 0.08);
+  --ic-border-soft: rgba(23, 25, 38, 0.06);
+  --ic-text: #16171a;
+  --ic-text-muted: #6a6d73;
+  --ic-text-faint: #86898f;
+  --ic-accent: #3a6ce5;
+  --ic-accent-hover: #2f5ed6;
+  --ic-accent-soft: color-mix(in oklab, var(--ic-accent) 20%, transparent);
+  --ic-accent-ring: color-mix(in oklab, var(--ic-accent) 70%, transparent);
+  --ic-on-accent: #ffffff;
+  --ic-success: #2f6e4a;
+  --ic-warning: #8f6b2f;
+  --ic-danger: #b3453f;
+  --ic-shadow: rgba(20, 21, 24, 0.14);
+  --ic-inset-top: rgba(255, 255, 255, 0.9);
+  --ic-inset-bottom: rgba(0, 0, 0, 0.06);
+  --ic-dot: rgba(20, 21, 24, 0.12);
+  --ic-scroll-track: rgba(0, 0, 0, 0.04);
+  --ic-scroll-thumb: rgba(0, 0, 0, 0.22);
+  --ic-scroll-thumb-hover: rgba(0, 0, 0, 0.34);
+}
+
+/*
+ * Layer 3 — component tokens.
+ *
+ * Concrete dimensions shared by the action primitives (Button, IconButton)
+ * and the app chrome. Theme-independent; kept intentionally small so the
+ * system does not invent a token for every visual decision.
+ */
+:root {
+  --ic-control-sm: 32px;
+  --ic-control-md: 28px;
+  --ic-control-lg: 34px;
+  --ic-radius-sm: 8px;
+  --ic-radius-md: 6px;
+  --ic-radius-lg: 10px;
+}

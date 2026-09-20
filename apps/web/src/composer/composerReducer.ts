@@ -18,7 +18,7 @@ import {
   DEFAULT_TARGETS
 } from './utils/projectFactory';
 
-export type PublicRoute = 'workspaces' | 'edit-space' | 'export-utilities';
+export type PublicRoute = 'workspaces' | 'edit-space' | 'export-utilities' | 'ui';
 export type WorkspaceId = 'create-edit' | 'upload-export' | 'upload-edit-export';
 export type ComposerView = PublicRoute;
 
@@ -36,6 +36,9 @@ export interface ComposerState {
   maskShape: 'square' | 'circle' | 'rounded-rectangle' | 'squircle';
   compareDefault: boolean;
   showKeylines: boolean;
+  showSnapping: boolean;
+  /** Visual backdrop of the editing stage (work area), distinct from the exported icon image. */
+  editorBackdrop: 'dots' | 'grid' | 'plain';
   history: IconCoreProject[];
   historyIndex: number;
 }
@@ -71,7 +74,9 @@ export type ComposerAction =
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_KEYLINES' }
-  | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' };
+  | { type: 'TOGGLE_SNAPPING' }
+  | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' }
+  | { type: 'SET_EDITOR_BACKDROP'; payload: ComposerState['editorBackdrop'] };
 
 export const initialState: ComposerState = {
   view: 'workspaces',
@@ -85,8 +90,10 @@ export const initialState: ComposerState = {
   zoom: 1,
   showGrid: true,
   maskShape: 'rounded-rectangle',
+  editorBackdrop: 'dots',
   compareDefault: false,
   showKeylines: false,
+  showSnapping: true,
   history: [],
   historyIndex: -1
 };
@@ -94,7 +101,7 @@ export const initialState: ComposerState = {
 export const normalizeRoute = (value: string): ComposerView => {
   if (value === 'composer' || value === 'compose' || value === 'start') return 'edit-space';
   if (value === 'export') return 'export-utilities';
-  if (value === 'edit-space' || value === 'export-utilities' || value === 'workspaces') return value;
+  if (value === 'edit-space' || value === 'export-utilities' || value === 'workspaces' || value === 'ui') return value;
   return 'workspaces';
 };
 
@@ -483,8 +490,14 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
     case 'TOGGLE_KEYLINES':
       return { ...state, showKeylines: !state.showKeylines };
 
+    case 'TOGGLE_SNAPPING':
+      return { ...state, showSnapping: !state.showSnapping };
+
     case 'SET_MASK_SHAPE':
       return { ...state, maskShape: action.payload };
+
+    case 'SET_EDITOR_BACKDROP':
+      return { ...state, editorBackdrop: action.payload };
 
     default:
       return state;
