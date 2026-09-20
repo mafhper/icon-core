@@ -1,4 +1,13 @@
 import '@testing-library/jest-dom/vitest';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
+
+// testing-library only auto-registers cleanup when globals are on (they are
+// not here), so isolate renders explicitly. Without this, queries match
+// elements from earlier tests ("Found multiple elements").
+afterEach(() => {
+  cleanup();
+});
 
 /**
  * jsdom does not implement ResizeObserver, which Radix primitives

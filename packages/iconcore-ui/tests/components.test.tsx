@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd } from '../src/index';
+import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, TextField, NumberField, Select, Switch, Slider, ColorField, SegmentedControl } from '../src/index';
 
 describe('Button', () => {
   it('defaults type to "button" (never submits)', () => {
@@ -127,6 +127,129 @@ describe('Tooltip', () => {
     await user.hover(screen.getByRole('button', { name: 'undo' }));
     expect(await screen.findByText('Undo (Ctrl+Z)')).toBeInTheDocument();
   }, 10_000);
+});
+
+describe('Section', () => {
+  it('renders title heading and children', () => {
+    render(
+      <Section title="Color">
+        <span>body</span>
+      </Section>
+    );
+    expect(screen.getByRole('heading', { name: 'Color' })).toBeInTheDocument();
+    expect(screen.getByText('body')).toBeInTheDocument();
+  });
+
+  it('renders hint when given', () => {
+    render(<Section title="Work area" hint="Backdrop hint" />);
+    expect(screen.getByText('Backdrop hint')).toBeInTheDocument();
+  });
+});
+
+describe('Field', () => {
+  it('associates label with control', () => {
+    render(
+      <Field label="Name">
+        <input data-testid="name-input" />
+      </Field>
+    );
+    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(screen.getByTestId('name-input')).toBeInTheDocument();
+  });
+});
+
+describe('TextField', () => {
+  it('renders labelled text input', () => {
+    render(<TextField label="Name" defaultValue="icon" />);
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('icon');
+  });
+});
+
+describe('NumberField', () => {
+  it('renders labelled number input', () => {
+    render(<NumberField label="Opacity" defaultValue={80} />);
+    expect(screen.getByRole('spinbutton', { name: 'Opacity' })).toHaveValue(80);
+  });
+});
+
+describe('Select', () => {
+  it('renders labelled select with options', () => {
+    render(
+      <Select label="Fill type" defaultValue="solid">
+        <option value="solid">Solid color</option>
+        <option value="linear-gradient">Linear gradient</option>
+      </Select>
+    );
+    const select = screen.getByRole('combobox', { name: 'Fill type' });
+    expect(select).toHaveValue('solid');
+    expect(screen.getByRole('option', { name: 'Linear gradient' })).toBeInTheDocument();
+  });
+});
+
+describe('Switch', () => {
+  it('renders labelled checkbox row', () => {
+    const onChange = vi.fn();
+    render(<Switch label="Depth shadow" onChange={onChange} />);
+    const box = screen.getByRole('checkbox', { name: 'Depth shadow' });
+    fireEvent.click(box);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Slider', () => {
+  it('renders labelled range input', () => {
+    render(<Slider label="Scale (100%)" min={8} max={400} defaultValue={100} />);
+    const slider = screen.getByRole('slider', { name: 'Scale (100%)' });
+    expect(slider).toHaveValue('100');
+  });
+});
+
+describe('ColorField', () => {
+  it('renders labelled color input', () => {
+    // input[type=color] has no implicit ARIA role: query the control directly
+    // and assert its accessible name comes from the label.
+    const { container } = render(<ColorField label="Fill" defaultValue="#ff0000" />);
+    const input = container.querySelector('input[type="color"]');
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveAccessibleName('Fill');
+    expect(input).toHaveValue('#ff0000');
+  });
+});
+
+describe('SegmentedControl', () => {
+  const options = [
+    { value: 'dots', label: 'Dots' },
+    { value: 'grid', label: 'Grid' },
+    { value: 'plain', label: 'Plain' },
+  ] as const;
+
+  it('marks the selected option pressed', () => {
+    render(
+      <SegmentedControl
+        aria-label="Work area backdrop"
+        options={options}
+        value="grid"
+        onChange={() => {}}
+      />
+    );
+    expect(screen.getByRole('group', { name: 'Work area backdrop' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Grid' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Dots' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('calls onChange with the clicked value', () => {
+    const onChange = vi.fn();
+    render(
+      <SegmentedControl
+        aria-label="Work area backdrop"
+        options={options}
+        value="dots"
+        onChange={onChange}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Plain' }));
+    expect(onChange).toHaveBeenCalledWith('plain');
+  });
 });
 
 describe('Kbd', () => {
