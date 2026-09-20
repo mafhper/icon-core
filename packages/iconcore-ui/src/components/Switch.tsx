@@ -1,9 +1,9 @@
-import { type InputHTMLAttributes, forwardRef } from 'react';
+import { type InputHTMLAttributes, type ReactNode, forwardRef } from 'react';
 import { cn } from '../utils/cn';
 
 export interface SwitchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
-  /** Row label (e.g. "Depth shadow"). */
-  label: string;
+  /** Row label (e.g. "Depth shadow"). Accepts rich content such as <code>. */
+  label: ReactNode;
 }
 
 /**

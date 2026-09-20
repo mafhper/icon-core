@@ -99,12 +99,11 @@ const themes = {
   light: parseVars(block("[data-theme='light']"))
 };
 
-// Advisory-only pairs (reported, never failed). Both are pre-existing token
-// values locked verbatim by A1; tuning them is a visual change for A6:
-// - `--ic-text-faint`: decorative by contract (never the sole carrier).
-// - `--ic-on-accent` on `--ic-accent` (dark 3.87:1): real button text —
-//   A6 must darken the dark accent or brighten on-accent (user-validated).
-const ADVISORY = new Set(['--ic-text-faint', '--ic-on-accent']);
+// A6 fixed the two pre-existing shortfalls (dark accent #4a7cf0 -> #3f6ce0,
+// light faint #8f9297 -> #86898f; primary Button flattened), so every pair
+// below is enforced: any regression fails the gate. `--ic-text-faint` keeps
+// a 3.0 floor (decorative by contract, never the sole carrier).
+const ADVISORY = new Set();
 
 let failed = 0;
 for (const [themeName, vars] of Object.entries(themes)) {

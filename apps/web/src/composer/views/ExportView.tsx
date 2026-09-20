@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ArrowLeft, Download, Check, LoaderCircle, FileText, TriangleAlert, FolderOpen } from 'lucide-react';
 import type { IconTarget, IconVariant, OutputFormat, ExportStructure, ZipCompression } from '@iconcore/shared';
+import { Button, Field, SegmentedControl, Slider, Switch } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import {
@@ -24,26 +25,11 @@ interface ExportProgress {
   currentTarget: string;
 }
 
-interface SegmentedProps<T extends string> {
-  value: T;
-  options: Array<{ id: T; label: string }>;
-  onChange: (value: T) => void;
-}
-
-const Segmented = <T extends string>({ value, options, onChange }: SegmentedProps<T>) => (
-  <div className="ic-segmented">
-    {options.map((option) => (
-      <button
-        key={option.id}
-        type="button"
-        className={value === option.id ? 'is-active' : ''}
-        onClick={() => onChange(option.id)}
-      >
-        {option.label}
-      </button>
-    ))}
-  </div>
-);
+/**
+ * A6: the local `Segmented` (no semantics) is replaced by the kit
+ * `SegmentedControl` (role=group + aria-pressed). Option lists below map
+ * `{id,label}` to `{value,label}` inline.
+ */
 
 export const ExportView = () => {
   const { state, dispatch, navigate } = useComposer();
@@ -291,79 +277,79 @@ export const ExportView = () => {
             Output
           </h2>
 
-          <div className="ic-export-field">
-            <label>Format</label>
-            <Segmented
+          <Field label="Format">
+            <SegmentedControl
+              aria-label="Format"
               value={format}
               onChange={setFormat}
-              options={[{ id: 'png', label: 'PNG' }, { id: 'webp', label: 'WebP' }, { id: 'jpeg', label: 'JPEG' }]}
+              options={[{ value: 'png', label: 'PNG' }, { value: 'webp', label: 'WebP' }, { value: 'jpeg', label: 'JPEG' }]}
             />
-          </div>
+          </Field>
 
           {isLossy && (
-            <div className="ic-export-field">
-              <label>Quality <span className="text-ic-muted">({Math.round(quality * 100)}%)</span></label>
-              <input
-                type="range"
-                min={10}
-                max={100}
-                value={Math.round(quality * 100)}
-                onChange={(e) => setQuality(Number(e.target.value) / 100)}
-                className="w-full"
-              />
-            </div>
+            <Slider
+              label={`Quality (${Math.round(quality * 100)}%)`}
+              min={10}
+              max={100}
+              value={Math.round(quality * 100)}
+              onChange={(e) => setQuality(Number(e.target.value) / 100)}
+            />
           )}
 
-          <div className="ic-export-field">
-            <label>Folder structure</label>
-            <Segmented
+          <Field label="Folder structure">
+            <SegmentedControl
+              aria-label="Folder structure"
               value={structure}
               onChange={setStructure}
-              options={[{ id: 'nested', label: 'Nested (target/variant)' }, { id: 'flat', label: 'Flat' }]}
+              options={[{ value: 'nested', label: 'Nested (target/variant)' }, { value: 'flat', label: 'Flat' }]}
             />
-          </div>
+          </Field>
 
-          <div className="ic-export-field">
-            <label>Destination</label>
-            <Segmented value={destination} onChange={setDestination} options={destinationOptions} />
-            {destination === 'files' && (
-              <p className="text-xs text-ic-muted mt-1.5">Each file downloads separately (paths flattened into the filename).</p>
-            )}
-            {destination === 'folder' && (
-              <p className="text-xs text-ic-muted mt-1.5">You'll be asked to choose a folder; the full tree is written there, uncompressed.</p>
-            )}
-          </div>
+          <Field label="Destination">
+            <SegmentedControl
+              aria-label="Destination"
+              value={destination}
+              onChange={setDestination}
+              options={destinationOptions.map((o) => ({ value: o.id, label: o.label }))}
+            />
+          </Field>
+          {destination === 'files' && (
+            <p className="text-xs text-ic-muted mt-1.5">Each file downloads separately (paths flattened into the filename).</p>
+          )}
+          {destination === 'folder' && (
+            <p className="text-xs text-ic-muted mt-1.5">You'll be asked to choose a folder; the full tree is written there, uncompressed.</p>
+          )}
 
           {destination === 'zip' && (
-            <div className="ic-export-field">
-              <label>Compression</label>
-              <Segmented
+            <Field label="Compression">
+              <SegmentedControl
+                aria-label="Compression"
                 value={compression}
                 onChange={setCompression}
-                options={[{ id: 'deflate', label: 'Deflate' }, { id: 'store', label: 'Store (none)' }]}
+                options={[{ value: 'deflate', label: 'Deflate' }, { value: 'store', label: 'Store (none)' }]}
               />
               {compression === 'deflate' && (
-                <input
-                  type="range"
+                <Slider
+                  label={`Deflate level (${compressionLevel})`}
                   min={0}
                   max={9}
                   value={compressionLevel}
                   onChange={(e) => setCompressionLevel(Number(e.target.value))}
-                  className="w-full mt-2"
-                  title={`Deflate level ${compressionLevel}`}
                 />
               )}
-            </div>
+            </Field>
           )}
 
-          <label className="ic-export-toggle">
-            <input type="checkbox" checked={includePreview} onChange={(e) => setIncludePreview(e.target.checked)} />
-            <span>Include <code>preview.html</code> test sheet</span>
-          </label>
-          <label className="ic-export-toggle">
-            <input type="checkbox" checked={includeReport} onChange={(e) => setIncludeReport(e.target.checked)} />
-            <span>Include per-target <code>iconcore-report.json</code></span>
-          </label>
+          <Switch
+            label={<span>Include <code>preview.html</code> test sheet</span>}
+            checked={includePreview}
+            onChange={(e) => setIncludePreview(e.target.checked)}
+          />
+          <Switch
+            label={<span>Include per-target <code>iconcore-report.json</code></span>}
+            checked={includeReport}
+            onChange={(e) => setIncludeReport(e.target.checked)}
+          />
         </div>
 
         {busy && (
@@ -421,13 +407,13 @@ export const ExportView = () => {
           </div>
         )}
 
-        <button
-          type="button"
+        <Button
+          variant="primary"
           onClick={handleExport}
           disabled={selectedTargets.size === 0 || busy}
-          className="w-full core-btn core-btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-ic-border px-4 py-3 text-sm font-semibold uppercase tracking-[0.08em] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-4 py-3 text-sm font-semibold uppercase tracking-[0.08em]"
+          iconLeft={destination === 'folder' ? <FolderOpen size={16} /> : <Download size={16} />}
         >
-          {destination === 'folder' ? <FolderOpen size={16} /> : <Download size={16} />}
           {busy
             ? 'Exporting...'
             : progress.phase === 'complete'
@@ -437,7 +423,7 @@ export const ExportView = () => {
                 : destination === 'files'
                   ? `Download ${totalFilesLabel} files`
                   : `Export ZIP (≈${totalFilesLabel} files)`}
-        </button>
+        </Button>
       </div>
     </div>
   );

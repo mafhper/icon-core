@@ -10,12 +10,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  // Matches the former `.ic-topbar-export` look 1:1 (accent gradient, 34px
-  // min-height, lifted hover) so the migration is pixel-neutral.
+  // Flat accent fill (A6): the former accent gradient topped out lighter than
+  // `--ic-accent`, so white text on primary never reached 4.5:1. Flat fill +
+  // themed hover keeps contrast AA in both themes.
   primary:
-    'min-h-[var(--ic-control-lg)] gap-[7px] rounded-ic-lg border border-ic-accent-hover px-[14px] text-[0.78rem] font-[740] tracking-[0.02em] ' +
-    'text-ic-on-accent bg-[linear-gradient(in_oklab_180deg,color-mix(in_oklab,var(--ic-accent),white_10%),var(--ic-accent))] ' +
-    'hover:not-disabled:-translate-y-px hover:not-disabled:brightness-[1.03]',
+    'min-h-[var(--ic-control-lg)] gap-[7px] rounded-ic-lg border border-ic-accent-hover bg-ic-accent px-[14px] text-[0.78rem] font-[740] tracking-[0.02em] ' +
+    'text-ic-on-accent hover:not-disabled:-translate-y-px hover:not-disabled:bg-ic-accent-hover',
   secondary: 'min-h-[var(--ic-control-md)] gap-2 rounded-ic-md border border-ic-border bg-ic-elevated px-3 text-[13px] text-ic-text hover:not-disabled:bg-ic-surface',
   ghost: 'min-h-[var(--ic-control-md)] gap-2 rounded-ic-md px-3 text-[13px] text-ic-text-muted hover:not-disabled:bg-ic-elevated hover:not-disabled:text-ic-text'
 };

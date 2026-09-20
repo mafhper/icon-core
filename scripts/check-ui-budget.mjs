@@ -51,10 +51,10 @@ const collectTs = (dir) => {
 };
 
 const scanDirs = ['apps/web/src'];
-// `icon-core` (product name, e.g. the default 'icon-core-project' slug) is not
-// a legacy token: negative lookbehind keeps the ratchet focused on classes
-// (`bg-core-*`) and CSS vars (`--core-*`).
-const CORE_RE = /(?<!icon)-core-/g;
+// `icon-core-project` (default project slug) is not a legacy token: skip
+// `core-` followed by `project`. Catches classes (`bg-core-*`), CSS vars
+// (`--core-*`) and bare legacy names (`.core-btn`).
+const CORE_RE = /(?<![a-zA-Z])core-(?!project\b)/g;
 let coreCount = 0;
 for (const dir of scanDirs) {
   for (const file of collectTs(path.join(rootDir, dir))) {
