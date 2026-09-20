@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, IconButton, ButtonGroup, Tooltip, TooltipProvider, Kbd } from '../src/index';
+import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd } from '../src/index';
 
 describe('Button', () => {
   it('defaults type to "button" (never submits)', () => {
@@ -92,6 +92,23 @@ describe('ButtonGroup', () => {
       </ButtonGroup>
     );
     expect(screen.getByRole('toolbar', { name: 'Zoom' })).toBeInTheDocument();
+  });
+});
+
+describe('ToolbarDivider', () => {
+  it('renders as a vertical separator by default', () => {
+    render(<ToolbarDivider data-testid="sep" />);
+    const sep = screen.getByTestId('sep');
+    expect(sep).toHaveAttribute('role', 'separator');
+    expect(sep).toHaveAttribute('aria-orientation', 'vertical');
+    expect(sep.className).toContain('w-px');
+  });
+
+  it('renders horizontal when requested', () => {
+    render(<ToolbarDivider orientation="horizontal" data-testid="sep-h" />);
+    const sep = screen.getByTestId('sep-h');
+    expect(sep).toHaveAttribute('aria-orientation', 'horizontal');
+    expect(sep.className).toContain('h-px');
   });
 });
 
