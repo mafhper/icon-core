@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import {
+  Circle,
   Grid3x3,
   Magnet,
   Moon,
   Redo2,
   RotateCcw,
+  Shapes,
+  Square,
+  Star,
   Sun,
   Undo2,
   ZoomIn,
@@ -17,6 +21,8 @@ import {
   Field,
   IconButton,
   Kbd,
+  Menu,
+  MenuItem,
   NumberField,
   Section,
   SegmentedControl,
@@ -151,6 +157,25 @@ export const UiGallery = () => {
               <IconButton icon={<Sun size={15} />} aria-label="Light theme" />
               <IconButton icon={<Moon size={15} />} aria-label="Dark theme" selected />
             </ButtonGroup>
+          </div>
+        </Section>
+
+        <Section
+          title="Menu"
+          hint="Dropdown for grouped creation/selection actions. Non-modal; Escape and outside pointer dismiss. Click an item:"
+        >
+          <div className="flex items-center gap-2">
+            <Menu
+              label="Add shape"
+              trigger={<IconButton icon={<Shapes size={16} />} aria-label="Add shape (demo)" />}
+            >
+              <MenuItem icon={<Square size={15} />} label="Rectangle" onSelect={() => setBackdrop('dots')} />
+              <MenuItem icon={<Circle size={15} />} label="Circle" onSelect={() => setBackdrop('grid')} />
+              <MenuItem icon={<Star size={15} />} label="Star" onSelect={() => setBackdrop('plain')} />
+            </Menu>
+            <span className="text-[0.78rem] text-ic-text-muted">
+              Last picked: <strong className="text-ic-text">{backdrop}</strong>
+            </span>
           </div>
         </Section>
 

@@ -260,8 +260,8 @@ export const CommandPalette = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-black/50 backdrop-blur-sm" onClick={() => setIsOpen(false)}>
-      <div className="w-full max-w-2xl bg-core-surface border border-core-border rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="p-4 border-b border-core-border">
+      <div className="w-full max-w-2xl bg-ic-surface border border-ic-border rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="p-4 border-b border-ic-border">
           <input
             ref={inputRef}
             type="text"
@@ -269,7 +269,7 @@ export const CommandPalette = () => {
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a command..."
-            className="w-full px-4 py-3 bg-core-elevated border border-core-border rounded-xl text-sm focus:outline-none focus:border-core-accent"
+            className="w-full px-4 py-3 bg-ic-elevated border border-ic-border rounded-xl text-sm focus:outline-none focus:border-ic-accent"
           />
         </div>
         <div className="max-h-[400px] overflow-y-auto p-2">
@@ -279,7 +279,7 @@ export const CommandPalette = () => {
 
             return (
               <div key={category} className="mb-2">
-                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-core-muted">
+                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ic-muted">
                   {category}
                 </div>
                 {categoryCommands.map((cmd) => {
@@ -293,18 +293,18 @@ export const CommandPalette = () => {
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition ${
                         globalIdx === selectedIndex
-                          ? 'bg-core-accent/20 text-core-accent'
-                          : 'hover:bg-core-elevated text-core-text'
+                          ? 'bg-ic-accent/20 text-ic-accent'
+                          : 'hover:bg-ic-elevated text-ic-text'
                       }`}
                     >
                       <div className="flex-1">
                         <div className="text-sm font-medium">{cmd.label}</div>
                         {cmd.description && (
-                          <div className="text-xs text-core-muted mt-0.5">{cmd.description}</div>
+                          <div className="text-xs text-ic-muted mt-0.5">{cmd.description}</div>
                         )}
                       </div>
                       {cmd.shortcut && (
-                        <div className="text-xs text-core-muted font-mono ml-4">{cmd.shortcut}</div>
+                        <div className="text-xs text-ic-muted font-mono ml-4">{cmd.shortcut}</div>
                       )}
                     </button>
                   );
@@ -313,16 +313,16 @@ export const CommandPalette = () => {
             );
           })}
           {filteredCommands.length === 0 && (
-            <div className="px-3 py-8 text-center text-sm text-core-muted">
+            <div className="px-3 py-8 text-center text-sm text-ic-muted">
               No commands found
             </div>
           )}
         </div>
-        <div className="px-4 py-3 border-t border-core-border bg-core-elevated flex items-center justify-between text-xs text-core-muted">
+        <div className="px-4 py-3 border-t border-ic-border bg-ic-elevated flex items-center justify-between text-xs text-ic-muted">
           <div className="flex items-center gap-4">
-            <span><kbd className="px-1.5 py-0.5 bg-core-surface rounded">↑↓</kbd> Navigate</span>
-            <span><kbd className="px-1.5 py-0.5 bg-core-surface rounded">↵</kbd> Select</span>
-            <span><kbd className="px-1.5 py-0.5 bg-core-surface rounded">Esc</kbd> Close</span>
+            <span><kbd className="px-1.5 py-0.5 bg-ic-surface rounded">↑↓</kbd> Navigate</span>
+            <span><kbd className="px-1.5 py-0.5 bg-ic-surface rounded">↵</kbd> Select</span>
+            <span><kbd className="px-1.5 py-0.5 bg-ic-surface rounded">Esc</kbd> Close</span>
           </div>
           <span>{filteredCommands.length} commands</span>
         </div>

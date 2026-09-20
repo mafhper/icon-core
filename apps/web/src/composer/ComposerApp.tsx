@@ -46,7 +46,7 @@ export const ComposerApp = () => {
     <TooltipProvider delayDuration={400}>
       <ToastProvider>
         <ComposerProvider>
-          <div className="min-h-screen text-core-text bg-core-bg composer-enter">
+          <div className="min-h-screen text-ic-text bg-ic-bg composer-enter">
             <ComposerShell />
           </div>
         </ComposerProvider>

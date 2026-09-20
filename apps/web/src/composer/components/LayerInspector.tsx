@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Eraser } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
-import { ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { brandGradientFill } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
@@ -33,7 +33,7 @@ export const LayerInspector = () => {
   if (!state.project) {
     return (
       <aside className="ic-inspector">
-        <p className="text-xs text-core-muted text-center py-8">No project open.</p>
+        <p className="text-xs text-ic-muted text-center py-8">No project open.</p>
       </aside>
     );
   }
@@ -179,7 +179,7 @@ export const LayerInspector = () => {
                 value={layer.text?.content ?? ''}
                 onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
               />
-              <div className="ic-field-grid">
+              <div className="grid grid-cols-2 gap-2.5">
                 <NumberField
                   label="Size"
                   min="8"
@@ -200,7 +200,7 @@ export const LayerInspector = () => {
         </Section>
 
         <Section title="Composition">
-          <div className="ic-field-grid">
+          <div className="grid grid-cols-2 gap-2.5">
             <NumberField
               label="X"
               value={Math.round(layer.transform.x)}
@@ -260,7 +260,7 @@ export const LayerInspector = () => {
         )}
 
         <Section title="Color">
-          <div className="ic-field-grid">
+          <div className="grid grid-cols-2 gap-2.5">
             <ColorField
               label="Fill"
               value={solidColor}
@@ -370,21 +370,24 @@ export const LayerInspector = () => {
               onKeyUp={commit}
             />
             {baseLayer.source.type === 'inline' && baseLayer.source.mimeType !== 'image/svg+xml' && (
-              <button type="button" className="ic-button inline-flex items-center justify-center gap-2" onClick={() => setShowBgRemoval(true)}>
-                <Eraser size={14} />
+              <Button
+                variant="secondary"
+                iconLeft={<Eraser size={14} />}
+                onClick={() => setShowBgRemoval(true)}
+              >
                 Remove background
-              </button>
+              </Button>
             )}
           </Section>
         )}
 
-        <button
-          type="button"
-          className="ic-danger-button"
+        <Button
+          variant="secondary"
+          className="border-ic-danger/60 bg-ic-danger/10 text-ic-danger hover:bg-ic-danger/20"
           onClick={() => dispatch({ type: 'REMOVE_LAYER', payload: { id: layer.id } })}
         >
           Delete selected layer
-        </button>
+        </Button>
       </div>
 
       {showBgRemoval && <BackgroundRemovalModal layer={baseLayer} onClose={() => setShowBgRemoval(false)} />}

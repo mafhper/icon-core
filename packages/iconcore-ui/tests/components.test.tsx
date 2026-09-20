@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, TextField, NumberField, Select, Switch, Slider, ColorField, SegmentedControl } from '../src/index';
+import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, TextField, NumberField, Select, Switch, Slider, ColorField, SegmentedControl, Menu, MenuItem } from '../src/index';
 
 describe('Button', () => {
   it('defaults type to "button" (never submits)', () => {
@@ -250,6 +250,39 @@ describe('SegmentedControl', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Plain' }));
     expect(onChange).toHaveBeenCalledWith('plain');
   });
+});
+
+describe('Menu', () => {
+  const renderMenu = (onSelect = vi.fn()) =>
+    render(
+      <Menu trigger={<IconButton icon={<span />} aria-label="Add shape" />} label="Add shape">
+        <MenuItem icon={<span />} label="Rectangle" onSelect={onSelect} />
+        <MenuItem icon={<span />} label="Circle" onSelect={onSelect} />
+      </Menu>
+    );
+
+  it('opens on trigger click and selects an item', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderMenu(onSelect);
+    expect(screen.queryByRole('menuitem', { name: 'Rectangle' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Add shape' }));
+    expect(await screen.findByRole('menuitem', { name: 'Rectangle' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('menuitem', { name: 'Rectangle' }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  }, 10_000);
+
+  it('closes on Escape', async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await user.click(screen.getByRole('button', { name: 'Add shape' }));
+    expect(await screen.findByRole('menuitem', { name: 'Circle' })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menuitem', { name: 'Circle' })).not.toBeInTheDocument();
+  }, 10_000);
 });
 
 describe('Kbd', () => {

@@ -23,7 +23,7 @@ const FORBIDDEN_PREFIXES = ['@iconcore/', 'apps/',
   // Known domain-adjacent modules that a UI package must never touch:
   'lucide-react'];
 
-const ALLOWED_DEPENDENCIES = ['clsx', 'tailwind-merge', 'react', 'react-dom', 'react/jsx-runtime', '@radix-ui/react-tooltip'];
+const ALLOWED_DEPENDENCIES = ['clsx', 'tailwind-merge', 'react', 'react-dom', 'react/jsx-runtime', '@radix-ui/react-tooltip', '@radix-ui/react-dropdown-menu'];
 
 /** Recursively collect .ts/.tsx paths under a directory. */
 const collectSources = (dir) => {
