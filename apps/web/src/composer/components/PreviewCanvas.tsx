@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Crosshair, Minus, Plus, SquareStack, Triangle, Type, Upload } from 'lucide-react';
-import type { IconLayer, IconVariant, IconCoreProject } from '@iconcore/shared';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Circle, Crosshair, ImagePlus, Shapes, Slash, Square, Squircle, Star, Triangle, Type } from 'lucide-react';
+import type { IconLayer, IconVariant, IconCoreProject, ShapeDefinition } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
-import { ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
+import { ButtonGroup, IconButton, Menu, MenuItem, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useLayerImport } from '../hooks/useLayerImport';
 import { resolveLayerVariant } from '../utils/layerResolve';
@@ -17,6 +17,31 @@ import { KeylineOverlay } from './KeylineOverlay';
 import { LayerContextMenu } from './LayerContextMenu';
 
 type DragMode = 'move' | 'scale' | 'rotate';
+
+/** Tiny rounded-rectangle glyph (lucide has no rounded-rect primitive). */
+const RoundedRectGlyph = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+    <rect x="2" y="3.5" width="12" height="9" rx="2.5" />
+  </svg>
+);
+
+interface ShapeOption {
+  kind: ShapeDefinition['kind'];
+  label: string;
+  icon: ReactNode;
+  defaults: ShapeDefinition;
+}
+
+/** Primitive shapes offered by the canvas "Add" menu, with creation defaults. */
+const SHAPE_OPTIONS: ShapeOption[] = [
+  { kind: 'rectangle', label: 'Rectangle', icon: <Square size={15} />, defaults: { kind: 'rectangle', width: 220, height: 220 } },
+  { kind: 'rounded-rectangle', label: 'Rounded rectangle', icon: <RoundedRectGlyph />, defaults: { kind: 'rounded-rectangle', width: 220, height: 220, cornerRadius: 48 } },
+  { kind: 'squircle', label: 'Squircle', icon: <Squircle size={15} />, defaults: { kind: 'squircle', width: 220, height: 220, cornerRadius: 48 } },
+  { kind: 'circle', label: 'Circle', icon: <Circle size={15} />, defaults: { kind: 'circle', width: 220, height: 220 } },
+  { kind: 'triangle', label: 'Triangle', icon: <Triangle size={15} />, defaults: { kind: 'triangle', width: 220, height: 220 } },
+  { kind: 'line', label: 'Line', icon: <Slash size={15} />, defaults: { kind: 'line', width: 280, height: 40 } },
+  { kind: 'star', label: 'Star', icon: <Star size={15} />, defaults: { kind: 'star', width: 220, height: 220 } }
+];
 
 interface DragState {
   id: string;
@@ -228,42 +253,19 @@ export const PreviewCanvas = () => {
             Add
           </span>
           <ButtonGroup label="Add layer" className="ic-toolbar-group">
-            <Tooltip content="Add shape layer">
-              <IconButton
-                icon={<Plus size={16} />}
-                aria-label="Add shape layer"
-                onClick={() =>
-                  dispatch({
-                    type: 'ADD_LAYER',
-                    payload: { shape: { kind: 'squircle', width: 220, height: 220, cornerRadius: 48 } }
-                  })
-                }
-              />
-            </Tooltip>
-            <Tooltip content="Add triangle layer">
-              <IconButton
-                icon={<Triangle size={16} />}
-                aria-label="Add triangle layer"
-                onClick={() =>
-                  dispatch({
-                    type: 'ADD_LAYER',
-                    payload: { shape: { kind: 'triangle', width: 220, height: 220 } }
-                  })
-                }
-              />
-            </Tooltip>
-            <Tooltip content="Add line layer">
-              <IconButton
-                icon={<Minus size={16} />}
-                aria-label="Add line layer"
-                onClick={() =>
-                  dispatch({
-                    type: 'ADD_LAYER',
-                    payload: { shape: { kind: 'line', width: 280, height: 40 } }
-                  })
-                }
-              />
-            </Tooltip>
+            <Menu
+              label="Add shape"
+              trigger={<IconButton icon={<Shapes size={16} />} aria-label="Add shape" />}
+            >
+              {SHAPE_OPTIONS.map((shape) => (
+                <MenuItem
+                  key={shape.kind}
+                  icon={shape.icon}
+                  label={shape.label}
+                  onSelect={() => dispatch({ type: 'ADD_LAYER', payload: { shape: shape.defaults } })}
+                />
+              ))}
+            </Menu>
             <Tooltip content="Add text layer">
               <IconButton
                 icon={<Type size={16} />}
@@ -273,14 +275,14 @@ export const PreviewCanvas = () => {
             </Tooltip>
             <Tooltip content="Add background fill layer">
               <IconButton
-                icon={<SquareStack size={16} />}
+                icon={<Square size={16} fill="currentColor" strokeWidth={1} />}
                 aria-label="Add background fill layer"
                 onClick={() => dispatch({ type: 'ADD_LAYER', payload: { background: true } })}
               />
             </Tooltip>
             <Tooltip content="Upload image">
               <IconButton
-                icon={<Upload size={16} />}
+                icon={<ImagePlus size={16} />}
                 aria-label="Upload image"
                 onClick={() => fileRef.current?.click()}
               />
