@@ -34,6 +34,9 @@ jobs:
       - name: Third-party asset guard
         run: bun scripts/check-third-party-assets.mjs
 
+      - name: UI boundary guard (G6)
+        run: bun scripts/check-ui-boundary.mjs
+
       - name: Typecheck
         run: bun run typecheck
 

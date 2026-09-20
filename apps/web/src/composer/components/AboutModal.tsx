@@ -6,7 +6,7 @@ const THIRD_PARTY = [
   {
     name: 'Rune Icons',
     license: 'Apache-2.0',
-    source: 'https://github.com/RuneIcons/rune-icons',
+    source: 'https://github.com/Nexvyn/runeicons',
     note: 'Initial stock for the built-in icon library.'
   },
   {
