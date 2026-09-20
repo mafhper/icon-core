@@ -2,17 +2,35 @@
 
 [English](README.md) | [Português (Brasil)](README.pt-BR.md) | [Español](README.es-ES.md)
 
-Icon Core is a free, open-source workspace for app icons. Start from a blank canvas or an existing SVG/PNG/JPG/WebP file, adjust the icon, and export ready-to-use assets for web and desktop projects.
+Free, open-source app icons, from first sketch to finished files. Design in the browser or on the desktop. Everything runs on your machine. No account, no uploads, no server.
 
-Everything runs locally in the browser or desktop app. No account, upload service, or backend is required.
+![Icon Core editor: layer list on the left, canvas with keylines in the center, properties on the right](docs/assets/app-editor.png)
 
-![Icon Core Edit Space](docs/assets/app-editor.png)
+## Start your way
 
-| Start a new icon | Export Utilities |
-| --- | --- |
-| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.png) |
+Three doors, same exit: finished icon files.
 
-## Try It
+### Start from scratch
+
+![Start screen offering three ways to begin](docs/assets/app-welcome.png)
+
+Open Edit Space on a blank canvas. Add shapes, text and images as layers, tune each one, and preview light, dark and mono variants as you go.
+
+### Start from a file
+
+Skip the canvas. Drop in a finished SVG, PNG, JPG or WebP and go straight to export.
+
+### Start from a file, then refine
+
+Open your file in Edit Space first, adjust positioning and variants, then export.
+
+## Export once, ship everywhere
+
+![Export Utilities with targets, format and output options](docs/assets/app-export.png)
+
+Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP, JPEG), take a ZIP or separate files. The preview uses the same engine as export, so the files match what you saw.
+
+## Try it
 
 - Web app: https://mafhper.github.io/icon-core/app/
 - Landing page: https://mafhper.github.io/icon-core/
@@ -21,23 +39,13 @@ Everything runs locally in the browser or desktop app. No account, upload servic
 
 [![Icon Core landing page](docs/assets/promo.png)](https://mafhper.github.io/icon-core/)
 
-## Workflows
+## What it does
 
-| Workspace | Use it when |
-| --- | --- |
-| Create in Edit Space | You want to build an icon from layers, text, shapes, and images. |
-| Upload to Export Utilities | You already have a final source file and only need generated assets. |
-| Upload, Adjust, Export | You want to import a file, tune it, then generate the final package. |
-
-## Features
-
-- **WYSIWYG canvas** — the live preview renders through the exact same engine as export, so what you see is what you ship
-- Layer editing for images, SVG, shapes, and text, with position, scale, rotation, opacity, color, gradient, blend mode, and shadow controls
-- Appearance and platform previews (default / light / dark / mono · square / rounded / circle) and per-variant overrides
-- Safe area shown as a guide only — icons stay full-bleed so each platform applies its own mask
-- Export targets for favicon, PWA, Tauri, Electron, and generic desktop assets
-- Flexible output: PNG / WebP / JPEG, quality, nested or flat structure, ZIP or a chosen folder (desktop), compression, an HTML preview sheet, and per-target reports
-- Web and desktop apps built from the same project model
+- Layers for shapes, text, images and SVG, with position, size, rotation, opacity, color, gradients, blend and shadow
+- Light, dark and mono previews, plus square, rounded and circle masks
+- Safe area guides that never crop your artwork
+- One click export to favicon, PWA, Tauri, Electron and desktop sets
+- HTML preview sheet and per target report included
 
 ## Development
 
@@ -47,43 +55,18 @@ Prerequisites:
 - Node.js 20+
 - Rust toolchain for desktop builds
 
-Install dependencies:
-
 ```bash
 bun install
+bun run dev:web     # browser app on :5173
+bun run dev:promo   # landing page on :5174
+bun run build       # everything for GitHub Pages
 ```
-
-Run the web app:
-
-```bash
-bun run dev:web
-```
-
-Run the landing page:
-
-```bash
-bun run dev:promo
-```
-
-Build everything for GitHub Pages:
-
-```bash
-bun run build
-```
-
-Run validation:
 
 ```bash
 bun audit --audit-level=high
 bun run lint
 bun run typecheck
 bun run test
-```
-
-Build desktop bundles:
-
-```bash
-bun run build:desktop
 ```
 
 ## Repository
@@ -100,11 +83,12 @@ packages/
   iconcore-engine/     Planning and schema utilities
   iconcore-validator/  Project validation
   iconcore-cli/        Command-line tools
+  iconcore-ui/        Design system primitives
 ```
 
 ## Contributing
 
-Issues, fixes, and experiments are welcome. Keep changes focused, run the relevant checks, and include validation notes in pull requests.
+Issues, fixes and experiments are welcome. Keep changes focused, run the relevant checks, and include validation notes in pull requests.
 
 ## License
 
