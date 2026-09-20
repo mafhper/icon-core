@@ -2,6 +2,7 @@ import { TooltipProvider } from '@iconcore/ui';
 import { ComposerProvider, useComposer } from './ComposerContext';
 import { ComposeView } from './views/ComposeView';
 import { ExportView } from './views/ExportView';
+import { UiGallery } from './views/UiGallery';
 import { CommandPalette } from './components/CommandPalette';
 import { WelcomeModal } from './components/WelcomeModal';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -13,6 +14,12 @@ const ComposerShell = () => {
   const { state } = useComposer();
   useKeyboardShortcuts();
   useTheme();
+
+  // The `#/ui` gallery is project-independent: it renders alone, never under
+  // the welcome modal, so primitives are inspectable with zero setup.
+  if (state.view === 'ui') {
+    return <UiGallery />;
+  }
 
   // The editor is always mounted; the welcome experience is a modal layered on
   // top of it — shown automatically when there is no project, and on demand

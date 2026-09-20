@@ -18,7 +18,7 @@ import {
   DEFAULT_TARGETS
 } from './utils/projectFactory';
 
-export type PublicRoute = 'workspaces' | 'edit-space' | 'export-utilities';
+export type PublicRoute = 'workspaces' | 'edit-space' | 'export-utilities' | 'ui';
 export type WorkspaceId = 'create-edit' | 'upload-export' | 'upload-edit-export';
 export type ComposerView = PublicRoute;
 
@@ -101,7 +101,7 @@ export const initialState: ComposerState = {
 export const normalizeRoute = (value: string): ComposerView => {
   if (value === 'composer' || value === 'compose' || value === 'start') return 'edit-space';
   if (value === 'export') return 'export-utilities';
-  if (value === 'edit-space' || value === 'export-utilities' || value === 'workspaces') return value;
+  if (value === 'edit-space' || value === 'export-utilities' || value === 'workspaces' || value === 'ui') return value;
   return 'workspaces';
 };
 
