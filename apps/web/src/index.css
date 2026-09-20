@@ -32,6 +32,7 @@
   --color-ic-success: var(--ic-success);
   --color-ic-warning: var(--ic-warning);
   --color-ic-danger: var(--ic-danger);
+  --color-ic-gold: var(--ic-gold);
   --font-display: "Sora", sans-serif;
   --font-body: "Sora", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
@@ -1056,6 +1057,20 @@ input[type='range'] {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Visible group caption inside roomy toolbars (canvas toolbar). Supplementary:
+   every control keeps its own Tooltip + aria-label. Hidden on narrow screens
+   where the toolbar wraps and space is scarce. */
+.ic-toolbar-label {
+  padding: 0 4px;
+  color: var(--ic-text-faint);
+  font-size: 0.66rem;
+  font-weight: 720;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  user-select: none;
+  white-space: nowrap;
 }
 
 .ic-layer-list {

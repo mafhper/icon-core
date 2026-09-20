@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Crosshair } from 'lucide-react';
+import { Crosshair, Minus, Plus, SquareStack, Triangle, Type, Upload } from 'lucide-react';
 import type { IconLayer, IconVariant, IconCoreProject } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
+import { ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
+import { useLayerImport } from '../hooks/useLayerImport';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
@@ -80,6 +82,8 @@ const useRenderedIcon = (
 
 export const PreviewCanvas = () => {
   const { state, dispatch } = useComposer();
+  const importFiles = useLayerImport();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; layerId: string } | null>(null);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
   const dragRef = useRef<DragState | null>(null);
@@ -211,19 +215,101 @@ export const PreviewCanvas = () => {
     dispatch({ type: 'COMMIT_HISTORY' });
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await importFiles(e.target.files);
+    e.target.value = '';
+  };
+
   return (
     <div className="ic-preview-panel">
       <div className="ic-canvas-toolbar">
-        <div className="ic-toolbar-group">
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
-            className={`p-1.5 rounded ${state.showKeylines ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-            title="Toggle keyline grid"
-            aria-label="Toggle keyline grid"
-          >
-            <Crosshair size={16} />
-          </button>
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="ic-toolbar-label" aria-hidden="true">
+            Add
+          </span>
+          <ButtonGroup label="Add layer" className="ic-toolbar-group">
+            <Tooltip content="Add shape layer">
+              <IconButton
+                icon={<Plus size={16} />}
+                aria-label="Add shape layer"
+                onClick={() =>
+                  dispatch({
+                    type: 'ADD_LAYER',
+                    payload: { shape: { kind: 'squircle', width: 220, height: 220, cornerRadius: 48 } }
+                  })
+                }
+              />
+            </Tooltip>
+            <Tooltip content="Add triangle layer">
+              <IconButton
+                icon={<Triangle size={16} />}
+                aria-label="Add triangle layer"
+                onClick={() =>
+                  dispatch({
+                    type: 'ADD_LAYER',
+                    payload: { shape: { kind: 'triangle', width: 220, height: 220 } }
+                  })
+                }
+              />
+            </Tooltip>
+            <Tooltip content="Add line layer">
+              <IconButton
+                icon={<Minus size={16} />}
+                aria-label="Add line layer"
+                onClick={() =>
+                  dispatch({
+                    type: 'ADD_LAYER',
+                    payload: { shape: { kind: 'line', width: 280, height: 40 } }
+                  })
+                }
+              />
+            </Tooltip>
+            <Tooltip content="Add text layer">
+              <IconButton
+                icon={<Type size={16} />}
+                aria-label="Add text layer"
+                onClick={() => dispatch({ type: 'ADD_LAYER', payload: { text: true } })}
+              />
+            </Tooltip>
+            <Tooltip content="Add background fill layer">
+              <IconButton
+                icon={<SquareStack size={16} />}
+                aria-label="Add background fill layer"
+                onClick={() => dispatch({ type: 'ADD_LAYER', payload: { background: true } })}
+              />
+            </Tooltip>
+            <Tooltip content="Upload image">
+              <IconButton
+                icon={<Upload size={16} />}
+                aria-label="Upload image"
+                onClick={() => fileRef.current?.click()}
+              />
+            </Tooltip>
+          </ButtonGroup>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp"
+            className="hidden"
+            multiple
+            onChange={handleFileUpload}
+          />
+        </div>
+        <ToolbarDivider />
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="ic-toolbar-label" aria-hidden="true">
+            View
+          </span>
+          <ButtonGroup label="Canvas view" className="ic-toolbar-group">
+            <Tooltip content="Toggle keyline grid">
+              <IconButton
+                selected={state.showKeylines}
+                onClick={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
+                icon={<Crosshair size={16} />}
+                aria-label="Toggle keyline grid"
+              />
+            </Tooltip>
+          </ButtonGroup>
         </div>
       </div>
       <div

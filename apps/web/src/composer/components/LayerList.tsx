@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Upload, Type, Triangle, Minus, SquareStack } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, Copy } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
-import { useLayerImport } from '../hooks/useLayerImport';
 import { QualityWarnings } from './QualityWarnings';
 import { LayerContextMenu } from './LayerContextMenu';
 
 export const LayerList = () => {
   const { state, dispatch } = useComposer();
-  const importFiles = useLayerImport();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; layerId: string } | null>(null);
@@ -44,76 +42,18 @@ export const LayerList = () => {
     setDragOverId(null);
   };
 
-  const handleAddLayer = () => {
-    dispatch({
-      type: 'ADD_LAYER',
-      payload: { shape: { kind: 'squircle', width: 220, height: 220, cornerRadius: 48 } }
-    });
-  };
-
   const commitRename = (id: string, value: string) => {
     const name = value.trim();
     if (name) dispatch({ type: 'UPDATE_LAYER', payload: { id, changes: { name } } });
     dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: null } });
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    await importFiles(e.target.files);
-    e.target.value = '';
-  };
-
   return (
     <aside className="ic-layer-list">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">
           Layers
         </h2>
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={handleAddLayer}
-            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
-            title="Add shape layer"
-          >
-            <Plus size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'ADD_LAYER', payload: { shape: { kind: 'triangle', width: 220, height: 220 } } })}
-            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
-            title="Add triangle layer"
-          >
-            <Triangle size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'ADD_LAYER', payload: { shape: { kind: 'line', width: 280, height: 40 } } })}
-            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
-            title="Add line layer"
-          >
-            <Minus size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'ADD_LAYER', payload: { text: true } })}
-            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
-            title="Add text layer"
-          >
-            <Type size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'ADD_LAYER', payload: { background: true } })}
-            className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text"
-            title="Add background fill layer"
-          >
-            <SquareStack size={16} />
-          </button>
-          <label className="p-1.5 rounded-lg hover:bg-core-elevated text-core-muted hover:text-core-text cursor-pointer" title="Upload image">
-            <input type="file" accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp" className="hidden" multiple onChange={handleFileUpload} />
-            <Upload size={16} />
-          </label>
-        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-1">

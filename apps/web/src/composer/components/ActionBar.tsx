@@ -1,5 +1,5 @@
-import { Circle, Download, Grid3x3, Magnet, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, RectangleHorizontal, Redo2, RotateCcw, Square, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
-import { Button, ButtonGroup, IconButton, Tooltip } from '@iconcore/ui';
+import { Circle, Grid3x3, Magnet, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, RectangleHorizontal, Redo2, RotateCcw, Square, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { SizePreview } from './SizePreview';
@@ -44,41 +44,49 @@ export const ActionBar = ({
   inspectorOpen,
   showInspectorToggle = false
 }: ActionBarProps) => {
-  const { state, dispatch, navigate } = useComposer();
+  const { state, dispatch } = useComposer();
   const platformLabel = `Platform: ${PLATFORM_LABELS[state.maskShape] ?? state.maskShape}`;
 
   return (
     <footer className="ic-action-bar">
       <div className="ic-action-bar-inner">
-        <ButtonGroup className="ic-toolbar-group">
+        <div className="flex min-w-0 items-center gap-1">
           {showLeftToggle && (
-            <Tooltip content="Toggle Layers panel">
-              <IconButton
-                selected={leftOpen}
-                onClick={onToggleLeft}
-                icon={leftOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-                aria-label="Toggle Layers panel"
-                aria-expanded={leftOpen ?? false}
-              />
-            </Tooltip>
+            <>
+              <ButtonGroup label="Panels" className="ic-toolbar-group">
+                <Tooltip content="Toggle Layers panel">
+                  <IconButton
+                    selected={leftOpen}
+                    onClick={onToggleLeft}
+                    icon={leftOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+                    aria-label="Toggle Layers panel"
+                    aria-expanded={leftOpen ?? false}
+                  />
+                </Tooltip>
+              </ButtonGroup>
+              <ToolbarDivider />
+            </>
           )}
-          <IconButton
-            onClick={() => dispatch({ type: 'UNDO' })}
-            disabled={state.historyIndex <= 0}
-            icon={<Undo2 size={15} />}
-            title="Undo (Ctrl+Z)"
-            aria-label="Undo"
-          />
-          <IconButton
-            onClick={() => dispatch({ type: 'REDO' })}
-            disabled={state.historyIndex >= state.history.length - 1}
-            icon={<Redo2 size={15} />}
-            title="Redo (Ctrl+Shift+Z)"
-            aria-label="Redo"
-          />
-        </ButtonGroup>
+          <ButtonGroup label="History" className="ic-toolbar-group">
+            <IconButton
+              onClick={() => dispatch({ type: 'UNDO' })}
+              disabled={state.historyIndex <= 0}
+              icon={<Undo2 size={15} />}
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo"
+            />
+            <IconButton
+              onClick={() => dispatch({ type: 'REDO' })}
+              disabled={state.historyIndex >= state.history.length - 1}
+              icon={<Redo2 size={15} />}
+              title="Redo (Ctrl+Shift+Z)"
+              aria-label="Redo"
+            />
+          </ButtonGroup>
+        </div>
 
-        <ButtonGroup className="ic-toolbar-group">
+        <div className="flex min-w-0 items-center gap-1">
+          <ButtonGroup label="Zoom" className="ic-toolbar-group">
           <Tooltip content="Zoom out">
             <IconButton
               onClick={() => dispatch({ type: 'SET_ZOOM', payload: Math.max(ZOOM_MIN, state.zoom - ZOOM_STEP) })}
@@ -101,64 +109,72 @@ export const ActionBar = ({
               aria-label="Reset zoom"
             />
           </Tooltip>
-          <Tooltip content="Toggle grid">
-            <IconButton
-              selected={state.showGrid}
-              onClick={() => dispatch({ type: 'TOGGLE_GRID' })}
-              icon={<Grid3x3 size={15} />}
-              aria-label="Toggle grid"
-            />
-          </Tooltip>
-          <Tooltip content="Toggle snapping">
-            <IconButton
-              selected={state.showSnapping}
-              onClick={() => dispatch({ type: 'TOGGLE_SNAPPING' })}
-              icon={<Magnet size={15} />}
-              aria-label="Toggle snapping"
-            />
-          </Tooltip>
-          <Tooltip content={platformLabel}>
-            <IconButton
-              onClick={() => {
-                const index = PLATFORM_CYCLE.indexOf(state.maskShape as (typeof PLATFORM_CYCLE)[number]);
-                const next = PLATFORM_CYCLE[(index + 1) % PLATFORM_CYCLE.length];
-                dispatch({ type: 'SET_MASK_SHAPE', payload: next });
-              }}
-              icon={
-                state.maskShape === 'circle'
-                  ? <Circle size={15} />
-                  : state.maskShape === 'square'
-                    ? <Square size={15} />
-                    : <RectangleHorizontal size={15} />
-              }
-              aria-label={platformLabel}
-            />
-          </Tooltip>
-          {state.project && <AppearanceSwitcher />}
-          {state.project && <SizePreview />}
-          {showInspectorToggle && (
-            <Tooltip content="Toggle Inspector panel">
+          </ButtonGroup>
+          <ToolbarDivider />
+          <ButtonGroup label="View" className="ic-toolbar-group">
+            <Tooltip content="Toggle grid">
               <IconButton
-                selected={inspectorOpen}
-                onClick={onToggleInspector}
-                icon={inspectorOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
-                aria-label="Toggle Inspector panel"
-                aria-expanded={inspectorOpen ?? false}
+                selected={state.showGrid}
+                onClick={() => dispatch({ type: 'TOGGLE_GRID' })}
+                icon={<Grid3x3 size={15} />}
+                aria-label="Toggle grid"
               />
             </Tooltip>
+            <Tooltip content="Toggle snapping">
+              <IconButton
+                selected={state.showSnapping}
+                onClick={() => dispatch({ type: 'TOGGLE_SNAPPING' })}
+                icon={<Magnet size={15} />}
+                aria-label="Toggle snapping"
+              />
+            </Tooltip>
+          </ButtonGroup>
+          <ToolbarDivider />
+          <ButtonGroup label="Shape" className="ic-toolbar-group">
+            <Tooltip content={platformLabel}>
+              <IconButton
+                onClick={() => {
+                  const index = PLATFORM_CYCLE.indexOf(state.maskShape as (typeof PLATFORM_CYCLE)[number]);
+                  const next = PLATFORM_CYCLE[(index + 1) % PLATFORM_CYCLE.length];
+                  dispatch({ type: 'SET_MASK_SHAPE', payload: next });
+                }}
+                icon={
+                  state.maskShape === 'circle'
+                    ? <Circle size={15} />
+                    : state.maskShape === 'square'
+                      ? <Square size={15} />
+                      : <RectangleHorizontal size={15} />
+                }
+                aria-label={platformLabel}
+              />
+            </Tooltip>
+          </ButtonGroup>
+          {state.project && (
+            <>
+              <ToolbarDivider />
+              <ButtonGroup label="Appearance" className="ic-toolbar-group">
+                <AppearanceSwitcher />
+                <SizePreview />
+              </ButtonGroup>
+            </>
           )}
-          <Tooltip content="Export icon pack">
-            <Button
-              variant="primary"
-              iconLeft={<Download size={15} />}
-              onClick={() => navigate('export-utilities')}
-              disabled={!state.project}
-              aria-label="Export icon pack"
-            >
-              Export
-            </Button>
-          </Tooltip>
-        </ButtonGroup>
+          {showInspectorToggle && (
+            <>
+              <ToolbarDivider />
+              <ButtonGroup label="Panels" className="ic-toolbar-group">
+                <Tooltip content="Toggle Inspector panel">
+                  <IconButton
+                    selected={inspectorOpen}
+                    onClick={onToggleInspector}
+                    icon={inspectorOpen ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />}
+                    aria-label="Toggle Inspector panel"
+                    aria-expanded={inspectorOpen ?? false}
+                  />
+                </Tooltip>
+              </ButtonGroup>
+            </>
+          )}
+        </div>
       </div>
     </footer>
   );
