@@ -37,6 +37,12 @@ jobs:
       - name: UI boundary guard (G6)
         run: bun scripts/check-ui-boundary.mjs
 
+      - name: UI budget guard (G1 + ratchets)
+        run: bun scripts/check-ui-budget.mjs
+
+      - name: UI contrast guard
+        run: bun scripts/check-ui-contrast.mjs
+
       - name: Typecheck
         run: bun run typecheck
 
