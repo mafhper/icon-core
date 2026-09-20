@@ -201,12 +201,12 @@ export const App = () => {
   };
 
   return (
-    <div className="min-h-screen text-core-text">
-      <header className="sticky top-0 z-20 border-b border-core-border bg-core-bg/88 backdrop-blur-xl">
+    <div className="min-h-screen text-ic-text">
+      <header className="sticky top-0 z-20 border-b border-ic-border bg-ic-bg/88 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-3 md:px-6">
           <div>
             <p className="font-display text-sm uppercase tracking-[0.18em]">{t('appTitle')}</p>
-            <p className="text-xs text-core-muted">{t('appSubtitle')}</p>
+            <p className="text-xs text-ic-muted">{t('appSubtitle')}</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -214,7 +214,7 @@ export const App = () => {
               type="button"
               onClick={handleZipExport}
               disabled={artifacts.length === 0 || isGenerating}
-              className="core-btn inline-flex items-center gap-2 rounded-xl border border-core-border bg-core-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-core-text disabled:cursor-not-allowed disabled:opacity-60"
+              className="core-btn inline-flex items-center gap-2 rounded-xl border border-ic-border bg-ic-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-ic-text disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Download size={14} />
               {t('exportAssets')}
@@ -224,7 +224,7 @@ export const App = () => {
                 type="button"
                 onClick={() => void handleGenerate()}
                 disabled={!uploads.master.file || isGenerating}
-                className="core-btn core-btn-primary inline-flex items-center gap-2 rounded-xl border border-core-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] disabled:cursor-not-allowed disabled:opacity-60"
+                className="core-btn core-btn-primary inline-flex items-center gap-2 rounded-xl border border-ic-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Package size={14} />
                 {isGenerating ? t('generating') : t('generate')}
@@ -232,7 +232,7 @@ export const App = () => {
             )}
             <button
               type="button"
-              className="core-btn inline-flex items-center gap-2 rounded-xl border border-core-border bg-core-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-core-text transition hover:border-core-accent"
+              className="core-btn inline-flex items-center gap-2 rounded-xl border border-ic-border bg-ic-surface px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-ic-text transition hover:border-ic-accent"
               onClick={() => setIsSettingsOpen(true)}
             >
               <SlidersHorizontal size={14} />
@@ -254,14 +254,14 @@ export const App = () => {
           />
           <ProjectConfigPanel config={projectConfig} onChange={setProjectConfig} t={t} />
 
-          <section className="card-surface space-y-4 rounded-2xl border border-core-border bg-core-surface p-5 shadow-panel">
+          <section className="card-surface space-y-4 rounded-2xl border border-ic-border bg-ic-surface p-5 shadow-panel">
             <div className="flex items-center gap-2">
-              <Settings2 size={16} className="text-core-accent" />
-              <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">{t('settings')}</h2>
+              <Settings2 size={16} className="text-ic-accent" />
+              <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">{t('settings')}</h2>
             </div>
 
             <label className="grid gap-2 text-xs">
-              <span className="font-semibold uppercase tracking-[0.08em] text-core-muted">
+              <span className="font-semibold uppercase tracking-[0.08em] text-ic-muted">
                 {t('paddingLogo')} ({Math.round(settings.logoPadding * 100)}%)
               </span>
               <input
@@ -277,7 +277,7 @@ export const App = () => {
             </label>
 
             <label className="grid gap-2 text-xs">
-              <span className="font-semibold uppercase tracking-[0.08em] text-core-muted">
+              <span className="font-semibold uppercase tracking-[0.08em] text-ic-muted">
                 {t('paddingFavicon')} ({Math.round(settings.faviconPadding * 100)}%)
               </span>
               <input
@@ -293,7 +293,7 @@ export const App = () => {
             </label>
 
             <label className="grid gap-2 text-xs">
-              <span className="font-semibold uppercase tracking-[0.08em] text-core-muted">
+              <span className="font-semibold uppercase tracking-[0.08em] text-ic-muted">
                 {t('paddingSocial')} ({Math.round(settings.socialPadding * 100)}%)
               </span>
               <input
@@ -322,7 +322,7 @@ export const App = () => {
               />
             </div>
 
-            <label className="flex items-center justify-between rounded-lg border border-core-border bg-core-elevated px-3 py-2 text-xs text-core-muted">
+            <label className="flex items-center justify-between rounded-lg border border-ic-border bg-ic-elevated px-3 py-2 text-xs text-ic-muted">
               {t('transparentBg')}
               <input
                 type="checkbox"
@@ -333,7 +333,7 @@ export const App = () => {
               />
             </label>
 
-            <label className="flex items-center justify-between rounded-lg border border-core-border bg-core-elevated px-3 py-2 text-xs text-core-muted">
+            <label className="flex items-center justify-between rounded-lg border border-ic-border bg-ic-elevated px-3 py-2 text-xs text-ic-muted">
               {t('includeSocial')}
               <input
                 type="checkbox"
@@ -346,7 +346,7 @@ export const App = () => {
           </section>
 
           {error && (
-            <p className="rounded-xl border border-core-danger/50 bg-core-danger/10 p-3 text-xs text-core-danger">{error}</p>
+            <p className="rounded-xl border border-ic-danger/50 bg-ic-danger/10 p-3 text-xs text-ic-danger">{error}</p>
           )}
         </aside>
 

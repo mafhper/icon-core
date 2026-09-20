@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { Fill } from '@iconcore/shared';
+import { Slider } from '@iconcore/ui';
 
 interface GradientEditorProps {
   fill: Fill;
@@ -104,56 +105,44 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
       </div>
 
       {fill.kind === 'linear-gradient' ? (
-        <label className="ic-field">
-          <span>Angle ({fill.angle ?? 135}°)</span>
-          <input
-            type="range"
+        <Slider
+          label={`Angle (${fill.angle ?? 135}°)`}
+          min="0"
+          max="360"
+          value={fill.angle ?? 135}
+          onChange={(e) => onChange({ ...fill, angle: Number(e.target.value) })}
+          onPointerUp={onCommit}
+          onKeyUp={onCommit}
+        />
+      ) : (
+        <div className="grid grid-cols-2 gap-2.5">
+          <Slider
+            label={`Center X (${Math.round((fill.centerX ?? 0.5) * 100)}%)`}
             min="0"
-            max="360"
-            value={fill.angle ?? 135}
-            onChange={(e) => onChange({ ...fill, angle: Number(e.target.value) })}
+            max="100"
+            value={Math.round((fill.centerX ?? 0.5) * 100)}
+            onChange={(e) => onChange({ ...fill, centerX: Number(e.target.value) / 100 })}
             onPointerUp={onCommit}
             onKeyUp={onCommit}
           />
-        </label>
-      ) : (
-        <div className="ic-field-grid">
-          <label className="ic-field">
-            <span>Center X ({Math.round((fill.centerX ?? 0.5) * 100)}%)</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={Math.round((fill.centerX ?? 0.5) * 100)}
-              onChange={(e) => onChange({ ...fill, centerX: Number(e.target.value) / 100 })}
-              onPointerUp={onCommit}
-              onKeyUp={onCommit}
-            />
-          </label>
-          <label className="ic-field">
-            <span>Center Y ({Math.round((fill.centerY ?? 0.5) * 100)}%)</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={Math.round((fill.centerY ?? 0.5) * 100)}
-              onChange={(e) => onChange({ ...fill, centerY: Number(e.target.value) / 100 })}
-              onPointerUp={onCommit}
-              onKeyUp={onCommit}
-            />
-          </label>
-          <label className="ic-field">
-            <span>Radius ({Math.round((fill.radius ?? 0.5) * 100)}%)</span>
-            <input
-              type="range"
-              min="10"
-              max="100"
-              value={Math.round((fill.radius ?? 0.5) * 100)}
-              onChange={(e) => onChange({ ...fill, radius: Number(e.target.value) / 100 })}
-              onPointerUp={onCommit}
-              onKeyUp={onCommit}
-            />
-          </label>
+          <Slider
+            label={`Center Y (${Math.round((fill.centerY ?? 0.5) * 100)}%)`}
+            min="0"
+            max="100"
+            value={Math.round((fill.centerY ?? 0.5) * 100)}
+            onChange={(e) => onChange({ ...fill, centerY: Number(e.target.value) / 100 })}
+            onPointerUp={onCommit}
+            onKeyUp={onCommit}
+          />
+          <Slider
+            label={`Radius (${Math.round((fill.radius ?? 0.5) * 100)}%)`}
+            min="10"
+            max="100"
+            value={Math.round((fill.radius ?? 0.5) * 100)}
+            onChange={(e) => onChange({ ...fill, radius: Number(e.target.value) / 100 })}
+            onPointerUp={onCommit}
+            onKeyUp={onCommit}
+          />
         </div>
       )}
     </div>

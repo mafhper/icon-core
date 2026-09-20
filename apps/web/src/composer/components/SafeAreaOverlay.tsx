@@ -18,7 +18,7 @@ export const SafeAreaOverlay = () => {
       }}
     >
       <div
-        className="absolute border-2 border-dashed border-core-accent/60"
+        className="absolute border-2 border-dashed border-ic-accent/60"
         style={{
           top: insetPx * state.zoom,
           left: insetPx * state.zoom,

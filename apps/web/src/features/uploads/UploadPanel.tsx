@@ -51,9 +51,9 @@ export const UploadPanel = ({
   };
 
   return (
-    <section className="card-surface space-y-4 rounded-2xl border border-core-border bg-core-surface p-5 shadow-panel">
+    <section className="card-surface space-y-4 rounded-2xl border border-ic-border bg-ic-surface p-5 shadow-panel">
       <div>
-        <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">Assets</h2>
+        <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">Assets</h2>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -63,8 +63,8 @@ export const UploadPanel = ({
           return (
             <label
               key={slot.id}
-              className={`group relative flex min-h-28 flex-col justify-between rounded-xl border border-core-border bg-core-elevated p-3 transition ${
-                disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer hover:border-core-accent'
+              className={`group relative flex min-h-28 flex-col justify-between rounded-xl border border-ic-border bg-ic-elevated p-3 transition ${
+                disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer hover:border-ic-accent'
               }`}
             >
               <input
@@ -79,7 +79,7 @@ export const UploadPanel = ({
                 }}
               />
 
-              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.08em] text-core-muted">
+              <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.08em] text-ic-muted">
                 <span>{t(slot.label as never)}{slot.required ? ' *' : ''}</span>
                 <span className="font-mono text-[10px]">{t('suggested')} {slot.suggested}</span>
               </div>
@@ -93,20 +93,20 @@ export const UploadPanel = ({
                       event.preventDefault();
                       onClear(slot.id);
                     }}
-                    className="absolute right-2 top-2 rounded-md border border-core-border bg-black/60 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
+                    className="absolute right-2 top-2 rounded-md border border-ic-border bg-black/60 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
                   >
                     clear
                   </button>
                 </div>
               ) : (
-                <div className="mt-3 flex h-24 items-center justify-center rounded-lg border border-dashed border-core-border text-core-muted transition group-hover:text-core-accent">
+                <div className="mt-3 flex h-24 items-center justify-center rounded-lg border border-dashed border-ic-border text-ic-muted transition group-hover:text-ic-accent">
                   {disabled ? <span className="text-[11px] font-semibold uppercase tracking-[0.08em]">{t('autoFromMaster')}</span> : slot.icon}
                 </div>
               )}
 
               {slot.id === 'master' && (
                 <div className="mt-3 grid gap-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-core-muted">{t('masterScope')}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ic-muted">{t('masterScope')}</span>
                   <div className="grid grid-cols-2 gap-1">
                     {masterSourceModes.map((mode) => (
                       <button
@@ -118,8 +118,8 @@ export const UploadPanel = ({
                         }}
                         className={`rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.07em] ${
                           masterSourceMode === mode.id
-                            ? 'border-core-accent bg-core-accent text-[color:var(--core-on-accent)]'
-                            : 'border-core-border bg-core-surface text-core-muted'
+                            ? 'border-ic-accent bg-ic-accent text-[color:var(--ic-on-accent)]'
+                            : 'border-ic-border bg-ic-surface text-ic-muted'
                         }`}
                       >
                         {t(mode.key as never)}

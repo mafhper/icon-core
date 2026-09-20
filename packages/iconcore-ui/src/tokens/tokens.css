@@ -35,9 +35,9 @@
   --ic-text: #e6e7ea;
   --ic-text-muted: #9a9ca3;
   --ic-text-faint: #6b6d74;
-  --ic-accent: #4a7cf0;
-  --ic-accent-hover: #5c8bf5;
-  --ic-accent-soft: color-mix(in oklab, var(--ic-accent) 14%, transparent);
+  --ic-accent: #3f6ce0;
+  --ic-accent-hover: #4a76e8;
+  --ic-accent-soft: color-mix(in oklab, var(--ic-accent) 20%, transparent);
   --ic-accent-ring: color-mix(in oklab, var(--ic-accent) 70%, transparent);
   --ic-on-accent: #ffffff;
   --ic-success: #7fb899;
@@ -71,10 +71,10 @@
   --ic-border-soft: rgba(23, 25, 38, 0.06);
   --ic-text: #16171a;
   --ic-text-muted: #6a6d73;
-  --ic-text-faint: #8f9297;
+  --ic-text-faint: #86898f;
   --ic-accent: #3a6ce5;
   --ic-accent-hover: #2f5ed6;
-  --ic-accent-soft: color-mix(in oklab, var(--ic-accent) 14%, transparent);
+  --ic-accent-soft: color-mix(in oklab, var(--ic-accent) 20%, transparent);
   --ic-accent-ring: color-mix(in oklab, var(--ic-accent) 70%, transparent);
   --ic-on-accent: #ffffff;
   --ic-success: #2f6e4a;
@@ -87,4 +87,20 @@
   --ic-scroll-track: rgba(0, 0, 0, 0.04);
   --ic-scroll-thumb: rgba(0, 0, 0, 0.22);
   --ic-scroll-thumb-hover: rgba(0, 0, 0, 0.34);
+}
+
+/*
+ * Layer 3 — component tokens.
+ *
+ * Concrete dimensions shared by the action primitives (Button, IconButton)
+ * and the app chrome. Theme-independent; kept intentionally small so the
+ * system does not invent a token for every visual decision.
+ */
+:root {
+  --ic-control-sm: 32px;
+  --ic-control-md: 28px;
+  --ic-control-lg: 34px;
+  --ic-radius-sm: 8px;
+  --ic-radius-md: 6px;
+  --ic-radius-lg: 10px;
 }

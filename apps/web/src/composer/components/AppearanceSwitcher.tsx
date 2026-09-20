@@ -1,5 +1,6 @@
 import { Contrast, Image, Moon, Sun } from 'lucide-react';
 import type { IconVariant } from '@iconcore/shared';
+import { IconButton, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 
 const APPEARANCES: Array<{ id: IconVariant; label: string; icon: typeof Sun }> = [
@@ -14,28 +15,25 @@ const APPEARANCES: Array<{ id: IconVariant; label: string; icon: typeof Sun }> =
  * Uses distinct SVG icons per mode — default (image), light (sun), dark
  * (moon), mono (contrast) — so each variant is recognizable at a glance,
  * unlike rendered thumbnails which all looked identical.
+ *
+ * A6: migrated to kit `IconButton`s inside the parent `ButtonGroup`
+ * (label "Appearance"); no wrapper div of its own anymore.
  */
 export const AppearanceSwitcher = () => {
   const { state, dispatch } = useComposer();
 
   return (
-    <div className="ic-toolbar-group" role="group" aria-label="Icon appearance variants">
-      {APPEARANCES.map(({ id, label, icon: Icon }) => {
-        const active = state.activeVariant === id;
-        return (
-          <button
-            key={id}
-            type="button"
+    <>
+      {APPEARANCES.map(({ id, label, icon: Icon }) => (
+        <Tooltip key={id} content={label}>
+          <IconButton
+            selected={state.activeVariant === id}
             onClick={() => dispatch({ type: 'SET_ACTIVE_VARIANT', payload: id })}
-            className={`p-1.5 rounded ${active ? 'bg-core-accent/20 text-core-accent' : 'hover:bg-core-elevated'}`}
-            title={label}
+            icon={<Icon size={15} />}
             aria-label={label}
-            aria-pressed={active}
-          >
-            <Icon size={15} />
-          </button>
-        );
-      })}
-    </div>
+          />
+        </Tooltip>
+      ))}
+    </>
   );
 };

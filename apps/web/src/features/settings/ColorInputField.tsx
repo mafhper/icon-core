@@ -142,7 +142,7 @@ export const ColorInputField = ({ label, valueHex, onChangeHex }: ColorInputFiel
   return (
     <label className="color-input-field grid gap-2 text-xs">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold uppercase tracking-[0.08em] text-core-muted">{label}</span>
+        <span className="font-semibold uppercase tracking-[0.08em] text-ic-muted">{label}</span>
         <select value={format} onChange={(event) => setFormat(event.target.value as ColorFormat)} className="color-format-select">
           <option value="hex">HEX</option>
           <option value="rgb">RGB</option>
@@ -150,7 +150,7 @@ export const ColorInputField = ({ label, valueHex, onChangeHex }: ColorInputFiel
         </select>
       </div>
       <div className="color-input-row">
-        <input type="color" value={normalizeHex(valueHex) ?? '#000000'} onChange={(event) => onChangeHex(event.target.value)} className="h-10 w-12 rounded-lg border border-core-border bg-core-elevated p-1" />
+        <input type="color" value={normalizeHex(valueHex) ?? '#000000'} onChange={(event) => onChangeHex(event.target.value)} className="h-10 w-12 rounded-lg border border-ic-border bg-ic-elevated p-1" />
         <input
           value={valueText}
           onChange={(event) => setValueText(event.target.value)}
@@ -162,7 +162,7 @@ export const ColorInputField = ({ label, valueHex, onChangeHex }: ColorInputFiel
             }
           }}
           placeholder={help}
-          className={`h-10 w-full rounded-lg border bg-core-elevated px-3 text-sm outline-none ${hasError ? 'border-core-danger' : 'border-core-border focus:border-core-accent'}`}
+          className={`h-10 w-full rounded-lg border bg-ic-elevated px-3 text-sm outline-none ${hasError ? 'border-ic-danger' : 'border-ic-border focus:border-ic-accent'}`}
         />
       </div>
     </label>
