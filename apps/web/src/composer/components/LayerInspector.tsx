@@ -33,7 +33,7 @@ export const LayerInspector = () => {
   if (!state.project) {
     return (
       <aside className="ic-inspector">
-        <p className="text-xs text-core-muted text-center py-8">No project open.</p>
+        <p className="text-xs text-ic-muted text-center py-8">No project open.</p>
       </aside>
     );
   }

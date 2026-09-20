@@ -188,7 +188,7 @@ export const ExportView = () => {
         <button
           type="button"
           onClick={() => navigate('edit-space')}
-          className="inline-flex items-center gap-2 text-sm text-core-muted hover:text-core-text transition"
+          className="inline-flex items-center gap-2 text-sm text-ic-muted hover:text-ic-text transition"
         >
           <ArrowLeft size={16} />
           Back to Edit Space
@@ -198,13 +198,13 @@ export const ExportView = () => {
           <h1 className="font-display text-2xl uppercase tracking-[0.18em] mb-2">
             Export Utilities
           </h1>
-          <p className="text-sm text-core-muted">
+          <p className="text-sm text-ic-muted">
             Pick targets, variants and output settings. Everything renders through the same engine you see on the canvas.
           </p>
         </div>
 
-        <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 space-y-3">
-          <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">
+        <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-6 space-y-3">
+          <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">
             Variants
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -213,8 +213,8 @@ export const ExportView = () => {
                 key={variant}
                 className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border cursor-pointer ${
                   selectedVariants.has(variant)
-                    ? 'border-core-accent bg-core-accent/10'
-                    : 'border-core-border hover:border-core-accent/50'
+                    ? 'border-ic-accent bg-ic-accent/10'
+                    : 'border-ic-border hover:border-ic-accent/50'
                 }`}
               >
                 <span className="text-xs font-semibold uppercase tracking-[0.08em]">{variant}</span>
@@ -228,9 +228,9 @@ export const ExportView = () => {
           </div>
         </div>
 
-        <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 space-y-4">
+        <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">
+            <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">
               Export Targets
             </h2>
             <select
@@ -262,8 +262,8 @@ export const ExportView = () => {
                 key={target.id}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all ${
                   selectedTargets.has(target.id)
-                    ? 'border-core-accent bg-core-accent/10'
-                    : 'border-core-border hover:border-core-accent/50'
+                    ? 'border-ic-accent bg-ic-accent/10'
+                    : 'border-ic-border hover:border-ic-accent/50'
                 }`}
               >
                 <input
@@ -274,20 +274,20 @@ export const ExportView = () => {
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{target.name}</p>
-                  <p className="text-xs text-core-muted">
+                  <p className="text-xs text-ic-muted">
                     {target.tasks.length} files
                   </p>
                 </div>
                 {selectedTargets.has(target.id) && (
-                  <Check size={16} className="text-core-accent shrink-0" />
+                  <Check size={16} className="text-ic-accent shrink-0" />
                 )}
               </label>
             ))}
           </div>
         </div>
 
-        <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 space-y-5">
-          <h2 className="font-display text-sm uppercase tracking-[0.18em] text-core-accent">
+        <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-6 space-y-5">
+          <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">
             Output
           </h2>
 
@@ -302,7 +302,7 @@ export const ExportView = () => {
 
           {isLossy && (
             <div className="ic-export-field">
-              <label>Quality <span className="text-core-muted">({Math.round(quality * 100)}%)</span></label>
+              <label>Quality <span className="text-ic-muted">({Math.round(quality * 100)}%)</span></label>
               <input
                 type="range"
                 min={10}
@@ -327,10 +327,10 @@ export const ExportView = () => {
             <label>Destination</label>
             <Segmented value={destination} onChange={setDestination} options={destinationOptions} />
             {destination === 'files' && (
-              <p className="text-xs text-core-muted mt-1.5">Each file downloads separately (paths flattened into the filename).</p>
+              <p className="text-xs text-ic-muted mt-1.5">Each file downloads separately (paths flattened into the filename).</p>
             )}
             {destination === 'folder' && (
-              <p className="text-xs text-core-muted mt-1.5">You'll be asked to choose a folder; the full tree is written there, uncompressed.</p>
+              <p className="text-xs text-ic-muted mt-1.5">You'll be asked to choose a folder; the full tree is written there, uncompressed.</p>
             )}
           </div>
 
@@ -367,17 +367,17 @@ export const ExportView = () => {
         </div>
 
         {busy && (
-          <div className="card-surface rounded-2xl border border-core-border bg-core-surface p-6 composer-scale-in">
+          <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-6 composer-scale-in">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                {progress.phase === 'exporting' && <LoaderCircle size={20} className="animate-spin text-core-accent" />}
-                {progress.phase === 'archiving' && <FileText size={20} className="text-core-accent composer-pulse" />}
+                {progress.phase === 'exporting' && <LoaderCircle size={20} className="animate-spin text-ic-accent" />}
+                {progress.phase === 'archiving' && <FileText size={20} className="text-ic-accent composer-pulse" />}
                 <div>
                   <p className="text-sm font-semibold">
                     {progress.phase === 'exporting' && `Rendering ${progress.currentTarget}`}
                     {progress.phase === 'archiving' && (destination === 'folder' ? 'Writing files…' : 'Packaging archive…')}
                   </p>
-                  <p className="text-xs text-core-muted">
+                  <p className="text-xs text-ic-muted">
                     {progress.currentTask} / {progress.totalTasks} render tasks
                     {elapsed > 0 && ` · ${formatElapsed(elapsed)}`}
                   </p>
@@ -387,9 +387,9 @@ export const ExportView = () => {
                 {totalTasks > 0 ? Math.round((progress.currentTask / totalTasks) * 100) : 0}%
               </span>
             </div>
-            <div className="w-full bg-core-elevated rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-ic-elevated rounded-full h-2 overflow-hidden">
               <div
-                className="bg-core-accent h-2 rounded-full transition-all duration-300"
+                className="bg-ic-accent h-2 rounded-full transition-all duration-300"
                 style={{ width: `${totalTasks > 0 ? (progress.currentTask / totalTasks) * 100 : 0}%` }}
               />
             </div>
@@ -397,14 +397,14 @@ export const ExportView = () => {
         )}
 
         {progress.phase === 'complete' && (
-          <div className="card-surface rounded-2xl border border-core-success/50 bg-core-surface p-6 composer-scale-in">
+          <div className="card-surface rounded-2xl border border-ic-success/50 bg-ic-surface p-6 composer-scale-in">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-core-success/20 flex items-center justify-center">
-                <Check size={20} className="text-core-success" />
+              <div className="w-10 h-10 rounded-full bg-ic-success/20 flex items-center justify-center">
+                <Check size={20} className="text-ic-success" />
               </div>
               <div>
                 <p className="text-sm font-semibold">Export complete!</p>
-                <p className="text-xs text-core-muted">
+                <p className="text-xs text-ic-muted">
                   {formatElapsed(elapsed)}
                 </p>
               </div>
@@ -413,9 +413,9 @@ export const ExportView = () => {
         )}
 
         {error && (
-          <div className="card-surface rounded-2xl border border-core-danger/50 bg-core-surface p-6 composer-scale-in">
+          <div className="card-surface rounded-2xl border border-ic-danger/50 bg-ic-surface p-6 composer-scale-in">
             <div className="flex items-center gap-3">
-              <TriangleAlert size={20} className="text-core-danger" />
+              <TriangleAlert size={20} className="text-ic-danger" />
               <p className="text-sm">{error}</p>
             </div>
           </div>
@@ -425,7 +425,7 @@ export const ExportView = () => {
           type="button"
           onClick={handleExport}
           disabled={selectedTargets.size === 0 || busy}
-          className="w-full core-btn core-btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-core-border px-4 py-3 text-sm font-semibold uppercase tracking-[0.08em] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full core-btn core-btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-ic-border px-4 py-3 text-sm font-semibold uppercase tracking-[0.08em] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {destination === 'folder' ? <FolderOpen size={16} /> : <Download size={16} />}
           {busy

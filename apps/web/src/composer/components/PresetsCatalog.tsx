@@ -125,10 +125,10 @@ export const PresetsCatalog = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-4xl bg-core-surface border border-core-border rounded-2xl shadow-2xl overflow-hidden p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-4xl bg-ic-surface border border-ic-border rounded-2xl shadow-2xl overflow-hidden p-6" onClick={(e) => e.stopPropagation()}>
         <div className="mb-6">
           <h2 className="font-display text-lg uppercase tracking-[0.18em]">Presets</h2>
-          <p className="text-sm text-core-muted mt-1">Start with a pre-designed composition</p>
+          <p className="text-sm text-ic-muted mt-1">Start with a pre-designed composition</p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -140,22 +140,22 @@ export const PresetsCatalog = ({ onClose }: { onClose: () => void }) => {
               onMouseLeave={() => setHoveredPreset(null)}
               className={`relative group p-6 rounded-xl border text-left transition-all ${
                 hoveredPreset === preset.id
-                  ? 'border-core-accent bg-core-accent/10 shadow-lg scale-[1.02]'
-                  : 'border-core-border hover:border-core-accent/50 bg-core-elevated'
+                  ? 'border-ic-accent bg-ic-accent/10 shadow-lg scale-[1.02]'
+                  : 'border-ic-border hover:border-ic-accent/50 bg-ic-elevated'
               }`}
             >
               <div className="text-4xl mb-3">{preset.preview}</div>
               <h3 className="text-sm font-semibold">{preset.name}</h3>
-              <p className="text-xs text-core-muted mt-1">{preset.description}</p>
+              <p className="text-xs text-ic-muted mt-1">{preset.description}</p>
             </button>
           ))}
         </div>
 
-        <div className="mt-6 pt-4 border-t border-core-border flex justify-end">
+        <div className="mt-6 pt-4 border-t border-ic-border flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="core-btn inline-flex items-center gap-2 rounded-xl border border-core-border px-4 py-2 text-sm"
+            className="core-btn inline-flex items-center gap-2 rounded-xl border border-ic-border px-4 py-2 text-sm"
           >
             Cancel
           </button>

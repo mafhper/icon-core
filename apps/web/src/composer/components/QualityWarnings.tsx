@@ -29,9 +29,9 @@ export const QualityWarnings = () => {
 
   const iconFor = (severity: ValidationIssue['severity']) => {
     switch (severity) {
-      case 'error': return <CircleX size={14} className="text-core-danger" />;
+      case 'error': return <CircleX size={14} className="text-ic-danger" />;
       case 'warning': return <TriangleAlert size={14} className="text-yellow-500" />;
-      case 'info': return <Info size={14} className="text-core-muted" />;
+      case 'info': return <Info size={14} className="text-ic-muted" />;
     }
   };
 
@@ -76,9 +76,9 @@ export const QualityWarnings = () => {
         title="Icon quality check"
       >
         {tone === 'ok'
-          ? <CircleCheck size={14} className="text-core-success" />
+          ? <CircleCheck size={14} className="text-ic-success" />
           : tone === 'error'
-            ? <CircleX size={14} className="text-core-danger" />
+            ? <CircleX size={14} className="text-ic-danger" />
             : <TriangleAlert size={14} className="text-yellow-500" />}
         <span className="ic-quality-score">{result.score}</span>
         {visibleIssues.length > 0 && (
