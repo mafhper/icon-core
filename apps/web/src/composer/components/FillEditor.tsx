@@ -27,7 +27,7 @@ export const FillEditor = ({ label, fill, onChange, onCommit, noneNote }: FillEd
   const solid = solidOf(fill);
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
       <Select
         label={label}
         value={kind}

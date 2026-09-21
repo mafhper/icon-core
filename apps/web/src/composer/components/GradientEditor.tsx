@@ -42,63 +42,6 @@ const toColorValue = (stop: GradientStop): ColorValue => ({
 
 const pct = (value: number): string => `${Math.round(value * 100)}%`;
 
-interface AdjustRowProps {
-  label: string;
-  unit: string;
-  min: number;
-  max: number;
-  value: number;
-  onChange: (value: number, transient: boolean) => void;
-  onCommit: () => void;
-}
-
-/**
- * A continuous gradient parameter: a slider for coarse dragging plus a matching
- * number field (`[ 90 ° ]`) for precision — the slider+number pairing used by
- * colour pickers, so both stay reachable in a 240px panel.
- */
-const AdjustRow = ({ label, unit, min, max, value, onChange, onCommit }: AdjustRowProps) => (
-  <div className="grid grid-cols-[minmax(0,1fr)] gap-[var(--ic-label-gap)]">
-    <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">{label}</span>
-    <div className="flex items-center gap-1.5">
-      <div className="min-w-0 flex-1">
-        <Slider
-          variant="inline"
-          hideLabel
-          label={label}
-          min={String(min)}
-          max={String(max)}
-          value={value}
-          onChange={(event) => onChange(Number(event.target.value), true)}
-          onPointerUp={onCommit}
-          onKeyUp={onCommit}
-        />
-      </div>
-      <NumberField
-        variant="inline"
-        unit={unit}
-        label={label}
-        min={String(min)}
-        max={String(max)}
-        value={Math.round(value)}
-        onChange={(event) => onChange(Number(event.target.value), true)}
-        onBlur={onCommit}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') onCommit();
-        }}
-        className="w-16 shrink-0"
-      />
-    </div>
-  </div>
-);
-
-/**
- * Gradient adjustments — the body of the unified `FillEditor` when the fill kind
- * is a gradient. Deliberately frameless: the Fill control already provides the
- * header (kind selector) and the inspector `Section` the grouping, so this must
- * not add a card. Stops are one aligned row each (`[pos %] [swatch #hex alpha %]
- * [remove]`) and continuous parameters use the slider+number pairing.
- */
 export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps) => {
   const stops = normalizeStops(fill.stops);
   const barRef = useRef<HTMLDivElement>(null);
@@ -148,7 +91,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
   const isDiamond = fill.kind === 'diamond-gradient';
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
       <div
         ref={barRef}
         className="relative mx-2 h-6 cursor-pointer rounded-ic-sm border border-ic-border"
@@ -209,7 +152,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ))}
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
             Stops {stops.length > 2 ? `(${stops.length})` : ''}
@@ -224,7 +167,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
           </Button>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
           {stops.map((stop, index) => (
             <div key={index} className="flex flex-wrap items-center gap-2">
               <NumberField
@@ -277,57 +220,62 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
       </div>
 
       {isLinear && (
-        <AdjustRow
+        <Slider
+          variant="inline"
           label="Angle"
           unit="°"
-          min={0}
-          max={360}
+          min="0"
+          max="360"
           value={fill.angle ?? 90}
-          onChange={(angle, transient) => onChange({ ...fill, angle }, transient)}
+          onChange={(event) => onChange({ ...fill, angle: Number(event.target.value) }, true)}
           onCommit={onCommit}
         />
       )}
 
       {isAngular && (
-        <AdjustRow
+        <Slider
+          variant="inline"
           label="Start angle"
           unit="°"
-          min={0}
-          max={360}
+          min="0"
+          max="360"
           value={fill.angle ?? 0}
-          onChange={(angle, transient) => onChange({ ...fill, angle }, transient)}
+          onChange={(event) => onChange({ ...fill, angle: Number(event.target.value) }, true)}
           onCommit={onCommit}
         />
       )}
 
       {(isRadial || isDiamond || isAngular) && (
         <>
-          <AdjustRow
+          <Slider
+            variant="inline"
             label="Center X"
             unit="%"
-            min={0}
-            max={100}
+            min="0"
+            max="100"
             value={Math.round((fill.centerX ?? 0.5) * 100)}
-            onChange={(value, transient) => onChange({ ...fill, centerX: value / 100 }, transient)}
+            onChange={(event) => onChange({ ...fill, centerX: Number(event.target.value) / 100 }, true)}
             onCommit={onCommit}
           />
-          <AdjustRow
+          <Slider
+            variant="inline"
             label="Center Y"
             unit="%"
-            min={0}
-            max={100}
+            min="0"
+            max="100"
             value={Math.round((fill.centerY ?? 0.5) * 100)}
-            onChange={(value, transient) => onChange({ ...fill, centerY: value / 100 }, transient)}
+            onChange={(event) => onChange({ ...fill, centerY: Number(event.target.value) / 100 }, true)}
             onCommit={onCommit}
           />
           {(isRadial || isDiamond) && (
-            <AdjustRow
+            <Slider
+              variant="inline"
               label="Radius"
               unit="%"
-              min={10}
-              max={100}
+              min="10"
+              max="100"
               value={Math.round((fill.radius ?? 0.5) * 100)}
-              onChange={(value, transient) => onChange({ ...fill, radius: value / 100 }, transient)}
+              onChange={(event) => onChange({ ...fill, radius: Number(event.target.value) / 100 }, true)}
               onCommit={onCommit}
             />
           )}
