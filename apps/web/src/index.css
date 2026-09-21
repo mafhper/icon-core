@@ -123,8 +123,8 @@ button {
 select {
   appearance: none;
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--ic-muted) 50%),
-    linear-gradient(135deg, var(--ic-muted) 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, var(--ic-text-muted) 50%),
+    linear-gradient(135deg, var(--ic-text-muted) 50%, transparent 50%);
   background-position:
     calc(100% - 14px) calc(50% + 2px),
     calc(100% - 9px) calc(50% + 2px);
@@ -276,7 +276,7 @@ input[type='range'] {
   height: 32px;
   border: 1px solid var(--ic-border);
   border-radius: 10px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   background: var(--ic-elevated);
 }
 
@@ -313,7 +313,7 @@ input[type='range'] {
 .ic-welcome-head p {
   margin: 0;
   max-width: 60ch;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   line-height: 1.55;
 }
 
@@ -346,7 +346,7 @@ input[type='range'] {
 
 .ic-welcome-card p {
   margin: 0;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.86rem;
   line-height: 1.5;
 }
@@ -355,7 +355,7 @@ input[type='range'] {
   display: grid;
   gap: 6px;
   margin-top: 2px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.7rem;
   font-weight: 720;
   letter-spacing: 0.04em;
@@ -395,7 +395,7 @@ input[type='range'] {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.84rem;
   font-weight: 700;
 }
@@ -858,7 +858,7 @@ input[type='range'] {
 }
 
 .ic-context-menu strong {
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.72rem;
   text-transform: uppercase;
 }
@@ -910,7 +910,7 @@ input[type='range'] {
 
 .ic-inspector-head p {
   margin: 0 0 3px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.72rem;
   font-weight: 720;
 }
@@ -960,7 +960,7 @@ input[type='range'] {
   border: 1px solid var(--ic-border);
   border-radius: 11px;
   background: var(--ic-elevated);
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
@@ -1027,7 +1027,7 @@ input[type='range'] {
   font-weight: 760;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-quality-pop-list {
@@ -1045,7 +1045,7 @@ input[type='range'] {
 .ic-quality-issue-msg {
   flex: 1;
   text-align: left;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   background: transparent;
   border: 0;
   padding: 0;
@@ -1058,7 +1058,7 @@ input[type='range'] {
 }
 
 .ic-quality-issue-dismiss {
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   background: transparent;
   border: 0;
   padding: 2px;
@@ -1095,7 +1095,7 @@ input[type='range'] {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   padding-right: 2px;
 }
 
@@ -1129,7 +1129,7 @@ input[type='range'] {
   border: 1px solid color-mix(in srgb, var(--ic-accent) 40%, var(--ic-border));
   border-radius: 10px;
   background: color-mix(in srgb, var(--ic-accent) 10%, transparent);
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.72rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -1185,7 +1185,7 @@ input[type='range'] {
 .ic-modal-head button {
   padding: 4px;
   border-radius: 6px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-modal-head button:hover {
@@ -1219,7 +1219,7 @@ input[type='range'] {
 .ic-modal-hint {
   margin: 0;
   font-size: 0.72rem;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-modal-actions {
@@ -1286,7 +1286,7 @@ input[type='range'] {
   border: 1px solid var(--ic-border);
   border-radius: 11px;
   background: var(--ic-elevated);
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.74rem;
   font-weight: 680;
   cursor: pointer;
@@ -1354,7 +1354,7 @@ input[type='range'] {
 
 .ic-size-label {
   font-size: 10px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-layer-row.is-dragging {
@@ -1473,7 +1473,7 @@ input[type='range'] {
   background: var(--ic-elevated);
   border: 1px solid var(--ic-border);
   border-radius: 4px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 /* --- Toast notifications --- */
@@ -1525,7 +1525,7 @@ input[type='range'] {
   display: inline-flex;
   padding: 2px;
   border-radius: 6px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   transition: color 0.15s cubic-bezier(0.2, 0, 0, 1), background 0.15s cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -1609,7 +1609,7 @@ textarea:focus-visible,
 .ic-about-section p {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   line-height: 1.5;
 }
 
@@ -1650,13 +1650,13 @@ textarea:focus-visible,
   padding: 2px 8px;
   border: 1px solid var(--ic-border);
   border-radius: 999px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-about-note {
   grid-column: 1 / -1;
   font-size: 0.78rem;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-about-list a {
