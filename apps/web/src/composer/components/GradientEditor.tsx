@@ -140,7 +140,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ))}
       </div>
 
-      <div className="ic-gradient-presets mt-2 flex flex-wrap gap-1.5">
+      <div className="ic-gradient-presets mt-2">
         {PRESETS.map((preset) => (
           <button
             key={preset.name}
@@ -154,29 +154,29 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ))}
       </div>
 
-      <div className="ic-gradient-stops mt-2 flex flex-col gap-2">
+      <div className="ic-gradient-stops mt-2">
         {stops.map((stop, index) => (
-          <div key={index} className="flex items-end gap-2">
-            <div className="min-w-0 flex-1">
-              <ColorField
-                label={`Stop ${index + 1}`}
-                value={toColorValue(stop)}
-                onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
+          <div key={index} className="grid gap-1.5 rounded-ic-sm border border-ic-border p-2">
+            <ColorField
+              label={`Stop ${index + 1}`}
+              value={toColorValue(stop)}
+              onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
+            />
+            <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+              <NumberField
+                label="Position (%)"
+                min="0"
+                max="100"
+                value={Math.round(stop.offset * 100)}
+                onChange={(event) => updateStop(index, { offset: Number(event.target.value) / 100 }, true)}
+              />
+              <IconButton
+                icon={<Trash2 size={12} />}
+                aria-label={`Remove stop ${index + 1}`}
+                disabled={stops.length <= 2}
+                onClick={() => removeStop(index)}
               />
             </div>
-            <NumberField
-              label="Pos"
-              min="0"
-              max="100"
-              value={Math.round(stop.offset * 100)}
-              onChange={(event) => updateStop(index, { offset: Number(event.target.value) / 100 }, true)}
-            />
-            <IconButton
-              icon={<Trash2 size={12} />}
-              aria-label={`Remove stop ${index + 1}`}
-              disabled={stops.length <= 2}
-              onClick={() => removeStop(index)}
-            />
           </div>
         ))}
       </div>

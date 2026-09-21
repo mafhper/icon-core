@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { HexColorPicker } from 'react-colorful';
 import { cn } from '../utils/cn';
 import { Field } from './Field';
@@ -93,6 +94,11 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
   const [hexDraft, setHexDraft] = useState(() => normalizeHex(value.color).slice(1).toUpperCase());
   const [recent, setRecent] = useState<string[]>(() => readRecent());
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(null);
+
+  const PANEL_WIDTH = 248;
 
   useEffect(() => {
     setDraft(formatValue(value, format));
@@ -103,18 +109,45 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
   }, [value.color]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setPanelPos(null);
+      return;
+    }
+
+    const place = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const left = Math.min(
+        Math.max(8, rect.right - PANEL_WIDTH),
+        Math.max(8, window.innerWidth - PANEL_WIDTH - 8)
+      );
+      const below = rect.bottom + 6;
+      // Flip above when there is not enough room below.
+      const top = below + 330 > window.innerHeight ? Math.max(8, rect.top - 336) : below;
+      setPanelPos({ left, top });
+    };
+    place();
+
     const onPointerDown = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
     };
+    // The panel is portaled with fixed coordinates, so any scroll/resize closes it.
+    const onViewportChange = () => setOpen(false);
+
     document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('resize', onViewportChange);
+    window.addEventListener('scroll', onViewportChange, true);
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', onViewportChange);
+      window.removeEventListener('scroll', onViewportChange, true);
     };
   }, [open]);
 
@@ -154,6 +187,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
         <div className="flex items-center gap-1.5">
           <button
             type="button"
+            ref={triggerRef}
             disabled={disabled}
             onClick={() => (open ? close() : setOpen(true))}
             className="h-7 w-7 shrink-0 rounded-ic-sm border border-ic-border disabled:cursor-not-allowed disabled:opacity-40"
@@ -191,17 +225,19 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
               disabled={disabled}
               aria-label={`${label} alpha percent`}
               onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-              className="w-7 bg-transparent text-right text-ic-text focus:outline-none disabled:opacity-40"
+              className="w-7 bg-transparent text-right text-ic-text focus:outline-none disabled:opacity-40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
             />
             <span className="select-none text-ic-text-muted">%</span>
           </div>
         </div>
 
-        {open && (
+        {open && panelPos && createPortal(
           <div
+            ref={panelRef}
             role="dialog"
             aria-label={`${label} picker`}
-            className="absolute z-50 mt-2 w-[248px] rounded-ic-md border border-ic-border bg-ic-overlay p-3 shadow-xl"
+            style={{ position: 'fixed', left: panelPos.left, top: panelPos.top, width: PANEL_WIDTH }}
+            className="z-50 rounded-ic-md border border-ic-border bg-ic-overlay p-3 shadow-xl"
           >
             <HexColorPicker
               color={normalizeHex(value.color)}
@@ -219,7 +255,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
                 value={alphaPct}
                 aria-label="Alpha"
                 onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full"
+                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-ic-border [&::-moz-range-thumb]:bg-ic-text [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-ic-border [&::-webkit-slider-thumb]:bg-ic-text"
                 style={{
                   backgroundImage:
                     `linear-gradient(to right, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0), rgb(${rgb.r}, ${rgb.g}, ${rgb.b})), ` +
@@ -234,7 +270,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
                 value={alphaPct}
                 aria-label="Alpha percent"
                 onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-                className="w-12 rounded-ic-sm border border-ic-border bg-ic-surface px-1 py-0.5 text-center font-mono text-[11px] text-ic-text"
+                className="w-12 rounded-ic-sm border border-ic-border bg-ic-surface px-1 py-0.5 text-center font-mono text-[11px] text-ic-text [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
               />
             </div>
 
@@ -279,7 +315,8 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
                 </div>
               </div>
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </Field>

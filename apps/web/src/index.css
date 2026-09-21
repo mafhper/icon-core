@@ -1259,90 +1259,15 @@ input[type='range'] {
   gap: 8px;
 }
 
-.ic-gradient-preview {
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid var(--ic-border);
-}
-
 .ic-gradient-presets {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.ic-gradient-preset {
-  width: 28px;
-  height: 18px;
-  border-radius: 6px;
-  border: 1px solid var(--ic-border);
-  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), border-color 0.12s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.ic-gradient-preset:hover {
-  transform: translateY(-1px);
-  border-color: var(--ic-accent);
-}
-
 .ic-gradient-stops {
   display: grid;
   gap: 6px;
-}
-
-.ic-gradient-stop {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.ic-gradient-stop input[type='color'] {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-}
-
-.ic-gradient-stop-val {
-  font-size: 10px;
-  font-family: 'IBM Plex Mono', monospace;
-  color: var(--ic-muted);
-  min-width: 34px;
-  text-align: right;
-}
-
-.ic-gradient-stop-remove {
-  display: inline-flex;
-  padding: 4px;
-  border-radius: 6px;
-  color: var(--ic-muted);
-}
-
-.ic-gradient-stop-remove:hover:not(:disabled) {
-  color: var(--ic-danger);
-  background: var(--ic-surface);
-}
-
-.ic-gradient-stop-remove:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.ic-gradient-add {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 6px;
-  border-radius: 8px;
-  border: 1px dashed var(--ic-border);
-  color: var(--ic-muted);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.ic-gradient-add:hover {
-  color: var(--ic-text);
-  border-color: var(--ic-accent);
 }
 
 /* Appearance switcher — floating mini-toolbar docked to the bottom of the
