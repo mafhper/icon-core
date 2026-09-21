@@ -1,0 +1,40 @@
+# Releases are produced by the Release Core protocol (mafhper/release-core).
+#
+# - `push: tags` handles an annotated tag pushed by a maintainer (with a token
+#   that can trigger workflows).
+# - `workflow_dispatch` lets `release-tag.yml` publish the tag created by the
+#   bump PR (a tag pushed with the default GITHUB_TOKEN does not fire `push`).
+#
+# The project declares its distribution in `.github/release.config.json`;
+# the Core runs prepare -> build (matrix) -> finalize.
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.5.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: mafhper/release-core/.github/workflows/release.yml@v1.1.5
+    with:
+      tag: ${{ github.event.inputs.tag || github.ref_name }}
+      matrix: |-
+        [
+          { "os": "ubuntu-latest",  "args": "--bundles appimage,deb" },
+          { "os": "windows-latest", "args": "--bundles nsis,msi" },
+          { "os": "macos-latest",   "args": "--bundles dmg" }
+        ]
