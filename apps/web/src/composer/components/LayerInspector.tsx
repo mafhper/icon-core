@@ -1,27 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Eraser } from 'lucide-react';
-import type { Fill, IconLayer, LinearGradientFill, RadialGradientFill, ShapeDefinition, ShapeKind } from '@iconcore/shared';
-import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
+import { Button, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
-import { brandGradientFill } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
 import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
-import { GradientEditor } from './GradientEditor';
+import { FillEditor } from './FillEditor';
 import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
 const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'squircle', 'triangle', 'line', 'star'];
-
-const FILL_KIND_OPTIONS = [
-  { value: 'solid', label: 'Solid color' },
-  { value: 'linear-gradient', label: 'Linear gradient' },
-  { value: 'radial-gradient', label: 'Radial gradient' },
-  { value: 'none', label: 'Transparent' }
-] as const;
-
-const isGradientFill = (fill: Fill | undefined): fill is LinearGradientFill | RadialGradientFill =>
-  fill?.kind === 'linear-gradient' || fill?.kind === 'radial-gradient';
 
 const BACKDROP_OPTIONS = [
   { value: 'dots', label: 'Dots' },
@@ -42,46 +31,18 @@ const BackgroundFillSection = ({
   background: Fill;
   onChange: (fill: Fill, transient?: boolean) => void;
   onCommit: () => void;
-}) => {
-  const solid = background.kind === 'solid' ? background.color ?? '#ffffff' : '#ffffff';
+}) => (
+  <Section title="Background">
+    <FillEditor
+      label="Background fill"
+      fill={background}
+      onChange={onChange}
+      onCommit={onCommit}
+      noneNote="The exported image has a transparent background."
+    />
+  </Section>
+);
 
-  const setKind = (kind: Fill['kind']) => {
-    if (kind === 'solid') { onChange({ kind: 'solid', color: solid }); return; }
-    if (kind === 'none') { onChange({ kind: 'none' }); return; }
-    const preset = brandGradientFill();
-    const stops = isGradientFill(background) && background.stops && background.stops.length >= 2
-      ? background.stops
-      : preset.stops;
-    onChange({ ...preset, kind, stops });
-  };
-
-  return (
-    <Section title="Background">
-      <Select
-        label="Fill type"
-        value={background.kind}
-        onChange={(event) => setKind(event.target.value as Fill['kind'])}
-      >
-        {FILL_KIND_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </Select>
-      {background.kind === 'solid' && (
-        <ColorField
-          label="Color"
-          value={solid}
-          onChange={(event) => onChange({ kind: 'solid', color: event.target.value })}
-        />
-      )}
-      {isGradientFill(background) && (
-        <GradientEditor fill={background} onChange={(next) => onChange(next, true)} onCommit={onCommit} />
-      )}
-      {background.kind === 'none' && (
-        <p className="ic-variant-scope-note">The exported image has a <strong>transparent</strong> background.</p>
-      )}
-    </Section>
-  );
-};
 
 export const LayerInspector = () => {
   const { state, dispatch } = useComposer();
@@ -178,25 +139,7 @@ export const LayerInspector = () => {
     });
   };
 
-  const setFillKind = (kind: Fill['kind']) => {
-    if (kind === 'solid') {
-      updateLayer({ fill: { kind: 'solid', color: solidColor } });
-      return;
-    }
-    if (kind === 'none') {
-      updateLayer({ fill: { kind: 'none' } });
-      return;
-    }
-    const preset = brandGradientFill();
-    const stops = isGradientFill(layer.fill) && layer.fill.stops && layer.fill.stops.length >= 2
-      ? layer.fill.stops
-      : preset.stops;
-    const angle = layer.fill?.kind === 'linear-gradient' ? layer.fill.angle : undefined;
-    updateLayer({ fill: { ...preset, kind, stops, angle: angle ?? preset.angle } });
-  };
-
   const shadow = getShadow(layer);
-  const solidColor = fillColor(layer.fill);
   const isImage = baseLayer.kind === 'image' || baseLayer.kind === 'svg';
   const imageFilter = layer.imageFilter ?? {};
   const updateImageFilter = (patch: Partial<typeof imageFilter>, transient = false) =>
@@ -230,38 +173,38 @@ export const LayerInspector = () => {
       )}
 
       <div className="ic-field-stack">
+        {layer.kind === 'text' && (
+          <Section title="Text" hint="Numa camada de texto, conteúdo e tipografia vêm primeiro.">
+            <TextField
+              label="Text"
+              value={layer.text?.content ?? ''}
+              onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
+            />
+            <div className="grid grid-cols-2 gap-2.5">
+              <NumberField
+                label="Size"
+                min="8"
+                value={layer.text?.fontSize ?? 64}
+                onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
+              />
+              <NumberField
+                label="Weight"
+                min="100"
+                max="900"
+                step="100"
+                value={layer.text?.fontWeight ?? 700}
+                onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
+              />
+            </div>
+          </Section>
+        )}
+
         <Section title="Layer">
           <TextField
             label="Name"
             value={baseLayer.name}
             onChange={(event) => dispatch({ type: 'UPDATE_LAYER', payload: { id: baseLayer.id, changes: { name: event.target.value } } })}
           />
-
-          {layer.kind === 'text' && (
-            <>
-              <TextField
-                label="Text"
-                value={layer.text?.content ?? ''}
-                onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
-              />
-              <div className="grid grid-cols-2 gap-2.5">
-                <NumberField
-                  label="Size"
-                  min="8"
-                  value={layer.text?.fontSize ?? 64}
-                  onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
-                />
-                <NumberField
-                  label="Weight"
-                  min="100"
-                  max="900"
-                  step="100"
-                  value={layer.text?.fontWeight ?? 700}
-                  onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
-                />
-              </div>
-            </>
-          )}
         </Section>
 
         <Section title="Composition">
@@ -279,25 +222,27 @@ export const LayerInspector = () => {
           </div>
 
           <Slider
-            label={`Scale (${Math.round(layer.transform.scale * 100)}%)`}
+            variant="inline"
+            label="Scale"
+            unit="×"
             min="0.08"
             max="4"
             step="0.01"
             value={layer.transform.scale}
             onChange={(event) => updateTransform({ scale: Number(event.target.value) })}
-            onPointerUp={commit}
-            onKeyUp={commit}
+            onCommit={commit}
           />
 
           <Slider
-            label={`Rotation (${Math.round(layer.transform.rotation)}°)`}
+            variant="inline"
+            label="Rotation"
+            unit="°"
             min="-180"
             max="180"
             step="1"
             value={layer.transform.rotation}
             onChange={(event) => updateTransform({ rotation: Number(event.target.value) })}
-            onPointerUp={commit}
-            onKeyUp={commit}
+            onCommit={commit}
           />
         </Section>
 
@@ -312,53 +257,37 @@ export const LayerInspector = () => {
             </Select>
             {shape.kind === 'rounded-rectangle' && (
               <Slider
-                label={`Corner radius (${Math.round(shape.cornerRadius ?? 32)})`}
+                variant="inline"
+                label="Corner radius"
+                unit="px"
                 min="0"
                 max={Math.round(Math.min(shape.width, shape.height) / 2)}
                 value={Math.round(shape.cornerRadius ?? 32)}
                 onChange={(event) => updateShape({ cornerRadius: Number(event.target.value) }, true)}
-                onPointerUp={commit}
-                onKeyUp={commit}
+                onCommit={commit}
               />
             )}
           </Section>
         )}
 
         <Section title="Color">
-          <div className="grid grid-cols-2 gap-2.5">
-            {layer.fill?.kind !== 'none' && (
-              <ColorField
-                label="Fill"
-                value={solidColor}
-                onChange={(event) => updateLayer({ fill: { kind: 'solid', color: event.target.value } })}
-              />
-            )}
-            <NumberField
-              label="Opacity"
-              min="0"
-              max="100"
-              value={Math.round(layer.opacity * 100)}
-              onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
-            />
-          </div>
+          <FillEditor
+            label="Fill"
+            fill={layer.fill ?? { kind: 'solid', color: fillColor(layer.fill) }}
+            onChange={(next, transient) => updateLayer({ fill: next }, transient)}
+            onCommit={commit}
+          />
 
-          <Select
-            label="Fill type"
-            value={layer.fill?.kind ?? 'solid'}
-            onChange={(event) => setFillKind(event.target.value as Fill['kind'])}
-          >
-            {FILL_KIND_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </Select>
-
-          {isGradientFill(layer.fill) && (
-            <GradientEditor
-              fill={layer.fill}
-              onChange={(next) => updateLayer({ fill: next }, true)}
-              onCommit={commit}
-            />
-          )}
+          <Slider
+            variant="inline"
+            label="Opacity"
+            unit="%"
+            min="0"
+            max="100"
+            value={Math.round(layer.opacity * 100)}
+            onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
+            onCommit={commit}
+          />
 
           <Select
             label="Blend mode"
@@ -366,8 +295,7 @@ export const LayerInspector = () => {
             onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
           >
             {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-          </Select>
-        </Section>
+          </Select>        </Section>
 
         <Section title="Effects">
           <Switch
@@ -377,7 +305,9 @@ export const LayerInspector = () => {
           />
 
           <Slider
-            label={`Shadow blur (${Number(shadow.params.blur ?? 34)})`}
+            variant="inline"
+            label="Shadow blur"
+            unit="px"
             min="0"
             max="80"
             value={Number(shadow.params.blur ?? 34)}
@@ -388,53 +318,58 @@ export const LayerInspector = () => {
           />
 
           <Slider
-            label={`Layer blur (${blurRadius})`}
+            variant="inline"
+            label="Layer blur"
+            unit="px"
             min="0"
             max="60"
             value={blurRadius}
             onChange={(event) => setBlur(Number(event.target.value), true)}
-            onPointerUp={commit}
-            onKeyUp={commit}
+            onCommit={commit}
           />
         </Section>
 
         {isImage && (
           <Section title="Image adjustments">
             <Slider
-              label={`Hue (${imageFilter.hue ?? 0}°)`}
+              variant="inline"
+              label="Hue"
+              unit="°"
               min="-180"
               max="180"
               value={imageFilter.hue ?? 0}
               onChange={(event) => updateImageFilter({ hue: Number(event.target.value) }, true)}
-              onPointerUp={commit}
-              onKeyUp={commit}
+              onCommit={commit}
             />
             <Slider
-              label={`Saturation (${imageFilter.saturation ?? 100}%)`}
+              variant="inline"
+              label="Saturation"
+              unit="%"
               min="0"
               max="200"
               value={imageFilter.saturation ?? 100}
               onChange={(event) => updateImageFilter({ saturation: Number(event.target.value) }, true)}
-              onPointerUp={commit}
-              onKeyUp={commit}
+              onCommit={commit}
             />
             <Slider
-              label={`Brightness (${imageFilter.brightness ?? 100}%)`}
+              variant="inline"
+              label="Brightness"
+              unit="%"
               min="0"
               max="200"
               value={imageFilter.brightness ?? 100}
               onChange={(event) => updateImageFilter({ brightness: Number(event.target.value) }, true)}
-              onPointerUp={commit}
-              onKeyUp={commit}
+              onCommit={commit}
             />
             <Slider
-              label={`Contrast (${imageFilter.contrast ?? 100}%)`}
+              variant="inline"
+              label="Contrast"
+              unit="%"
               min="0"
               max="200"
               value={imageFilter.contrast ?? 100}
               onChange={(event) => updateImageFilter({ contrast: Number(event.target.value) }, true)}
-              onPointerUp={commit}
-              onKeyUp={commit}
+              onCommit={commit}
             />
             {baseLayer.source.type === 'inline' && baseLayer.source.mimeType !== 'image/svg+xml' && (
               <Button

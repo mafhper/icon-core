@@ -27,6 +27,10 @@
   --font-body: "Sora", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --shadow-panel: 0 20px 40px rgba(0, 0, 0, 0.32);
+  /* Motion language (better-ui): one curve and one duration for utility
+     transitions, instead of Tailwind's default ease. */
+  --default-transition-duration: 120ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* A6: `--core-*` compat layer removed (counter at zero). Tokens resolve in
@@ -86,50 +90,47 @@ button {
     0 18px 36px var(--ic-shadow);
 }
 
-input,
+@layer base {
+  input,
+  textarea,
+  select {
+    color: var(--ic-text);
+  }
 
+  input:not([type='range']):not([type='checkbox']):not([type='color']),
+  textarea,
+  select {
+    border-radius: 0.66rem;
+    border: 1px solid var(--ic-border);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ic-elevated) 92%, #fff 8%) 0%,
+      var(--ic-elevated) 100%
+    );
+    box-shadow: inset 0 1px 0 var(--ic-inset-top), inset 0 -1px 0 var(--ic-inset-bottom);
+    padding: 0.58rem 0.72rem;
+  }
 
-textarea,
-
-
-select {
-  color: var(--ic-text);
+  option {
+    background: var(--ic-elevated);
+    color: var(--ic-text);
+  }
 }
 
-input:not([type='range']):not([type='checkbox']):not([type='color']),
-
-
-textarea,
-
-
-select {
-  border-radius: 0.66rem;
-  border: 1px solid var(--ic-border);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--ic-elevated) 92%, #fff 8%) 0%,
-    var(--ic-elevated) 100%
-  );
-  box-shadow: inset 0 1px 0 var(--ic-inset-top), inset 0 -1px 0 var(--ic-inset-bottom);
-  padding: 0.58rem 0.72rem;
-}
-
+/* The dropdown arrow stays outside the base layer: it must survive the kit's
+   `bg-none` (panel fields are flat) while every other select style yields to
+   the component utilities. */
 select {
   appearance: none;
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--ic-muted) 50%),
-    linear-gradient(135deg, var(--ic-muted) 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, var(--ic-text-muted) 50%),
+    linear-gradient(135deg, var(--ic-text-muted) 50%, transparent 50%);
   background-position:
     calc(100% - 14px) calc(50% + 2px),
     calc(100% - 9px) calc(50% + 2px);
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
   padding-right: 2rem;
-}
-
-option {
-  background: var(--ic-elevated);
-  color: var(--ic-text);
 }
 
 * {
@@ -162,30 +163,6 @@ option {
 
 input[type='range'] {
   accent-color: color-mix(in srgb, var(--ic-accent) 84%, #fff 16%);
-}
-
-.checkerboard {
-  background-color: rgba(127, 127, 127, 0.04);
-  background-image:
-    linear-gradient(45deg, rgba(255, 255, 255, 0.08) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255, 255, 255, 0.08) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.08) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.08) 75%);
-  background-size: 18px 18px;
-  background-position: 0 0, 0 9px, 9px -9px, -9px 0;
-}
-
-.empty-state {
-  min-height: 65vh;
-  display: grid;
-  align-items: center;
-  background-image: radial-gradient(var(--ic-dot) 0.75px, transparent 0.75px);
-  background-size: 11px 11px;
-}
-
-.empty-state-grid {
-  display: grid;
-  gap: 1rem;
 }
 
 .ic-inspector,
@@ -227,10 +204,6 @@ input[type='range'] {
 .ic-link-button:hover {
   transform: translateY(-1px);
   border-color: var(--ic-accent);
-}
-
-.ic-device-rail .is-active {
-  background: var(--ic-brand-gradient);
 }
 
 .ic-card-icon {
@@ -303,7 +276,7 @@ input[type='range'] {
   height: 32px;
   border: 1px solid var(--ic-border);
   border-radius: 10px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   background: var(--ic-elevated);
 }
 
@@ -340,7 +313,7 @@ input[type='range'] {
 .ic-welcome-head p {
   margin: 0;
   max-width: 60ch;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   line-height: 1.55;
 }
 
@@ -373,7 +346,7 @@ input[type='range'] {
 
 .ic-welcome-card p {
   margin: 0;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.86rem;
   line-height: 1.5;
 }
@@ -382,7 +355,7 @@ input[type='range'] {
   display: grid;
   gap: 6px;
   margin-top: 2px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.7rem;
   font-weight: 720;
   letter-spacing: 0.04em;
@@ -405,10 +378,7 @@ input[type='range'] {
   border-color: var(--ic-accent);
 }
 
-.ic-welcome-card .ic-link-button,
-
-
-.ic-welcome-card .ic-button {
+.ic-welcome-card .ic-link-button {
   margin-top: auto;
 }
 
@@ -425,7 +395,7 @@ input[type='range'] {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.84rem;
   font-weight: 700;
 }
@@ -838,6 +808,17 @@ input[type='range'] {
   border-radius: 50%;
   background: var(--ic-gold);
   touch-action: none;
+  /* The layer is scaled by `--layer-scale`; counter-scaling keeps the handle the
+     same size on screen at any layer scale or zoom. */
+  transform: scale(calc(1 / max(var(--layer-scale, 1), 0.01)));
+}
+
+/* 24px hit target without changing the visual size (better-ui / WCAG 2.2). */
+.ic-transform-handle::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
 }
 
 .ic-scale-handle {
@@ -888,7 +869,7 @@ input[type='range'] {
 }
 
 .ic-context-menu strong {
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.72rem;
   text-transform: uppercase;
 }
@@ -912,7 +893,23 @@ input[type='range'] {
   border-radius: 0;
   padding: 16px;
   overflow-y: auto;
+  /* `overflow-y: auto` would otherwise make x scrollable too, so any control a
+     few pixels wider than the panel shifted the whole column (labels clipped on
+     the left). The colour picker is portaled to <body>, so nothing here needs
+     horizontal overflow. */
+  overflow-x: hidden;
   scrollbar-gutter: stable;
+}
+
+/* One type size for every control inside the inspector. Nested inputs are form
+   controls, so they do not inherit the panel's font-size: without this they fell
+   back to the browser's 16px inside a 12px field, and a three-digit value was
+   clipped to a single digit. Panel buttons follow the same size. */
+.ic-inspector input,
+.ic-inspector select,
+.ic-inspector textarea,
+.ic-inspector button {
+  font-size: var(--ic-control-font-size);
 }
 
 .ic-inspector-head {
@@ -924,7 +921,7 @@ input[type='range'] {
 
 .ic-inspector-head p {
   margin: 0 0 3px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.72rem;
   font-weight: 720;
 }
@@ -948,16 +945,15 @@ input[type='range'] {
 
 .ic-field-stack {
   display: grid;
-  gap: 14px;
-  margin-top: 14px;
+  /* `minmax(0, 1fr)`: without it the implicit column is sized by the widest
+     child's min-content, and a row of inputs (each ~223px of min-content) blew
+     the column past the panel — `overflow-x: hidden` then clipped it. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 18px;
 }
 
 /* Export Utilities — output settings */
-
-.ic-segmented button.is-active {
-  background: color-mix(in srgb, var(--ic-accent) 22%, transparent);
-  color: var(--ic-accent);
-}
 
 /* Quality check — a compact chip pinned to the sidebar, expandable into a popover */
 .ic-quality-chip-wrap {
@@ -975,7 +971,7 @@ input[type='range'] {
   border: 1px solid var(--ic-border);
   border-radius: 11px;
   background: var(--ic-elevated);
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
@@ -1042,7 +1038,7 @@ input[type='range'] {
   font-weight: 760;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-quality-pop-list {
@@ -1060,7 +1056,7 @@ input[type='range'] {
 .ic-quality-issue-msg {
   flex: 1;
   text-align: left;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   background: transparent;
   border: 0;
   padding: 0;
@@ -1073,7 +1069,7 @@ input[type='range'] {
 }
 
 .ic-quality-issue-dismiss {
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   background: transparent;
   border: 0;
   padding: 2px;
@@ -1110,7 +1106,7 @@ input[type='range'] {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   padding-right: 2px;
 }
 
@@ -1144,9 +1140,10 @@ input[type='range'] {
   border: 1px solid color-mix(in srgb, var(--ic-accent) 40%, var(--ic-border));
   border-radius: 10px;
   background: color-mix(in srgb, var(--ic-accent) 10%, transparent);
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.72rem;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .ic-variant-scope-note strong {
@@ -1154,27 +1151,10 @@ input[type='range'] {
   text-transform: capitalize;
 }
 
-.ic-gradient-editor {
-  display: grid;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--ic-border);
-  border-radius: 12px;
-  background: var(--ic-elevated);
-}
-
-.ic-field-stack > .ic-section-head:not(:first-child),
-
-
-.ic-field-stack > .ic-inspector-section:not(:first-child),
-
-
-.ic-field-stack > section:not(:first-child),
-
-
-.ic-field-stack > .ic-image-filters {
-  margin-top: 14px;
-  padding-top: 14px;
+/* Section separation inside the inspector stack. */
+.ic-field-stack > section:not(:first-child) {
+  margin-top: 18px;
+  padding-top: 18px;
   border-top: 1px solid var(--ic-border);
 }
 
@@ -1216,7 +1196,7 @@ input[type='range'] {
 .ic-modal-head button {
   padding: 4px;
   border-radius: 6px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-modal-head button:hover {
@@ -1250,7 +1230,7 @@ input[type='range'] {
 .ic-modal-hint {
   margin: 0;
   font-size: 0.72rem;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-modal-actions {
@@ -1259,21 +1239,15 @@ input[type='range'] {
   gap: 8px;
 }
 
-.ic-gradient-preview {
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid var(--ic-border);
-}
-
 .ic-gradient-presets {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .ic-gradient-preset {
-  width: 28px;
-  height: 18px;
+  width: 32px;
+  height: 20px;
   border-radius: 6px;
   border: 1px solid var(--ic-border);
   transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), border-color 0.12s cubic-bezier(0.2, 0, 0, 1);
@@ -1284,78 +1258,28 @@ input[type='range'] {
   border-color: var(--ic-accent);
 }
 
-.ic-gradient-stops {
-  display: grid;
-  gap: 6px;
+/* Explicit stop handle (do not depend on utility classes for a core affordance). */
+.ic-gradient-handle {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 2px solid var(--ic-surface);
+  box-shadow: 0 1px 3px var(--ic-shadow);
+  outline: none;
+  cursor: ew-resize;
 }
 
-.ic-gradient-stop {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  align-items: center;
-  gap: 8px;
+.ic-gradient-handle:focus-visible {
+  box-shadow: 0 0 0 2px var(--ic-accent-ring);
 }
 
-.ic-gradient-stop input[type='color'] {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-}
-
-.ic-gradient-stop-val {
-  font-size: 10px;
-  font-family: 'IBM Plex Mono', monospace;
-  color: var(--ic-muted);
-  min-width: 34px;
-  text-align: right;
-}
-
-.ic-gradient-stop-remove {
-  display: inline-flex;
-  padding: 4px;
-  border-radius: 6px;
-  color: var(--ic-muted);
-}
-
-.ic-gradient-stop-remove:hover:not(:disabled) {
-  color: var(--ic-danger);
-  background: var(--ic-surface);
-}
-
-.ic-gradient-stop-remove:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.ic-gradient-add {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 6px;
-  border-radius: 8px;
-  border: 1px dashed var(--ic-border);
-  color: var(--ic-muted);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.ic-gradient-add:hover {
-  color: var(--ic-text);
-  border-color: var(--ic-accent);
-}
-
-/* Appearance switcher — floating mini-toolbar docked to the bottom of the
-   canvas stage (RuneIcons style). The active variant is highlighted; the
-   others stay dimmed to signal that only one mode is being edited. */
-
-.ic-floating-appearance .ic-appearance-thumb.is-active {
-  opacity: 1;
-  filter: none;
-}
-
-.ic-appearance-thumb.is-active .ic-thumb-frame {
-  box-shadow: 0 0 0 2px var(--ic-accent);
+/* The colour popover (portaled to <body>): let the SV area fill the panel. */
+.ic-picker .react-colorful {
+  width: 100%;
+  height: 176px;
 }
 
 .ic-sizes-control {
@@ -1373,7 +1297,7 @@ input[type='range'] {
   border: 1px solid var(--ic-border);
   border-radius: 11px;
   background: var(--ic-elevated);
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   font-size: 0.74rem;
   font-weight: 680;
   cursor: pointer;
@@ -1441,7 +1365,7 @@ input[type='range'] {
 
 .ic-size-label {
   font-size: 10px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-layer-row.is-dragging {
@@ -1502,263 +1426,8 @@ input[type='range'] {
     padding: 16px;
   }
 
-/* The default (no explicit data-editor-backdrop) keeps a subtle plain mid-tone
-   without fighting the icon */
-.ic-edit-stage:not([data-editor-backdrop]) {
-  background-image: none;
-  background-color: color-mix(in srgb, var(--ic-bg) 94%, #cbd6e4 6%);
-}
-
-.ic-drop-zone {
+  .ic-drop-zone {
     padding: 24px 18px;
-  }
-}
-
-.empty-copy {
-  display: grid;
-  gap: 0.65rem;
-}
-
-.empty-logo-stage {
-  min-height: 260px;
-  display: grid;
-  place-items: center;
-}
-
-.empty-logo-svg {
-  width: min(210px, 54%);
-  position: relative;
-  z-index: 1;
-  filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.5));
-}
-
-.settings-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  background: rgba(5, 8, 12, 0.58);
-  backdrop-filter: blur(8px);
-}
-
-.settings-panel {
-  width: min(820px, 100%);
-  max-height: 90vh;
-  overflow: auto;
-  border: 1px solid var(--ic-border);
-  border-radius: 1.2rem;
-  background: linear-gradient(170deg, color-mix(in srgb, var(--ic-surface) 90%, #fff 10%), var(--ic-surface));
-  box-shadow:
-    inset 0 1px 0 var(--ic-inset-top),
-    inset 0 -1px 0 var(--ic-inset-bottom),
-    0 24px 44px var(--ic-shadow);
-  padding: 1rem;
-}
-
-.settings-panel-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
-}
-
-.settings-panel-head h2 {
-  margin: 0;
-  font-size: 1.42rem;
-}
-
-.settings-panel-head p {
-  margin: 0.2rem 0 0;
-  color: var(--ic-muted);
-  font-size: 0.88rem;
-}
-
-.settings-close {
-  border: 1px solid var(--ic-border);
-  border-radius: 999px;
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--ic-elevated) 88%, #000 12%);
-  color: var(--ic-text);
-}
-
-.settings-section {
-  border-top: 1px solid var(--ic-border-soft);
-  padding-top: 0.85rem;
-  margin-top: 0.85rem;
-  display: grid;
-  gap: 0.72rem;
-}
-
-.settings-section h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.settings-section p {
-  margin: 0;
-  color: var(--ic-muted);
-  font-size: 0.83rem;
-}
-
-.theme-grid {
-  display: grid;
-  gap: 0.6rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.theme-chip {
-  border: 1px solid var(--ic-border);
-  border-radius: 0.9rem;
-  min-height: 110px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.42rem;
-  padding: 0.5rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.36);
-}
-
-.theme-chip::before {
-  content: '';
-  display: block;
-  width: 100%;
-  flex: 1;
-  border-radius: 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.34);
-}
-
-.theme-chip-label {
-  text-align: center;
-  width: 100%;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ic-text);
-}
-
-.theme-chip.system::before {
-  background: linear-gradient(135deg, #11141b 0%, #ebecf0 48%, #be9958 100%);
-}
-
-.theme-chip.dark::before {
-  background: linear-gradient(150deg, #181c24 0%, #0d1016 100%);
-}
-
-.theme-chip.light::before {
-  background: linear-gradient(150deg, #f0f1f3 0%, #d8dbe2 100%);
-}
-
-.theme-chip.gold::before {
-  background: linear-gradient(150deg, #dcc48d 0%, #b38942 100%);
-}
-
-[data-theme='light'] .theme-chip-label {
-  color: #252931;
-}
-
-.theme-chip.selected {
-  border-color: color-mix(in srgb, var(--ic-accent) 74%, #fff 26%);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--ic-accent) 36%, transparent 64%),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.36);
-}
-
-.settings-field {
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.83rem;
-}
-
-.settings-field input,
-
-
-.settings-field select {
-  width: 100%;
-  min-height: 40px;
-}
-
-.color-input-field .color-format-select {
-  min-height: 28px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  width: 84px;
-}
-
-.color-input-row {
-  display: flex;
-  align-items: center;
-  gap: 0.48rem;
-}
-
-.settings-toggle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  border: 1px solid var(--ic-border);
-  border-radius: 0.66rem;
-  padding: 0.58rem 0.72rem;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--ic-elevated) 92%, #fff 8%) 0%,
-    var(--ic-elevated) 100%
-  );
-}
-
-.settings-list {
-  display: grid;
-  gap: 0.48rem;
-}
-
-.settings-actions {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
-}
-
-.settings-btn {
-  border: 1px solid var(--ic-border);
-  border-radius: 0.78rem;
-  padding: 0.72rem 0.85rem;
-  font-weight: 700;
-  box-shadow: inset 0 1px 0 var(--ic-inset-top), inset 0 -1px 0 var(--ic-inset-bottom);
-  transition: filter 0.16s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.settings-btn:hover {
-  filter: brightness(1.04);
-}
-
-.settings-btn.subtle {
-  background: color-mix(in srgb, var(--ic-elevated) 92%, #000 8%);
-  color: var(--ic-text);
-}
-
-.settings-btn.primary {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--ic-accent) 82%, #fff 18%) 0%,
-    color-mix(in srgb, var(--ic-accent) 90%, #000 10%) 100%
-  );
-  color: color-mix(in srgb, var(--ic-bg) 82%, #000 18%);
-}
-
-@media (min-width: 1024px) {
-  .empty-state-grid {
-    grid-template-columns: 1.05fr 0.95fr;
-    align-items: center;
-    gap: 1.4rem;
   }
 }
 
@@ -1815,17 +1484,7 @@ input[type='range'] {
   background: var(--ic-elevated);
   border: 1px solid var(--ic-border);
   border-radius: 4px;
-  color: var(--ic-muted);
-}
-
-@media (max-width: 760px) {
-  .theme-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .settings-actions {
-    grid-template-columns: 1fr;
-  }
+  color: var(--ic-text-muted);
 }
 
 /* --- Toast notifications --- */
@@ -1877,7 +1536,7 @@ input[type='range'] {
   display: inline-flex;
   padding: 2px;
   border-radius: 6px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   transition: color 0.15s cubic-bezier(0.2, 0, 0, 1), background 0.15s cubic-bezier(0.2, 0, 0, 1);
 }
 
@@ -1961,7 +1620,7 @@ textarea:focus-visible,
 .ic-about-section p {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
   line-height: 1.5;
 }
 
@@ -2002,13 +1661,13 @@ textarea:focus-visible,
   padding: 2px 8px;
   border: 1px solid var(--ic-border);
   border-radius: 999px;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-about-note {
   grid-column: 1 / -1;
   font-size: 0.78rem;
-  color: var(--ic-muted);
+  color: var(--ic-text-muted);
 }
 
 .ic-about-list a {

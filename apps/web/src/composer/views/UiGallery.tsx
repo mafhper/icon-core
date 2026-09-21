@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { Fill } from '@iconcore/shared';
 import {
   Circle,
   Grid3x3,
@@ -18,8 +19,10 @@ import {
   Button,
   ButtonGroup,
   ColorField,
+  ControlRow,
   Field,
   IconButton,
+  InlineField,
   Kbd,
   Menu,
   MenuItem,
@@ -33,6 +36,15 @@ import {
   ToolbarDivider,
   Tooltip
 } from '@iconcore/ui';
+import { brandGradientFill } from '../constants';
+import { FillEditor } from '../components/FillEditor';
+import {
+  FillFixtures,
+  GradientDensityFixtures,
+  PendingFixtures,
+  RowGrammarFixtures,
+  StateFixtures
+} from './UiLabFixtures';
 
 type GalleryTheme = 'dark' | 'light';
 
@@ -57,6 +69,19 @@ export const UiGallery = () => {
   const [theme, setTheme] = useState<GalleryTheme>(readTheme);
   const [backdrop, setBackdrop] = useState<'dots' | 'grid' | 'plain'>('dots');
   const [switchOn, setSwitchOn] = useState(true);
+  const [fillColor, setFillColor] = useState({ color: '#4a7cf0', alpha: 1 });
+  const [galleryFill, setGalleryFill] = useState<Fill>(() => brandGradientFill());
+
+  // The app applies `data-theme` in an effect, which can land after this first
+  // render — without syncing, the gallery's theme control showed "Dark" over a
+  // light page. Observing the attribute also covers changes made elsewhere.
+  useEffect(() => {
+    const sync = () => setTheme(readTheme());
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   const applyTheme = (next: GalleryTheme) => {
     setTheme(next);
@@ -222,9 +247,51 @@ export const UiGallery = () => {
             <Slider label="Scale (100%)" min={8} max={400} defaultValue={100} />
             <Slider label="Rotation (0°)" min={-180} max={180} defaultValue={0} disabled />
             <div className="grid gap-3 sm:grid-cols-2">
-              <ColorField label="Fill" defaultValue="#4a7cf0" />
-              <ColorField label="Disabled" defaultValue="#4a7cf0" disabled />
+              <ColorField label="Fill" value={fillColor} onChange={setFillColor} />
+              <ColorField label="Disabled" value={fillColor} onChange={setFillColor} disabled />
             </div>
+          </div>
+        </Section>
+
+        <Section
+          title="Unified fill (240px)"
+          hint="One Fill control for every kind: the type selector on top, the matching adjustments below. Rendered inside a 240px column — the minimum inspector width — to prove nothing truncates."
+        >
+          <div className="grid gap-3 rounded-ic-lg border border-ic-border p-3" style={{ width: 240 }}>
+            <FillEditor label="Fill" fill={galleryFill} onChange={setGalleryFill} onCommit={() => {}} />
+            <Slider variant="inline" label="Opacity" min="0" max="100" defaultValue={100} valueLabel="100%" />
+            <InlineField label="Blend">
+              <Select variant="inline" label="Blend mode" defaultValue="normal">
+                <option value="normal">normal</option>
+                <option value="multiply">multiply</option>
+              </Select>
+            </InlineField>
+          </div>
+        </Section>
+
+        <Section
+          title="Inspector grammar (240px)"
+          hint="The row primitives the Colours inspector uses: InlineField, ControlRow and the inline Slider. Rendered inside a 240px column to prove they fit the minimum panel width."
+        >
+          <div className="grid gap-3 rounded-ic-lg border border-ic-border p-3" style={{ width: 240 }}>
+            <InlineField label="Fill">
+              <Select variant="inline" label="Fill type" defaultValue="linear-gradient">
+                <option value="solid">Solid color</option>
+                <option value="linear-gradient">Linear gradient</option>
+                <option value="diamond-gradient">Diamond gradient</option>
+              </Select>
+            </InlineField>
+            <ControlRow label="Color">
+              <ColorField variant="inline" label="Fill colour" value={fillColor} onChange={setFillColor} />
+            </ControlRow>
+            <Slider variant="inline" label="Opacity" min="0" max="100" defaultValue={100} valueLabel="100%" />
+            <Slider variant="inline" label="Angle" min="0" max="360" defaultValue={90} valueLabel="90°" />
+            <InlineField label="Blend">
+              <Select variant="inline" label="Blend mode" defaultValue="normal">
+                <option value="normal">normal</option>
+                <option value="multiply">multiply</option>
+              </Select>
+            </InlineField>
           </div>
         </Section>
 
@@ -241,6 +308,41 @@ export const UiGallery = () => {
           <p className="-mt-1 text-[0.78rem] text-ic-text-muted">
             Selected: <strong className="text-ic-text">{backdrop}</strong>
           </p>
+        </Section>
+
+        <Section
+          title="Fixtures — interaction grammar"
+          hint="Cada fixture responde a uma pergunta de design (ADR-012 §12). `real` usa o componente entregue, `proposta` é uma proposta sobre tokens existentes, `aguarda spec` registra a pergunta para as Fases 2–6. O Lab é um laboratório de fixtures: nada aqui instancia o Composer."
+        >
+          <RowGrammarFixtures />
+        </Section>
+
+        <Section
+          title="Fixtures — States"
+          hint="Estados isolados, para congelar a gramática (Fase 1): default, focus, disabled, selected. Hover/active são reais (CSS) — passe o mouse; onde não há visual próprio, o fixture denuncia."
+        >
+          <StateFixtures />
+        </Section>
+
+        <Section
+          title="Fixtures — Fill"
+          hint="Fill como objeto: cabeçalho (preview + tipo + opacity) com os ajustes do tipo abaixo. Renderizado a 240px com estado próprio."
+        >
+          <FillFixtures />
+        </Section>
+
+        <Section
+          title="Fixtures — Gradient density"
+          hint="Densidade de stops em 240px — o caso que costuma quebrar o layout."
+        >
+          <GradientDensityFixtures />
+        </Section>
+
+        <Section
+          title="Fixtures — pendentes do spec"
+          hint="Perguntas registradas, sem markup especulativo: Inspector, Layers e Responsive dependem do spec de interação (Fases 2, 5 e 6)."
+        >
+          <PendingFixtures />
         </Section>
       </main>
     </div>

@@ -17,6 +17,8 @@ if (!/^\d+\.\d+\.\d+$/.test(version)) {
 
 const jsonFiles = [
   'package.json',
+  'apps/web/package.json',
+  'apps/promo/package.json',
   'apps/desktop/package.json',
   'apps/desktop/src-tauri/tauri.conf.json',
 ];

@@ -89,6 +89,44 @@ if (budget.hexTsxBudget !== undefined) {
   }
 }
 
+// --- Orphan class ratchet (D2) ----------------------------------------------
+// A class counts as *used* when the sources reference it literally, or when it
+// matches an explicitly declared dynamic pattern (template literals such as
+// `is-${side}`). Patterns are declared, never auto-derived: a new dynamic class
+// must be acknowledged in `.ui-budget.json`, which keeps the ratchet honest.
+// Anything ambiguous stays in `allow` with a justification — D2 removes known
+// debt, it does not anticipate product decisions.
+//
+// Declared patterns (D2, 2026-09-21):
+//   `ic-toast-`  → ToastViewport: `ic-toast-${toast.variant}` (success/error/info)
+//   `is-`        → PanelResizer `is-${side}` (left/right) and QualityWarnings `is-${tone}` (error/warning)
+//   allow: `react-colorful` → third-party class targeted by the `.ic-picker` override (not ours to remove)
+const orphan = budget.orphanCheck ?? {};
+if (orphan.css) {
+  const orphanCss = fs.readFileSync(path.join(rootDir, orphan.css), 'utf8');
+  const classNames = new Set();
+  for (const match of orphanCss.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)) classNames.add(match[1]);
+
+  const sources = [];
+  for (const dir of orphan.scanDirs ?? []) {
+    for (const file of collectTs(path.join(rootDir, dir))) sources.push(fs.readFileSync(file, 'utf8'));
+  }
+
+  const allow = new Set(orphan.allow ?? []);
+  const dynamicPatterns = orphan.dynamicPatterns ?? [];
+  const orphans = [...classNames]
+    .filter((name) => !allow.has(name))
+    .filter((name) => !dynamicPatterns.some((pattern) => name.startsWith(pattern)))
+    .filter((name) => !sources.some((text) => text.includes(name)))
+    .sort();
+
+  if (orphans.length > 0) {
+    failures.push(`orphan CSS classes in ${orphan.css}: ${orphans.join(', ')}`);
+  } else {
+    notes.push(`OK   orphan CSS classes in ${orphan.css}: 0 (of ${classNames.size} scanned)`);
+  }
+}
+
 for (const n of notes) console.log(n);
 if (failures.length > 0) {
   console.error('\nUI budget guard FAILED:');

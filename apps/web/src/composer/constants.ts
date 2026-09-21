@@ -23,3 +23,9 @@ export const brandGradientFill = (): LinearGradientFill => ({
     { offset: 1, color: '#6bb7d8' }
   ]
 });
+
+/** Colour a solid fill falls back to when converting from `none`/an empty fill. */
+export const DEFAULT_SOLID_COLOR = '#2193b8';
+
+/** Neutral colour used when no fill colour is available at all. */
+export const EMPTY_SOLID_COLOR = '#ffffff';

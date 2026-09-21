@@ -110,3 +110,23 @@ describe('background layer handle', () => {
     expect(next.project!.canvas.background).toEqual({ kind: 'none' });
   });
 });
+
+describe('Work area backdrop (SET_EDITOR_BACKDROP)', () => {
+  it('defaults to dots', () => {
+    expect(initialState.editorBackdrop).toBe('dots');
+  });
+
+  it('accepts each of the three backdrops', () => {
+    for (const backdrop of ['grid', 'plain', 'dots'] as const) {
+      const next = composerReducer(initialState, { type: 'SET_EDITOR_BACKDROP', payload: backdrop });
+      expect(next.editorBackdrop).toBe(backdrop);
+    }
+  });
+
+  it('touches nothing else in the state', () => {
+    const next = composerReducer(initialState, { type: 'SET_EDITOR_BACKDROP', payload: 'grid' });
+    expect(next.project).toBe(initialState.project);
+    expect(next.activeLayerId).toBe(initialState.activeLayerId);
+    expect(next.activeVariant).toBe(initialState.activeVariant);
+  });
+});

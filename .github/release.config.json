@@ -39,6 +39,8 @@
   },
   "versions": {
     "files": [
+      { "path": "apps/web/package.json", "format": "json", "field": "version" },
+      { "path": "apps/promo/package.json", "format": "json", "field": "version" },
       { "path": "apps/desktop/package.json", "format": "json", "field": "version" },
       { "path": "apps/desktop/src-tauri/tauri.conf.json", "format": "json", "field": "version" },
       { "path": "apps/desktop/src-tauri/Cargo.toml", "format": "toml", "field": "package.version" }

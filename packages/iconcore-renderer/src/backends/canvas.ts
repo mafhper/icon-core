@@ -1,5 +1,122 @@
-import type { Fill, ShapeKind, BlendMode } from '@iconcore/shared';
+import type { AngularGradientFill, DiamondGradientFill, Fill, GradientFill, ShapeKind, BlendMode } from '@iconcore/shared';
 import type { ImageHandle, RenderBackend, RenderContext } from '../types';
+import { toRgba } from '../color';
+import { clamp01 } from '../color';
+import { conicStartRadians, cssAngleVector, expandStops, sampleStops } from '../gradient';
+
+const addStops = (gradient: CanvasGradient, fill: GradientFill): void => {
+  for (const stop of expandStops(fill.stops)) {
+    gradient.addColorStop(clamp01(stop.offset), stop.color);
+  }
+};
+
+const buildGradient = (
+  native: CanvasRenderingContext2D,
+  fill: GradientFill,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): CanvasGradient | null => {
+  if (fill.kind === 'linear-gradient') {
+    const { x: dx, y: dy } = cssAngleVector(fill.angle ?? 90);
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+    const half = (Math.abs(width * dx) + Math.abs(height * dy)) / 2 || Math.max(width, height) / 2;
+    const gradient = native.createLinearGradient(cx - dx * half, cy - dy * half, cx + dx * half, cy + dy * half);
+    addStops(gradient, fill);
+    return gradient;
+  }
+
+  if (fill.kind === 'radial-gradient') {
+    const cx = x + width * (fill.centerX ?? 0.5);
+    const cy = y + height * (fill.centerY ?? 0.5);
+    const radius = Math.max(Math.max(width, height) * (fill.radius ?? 0.5), 0.0001);
+    const gradient = native.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    addStops(gradient, fill);
+    return gradient;
+  }
+
+  // angular-gradient → native conic when available.
+  if (fill.kind !== 'angular-gradient') return null;
+  const conic = (native as { createConicGradient?: (start: number, cx: number, cy: number) => CanvasGradient })
+    .createConicGradient;
+  if (typeof conic !== 'function') return null;
+  const cx = x + width * (fill.centerX ?? 0.5);
+  const cy = y + height * (fill.centerY ?? 0.5);
+  const gradient = conic.call(native, conicStartRadians(fill.angle ?? 0), cx, cy);
+  addStops(gradient, fill);
+  return gradient;
+};
+
+/** Angular gradient fallback: concentric wedges (used when `createConicGradient` is missing). */
+const paintAngularWedges = (
+  native: CanvasRenderingContext2D,
+  fill: AngularGradientFill,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  steps = 180
+): void => {
+  const cx = x + width * (fill.centerX ?? 0.5);
+  const cy = y + height * (fill.centerY ?? 0.5);
+  const radius = Math.hypot(width, height);
+  const start = conicStartRadians(fill.angle ?? 0);
+
+  native.save();
+  native.beginPath();
+  native.rect(x, y, width, height);
+  native.clip();
+  for (let i = 0; i < steps; i++) {
+    const t0 = i / steps;
+    const t1 = (i + 1) / steps;
+    native.beginPath();
+    native.moveTo(cx, cy);
+    native.arc(cx, cy, radius, start + t0 * Math.PI * 2, start + t1 * Math.PI * 2);
+    native.closePath();
+    native.fillStyle = sampleStops(fill.stops, (t0 + t1) / 2);
+    native.fill();
+  }
+  native.restore();
+};
+
+/** Diamond gradient approximation: nested diamonds from the edge inward. */
+const paintDiamond = (
+  native: CanvasRenderingContext2D,
+  fill: DiamondGradientFill,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  steps = 96
+): void => {
+  const cx = x + width * (fill.centerX ?? 0.5);
+  const cy = y + height * (fill.centerY ?? 0.5);
+  const reach = Math.max(width, height) * (fill.radius ?? 0.5);
+
+  native.save();
+  native.beginPath();
+  native.rect(x, y, width, height);
+  native.clip();
+  // Corners keep the outermost colour.
+  native.fillStyle = sampleStops(fill.stops, 1);
+  native.fillRect(x, y, width, height);
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const r = reach * (1 - t);
+    native.beginPath();
+    native.moveTo(cx, cy - r);
+    native.lineTo(cx + r, cy);
+    native.lineTo(cx, cy + r);
+    native.lineTo(cx - r, cy);
+    native.closePath();
+    native.fillStyle = sampleStops(fill.stops, 1 - t);
+    native.fill();
+  }
+  native.restore();
+};
+
 
 const loadImageBrowser = async (source: string | Blob): Promise<ImageHandle> => {
   if (typeof source === 'string') {
@@ -130,35 +247,26 @@ export const createCanvasBackend = (): RenderBackend => {
       }
 
       if (fill.kind === 'solid') {
-        native.fillStyle = fill.color ?? '#ffffff';
+        native.fillStyle = toRgba(fill.color ?? '#ffffff', fill.alpha ?? 1);
         native.fillRect(x, y, width, height);
-      } else if (fill.kind === 'linear-gradient') {
-        const angle = (fill.angle ?? 0) * Math.PI / 180;
-        const cx = x + width / 2;
-        const cy = y + height / 2;
-        const length = Math.sqrt(width * width + height * height) / 2;
-        const gradient = native.createLinearGradient(
-          cx - Math.cos(angle) * length,
-          cy - Math.sin(angle) * length,
-          cx + Math.cos(angle) * length,
-          cy + Math.sin(angle) * length
-        );
-        for (const stop of fill.stops ?? []) {
-          gradient.addColorStop(stop.offset, stop.color);
-        }
-        native.fillStyle = gradient;
-        native.fillRect(x, y, width, height);
-      } else if (fill.kind === 'radial-gradient') {
-        const cx = x + width * (fill.centerX ?? 0.5);
-        const cy = y + height * (fill.centerY ?? 0.5);
-        const radius = Math.max(width, height) * (fill.radius ?? 0.5);
-        const gradient = native.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        for (const stop of fill.stops ?? []) {
-          gradient.addColorStop(stop.offset, stop.color);
-        }
-        native.fillStyle = gradient;
-        native.fillRect(x, y, width, height);
+        return;
       }
+
+      if (fill.kind === 'diamond-gradient') {
+        paintDiamond(native, fill, x, y, width, height);
+        return;
+      }
+
+      const gradient = buildGradient(native, fill, x, y, width, height);
+      if (gradient) {
+        native.fillStyle = gradient;
+        native.fillRect(x, y, width, height);
+        return;
+      }
+
+      // Angular gradient without native conic support.
+      if (fill.kind !== 'angular-gradient') return;
+      paintAngularWedges(native, fill, x, y, width, height);
     },
 
     applyOpacity(ctx: RenderContext, opacity: number): void {

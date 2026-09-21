@@ -13,7 +13,7 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: /ui-gallery\.spec\.ts/,
+  testMatch: /(ui-gallery|inspector-layout|polish)\.spec\.ts/,
   webServer: {
     command: process.env.CI
       ? 'npm run preview --workspace=@iconcore/web -- --host 127.0.0.1 --port 4182'
