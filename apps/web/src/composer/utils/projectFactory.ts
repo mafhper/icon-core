@@ -44,14 +44,38 @@ export const createBlankProject = (name: string, size = 512): IconCoreProject =>
   }
 });
 
+/** Largest fraction of the canvas a freshly imported layer may occupy. */
+const IMPORT_FILL = 0.78;
+/** Shortest acceptable *long* side, in canvas px, so tiny assets stay grabbable. */
+const MIN_LONG_SIDE = 32;
+
+/**
+ * Fit an imported asset into the canvas **without ever changing its aspect
+ * ratio**: a single scale drives both axes, and the minimum-size rule raises
+ * that same scale instead of being applied per axis. Flooring each axis
+ * independently is what used to squish thin assets — a 48×24 asset became
+ * 37×32 (ratio 1.16 instead of 2), and the Canvas2D backend stretches the
+ * source into exactly this rectangle.
+ */
+export const fitAssetSize = (
+  width: number,
+  height: number,
+  canvasSize: number
+): { width: number; height: number } => {
+  const naturalWidth = Math.max(1, width);
+  const naturalHeight = Math.max(1, height);
+  const longest = Math.max(naturalWidth, naturalHeight);
+  const scale = Math.max(Math.min(IMPORT_FILL, canvasSize / longest), MIN_LONG_SIDE / longest);
+  const round = (value: number): number => Math.max(1, Number(value.toFixed(2)));
+  return { width: round(naturalWidth * scale), height: round(naturalHeight * scale) };
+};
+
 export const createLayerFromAsset = (
   asset: FileLayerAsset,
   canvasSize: number,
   zIndex: number
 ): IconLayer => {
-  const fitScale = Math.min(0.78, canvasSize / Math.max(asset.width, asset.height));
-  const width = Math.max(32, Math.round(asset.width * fitScale));
-  const height = Math.max(32, Math.round(asset.height * fitScale));
+  const { width, height } = fitAssetSize(asset.width, asset.height, canvasSize);
 
   return {
     id: `layer-${crypto.randomUUID()}`,
