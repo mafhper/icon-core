@@ -1,4 +1,5 @@
 import type { IconCoreProject } from '@iconcore/shared';
+import { migrateToCurrent, type IconCoreProjectV2 } from '@iconcore/engine';
 import { auditProject } from '@iconcore/validator';
 import { readFileSync } from 'fs';
 
@@ -11,11 +12,13 @@ export const auditCommand = async (args: string[]): Promise<void> => {
 
   console.log(`Auditing project: ${projectPath}`);
   const content = readFileSync(projectPath, 'utf-8');
-  const project: IconCoreProject = JSON.parse(content);
+  const raw = JSON.parse(content) as { schemaVersion?: number };
 
-  if (project.schemaVersion !== 2) {
-    throw new Error(`Unsupported schema version: ${project.schemaVersion}. Expected 2.`);
+  if (raw.schemaVersion !== 2 && raw.schemaVersion !== 3) {
+    throw new Error(`Unsupported schema version: ${raw.schemaVersion}. Expected 2 or 3.`);
   }
+
+  const project: IconCoreProject = migrateToCurrent(raw as IconCoreProjectV2 | IconCoreProject);
 
   const result = auditProject(project);
 

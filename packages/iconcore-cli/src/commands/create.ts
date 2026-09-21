@@ -32,7 +32,7 @@ export const createCommand = async (args: string[]): Promise<void> => {
   }
 
   const project: IconCoreProject = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     metadata: { name, shortName: name },
     canvas: {
       size: presetConfig.canvas?.size ?? 512,
