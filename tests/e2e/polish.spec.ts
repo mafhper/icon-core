@@ -213,10 +213,10 @@ for (const surface of SURFACES) {
         const rect = element.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0 || !context) continue;
         if (element.children.length > 0 && element.tagName !== 'BUTTON') continue;
-        const text = (element.tagName === 'SELECT'
-          ? element.selectedOptions[0]?.textContent
-          : (element as HTMLInputElement).value ?? element.textContent ?? ''
-        ).trim();
+        const raw = element.tagName === 'SELECT'
+          ? element.selectedOptions[0]?.textContent ?? ''
+          : (element as HTMLInputElement).value ?? element.textContent ?? '';
+        const text = raw.trim();
         if (text.length < 2) continue;
         if (element.tagName !== 'SELECT' && element.tagName !== 'INPUT') {
           if (styles.whiteSpace !== 'nowrap' || styles.textOverflow === 'ellipsis') continue;
