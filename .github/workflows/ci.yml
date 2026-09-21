@@ -59,6 +59,12 @@ jobs:
       - name: End-to-end tests
         run: npm run test:e2e
 
+      # Enforces the visual contract: gallery captures plus the inspector layout
+      # assertions (no horizontal overflow at 240/288/320/380). Reuses the
+      # workspace build from the step above.
+      - name: UI shots + inspector layout contract
+        run: npm run ui:shots
+
   desktop-smoke:
     runs-on: windows-latest
     steps:
