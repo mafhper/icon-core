@@ -51,7 +51,7 @@ const readTheme = (): GalleryTheme =>
  * Project-independent: renders without a project and never under the welcome
  * modal. Every `@iconcore/ui` primitive appears here in all its meaningful
  * states so visual regressions are inspectable in one place — by a human
- * (`bun run dev:web` → `#/ui`) or by the `ui:shots` Playwright script.
+ * (`npm run dev:web` → `#/ui`) or by the `ui:shots` Playwright script.
  */
 export const UiGallery = () => {
   const [theme, setTheme] = useState<GalleryTheme>(readTheme);

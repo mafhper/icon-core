@@ -4,8 +4,8 @@
   "version": "1.4.0",
   "identifier": "com.mafhper.iconcore",
   "build": {
-    "beforeBuildCommand": "cd ../.. && bun run build:packages && bun run --filter @iconcore/web build:desktop",
-    "beforeDevCommand": "cd ../.. && bun run build:packages && bun run --filter @iconcore/web dev",
+    "beforeBuildCommand": "cd ../.. && npm run build:packages && npm run build:desktop-frontend",
+    "beforeDevCommand": "cd ../.. && npm run build:packages && npm run dev:web",
     "devUrl": "http://localhost:5173/icon-core/app/",
     "frontendDist": "../../web/dist"
   },

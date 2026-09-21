@@ -13,11 +13,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@iconcore/shared": "workspace:*",
-    "@iconcore/engine": "workspace:*",
-    "@iconcore/renderer": "workspace:*",
-    "@iconcore/exporters": "workspace:*",
-    "@iconcore/validator": "workspace:*"
+    "@iconcore/shared": "*",
+    "@iconcore/engine": "*",
+    "@iconcore/renderer": "*",
+    "@iconcore/exporters": "*",
+    "@iconcore/validator": "*"
   },
   "devDependencies": {
     "@types/node": "26.5.0",

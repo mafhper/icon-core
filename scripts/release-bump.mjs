@@ -6,7 +6,7 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const rawVersion = process.argv[2];
 if (!rawVersion) {
-  console.error('usage: bun scripts/release-bump.mjs <version>');
+  console.error('usage: node scripts/release-bump.mjs <version>');
   process.exit(1);
 }
 const version = rawVersion.replace(/^v/, '');

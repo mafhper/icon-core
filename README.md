@@ -51,22 +51,21 @@ Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP,
 
 Prerequisites:
 
-- Bun 1.3+
-- Node.js 20+
+- Node.js 22+ (npm)
 - Rust toolchain for desktop builds
 
 ```bash
-bun install
-bun run dev:web     # browser app on :5173
-bun run dev:promo   # landing page on :5174
-bun run build       # everything for GitHub Pages
+npm install
+npm run dev:web     # browser app on :5173
+npm run dev:promo   # landing page on :5174
+npm run build       # everything for GitHub Pages
 ```
 
 ```bash
-bun audit --audit-level=high
-bun run lint
-bun run typecheck
-bun run test
+npm audit --audit-level=high
+npm run lint
+npm run typecheck
+npm run test
 ```
 
 ## Repository

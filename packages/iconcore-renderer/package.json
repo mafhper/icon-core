@@ -12,7 +12,7 @@
     }
   },
   "dependencies": {
-    "@iconcore/shared": "workspace:*"
+    "@iconcore/shared": "*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -20,7 +20,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "jsdom": "^30.0.1",
+    "jsdom": "30.0.1",
     "vitest": "^4.1.11"
   }
 }
