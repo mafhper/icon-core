@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Fill } from '@iconcore/shared';
 import {
   Circle,
@@ -71,6 +71,17 @@ export const UiGallery = () => {
   const [switchOn, setSwitchOn] = useState(true);
   const [fillColor, setFillColor] = useState({ color: '#4a7cf0', alpha: 1 });
   const [galleryFill, setGalleryFill] = useState<Fill>(() => brandGradientFill());
+
+  // The app applies `data-theme` in an effect, which can land after this first
+  // render — without syncing, the gallery's theme control showed "Dark" over a
+  // light page. Observing the attribute also covers changes made elsewhere.
+  useEffect(() => {
+    const sync = () => setTheme(readTheme());
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   const applyTheme = (next: GalleryTheme) => {
     setTheme(next);

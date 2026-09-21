@@ -58,7 +58,7 @@ interface AdjustRowProps {
  * colour pickers, so both stay reachable in a 240px panel.
  */
 const AdjustRow = ({ label, unit, min, max, value, onChange, onCommit }: AdjustRowProps) => (
-  <div className="grid gap-[var(--ic-label-gap)]">
+  <div className="grid grid-cols-[minmax(0,1fr)] gap-[var(--ic-label-gap)]">
     <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">{label}</span>
     <div className="flex items-center gap-1.5">
       <div className="min-w-0 flex-1">
@@ -148,7 +148,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
   const isDiamond = fill.kind === 'diamond-gradient';
 
   return (
-    <div className="grid gap-2.5">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
       <div
         ref={barRef}
         className="relative mx-2 h-6 cursor-pointer rounded-ic-sm border border-ic-border"
@@ -209,7 +209,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ))}
       </div>
 
-      <div className="grid gap-2.5">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
             Stops {stops.length > 2 ? `(${stops.length})` : ''}
@@ -224,7 +224,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
           </Button>
         </div>
 
-        <div className="grid gap-2.5">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
           {stops.map((stop, index) => (
             <div key={index} className="flex items-center gap-2">
               <NumberField

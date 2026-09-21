@@ -33,7 +33,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
   if (variant === 'inline') {
     const showLabelRow = !hideLabel || valueLabel != null;
     return (
-      <div className="grid gap-1">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-1">
         {showLabelRow && (
           <div className="flex items-baseline justify-between gap-2">
             {!hideLabel && (

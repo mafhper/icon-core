@@ -22,7 +22,11 @@ export const Field = forwardRef<HTMLLabelElement, FieldProps>(function Field(
   ref
 ) {
   return (
-    <label ref={ref} className={cn('grid gap-[var(--ic-label-gap)]', className)} {...rest}>
+    <label
+      ref={ref}
+      className={cn('grid grid-cols-[minmax(0,1fr)] gap-[var(--ic-label-gap)]', className)}
+      {...rest}
+    >
       <span className="truncate text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
         {label}
       </span>
