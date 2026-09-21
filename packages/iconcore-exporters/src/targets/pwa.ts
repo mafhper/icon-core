@@ -4,8 +4,10 @@ export const pwa: TargetDefinition = {
   id: 'pwa',
   name: 'PWA Icons',
   tasks: [
-    { path: 'icons/icon-192x192.png', width: 192, height: 192, transparent: false },
-    { path: 'icons/icon-512x512.png', width: 512, height: 512, transparent: false },
+    { path: 'icons/icon-192x192.png', width: 192, height: 192, transparent: true },
+    { path: 'icons/icon-512x512.png', width: 512, height: 512, transparent: true },
+    // Maskable icons must stay opaque: the platform crops/masks them, so alpha
+    // is not meaningful and the background is part of the safe zone.
     { path: 'icons/icon-maskable-192x192.png', width: 192, height: 192, transparent: false },
     { path: 'icons/icon-maskable-512x512.png', width: 512, height: 512, transparent: false }
   ],

@@ -49,7 +49,7 @@ function createMockBackend(): RenderBackend {
 }
 
 const createProject = (overrides?: Partial<IconCoreProject>): IconCoreProject => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   metadata: { name: 'Test', shortName: 'Test' },
   canvas: { size: 512, background: { kind: 'solid', color: '#ffffff' } },
   layers: [],
