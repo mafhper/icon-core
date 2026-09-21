@@ -257,7 +257,7 @@ export const UiGallery = () => {
           title="Unified fill (240px)"
           hint="One Fill control for every kind: the type selector on top, the matching adjustments below. Rendered inside a 240px column — the minimum inspector width — to prove nothing truncates."
         >
-          <div className="grid gap-3 rounded-ic-lg border border-ic-border p-3" style={{ width: 240 }}>
+          <div className="grid gap-3 rounded-[var(--ic-radius-surface)] border border-ic-border p-3" style={{ width: 240 }}>
             <FillEditor label="Fill" fill={galleryFill} onChange={setGalleryFill} onCommit={() => {}} />
             <Slider variant="inline" label="Opacity" min="0" max="100" defaultValue={100} valueLabel="100%" />
             <InlineField label="Blend">
@@ -273,7 +273,7 @@ export const UiGallery = () => {
           title="Inspector grammar (240px)"
           hint="The row primitives the Colours inspector uses: InlineField, ControlRow and the inline Slider. Rendered inside a 240px column to prove they fit the minimum panel width."
         >
-          <div className="grid gap-3 rounded-ic-lg border border-ic-border p-3" style={{ width: 240 }}>
+          <div className="grid gap-3 rounded-[var(--ic-radius-surface)] border border-ic-border p-3" style={{ width: 240 }}>
             <InlineField label="Fill">
               <Select variant="inline" label="Fill type" defaultValue="linear-gradient">
                 <option value="solid">Solid color</option>

@@ -188,11 +188,38 @@ describe('Select', () => {
 });
 
 describe('Switch', () => {
-  it('renders labelled checkbox row', () => {
+  it('renders a labelled switch and reports the state', () => {
     const onChange = vi.fn();
     render(<Switch label="Depth shadow" onChange={onChange} />);
-    const box = screen.getByRole('checkbox', { name: 'Depth shadow' });
-    fireEvent.click(box);
+
+    // A switch, not a checkbox: it reports a setting's state (critique §11).
+    const control = screen.getByRole('switch', { name: 'Depth shadow' });
+    expect(control).not.toBeChecked();
+
+    fireEvent.click(control);
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('reflects checked and disabled', () => {
+    render(<Switch label="On" defaultChecked />);
+    expect(screen.getByRole('switch', { name: 'On' })).toBeChecked();
+
+    render(<Switch label="Off" disabled />);
+    expect(screen.getByRole('switch', { name: 'Off' })).toBeDisabled();
+  });
+});
+
+describe('NumberField', () => {
+  it('keeps the model while the field is cleared', () => {
+    const onChange = vi.fn();
+    render(<NumberField label="Size" value={64} onChange={onChange} />);
+    const input = screen.getByLabelText('Size');
+
+    // Clearing (or typing just "-") must not write 0 to the model mid-typing.
+    fireEvent.change(input, { target: { value: '' } });
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: '128' } });
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

@@ -180,8 +180,44 @@ test('ui lab nested radii are not inverted', async ({ page }) => {
   // Ratchet: the UI Lab is fixture markup whose radii follow the design tokens;
   // the recorded cases are nested controls, not nested surfaces. The spec
   // redefines the Lab's radius scale, so this number may only go down.
-  const LAB_BASELINE = 2;
+  const LAB_BASELINE = 0;
   expect(violations.length, violations.join('\n')).toBeLessThanOrEqual(LAB_BASELINE);
+});
+
+/**
+ * Focus ownership (critique §4, decision B): every interactive control must show
+ * a visible indicator when focused — either the base outline or an equivalent
+ * treatment of its own. Measured by diffing computed styles before/after focus,
+ * so it covers any indicator (outline, ring, border, background).
+ */
+test('every interactive control shows a focus indicator', async ({ page }) => {
+  await openInspector(page, true);
+
+  // Real keyboard focus: script `focus()` does not reliably match `:focus-visible`
+  // in Chromium, so the audit walks the tab order and reads the active element.
+  const missing = new Set<string>();
+
+  for (let step = 0; step < 80; step += 1) {
+    await page.keyboard.press('Tab');
+    const current = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement | null;
+      if (!element || element === document.body) return null;
+      const styles = getComputedStyle(element);
+      const outline =
+        styles.outlineStyle !== 'none' && (parseFloat(styles.outlineWidth) || 0) > 0;
+      return {
+        key: `${element.tagName.toLowerCase()}.${String(element.className).split(' ').slice(0, 2).join('.').slice(0, 40)}`,
+        label: element.getAttribute('aria-label') ?? (element.textContent ?? '').trim().slice(0, 18),
+        // Any of these is a visible indicator: the base outline, a ring/shadow, or
+        // a border/background change owned by the component.
+        hasIndicator: outline || styles.boxShadow !== 'none'
+      };
+    });
+    if (!current) break;
+    if (!current.hasIndicator) missing.add(`${current.key} [${current.label}]`);
+  }
+
+  expect([...missing], `sem indicador de foco:\n${[...missing].join('\n')}`).toEqual([]);
 });
 
 /**
