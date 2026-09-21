@@ -96,7 +96,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
     <div className="ic-gradient-editor">
       <div
         ref={barRef}
-        className="relative h-6 w-full cursor-pointer rounded-ic-sm border border-ic-border"
+        className="relative mx-2 h-6 w-[calc(100%-1rem)] cursor-pointer rounded-ic-sm border border-ic-border"
         style={{ background: barCss(stops) }}
         onPointerMove={(event) => {
           if (dragIndex.current === null) return;

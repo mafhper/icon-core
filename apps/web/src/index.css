@@ -912,6 +912,11 @@ input[type='range'] {
   border-radius: 0;
   padding: 16px;
   overflow-y: auto;
+  /* `overflow-y: auto` would otherwise make x scrollable too, so any control a
+     few pixels wider than the panel shifted the whole column (labels clipped on
+     the left). The colour picker is portaled to <body>, so nothing here needs
+     horizontal overflow. */
+  overflow-x: hidden;
   scrollbar-gutter: stable;
 }
 
@@ -1147,6 +1152,7 @@ input[type='range'] {
   color: var(--ic-muted);
   font-size: 0.72rem;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .ic-variant-scope-note strong {

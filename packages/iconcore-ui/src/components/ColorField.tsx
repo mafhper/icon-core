@@ -216,7 +216,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
             />
           </div>
 
-          <div className="flex h-7 w-14 shrink-0 items-center justify-end rounded-ic-sm border border-ic-border bg-ic-surface px-1.5 font-mono text-[11px]">
+          <div className="flex h-7 w-16 shrink-0 items-center justify-end rounded-ic-sm border border-ic-border bg-ic-surface px-1.5 font-mono text-[11px]">
             <input
               type="number"
               min="0"
@@ -225,7 +225,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
               disabled={disabled}
               aria-label={`${label} alpha percent`}
               onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-              className="w-7 bg-transparent text-right text-ic-text focus:outline-none disabled:opacity-40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
+              className="w-8 bg-transparent text-right tabular-nums text-ic-text focus:outline-none disabled:opacity-40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
             />
             <span className="select-none text-ic-text-muted">%</span>
           </div>
