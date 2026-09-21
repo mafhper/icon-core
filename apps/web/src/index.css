@@ -808,6 +808,17 @@ input[type='range'] {
   border-radius: 50%;
   background: var(--ic-gold);
   touch-action: none;
+  /* The layer is scaled by `--layer-scale`; counter-scaling keeps the handle the
+     same size on screen at any layer scale or zoom. */
+  transform: scale(calc(1 / max(var(--layer-scale, 1), 0.01)));
+}
+
+/* 24px hit target without changing the visual size (better-ui / WCAG 2.2). */
+.ic-transform-handle::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
 }
 
 .ic-scale-handle {

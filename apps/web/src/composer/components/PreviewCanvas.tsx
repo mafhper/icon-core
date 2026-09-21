@@ -208,10 +208,23 @@ export const PreviewCanvas = () => {
     }
 
     if (drag.mode === 'scale') {
-      const delta = Math.max(dx, dy) / canvasSize;
+      // Project the pointer onto the layer's own diagonal (in its local frame, so
+      // rotation is respected): the corner follows the cursor at any layer size.
+      // The previous fixed sensitivity (`* 2.2`) only matched ~468px layers.
+      const baseLayer = project.layers.find((item) => item.id === drag.id);
+      const dragged = baseLayer ? resolveLayerVariant(baseLayer, state.activeVariant) : null;
+      if (!dragged) return;
+      const size = layerSize(dragged, canvasSize);
+      const radians = (drag.origin.rotation * Math.PI) / 180;
+      const localX = dx * Math.cos(radians) + dy * Math.sin(radians);
+      const localY = -dx * Math.sin(radians) + dy * Math.cos(radians);
+      const diagonal = size.width ** 2 + size.height ** 2;
+      // The layer scales about its centre, so the corner travels half the size
+      // change: double the projection for the corner to follow the cursor.
+      const projected = diagonal === 0 ? 0 : (2 * (localX * size.width + localY * size.height)) / diagonal;
       scheduleTransform(drag.id, {
         ...drag.origin,
-        scale: Math.max(0.08, Number((drag.originScale + delta * 2.2).toFixed(3)))
+        scale: Math.max(0.08, Number((drag.originScale + projected).toFixed(3)))
       });
       return;
     }
@@ -360,8 +373,11 @@ export const PreviewCanvas = () => {
                   style={{
                     width,
                     height,
-                    transform: layerTransform(layer, state.zoom)
-                  }}
+                    transform: layerTransform(layer, state.zoom),
+                    // Handles counter-scale against this so they keep a constant
+                    // size on screen (see `.ic-transform-handle` in index.css).
+                    '--layer-scale': Math.max(0.01, layer.transform.scale * state.zoom)
+                  } as React.CSSProperties}
                   onPointerDown={(event) => startDrag(event, layer, 'move')}
                   onClick={(event) => {
                     event.stopPropagation();
