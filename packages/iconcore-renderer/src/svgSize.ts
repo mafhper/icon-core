@@ -23,16 +23,39 @@ const ROOT_TAG = /<svg\b[^>]*>/i;
 /**
  * Convert an SVG length (`24`, `24px`, `2.5cm`) to CSS px. Percentages and
  * relative units have no intrinsic size and return `null`.
+ *
+ * Scanned character by character instead of with a regular expression: an
+ * unambiguous-length pattern (`[0-9]*\.?[0-9]+`) is a polynomial-ReDoS finding
+ * (`js/polynomial-redos`) because both quantifiers consume digits.
  */
 const parseSvgLength = (raw: string | undefined): number | null => {
   if (!raw) return null;
   const text = raw.trim();
   if (text === '' || text.endsWith('%')) return null;
-  const match = /^([0-9]*\.?[0-9]+)([a-z]*)$/i.exec(text);
-  if (!match) return null;
-  const value = Number(match[1]);
-  const perUnit = CSS_PX_PER_UNIT[(match[2] || 'px').toLowerCase()];
-  if (!Number.isFinite(value) || value <= 0 || perUnit === undefined) return null;
+
+  let end = 0;
+  let seenDot = false;
+  while (end < text.length) {
+    const char = text[end];
+    if (char >= '0' && char <= '9') {
+      end += 1;
+      continue;
+    }
+    if (char === '.' && !seenDot) {
+      seenDot = true;
+      end += 1;
+      continue;
+    }
+    break;
+  }
+
+  const numberText = text.slice(0, end);
+  if (numberText === '' || numberText === '.') return null;
+  const value = Number(numberText);
+  if (!Number.isFinite(value) || value <= 0) return null;
+
+  const perUnit = CSS_PX_PER_UNIT[text.slice(end).toLowerCase() || 'px'];
+  if (perUnit === undefined) return null;
   return value * perUnit;
 };
 
