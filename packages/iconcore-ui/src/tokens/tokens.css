@@ -107,9 +107,15 @@
   /* Spacing rhythm for the inspector grammar. */
   --ic-control-gap: 6px;
   --ic-section-gap: 12px;
-  --ic-label-size: 10px;
+  /* Panel label: sentence case, 11px, muted — the OpenPencil / tauri-ui-kit
+     panel language. No uppercase, no letter-spacing. */
+  --ic-label-size: 11px;
+  --ic-label-gap: 4px;
 
   --ic-radius-sm: 8px;
   --ic-radius-md: 6px;
   --ic-radius-lg: 10px;
+  /* Panel fields (inputs, selects, number wells) are flat filled surfaces with
+     a small radius and a transparent border that only shows on focus. */
+  --ic-field-radius: 4px;
 }

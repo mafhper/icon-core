@@ -189,53 +189,52 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
 
   const content = (
       <div ref={rootRef} className={cn('relative', className)}>
-        {/* Compact row (Rune Icons pattern): swatch · #hex · alpha%. Fixed-width
-            fields keep the control from overflowing in narrow columns. */}
-        <div className="flex items-center gap-[var(--ic-control-gap)]">
+        {/* Paint field (OpenPencil): `[swatch][#hex][| 100 %]` is ONE flat
+            surface. No nested boxes, no stretched sub-fields — the single row
+            keeps its height and the hex input absorbs the slack. */}
+        <div className="flex h-[var(--ic-control-md)] min-w-0 flex-1 items-center overflow-hidden rounded-[var(--ic-field-radius)] bg-ic-elevated hover:bg-ic-overlay focus-within:ring-1 focus-within:ring-ic-accent-ring">
           <button
             type="button"
             ref={triggerRef}
             disabled={disabled}
             onClick={() => (open ? close() : setOpen(true))}
-            className="h-[var(--ic-control-md)] w-[var(--ic-control-md)] shrink-0 rounded-ic-sm border border-ic-border disabled:cursor-not-allowed disabled:opacity-40"
+            className="ml-1 h-4 w-4 shrink-0 rounded-[3px] border border-ic-border disabled:cursor-not-allowed disabled:opacity-40"
             style={checkerStyle}
             aria-label={`${label} colour picker`}
             aria-haspopup="dialog"
             aria-expanded={open}
           >
-            <span className="block h-full w-full rounded-ic-sm" style={{ background: rgbToCss(rgb, value.alpha) }} />
+            <span className="block h-full w-full rounded-[3px]" style={{ background: rgbToCss(rgb, value.alpha) }} />
           </button>
 
-          <div className="flex h-[var(--ic-control-md)] min-w-0 flex-1 items-center rounded-ic-sm border border-ic-border bg-ic-surface px-1.5 font-mono text-[11px]">
-            <span className="select-none text-ic-text-muted">#</span>
-            <input
-              value={hexDraft}
-              disabled={disabled}
-              aria-label={`${label} hex`}
-              spellCheck={false}
-              autoComplete="off"
-              onChange={(event) => setHexDraft(event.target.value)}
-              onBlur={commitHex}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') commitHex();
-              }}
-              className="min-w-0 flex-1 bg-transparent text-right uppercase text-ic-text focus:outline-none disabled:opacity-40"
-            />
-          </div>
+          <span className="select-none pl-1.5 font-mono text-ic-text-muted">#</span>
+          <input
+            value={hexDraft}
+            disabled={disabled}
+            aria-label={`${label} hex`}
+            spellCheck={false}
+            autoComplete="off"
+            onChange={(event) => setHexDraft(event.target.value)}
+            onBlur={commitHex}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') commitHex();
+            }}
+            className="min-w-0 flex-1 bg-transparent pr-1 font-mono uppercase text-ic-text outline-none disabled:opacity-40"
+          />
 
-          <div className="flex h-[var(--ic-control-md)] w-16 shrink-0 items-center justify-end rounded-ic-sm border border-ic-border bg-ic-surface px-1.5 font-mono text-[11px]">
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={alphaPct}
-              disabled={disabled}
-              aria-label={`${label} alpha percent`}
-              onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-              className="w-8 bg-transparent text-right tabular-nums text-ic-text focus:outline-none disabled:opacity-40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
-            />
-            <span className="select-none text-ic-text-muted">%</span>
-          </div>
+          <span className="h-4 w-px shrink-0 bg-ic-border" />
+
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={alphaPct}
+            disabled={disabled}
+            aria-label={`${label} alpha percent`}
+            onChange={(event) => setAlpha(Number(event.target.value) / 100)}
+            className="w-9 shrink-0 bg-transparent text-right tabular-nums text-ic-text outline-none disabled:opacity-40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
+          />
+          <span className="select-none pr-1.5 text-ic-text-muted">%</span>
         </div>
 
         {open && panelPos && createPortal(
@@ -279,7 +278,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 value={alphaPct}
                 aria-label="Alpha percent"
                 onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-                className="w-12 rounded-ic-sm border border-ic-border bg-ic-surface px-1 py-0.5 text-center font-mono text-[11px] text-ic-text [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
+                className="w-11 rounded-[var(--ic-field-radius)] bg-ic-elevated px-1 py-0.5 text-center font-mono text-[0.6875rem] text-ic-text outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
               />
             </div>
 
@@ -288,7 +287,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 value={format}
                 aria-label="Colour format"
                 onChange={(event) => setFormat(event.target.value as ColorFormat)}
-                className="h-7 w-[84px] shrink-0 rounded-ic-sm border border-ic-border bg-ic-surface px-1 text-[11px] text-ic-text"
+                className="h-6 w-[78px] shrink-0 rounded-[var(--ic-field-radius)] bg-ic-elevated pl-2 text-[0.6875rem] text-ic-text outline-none"
               >
                 <option value="hex">HEX</option>
                 <option value="rgba">RGBA</option>
@@ -302,13 +301,13 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') commitDraft();
                 }}
-                className="h-[var(--ic-control-md)] min-w-0 flex-1 rounded-ic-sm border border-ic-border bg-ic-surface px-2 font-mono text-[11px] text-ic-text"
+                className="h-6 min-w-0 flex-1 rounded-[var(--ic-field-radius)] bg-ic-elevated px-2 font-mono text-[0.6875rem] text-ic-text outline-none"
               />
             </div>
 
             {recent.length > 0 && (
               <div className="mt-3">
-                <p className="mb-1 text-[10px] uppercase tracking-wide text-ic-text-muted">Recent</p>
+                <p className="mb-1 text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">Recent</p>
                 <div className="flex flex-wrap gap-1">
                   {recent.map((hex) => (
                     <button

@@ -1,5 +1,5 @@
 import type { Fill } from '@iconcore/shared';
-import { ControlRow, ColorField, Select } from '@iconcore/ui';
+import { ColorField, Select } from '@iconcore/ui';
 import { convertFillKind, FILL_KIND_OPTIONS, isGradientFill, solidOf } from '../utils/fill';
 import { GradientEditor } from './GradientEditor';
 
@@ -28,33 +28,27 @@ export const FillEditor = ({ label, fill, onChange, onCommit, noneNote }: FillEd
 
   return (
     <div className="grid gap-2.5">
-      <ControlRow label={label}>
-        <Select
-          variant="inline"
-          label={`${label} type`}
-          value={kind}
-          onChange={(event) => onChange(convertFillKind(fill, event.target.value as Fill['kind']))}
-        >
-          {FILL_KIND_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </Select>
-      </ControlRow>
+      <Select
+        label={label}
+        value={kind}
+        onChange={(event) => onChange(convertFillKind(fill, event.target.value as Fill['kind']))}
+      >
+        {FILL_KIND_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </Select>
 
       {kind === 'none' ? (
         <p className="ic-variant-scope-note">{noneNote ?? 'No fill — the shape is transparent.'}</p>
       ) : isGradientFill(fill) ? (
         <GradientEditor fill={fill} onChange={onChange} onCommit={onCommit} />
       ) : (
-        <ControlRow label="Color">
-          <ColorField
-            variant="inline"
-            label={`${label} colour`}
-            value={solid}
-            onChange={(next) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha })}
-            onCommit={onCommit}
-          />
-        </ControlRow>
+        <ColorField
+          label="Color"
+          value={solid}
+          onChange={(next) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha })}
+          onCommit={onCommit}
+        />
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Eraser } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
-import { Button, InlineField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import { Button, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
@@ -287,17 +287,13 @@ export const LayerInspector = () => {
             onKeyUp={commit}
           />
 
-          <InlineField label="Blend">
-            <Select
-              variant="inline"
-              label="Blend mode"
-              value={layer.blendMode ?? 'normal'}
-              onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
-            >
-              {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-            </Select>
-          </InlineField>
-        </Section>
+          <Select
+            label="Blend mode"
+            value={layer.blendMode ?? 'normal'}
+            onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
+          >
+            {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+          </Select>        </Section>
 
         <Section title="Effects">
           <Switch

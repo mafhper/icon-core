@@ -58,33 +58,37 @@ interface AdjustRowProps {
  * colour pickers, so both stay reachable in a 240px panel.
  */
 const AdjustRow = ({ label, unit, min, max, value, onChange, onCommit }: AdjustRowProps) => (
-  <div className="flex items-end gap-2">
-    <div className="min-w-0 flex-1">
-      <Slider
+  <div className="grid gap-[var(--ic-label-gap)]">
+    <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">{label}</span>
+    <div className="flex items-center gap-1.5">
+      <div className="min-w-0 flex-1">
+        <Slider
+          variant="inline"
+          hideLabel
+          label={label}
+          min={String(min)}
+          max={String(max)}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value), true)}
+          onPointerUp={onCommit}
+          onKeyUp={onCommit}
+        />
+      </div>
+      <NumberField
         variant="inline"
+        unit={unit}
         label={label}
         min={String(min)}
         max={String(max)}
-        value={value}
+        value={Math.round(value)}
         onChange={(event) => onChange(Number(event.target.value), true)}
-        onPointerUp={onCommit}
-        onKeyUp={onCommit}
+        onBlur={onCommit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') onCommit();
+        }}
+        className="w-14 shrink-0"
       />
     </div>
-    <NumberField
-      variant="inline"
-      unit={unit}
-      label={label}
-      min={String(min)}
-      max={String(max)}
-      value={Math.round(value)}
-      onChange={(event) => onChange(Number(event.target.value), true)}
-      onBlur={onCommit}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') onCommit();
-      }}
-      className="w-16 shrink-0"
-    />
   </div>
 );
 
@@ -144,7 +148,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
   const isDiamond = fill.kind === 'diamond-gradient';
 
   return (
-    <div className="grid gap-3.5">
+    <div className="grid gap-2.5">
       <div
         ref={barRef}
         className="relative mx-2 h-6 cursor-pointer rounded-ic-sm border border-ic-border"
@@ -207,9 +211,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
 
       <div className="grid gap-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[length:var(--ic-label-size)] font-bold uppercase tracking-[0.04em] text-ic-text-muted">
-            Stops
-          </span>
+          <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">Stops</span>
           <IconButton icon={<Plus size={12} />} aria-label="Add stop" title="Add stop" onClick={addStop} />
         </div>
 

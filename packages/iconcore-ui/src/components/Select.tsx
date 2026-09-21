@@ -3,7 +3,7 @@ import { cn } from '../utils/cn';
 import { Field } from './Field';
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  /** Field label. Rendered uppercase above the select, or to the left when `variant="inline"`. */
+  /** Field label. Sentence case above the select, or to the left when `variant="inline"`. */
   label: string;
   /** Optional explanatory copy under the select. */
   hint?: ReactNode;
@@ -14,16 +14,19 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   variant?: 'field' | 'inline';
 }
 
+/**
+ * Panel select: flat filled surface. The dropdown arrow comes from the app's
+ * global `select` rule (unlayered, so it survives the flat background).
+ */
 const selectClasses =
-  'h-[var(--ic-control-md)] w-full appearance-none rounded-[var(--ic-radius-md)] border border-ic-border bg-ic-elevated px-[0.72rem] ' +
-  'text-[0.78rem] font-normal normal-case tracking-normal text-ic-text outline-none ' +
-  'focus-visible:border-ic-accent';
+  'h-[var(--ic-control-md)] w-full rounded-[var(--ic-field-radius)] border border-transparent bg-ic-elevated px-2 ' +
+  'text-[0.75rem] text-ic-text outline-none ' +
+  'hover:bg-ic-overlay focus:border-ic-accent';
 
 /**
  * Labelled native select. Compound of `Field` + `<select>`.
  * Native (not Radix) by design: full keyboard/screen-reader behaviour for
- * free, zero new runtime deps, and the app's global select CSS already
- * provides the dropdown arrow.
+ * free, zero new runtime deps.
  */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
   { className, label, hint, variant = 'field', children, ...rest },

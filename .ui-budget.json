@@ -10,7 +10,8 @@
   "hexExceptions": [
     "apps/web/src/composer/constants.ts",
     "apps/web/src/composer/components/GradientEditor.tsx",
-    "apps/web/src/composer/utils/fill.spec.ts"
+    "apps/web/src/composer/utils/fill.spec.ts",
+    "apps/web/src/composer/components/FillEditor.spec.tsx"
   ],
   "orphanCheck": {
     "css": "apps/web/src/index.css",

@@ -3,7 +3,7 @@ import { cn } from '../utils/cn';
 import { Field } from './Field';
 
 export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
-  /** Field label. Rendered uppercase above the input, or to the left when `variant="inline"`. */
+  /** Field label. Sentence case above the input, or to the left when `variant="inline"`. */
   label: string;
   /** Optional explanatory copy under the input. */
   hint?: ReactNode;
@@ -14,14 +14,17 @@ export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   variant?: 'field' | 'inline';
 }
 
-const inputClasses =
-  'h-[var(--ic-control-md)] w-full rounded-[var(--ic-radius-md)] border border-ic-border bg-ic-elevated px-[0.72rem] ' +
-  'text-[0.78rem] font-normal normal-case tracking-normal text-ic-text outline-none ' +
-  'focus-visible:border-ic-accent';
+/**
+ * Panel field: flat filled surface, no visible border until focus. `bg-none`
+ * neutralises the app's legacy gradient so the field reads as one flat plane.
+ */
+const fieldClasses =
+  'h-[var(--ic-control-md)] w-full rounded-[var(--ic-field-radius)] border border-transparent bg-ic-elevated bg-none px-2 ' +
+  'text-[0.75rem] text-ic-text outline-none ' +
+  'hover:bg-ic-overlay focus:border-ic-accent';
 
 /**
  * Labelled single-line text input. Compound of `Field` + native `<input>`.
- * Visuals replicate the app's `.ic-field input` so migration is pixel-neutral.
  */
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
   { className, label, hint, type = 'text', variant = 'field', ...rest },
@@ -32,7 +35,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
       ref={ref}
       type={type}
       aria-label={variant === 'inline' ? label : undefined}
-      className={cn(inputClasses, className)}
+      className={cn(fieldClasses, className)}
       {...rest}
     />
   );
