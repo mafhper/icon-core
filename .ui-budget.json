@@ -1,11 +1,11 @@
 {
   "ratchetSlack": 120,
   "cssLineBudget": {
-    "apps/web/src/index.css": 1941,
+    "apps/web/src/index.css": 1659,
     "apps/promo/src/index.css": 780
   },
-  "coreTsxBudget": 5,
-  "hexTsxBudget": 129,
+  "coreTsxBudget": 0,
+  "hexTsxBudget": 97,
   "hexScanDirs": ["apps/web/src", "apps/promo/src", "packages/iconcore-ui/src"],
   "hexExceptions": [
     "apps/web/src/composer/constants.ts",
