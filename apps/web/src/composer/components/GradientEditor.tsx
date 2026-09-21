@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { AlignHorizontalDistributeCenter, ArrowLeftRight, Plus, Trash2 } from 'lucide-react';
 import type { GradientFill, GradientStop } from '@iconcore/shared';
 import { Button, ColorField, IconButton, NumberField, Slider, type ColorValue } from '@iconcore/ui';
@@ -30,9 +30,13 @@ const toColorValue = (stop: GradientStop): ColorValue => ({
 const pct = (value: number): string => `${Math.round(value * 100)}%`;
 
 export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps) => {
-  const stops = normalizeStops(fill.stops);
   const barRef = useRef<HTMLDivElement>(null);
-  const dragIndex = useRef<number | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
+  // While a stop is dragged the list must NOT be re-sorted: the array is sorted by
+  // offset, so crossing a neighbour would make the index under the pointer refer to
+  // a different stop. The order is restored (sorted) on commit.
+  const stops =
+    dragging !== null && fill.stops && fill.stops.length >= 2 ? fill.stops : normalizeStops(fill.stops);
 
   const setStops = (next: GradientStop[], transient = false) => {
     onChange({ ...fill, stops: next }, transient);
@@ -83,13 +87,26 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ref={barRef}
         className="relative mx-2 h-6 cursor-pointer rounded-ic-sm border border-ic-border"
         style={{ background: barCss(stops) }}
+        onPointerDown={(event) => {
+          // The bar advertises `cursor-pointer`: clicking it adds a stop there and
+          // starts dragging it. Handles have their own pointerdown.
+          if ((event.target as HTMLElement).closest('.ic-gradient-handle')) return;
+          const offset = Number(offsetFromClientX(event.clientX).toFixed(3));
+          const { color, alpha } = sampleStopDetailed(stops, offset);
+          const next = [...stops, { offset, color, alpha }].sort((a, b) => a.offset - b.offset);
+          setStops(next);
+          setDragging(next.findIndex((stop) => stop.offset === offset && stop.color === color));
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
         onPointerMove={(event) => {
-          if (dragIndex.current === null) return;
-          updateStop(dragIndex.current, { offset: Number(offsetFromClientX(event.clientX).toFixed(3)) }, true);
+          if (dragging === null) return;
+          updateStop(dragging, { offset: Number(offsetFromClientX(event.clientX).toFixed(3)) }, true);
         }}
         onPointerUp={() => {
-          if (dragIndex.current !== null) {
-            dragIndex.current = null;
+          if (dragging !== null) {
+            setDragging(null);
+            // Commit with the canonical order so the stored list stays sorted.
+            setStops(normalizeStops(stops), true);
             onCommit();
           }
         }}
@@ -105,7 +122,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
             aria-valuenow={Math.round(stop.offset * 100)}
             aria-valuetext={pct(stop.offset)}
             onPointerDown={(event) => {
-              dragIndex.current = index;
+              setDragging(index);
               event.currentTarget.setPointerCapture(event.pointerId);
             }}
             onKeyDown={(event) => {
