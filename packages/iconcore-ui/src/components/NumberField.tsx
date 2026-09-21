@@ -1,4 +1,4 @@
-import { type ReactNode, forwardRef } from 'react';
+import { type ReactNode, forwardRef, useState } from 'react';
 import { cn } from '../utils/cn';
 import { Field } from './Field';
 import type { TextFieldProps } from './TextField';
@@ -26,15 +26,49 @@ const bareInputClasses =
   'min-w-0 w-full rounded-none bg-transparent p-0 text-right tabular-nums text-[length:var(--ic-control-font-size)] outline-none ' +
   '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]';
 
+const isNumeric = (raw: string): boolean => raw.trim() !== '' && Number.isFinite(Number(raw));
+
 /**
  * Labelled numeric input. Compound of `Field` + native `<input type="number">`.
- * With `unit`, the number and the unit share one field (`[ 100 % ]`) — the
- * pattern used by gradient stops and paint opacity.
+ * With `unit`, the number and the unit share one field (`[ 100 % ]`).
+ *
+ * The field keeps a **text draft** while typing: clearing it (or typing just `-`)
+ * no longer writes `0` to the model, which used to make the value jump the moment
+ * the user selected-all and deleted. The model only receives parseable numbers,
+ * and an abandoned draft falls back to the model value on blur/Enter.
  */
 export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(function NumberField(
-  { className, label, hint, variant = 'field', unit, ...rest },
+  { className, label, hint, variant = 'field', unit, value, onChange, onBlur, onKeyDown, ...rest },
   ref
 ) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft ?? (value === undefined || value === null ? '' : String(value));
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setDraft(event.target.value);
+    if (isNumeric(event.target.value)) onChange?.(event);
+  };
+
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    setDraft(null);
+    onBlur?.(event);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') setDraft(null);
+    onKeyDown?.(event);
+  };
+
+  const shared = {
+    // Only drive the DOM when the consumer controls the field: with
+    // `defaultValue` the input must stay uncontrolled (otherwise it renders empty).
+    ...(value === undefined || value === null ? {} : { value: display }),
+    onChange: handleChange,
+    onBlur: handleBlur,
+    onKeyDown: handleKeyDown,
+    ...rest
+  };
+
   const control =
     unit != null ? (
       <span
@@ -44,13 +78,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
           className
         )}
       >
-        <input
-          ref={ref}
-          type="number"
-          aria-label={label}
-          className={bareInputClasses}
-          {...rest}
-        />
+        <input ref={ref} type="number" aria-label={label} className={bareInputClasses} {...shared} />
         <span className="select-none text-[0.6875rem] text-ic-text-muted">{unit}</span>
       </span>
     ) : (
@@ -59,7 +87,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
         type="number"
         aria-label={variant === 'inline' ? label : undefined}
         className={cn(fieldClasses, className)}
-        {...rest}
+        {...shared}
       />
     );
 
