@@ -25,6 +25,46 @@ const collect = (page: Page, scope: string, fn: (root: Element, pill: number) =>
   page.locator(scope).evaluate(fn, pill);
 
 /**
+ * Controls must also fit vertically: the app's base rule padded inputs and
+ * selects by 9.28px top and bottom, so a 28px field needed 38.56px and the
+ * select clipped the top and bottom of its own text.
+ */
+for (const width of [240, 288] as const) {
+  test(`control text fits vertically at ${width}px`, async ({ page }) => {
+    await page.addInitScript(
+      (value) => window.localStorage.setItem('iconcore:panel-right', String(value)),
+      width
+    );
+    await openInspector(page, true);
+
+    const clipped = await collect(page, '.ic-inspector', (root) => {
+      const out: string[] = [];
+      for (const element of [...root.querySelectorAll('input, select')]) {
+        const rect = element.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) continue;
+        const type = (element as HTMLInputElement).type;
+        // Sliders, checkboxes and colour wells have no text to clip.
+        if (element.tagName === 'INPUT' && ['range', 'checkbox', 'radio', 'color', 'file'].includes(type)) continue;
+        const hasText = element.tagName === 'SELECT' || (element as HTMLInputElement).value !== '';
+        if (!hasText) continue;
+        const styles = getComputedStyle(element);
+        const paddingY = (parseFloat(styles.paddingTop) || 0) + (parseFloat(styles.paddingBottom) || 0);
+        const line = parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.2;
+        const needed =
+          line + paddingY +
+          (parseFloat(styles.borderTopWidth) || 0) + (parseFloat(styles.borderBottomWidth) || 0);
+        if (needed > rect.height + 0.5) {
+          out.push(`${element.getAttribute('aria-label') ?? element.tagName} h=${Math.round(rect.height)} needed=${Math.round(needed)}`);
+        }
+      }
+      return out;
+    });
+
+    expect(clipped, clipped.join('\n')).toEqual([]);
+  });
+}
+
+/**
  * No control may clip its own value. Measured with `canvas.measureText` against
  * the control's content box: three-digit values used to be cut to a single digit
  * because nested inputs inherited the browser's 16px font inside a 12px field.

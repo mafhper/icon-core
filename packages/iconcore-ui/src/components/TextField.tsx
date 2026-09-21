@@ -19,7 +19,7 @@ export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
  * neutralises the app's legacy gradient so the field reads as one flat plane.
  */
 const fieldClasses =
-  'h-[var(--ic-control-md)] w-full rounded-[var(--ic-field-radius)] border border-transparent bg-ic-elevated bg-none px-2 ' +
+  'h-[var(--ic-control-md)] w-full rounded-[var(--ic-field-radius)] border border-transparent bg-ic-elevated bg-none px-2 py-0 ' +
   'text-[0.75rem] text-ic-text outline-none ' +
   'hover:bg-ic-overlay focus:border-ic-accent';
 
