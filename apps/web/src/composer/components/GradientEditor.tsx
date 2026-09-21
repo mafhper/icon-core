@@ -86,7 +86,7 @@ const AdjustRow = ({ label, unit, min, max, value, onChange, onCommit }: AdjustR
         onKeyDown={(event) => {
           if (event.key === 'Enter') onCommit();
         }}
-        className="w-14 shrink-0"
+        className="w-16 shrink-0"
       />
     </div>
   </div>
@@ -226,7 +226,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
           {stops.map((stop, index) => (
-            <div key={index} className="flex items-center gap-2">
+            <div key={index} className="flex flex-wrap items-center gap-2">
               <NumberField
                 variant="inline"
                 unit="%"
@@ -241,7 +241,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
                 }}
                 className="w-16 shrink-0"
               />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-[9rem] flex-1">
                 <ColorField
                   variant="inline"
                   label={`Stop ${index + 1} colour`}

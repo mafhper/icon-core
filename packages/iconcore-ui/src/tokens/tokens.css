@@ -111,6 +111,9 @@
      panel language. No uppercase, no letter-spacing. */
   --ic-label-size: 11px;
   --ic-label-gap: 4px;
+  /* One type size for every panel control (inputs, selects, panel buttons).
+     Nested inputs used to fall back to the browser's 16px inside a 12px field. */
+  --ic-control-font-size: 0.75rem;
 
   --ic-radius-sm: 8px;
   --ic-radius-md: 6px;

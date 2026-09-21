@@ -5,7 +5,7 @@ export default defineConfig({
   // The gallery captures and the inspector layout contract belong to `ui:shots`
   // (playwright.ui.config.ts, web server) — they must not run against the promo
   // server here, where the app does not exist.
-  testIgnore: /(ui-gallery|inspector-layout)\.spec\.ts/,
+  testIgnore: /(ui-gallery|inspector-layout|polish)\.spec\.ts/,
   webServer: {
     command: process.env.CI
       ? 'npm run preview --workspace=@iconcore/promo -- --host 127.0.0.1 --port 4181'
