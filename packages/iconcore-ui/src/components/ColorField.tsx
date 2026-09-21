@@ -234,7 +234,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 value={alphaPct}
                 aria-label="Alpha percent"
                 onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-                className="w-11 rounded-[var(--ic-field-radius)] bg-ic-elevated px-1 py-0.5 text-center font-mono text-[0.6875rem] text-ic-text outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
+                className="h-[var(--ic-control-md)] w-14 rounded-[var(--ic-field-radius)] bg-ic-elevated px-1 py-0 text-center font-mono text-[length:var(--ic-control-font-size)] text-ic-text outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
               />
             </div>
 
@@ -243,7 +243,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 value={format}
                 aria-label="Colour format"
                 onChange={(event) => setFormat(event.target.value as ColorFormat)}
-                className="h-6 w-[78px] shrink-0 rounded-[var(--ic-field-radius)] bg-ic-elevated pl-2 text-[0.6875rem] text-ic-text outline-none"
+                className="h-[var(--ic-control-md)] w-[92px] shrink-0 rounded-[var(--ic-field-radius)] bg-ic-elevated py-0 pl-2 text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
               >
                 <option value="hex">HEX</option>
                 <option value="rgba">RGBA</option>
@@ -257,7 +257,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') commitDraft();
                 }}
-                className="h-6 min-w-0 flex-1 rounded-[var(--ic-field-radius)] bg-ic-elevated px-2 font-mono text-[0.6875rem] text-ic-text outline-none"
+                className="h-[var(--ic-control-md)] min-w-0 flex-1 rounded-[var(--ic-field-radius)] bg-ic-elevated px-2 py-0 font-mono text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
               />
             </div>
 
@@ -268,7 +268,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                   value={paletteId}
                   aria-label="Colour palette"
                   onChange={(event) => setPaletteId(event.target.value)}
-                  className="h-6 w-40 rounded-[var(--ic-field-radius)] bg-ic-elevated pl-2 text-[0.6875rem] text-ic-text outline-none"
+                  className="h-[var(--ic-control-md)] w-44 rounded-[var(--ic-field-radius)] bg-ic-elevated py-0 pl-2 text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
                 >
                   {COLOR_LIBRARY.map((system) => (
                     <optgroup key={system.id} label={system.name}>
