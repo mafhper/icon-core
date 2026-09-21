@@ -209,6 +209,21 @@ describe('Switch', () => {
   });
 });
 
+describe('NumberField', () => {
+  it('keeps the model while the field is cleared', () => {
+    const onChange = vi.fn();
+    render(<NumberField label="Size" value={64} onChange={onChange} />);
+    const input = screen.getByLabelText('Size');
+
+    // Clearing (or typing just "-") must not write 0 to the model mid-typing.
+    fireEvent.change(input, { target: { value: '' } });
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: '128' } });
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('Slider', () => {
   it('renders labelled range input', () => {
     render(<Slider label="Scale (100%)" min={8} max={400} defaultValue={100} />);
