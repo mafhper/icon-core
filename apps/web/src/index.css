@@ -919,6 +919,10 @@ input[type='range'] {
 
 .ic-field-stack {
   display: grid;
+  /* `minmax(0, 1fr)`: without it the implicit column is sized by the widest
+     child's min-content, and a row of inputs (each ~223px of min-content) blew
+     the column past the panel — `overflow-x: hidden` then clipped it. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   margin-top: 14px;
 }
