@@ -392,4 +392,19 @@ describe('ColorField picker', () => {
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Fill colour picker' })).not.toBeInTheDocument();
   }, 10_000);
+
+  it('browses the colour library and applies a palette swatch', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ColorField label="Fill" value={{ color: '#000000', alpha: 1 }} onChange={onChange} />);
+
+    await user.click(screen.getByRole('button', { name: 'Choose Fill' }));
+
+    // Palettes are grouped by system; switching palette swaps the swatches.
+    const paletteSelect = screen.getByLabelText('Colour palette');
+    await user.selectOptions(paletteSelect, 'apple-system');
+    await user.click(screen.getByRole('button', { name: 'Use #007AFF' }));
+
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ color: '#007AFF' }));
+  }, 10_000);
 });

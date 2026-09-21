@@ -14,7 +14,10 @@
     "apps/web/src/composer/components/FillEditor.spec.tsx",
     "apps/web/src/composer/views/UiLabFixtures.tsx",
     "apps/web/src/composer/utils/gradientPresets.ts",
-    "apps/web/src/composer/utils/gradientPresets.spec.ts"
+    "apps/web/src/composer/utils/gradientPresets.spec.ts",
+    "packages/iconcore-ui/src/library/colorLibrary.ts",
+    "packages/iconcore-ui/tests/colorLibrary.spec.ts",
+    "packages/iconcore-ui/tests/components.test.tsx"
   ],
   "orphanCheck": {
     "css": "apps/web/src/index.css",
