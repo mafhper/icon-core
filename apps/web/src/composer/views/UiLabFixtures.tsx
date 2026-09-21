@@ -51,7 +51,7 @@ export const Fixture = ({
   width?: number;
   children?: ReactNode;
 }) => (
-  <div className="grid gap-2 rounded-ic-lg border border-ic-border p-3">
+  <div className="grid gap-2 rounded-[var(--ic-radius-surface)] border border-ic-border p-3">
     <div className="flex items-start justify-between gap-2">
       <span className="text-[length:var(--ic-label-size)] font-semibold text-ic-text">{title}</span>
       <span
@@ -62,7 +62,7 @@ export const Fixture = ({
     </div>
     <p className="m-0 text-[0.72rem] leading-snug text-ic-text-muted">{question}</p>
     {children != null && (
-      <div className="grid gap-2.5 rounded-ic-sm bg-ic-surface p-3" style={{ width }}>
+      <div className="grid gap-2.5 rounded-[var(--ic-radius-surface)] bg-ic-surface p-3" style={{ width }}>
         {children}
       </div>
     )}

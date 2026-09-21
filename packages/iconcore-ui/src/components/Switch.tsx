@@ -7,26 +7,43 @@ export interface SwitchProps extends Omit<InputHTMLAttributes<HTMLInputElement>,
 }
 
 /**
- * Labelled on/off row. Native checkbox (not Radix) by design: the app's
- * inspector toggles are single checkboxes with full native keyboard and
- * screen-reader behaviour; no new runtime dep is warranted.
+ * Labelled on/off row: `label` on the left, a real **switch** on the right.
  *
- * Visuals replicate `.ic-switch-row` (bordered row, label left, box right).
+ * A switch is not a checkbox: it reports the state of a setting rather than an
+ * independent selection, so it gets a track + thumb (and `role="switch"` for
+ * assistive tech) instead of a ticked box. The native input is kept underneath,
+ * which is where keyboard support, `checked` and `disabled` come from; the track
+ * and thumb are the input's own background and `::after`.
+ *
+ * States: off/on, hover, focus-visible (ring), disabled. No border or card: the
+ * control carries the state, the row only aligns it.
  */
 export const Switch = forwardRef<HTMLInputElement, SwitchProps>(function Switch(
   { className, label, ...rest },
   ref
 ) {
   return (
-    <label
-      className={cn(
-        'flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-xl border border-ic-border px-2.5',
-        'text-[0.76rem] font-bold text-ic-text-muted select-none',
-        className
-      )}
-    >
-      <span>{label}</span>
-      <input ref={ref} type="checkbox" className="h-4 w-4 shrink-0 accent-ic-accent" {...rest} />
+    <label className={cn('flex min-h-8 cursor-pointer items-center justify-between gap-3 select-none', className)}>
+      <span className="min-w-0 truncate text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
+        {label}
+      </span>
+      <input
+        ref={ref}
+        type="checkbox"
+        role="switch"
+        className={cn(
+          'relative h-5 w-9 shrink-0 cursor-pointer appearance-none rounded-full bg-ic-border outline-none',
+          'transition-colors hover:bg-ic-overlay',
+          'checked:bg-ic-accent checked:hover:bg-ic-accent-hover',
+          'focus-visible:ring-2 focus-visible:ring-ic-accent-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ic-bg',
+          'disabled:cursor-not-allowed disabled:opacity-40',
+          // Thumb: the input's own pseudo-element, so there is nothing extra to focus.
+          "after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform after:content-['']",
+          'checked:after:translate-x-4',
+          className
+        )}
+        {...rest}
+      />
     </label>
   );
 });

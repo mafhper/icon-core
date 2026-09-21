@@ -939,8 +939,9 @@ input[type='range'] {
   padding: 4px 8px;
   color: var(--ic-accent);
   font-size: 0.68rem;
-  font-weight: 760;
-  text-transform: uppercase;
+  font-weight: 600;
+  /* Sentence case (critique §17): the variant name reads "Default", not "DEFAULT".
+     Uppercase stays for state badges and codes, not for a name. */
 }
 
 .ic-field-stack {
@@ -1565,6 +1566,12 @@ input[type='range'] {
   color: var(--ic-accent);
 }
 
+/* --- Focus ownership (critique §4, decision B) ---
+   Base guarantees an accessible indicator for every interactive element.
+   A component may replace it only with an equivalent indicator of its own
+   (ring, border + background, or an offset outline) — never remove it silently.
+   Keep this rule in @layer base so component utilities can override it. */
+@layer base {
 /* --- Keyboard focus visibility (only for keyboard users, not mouse clicks) --- */
 button:focus-visible,
 
@@ -1581,6 +1588,8 @@ textarea:focus-visible,
   outline-offset: 2px;
   border-radius: 4px;
 }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   .ic-toast,
