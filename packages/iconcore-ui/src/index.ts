@@ -14,6 +14,6 @@ export { NumberField, type NumberFieldProps } from './components/NumberField';
 export { Select, type SelectProps } from './components/Select';
 export { Switch, type SwitchProps } from './components/Switch';
 export { Slider, type SliderProps } from './components/Slider';
-export { ColorField, type ColorFieldProps } from './components/ColorField';
+export { ColorField, type ColorFieldProps, type ColorValue, type ColorFormat } from './components/ColorField';
 export { SegmentedControl, type SegmentedControlProps, type SegmentedOption } from './components/SegmentedControl';
 export { Menu, MenuItem, type MenuProps, type MenuItemProps } from './components/Menu';

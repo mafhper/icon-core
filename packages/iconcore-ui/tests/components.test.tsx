@@ -204,17 +204,16 @@ describe('Slider', () => {
   });
 });
 
-describe('ColorField', () => {
-  it('renders labelled color input', () => {
-    // input[type=color] has no implicit ARIA role: query the control directly
-    // and assert its accessible name comes from the label.
-    const { container } = render(<ColorField label="Fill" defaultValue="#ff0000" />);
-    const input = container.querySelector('input[type="color"]');
-    expect(input).toBeInTheDocument();
-    expect(input).toHaveAccessibleName('Fill');
-    expect(input).toHaveValue('#ff0000');
+  describe('ColorField', () => {
+    it('renders a labelled swatch + hex/alpha fields and opens the picker', async () => {
+      const user = userEvent.setup();
+      render(<ColorField label="Fill" value={{ color: '#ff0000', alpha: 0.5 }} onChange={() => {}} />);
+      expect(screen.getByLabelText('Fill hex')).toHaveValue('FF0000');
+      expect(screen.getByLabelText('Fill alpha percent')).toHaveValue(50);
+      await user.click(screen.getByRole('button', { name: 'Fill colour picker' }));
+      expect(screen.getByRole('dialog', { name: 'Fill picker' })).toBeInTheDocument();
+    });
   });
-});
 
 describe('SegmentedControl', () => {
   const options = [
