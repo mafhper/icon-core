@@ -1,3 +1,5 @@
+import { parseSvgIntrinsicSize } from '@iconcore/renderer';
+
 export interface FileLayerAsset {
   name: string;
   mimeType: string;
@@ -5,6 +7,9 @@ export interface FileLayerAsset {
   width: number;
   height: number;
 }
+
+/** Used only when nothing can measure the asset (last resort, keeps the old behaviour). */
+const FALLBACK_SIZE = 512;
 
 const SUPPORTED_MIME_TYPES = new Set([
   'image/png',
@@ -45,16 +50,52 @@ const readFileAsDataUrl = (file: File): Promise<string> => {
   });
 };
 
-const readImageSize = async (file: File): Promise<{ width: number; height: number }> => {
-  if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
-    return { width: 512, height: 512 };
+/**
+ * SVG documents are measured by the shared `parseSvgIntrinsicSize`
+ * (`@iconcore/renderer`), the same helper the SVG exporter uses to place an
+ * inline SVG — the two must agree or PNG and SVG would size it differently.
+ */
+
+/** Decode the text payload of an `image/svg+xml` data URL (base64 or percent-encoded). */
+const decodeSvgDataUrl = (dataUrl: string): string => {
+  const separator = dataUrl.indexOf(',');
+  if (separator === -1) return '';
+  const meta = dataUrl.slice(0, separator);
+  const payload = dataUrl.slice(separator + 1);
+  if (!/;base64/i.test(meta)) {
+    try {
+      return decodeURIComponent(payload);
+    } catch {
+      return payload;
+    }
+  }
+  try {
+    return atob(payload);
+  } catch {
+    return '';
+  }
+};
+
+const isSvgFile = (file: File): boolean =>
+  file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+
+/**
+ * Dimensions of the imported asset: SVGs are measured by parsing the document
+ * (deterministic, no timing dependency), rasters by decoding them. An SVG that
+ * declares no intrinsic size falls back to the browser's own rasterisation —
+ * never to a square guess.
+ */
+const measureAssetSize = async (file: File, dataUrl: string): Promise<{ width: number; height: number }> => {
+  if (isSvgFile(file)) {
+    const parsed = parseSvgIntrinsicSize(decodeSvgDataUrl(dataUrl));
+    if (parsed) return parsed;
   }
 
   try {
     const bitmap = await createImageBitmap(file);
     return { width: bitmap.width, height: bitmap.height };
   } catch {
-    return { width: 512, height: 512 };
+    return { width: FALLBACK_SIZE, height: FALLBACK_SIZE };
   }
 };
 
@@ -63,11 +104,14 @@ export const fileToLayerAsset = async (file: File): Promise<FileLayerAsset> => {
     throw new Error(`Unsupported file type: ${file.name}`);
   }
 
-  const [dataUrl, dimensions] = await Promise.all([readFileAsDataUrl(file), readImageSize(file)]);
+  // Read once: the data URL is both the payload and the source for SVG measuring.
+  const dataUrl = await readFileAsDataUrl(file);
   const separator = dataUrl.indexOf(',');
   if (separator === -1) {
     throw new Error(`Invalid data URL for ${file.name}`);
   }
+
+  const dimensions = await measureAssetSize(file, dataUrl);
 
   return {
     name: file.name.replace(/\.[^.]+$/, '') || file.name,

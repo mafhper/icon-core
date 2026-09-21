@@ -66,8 +66,8 @@ export const BackgroundRemovalModal = ({ layer, onClose }: { layer: IconLayer; o
         <div className="grid grid-cols-2 gap-2.5">
           <ColorField
             label="Background color"
-            value={color}
-            onChange={(event) => setColor(event.target.value)}
+            value={{ color, alpha: 1 }}
+            onChange={(next) => setColor(next.color)}
           />
           <Slider
             label={`Tolerance (${tolerance}%)`}

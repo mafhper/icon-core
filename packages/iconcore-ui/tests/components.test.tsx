@@ -1,7 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, TextField, NumberField, Select, Switch, Slider, ColorField, SegmentedControl, Menu, MenuItem } from '../src/index';
+import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, TextField, NumberField, Select, Switch, Slider, ColorField, ControlRow, InlineField, SegmentedControl, Menu, MenuItem, Popover } from '../src/index';
 
 describe('Button', () => {
   it('defaults type to "button" (never submits)', () => {
@@ -204,17 +205,42 @@ describe('Slider', () => {
   });
 });
 
-describe('ColorField', () => {
-  it('renders labelled color input', () => {
-    // input[type=color] has no implicit ARIA role: query the control directly
-    // and assert its accessible name comes from the label.
-    const { container } = render(<ColorField label="Fill" defaultValue="#ff0000" />);
-    const input = container.querySelector('input[type="color"]');
-    expect(input).toBeInTheDocument();
-    expect(input).toHaveAccessibleName('Fill');
-    expect(input).toHaveValue('#ff0000');
+  describe('ColorField', () => {
+    it('renders a labelled swatch + hex/alpha fields and opens the picker', async () => {
+      const user = userEvent.setup();
+      render(<ColorField label="Fill" value={{ color: '#ff0000', alpha: 0.5 }} onChange={() => {}} />);
+      expect(screen.getByLabelText('Fill hex')).toHaveValue('FF0000');
+      expect(screen.getByLabelText('Fill alpha percent')).toHaveValue(50);
+      await user.click(screen.getByRole('button', { name: 'Choose Fill' }));
+      expect(screen.getByRole('dialog', { name: 'Fill picker' })).toBeInTheDocument();
+    });
+
+    it('inline variant drops the stacked label and exposes a labelled group', () => {
+      render(<ColorField variant="inline" label="Stop 1 colour" value={{ color: '#00ff00', alpha: 1 }} onChange={() => {}} />);
+      expect(screen.getByRole('group', { name: 'Stop 1 colour' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Stop 1 colour hex')).toHaveValue('00FF00');
+    });
   });
-});
+
+  describe('InlineField / ControlRow', () => {
+    it('InlineField labels its control from the row', () => {
+      render(
+        <InlineField label="Fill">
+          <input aria-label="probe" />
+        </InlineField>
+      );
+      expect(screen.getByLabelText('Fill')).toBeInTheDocument();
+    });
+
+    it('ControlRow groups a composed control under the row label', () => {
+      render(
+        <ControlRow label="Color">
+          <ColorField variant="inline" label="Color" value={{ color: '#ff0000', alpha: 1 }} onChange={() => {}} />
+        </ControlRow>
+      );
+      expect(screen.getByRole('group', { name: 'Color' })).toBeInTheDocument();
+    });
+  });
 
 describe('SegmentedControl', () => {
   const options = [
@@ -291,4 +317,79 @@ describe('Kbd', () => {
     expect(screen.getByText('Ctrl+K')).toBeInTheDocument();
     expect(screen.getByText('Ctrl+K').tagName).toBe('KBD');
   });
+});
+
+describe('Popover', () => {
+  const Harness = ({ onClose = () => {} }: { onClose?: () => void }) => {
+    const [open, setOpen] = useState(false);
+    const anchor = useRef<HTMLButtonElement>(null);
+    return (
+      <div>
+        <button ref={anchor} type="button" onClick={() => setOpen((value) => !value)}>
+          Open panel
+        </button>
+        <Popover
+          open={open}
+          anchorRef={anchor}
+          onClose={() => {
+            setOpen(false);
+            onClose();
+          }}
+          aria-label="Colour picker"
+        >
+          <p>Panel content</p>
+        </Popover>
+      </div>
+    );
+  };
+
+  it('renders nothing until it opens, then portals the panel to <body>', () => {
+    render(<Harness />);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Colour picker' });
+    expect(dialog.parentElement).toBe(document.body);
+    expect(screen.getByText('Panel content')).toBeInTheDocument();
+    expect(dialog).toHaveStyle({ position: 'fixed' });
+  });
+
+  it('closes on Escape and reports it once', () => {
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel' }));
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('closes on an outside press but not on a press inside the panel', () => {
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Open panel' }));
+
+    fireEvent.mouseDown(screen.getByText('Panel content'));
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.mouseDown(document.body);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ColorField picker', () => {
+  it('opens in a portaled dialog and closes with Escape', async () => {
+    const user = userEvent.setup();
+    render(<ColorField label="Fill colour" value={{ color: '#f8fafc', alpha: 1 }} onChange={() => {}} />);
+
+    await user.click(screen.getByRole('button', { name: 'Choose Fill colour' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Fill colour picker' });
+    expect(dialog.parentElement).toBe(document.body);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Fill colour picker' })).not.toBeInTheDocument();
+  }, 10_000);
 });

@@ -1,20 +1,33 @@
-import type { Fill, IconLayer, LayerEffect } from '@iconcore/shared';
-import { layerBaseRect } from '@iconcore/renderer';
+import type { Fill, GradientFill, IconLayer, LayerEffect } from '@iconcore/shared';
+import { layerBaseRect, normalizeStops, toRgba } from '@iconcore/renderer';
 
-const DEFAULT_GRADIENT_STOPS = '#f3d18a, #6bb7d8';
+const stopsCss = (fill: GradientFill): string =>
+  normalizeStops(fill.stops)
+    .map((stop) => `${toRgba(stop.color, stop.alpha)} ${Math.round((stop.offset ?? 0) * 100)}%`)
+    .join(', ');
 
 /** Convert a Fill into a CSS color / gradient string for DOM previews. */
 export const fillToCss = (fill?: Fill): string => {
   if (!fill || fill.kind === 'none') return 'transparent';
-  if (fill.kind === 'solid') return fill.color ?? '#111827';
-  const stops = (fill.stops ?? []).map((stop) => `${stop.color} ${Math.round(stop.offset * 100)}%`).join(', ');
+  if (fill.kind === 'solid') return toRgba(fill.color ?? '#111827', fill.alpha ?? 1);
+
+  const stops = stopsCss(fill);
+
   if (fill.kind === 'linear-gradient') {
-    return `linear-gradient(${fill.angle ?? 135}deg, ${stops || DEFAULT_GRADIENT_STOPS})`;
+    return `linear-gradient(${fill.angle ?? 90}deg, ${stops})`;
   }
+
+  if (fill.kind === 'angular-gradient') {
+    const cx = Math.round((fill.centerX ?? 0.5) * 100);
+    const cy = Math.round((fill.centerY ?? 0.5) * 100);
+    return `conic-gradient(from ${fill.angle ?? 0}deg at ${cx}% ${cy}%, ${stops})`;
+  }
+
+  // Radial and diamond (CSS has no diamond gradient — approximate as radial).
   const cx = Math.round((fill.centerX ?? 0.5) * 100);
   const cy = Math.round((fill.centerY ?? 0.5) * 100);
   const extent = Math.round((fill.radius ?? 0.5) * 200); // 0.5 → 100% (full bound)
-  return `radial-gradient(ellipse ${extent}% ${extent}% at ${cx}% ${cy}%, ${stops || DEFAULT_GRADIENT_STOPS})`;
+  return `radial-gradient(ellipse ${extent}% ${extent}% at ${cx}% ${cy}%, ${stops})`;
 };
 
 /** Solid color extracted from a Fill, falling back to a neutral dark. */

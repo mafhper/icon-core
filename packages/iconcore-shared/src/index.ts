@@ -22,24 +22,52 @@ export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' 
 
 export type ShapeKind = 'circle' | 'rectangle' | 'rounded-rectangle' | 'squircle' | 'polygon' | 'triangle' | 'line' | 'star';
 
+export interface GradientStop {
+  offset: number;
+  color: string;
+  /** 0..1 (default 1). */
+  alpha?: number;
+}
+
 export interface SolidFill {
   kind: 'solid';
   color?: string;
+  /** 0..1 (default 1). */
+  alpha?: number;
 }
 
 export interface LinearGradientFill {
   kind: 'linear-gradient';
-  stops?: Array<{ offset: number; color: string }>;
+  stops?: GradientStop[];
+  /** Degrees: 0 = to top, increasing clockwise (CSS/Figma convention). Default 90. */
   angle?: number;
 }
 
 export interface RadialGradientFill {
   kind: 'radial-gradient';
-  stops?: Array<{ offset: number; color: string }>;
+  stops?: GradientStop[];
   /** Radial gradient center, 0..1 of the bounds (default 0.5/0.5). */
   centerX?: number;
   centerY?: number;
   /** Radial gradient radius as a fraction of the max dimension (default 0.5). */
+  radius?: number;
+}
+
+export interface AngularGradientFill {
+  kind: 'angular-gradient';
+  stops?: GradientStop[];
+  /** Starting angle in degrees: 0 = up, increasing clockwise (default 0). */
+  angle?: number;
+  centerX?: number;
+  centerY?: number;
+}
+
+export interface DiamondGradientFill {
+  kind: 'diamond-gradient';
+  stops?: GradientStop[];
+  centerX?: number;
+  centerY?: number;
+  /** Diamond reach as a fraction of the max dimension (default 0.5). */
   radius?: number;
 }
 
@@ -48,7 +76,13 @@ export interface NoneFill {
   kind: 'none';
 }
 
-export type Fill = SolidFill | LinearGradientFill | RadialGradientFill | NoneFill;
+export type GradientFill =
+  | LinearGradientFill
+  | RadialGradientFill
+  | AngularGradientFill
+  | DiamondGradientFill;
+
+export type Fill = SolidFill | GradientFill | NoneFill;
 
 export interface Stroke {
   color: string;
