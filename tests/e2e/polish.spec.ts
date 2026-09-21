@@ -221,6 +221,47 @@ test('every interactive control shows a focus indicator', async ({ page }) => {
 });
 
 /**
+ * Optical alignment (better-ui): an icon beside a label must sit on the text's
+ * *optical* centre, not merely its bounding-box centre. Measured with a Range
+ * over the label's text node; tolerance is 1px. First pass: every control was
+ * between 0.13px and 0.81px, so this locks the behaviour instead of fixing a defect.
+ */
+test('icon and label share an optical centre', async ({ page }) => {
+  await openInspector(page, true);
+
+  const offsets = await page.evaluate(() => {
+    const out: string[] = [];
+    for (const control of document.querySelectorAll('button, [role="menuitem"]')) {
+      const svg = control.querySelector('svg');
+      if (!svg) continue;
+      const walker = document.createTreeWalker(control, NodeFilter.SHOW_TEXT);
+      let node: Node | null = null;
+      while (walker.nextNode()) {
+        if ((walker.currentNode.textContent ?? '').trim().length > 1) {
+          node = walker.currentNode;
+          break;
+        }
+      }
+      if (!node) continue;
+
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const text = range.getBoundingClientRect();
+      const icon = svg.getBoundingClientRect();
+      if (text.height === 0 || icon.height === 0) continue;
+
+      const offset = icon.top + icon.height / 2 - (text.top + text.height / 2);
+      if (Math.abs(offset) > 1) {
+        out.push(`${String(control.className).slice(0, 30)} "${node.textContent?.trim().slice(0, 14)}" offset=${offset.toFixed(2)}px`);
+      }
+    }
+    return out;
+  });
+
+  expect(offsets, offsets.join('\n')).toEqual([]);
+});
+
+/**
  * F6 sweep: the surfaces beyond the inspector are measured the same way, so the
  * panel language holds everywhere (they were clean on the first pass — this keeps
  * them that way). Wrapping text and `truncate` are skipped: they are not clipping.
