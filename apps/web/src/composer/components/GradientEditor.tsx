@@ -211,8 +211,17 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
 
       <div className="grid gap-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">Stops</span>
-          <IconButton icon={<Plus size={12} />} aria-label="Add stop" title="Add stop" onClick={addStop} />
+          <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
+            Stops {stops.length > 2 ? `(${stops.length})` : ''}
+          </span>
+          <Button
+            variant="ghost"
+            iconLeft={<Plus size={12} />}
+            title="Add a stop at the widest gap"
+            onClick={addStop}
+          >
+            Add stop
+          </Button>
         </div>
 
         <div className="grid gap-2.5">
