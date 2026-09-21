@@ -5,7 +5,7 @@ const DEFAULT_GRADIENT_STOPS = '#f3d18a, #6bb7d8';
 
 /** Convert a Fill into a CSS color / gradient string for DOM previews. */
 export const fillToCss = (fill?: Fill): string => {
-  if (!fill) return 'transparent';
+  if (!fill || fill.kind === 'none') return 'transparent';
   if (fill.kind === 'solid') return fill.color ?? '#111827';
   const stops = (fill.stops ?? []).map((stop) => `${stop.color} ${Math.round(stop.offset * 100)}%`).join(', ');
   if (fill.kind === 'linear-gradient') {

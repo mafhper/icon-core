@@ -17,6 +17,11 @@ export interface RasterTask {
   path: string;
   width: number;
   height: number;
+  /**
+   * Target capability: `true` accepts an alpha channel; `false` requires an
+   * opaque background (e.g. PWA maskable). The project's transparency comes
+   * solely from `canvas.background` — this flag never defines the document.
+   */
   transparent: boolean;
 }
 

@@ -85,11 +85,16 @@ export const composeLayers = async (
 ): Promise<Blob> => {
   const ctx = backend.createCanvas(canvasSize, canvasSize);
 
-  backend.applyFill(ctx, background, 0, 0, canvasSize, canvasSize);
+  // `kind: 'none'` means "no background paint" — keep the alpha channel.
+  if (background.kind !== 'none') {
+    backend.applyFill(ctx, background, 0, 0, canvasSize, canvasSize);
+  }
 
   const resolved: ResolvedLayer[] = layers
     .map(l => resolveLayerForVariant(l, variant))
-    .filter(l => l.resolvedVisible)
+    // The background layer is a UI handle for `canvas.background`; it never
+    // contributes pixels.
+    .filter(l => l.resolvedVisible && l.role !== 'background')
     .sort((a, b) => a.zIndex - b.zIndex);
 
   for (const layer of resolved) {

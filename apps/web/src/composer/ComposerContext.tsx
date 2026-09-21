@@ -1,5 +1,4 @@
 import { createContext, useContext, useReducer, useEffect, useRef, type ReactNode } from 'react';
-import type { IconCoreProject } from '@iconcore/shared';
 import {
   composerReducer,
   initialState,
@@ -8,6 +7,7 @@ import {
   type ComposerAction,
   type ComposerView
 } from './composerReducer';
+import { parseProjectFile } from './utils/projectGuard';
 import { useToast } from './toast/ToastContext';
 
 const STORAGE_KEY = 'iconcore-composer-project';
@@ -24,7 +24,9 @@ const restoreInitialState = (): { init: ComposerState; failed: boolean } => {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return { init: initialState, failed: false };
   try {
-    const project = JSON.parse(saved) as IconCoreProject;
+    // Accepts v2 (legacy) and v3, migrating to the canonical v3 document.
+    const project = parseProjectFile(saved);
+    if (!project) throw new Error('unrecognized project payload');
     return {
       init: {
         ...initialState,

@@ -22,17 +22,33 @@ export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' 
 
 export type ShapeKind = 'circle' | 'rectangle' | 'rounded-rectangle' | 'squircle' | 'polygon' | 'triangle' | 'line' | 'star';
 
-export interface Fill {
-  kind: 'solid' | 'linear-gradient' | 'radial-gradient';
+export interface SolidFill {
+  kind: 'solid';
   color?: string;
+}
+
+export interface LinearGradientFill {
+  kind: 'linear-gradient';
   stops?: Array<{ offset: number; color: string }>;
   angle?: number;
+}
+
+export interface RadialGradientFill {
+  kind: 'radial-gradient';
+  stops?: Array<{ offset: number; color: string }>;
   /** Radial gradient center, 0..1 of the bounds (default 0.5/0.5). */
   centerX?: number;
   centerY?: number;
   /** Radial gradient radius as a fraction of the max dimension (default 0.5). */
   radius?: number;
 }
+
+/** Absence of paint: keep the alpha channel (fully transparent). */
+export interface NoneFill {
+  kind: 'none';
+}
+
+export type Fill = SolidFill | LinearGradientFill | RadialGradientFill | NoneFill;
 
 export interface Stroke {
   color: string;
@@ -118,6 +134,12 @@ export interface IconLayer {
   id: string;
   name: string;
   kind: 'svg' | 'image' | 'shape' | 'text';
+  /**
+   * Structural role. `'background'` marks the selectable handle of
+   * `project.canvas.background`; it never produces pixels in the renderer.
+   * Identification is semantic — never rely on `name === 'Background'`.
+   */
+  role?: 'background';
   visible: boolean;
   locked?: boolean;
   zIndex: number;
@@ -130,7 +152,7 @@ export interface IconLayer {
   effects?: LayerEffect[];
   text?: TextDefinition;
   imageFilter?: ImageFilter;
-  variantOverrides?: Partial<Record<IconVariant, Partial<Omit<IconLayer, 'id' | 'variantOverrides'>>>>;
+  variantOverrides?: Partial<Record<IconVariant, Partial<Omit<IconLayer, 'id' | 'role' | 'variantOverrides'>>>>;
 }
 
 export interface VariantOverrides {
@@ -178,7 +200,7 @@ export interface ExportProfile {
 }
 
 export interface IconCoreProject {
-  schemaVersion: 2;
+  schemaVersion: 3;
   metadata: {
     name: string;
     shortName: string;

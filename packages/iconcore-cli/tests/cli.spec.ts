@@ -8,7 +8,7 @@ const TMP_DIR = join(process.cwd(), 'tmp-cli-test');
 const createTestProject = (): string => {
   mkdirSync(TMP_DIR, { recursive: true });
   const project: IconCoreProject = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     metadata: { name: 'CLI Test', shortName: 'Test' },
     canvas: { size: 512, background: { kind: 'solid', color: '#ffffff' } },
     layers: [],
@@ -36,7 +36,7 @@ describe('CLI commands', () => {
     const content = readFileSync(outPath, 'utf-8');
     const project: IconCoreProject = JSON.parse(content);
 
-    expect(project.schemaVersion).toBe(2);
+    expect(project.schemaVersion).toBe(3);
     expect(project.metadata.name).toBe('Test');
     expect(project.canvas.size).toBe(512);
 

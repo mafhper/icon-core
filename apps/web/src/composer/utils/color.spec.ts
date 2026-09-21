@@ -31,7 +31,10 @@ describe('color helpers', () => {
       { kind: 'linear-gradient', stops: [{ offset: 0, color: '#000000' }, { offset: 1, color: '#111111' }] },
       () => '#abcdef'
     );
-    expect(gradient?.stops?.every((s) => s.color === '#abcdef')).toBe(true);
+    const stops = gradient?.kind === 'linear-gradient' || gradient?.kind === 'radial-gradient'
+      ? gradient.stops ?? []
+      : [];
+    expect(stops.every((s) => s.color === '#abcdef')).toBe(true);
     expect(mapFillColors(undefined, () => '#fff')).toBeUndefined();
   });
 });

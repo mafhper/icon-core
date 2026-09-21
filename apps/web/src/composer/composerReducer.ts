@@ -11,6 +11,7 @@ import type { FileLayerAsset } from './utils/fileLayers';
 import { clampZoom } from './constants';
 import { generateVariantPreset, isGeneratableVariant } from './utils/variantPresets';
 import {
+  createBackgroundLayer,
   createBlankProject,
   createLayerFromAsset,
   createShapeLayer,
@@ -193,17 +194,17 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       if (!state.project) return state;
 
       if (action.payload.background) {
-        const size = state.project.canvas.size;
-        const bgLayer: IconLayer = {
-          ...createShapeLayer(size, 0),
-          name: 'Background',
-          source: { type: 'reference', path: '', shape: { kind: 'rectangle', width: size, height: size } },
-          transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-          effects: []
-        };
-        const shifted = state.project.layers.map((entry) => ({ ...entry, zIndex: entry.zIndex + 1 }));
-        const project = { ...state.project, layers: [bgLayer, ...shifted] };
-        return { ...commitProject(state, project), activeLayerId: bgLayer.id };
+        // The Background layer is a single handle for `canvas.background`:
+        // re-selecting an existing one, or creating it below every other layer
+        // (without shifting their zIndex, since it never renders).
+        const existing = state.project.layers.find((layer) => layer.role === 'background');
+        if (existing) {
+          return { ...state, activeLayerId: existing.id };
+        }
+        const minZ = state.project.layers.reduce((min, layer) => Math.min(min, layer.zIndex), 0);
+        const handle = createBackgroundLayer(state.project.canvas.size, minZ - 1);
+        const project = { ...state.project, layers: [...state.project.layers, handle] };
+        return { ...commitProject(state, project), activeLayerId: handle.id };
       }
 
       const zIndex = state.project.layers.length;

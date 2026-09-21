@@ -59,6 +59,7 @@ export const toGray = (hex: string): string => {
 /** Apply a per-color transform to a Fill (solid color or every gradient stop). */
 export const mapFillColors = (fill: Fill | undefined, fn: (hex: string) => string): Fill | undefined => {
   if (!fill) return fill;
+  if (fill.kind === 'none') return fill;
   if (fill.kind === 'solid') {
     return fill.color ? { ...fill, color: fn(fill.color) } : fill;
   }

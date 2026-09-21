@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Eraser } from 'lucide-react';
-import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
+import type { Fill, IconLayer, LinearGradientFill, RadialGradientFill, ShapeDefinition, ShapeKind } from '@iconcore/shared';
 import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { brandGradientFill } from '../constants';
@@ -13,11 +13,75 @@ import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
 const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'squircle', 'triangle', 'line', 'star'];
 
+const FILL_KIND_OPTIONS = [
+  { value: 'solid', label: 'Solid color' },
+  { value: 'linear-gradient', label: 'Linear gradient' },
+  { value: 'radial-gradient', label: 'Radial gradient' },
+  { value: 'none', label: 'Transparent' }
+] as const;
+
+const isGradientFill = (fill: Fill | undefined): fill is LinearGradientFill | RadialGradientFill =>
+  fill?.kind === 'linear-gradient' || fill?.kind === 'radial-gradient';
+
 const BACKDROP_OPTIONS = [
   { value: 'dots', label: 'Dots' },
   { value: 'grid', label: 'Grid' },
   { value: 'plain', label: 'Plain' },
 ] as const;
+
+/**
+ * Editor for the image background (`project.canvas.background`). It is the same
+ * property whether reached through the Background layer handle or (historically)
+ * the empty-selection panel.
+ */
+const BackgroundFillSection = ({
+  background,
+  onChange,
+  onCommit
+}: {
+  background: Fill;
+  onChange: (fill: Fill, transient?: boolean) => void;
+  onCommit: () => void;
+}) => {
+  const solid = background.kind === 'solid' ? background.color ?? '#ffffff' : '#ffffff';
+
+  const setKind = (kind: Fill['kind']) => {
+    if (kind === 'solid') { onChange({ kind: 'solid', color: solid }); return; }
+    if (kind === 'none') { onChange({ kind: 'none' }); return; }
+    const preset = brandGradientFill();
+    const stops = isGradientFill(background) && background.stops && background.stops.length >= 2
+      ? background.stops
+      : preset.stops;
+    onChange({ ...preset, kind, stops });
+  };
+
+  return (
+    <Section title="Background">
+      <Select
+        label="Fill type"
+        value={background.kind}
+        onChange={(event) => setKind(event.target.value as Fill['kind'])}
+      >
+        {FILL_KIND_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </Select>
+      {background.kind === 'solid' && (
+        <ColorField
+          label="Color"
+          value={solid}
+          onChange={(event) => onChange({ kind: 'solid', color: event.target.value })}
+        />
+      )}
+      {isGradientFill(background) && (
+        <GradientEditor fill={background} onChange={(next) => onChange(next, true)} onCommit={onCommit} />
+      )}
+      {background.kind === 'none' && (
+        <p className="ic-variant-scope-note">The exported image has a <strong>transparent</strong> background.</p>
+      )}
+    </Section>
+  );
+};
 
 export const LayerInspector = () => {
   const { state, dispatch } = useComposer();
@@ -38,11 +102,32 @@ export const LayerInspector = () => {
     );
   }
 
+  if (baseLayer?.role === 'background') {
+    const setCanvasBg = (next: Fill, transient = false) =>
+      dispatch({ type: 'SET_CANVAS_BACKGROUND', payload: { background: next, transient } });
+    return (
+      <aside className="ic-inspector">
+        <div className="ic-inspector-head">
+          <div>
+            <p>Image</p>
+            <h2>Background</h2>
+          </div>
+        </div>
+        <p className="ic-variant-scope-note">
+          The <strong>Background</strong> layer is the handle of the exported image background. The editor backdrop is a separate setting (Work area).
+        </p>
+        <div className="ic-field-stack">
+          <BackgroundFillSection
+            background={state.project.canvas.background}
+            onChange={setCanvasBg}
+            onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
+          />
+        </div>
+      </aside>
+    );
+  }
+
   if (!layer || !baseLayer) {
-    const bg = state.project.canvas.background;
-    const bgSolid = bg.kind === 'solid' ? bg.color ?? '#ffffff' : '#ffffff';
-    const setCanvasBg = (background: Fill, transient = false) =>
-      dispatch({ type: 'SET_CANVAS_BACKGROUND', payload: { background, transient } });
     return (
       <aside className="ic-inspector">
         <div className="ic-inspector-head">
@@ -51,40 +136,13 @@ export const LayerInspector = () => {
             <h2>Canvas</h2>
           </div>
         </div>
-        <p className="ic-variant-scope-note">No layer selected — editing the <strong>canvas background</strong>.</p>
+        <p className="ic-variant-scope-note">
+          Select the <strong>Background</strong> layer to edit the image background — or another layer to edit it.
+        </p>
         <div className="ic-field-stack">
-          <Section title="Canvas background">
-            <ColorField
-              label="Background color"
-              value={bgSolid}
-              onChange={(event) => setCanvasBg({ kind: 'solid', color: event.target.value })}
-            />
-            <Select
-              label="Fill type"
-              value={bg.kind}
-              onChange={(event) => {
-                const kind = event.target.value as Fill['kind'];
-                if (kind === 'solid') { setCanvasBg({ kind: 'solid', color: bgSolid }); return; }
-                const preset = brandGradientFill();
-                setCanvasBg({ ...preset, kind, stops: bg.stops && bg.stops.length >= 2 ? bg.stops : preset.stops });
-              }}
-            >
-              <option value="solid">Solid color</option>
-              <option value="linear-gradient">Linear gradient</option>
-              <option value="radial-gradient">Radial gradient</option>
-            </Select>
-            {bg.kind !== 'solid' && (
-              <GradientEditor
-                fill={bg}
-                onChange={(next) => setCanvasBg(next, true)}
-                onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
-              />
-            )}
-          </Section>
-
           <Section
             title="Work area"
-            hint="Editor backdrop around the icon — distinct from the canvas image itself."
+            hint="Editor backdrop around the icon — never exported, and distinct from the image background."
           >
             <SegmentedControl
               aria-label="Work area backdrop"
@@ -125,9 +183,16 @@ export const LayerInspector = () => {
       updateLayer({ fill: { kind: 'solid', color: solidColor } });
       return;
     }
+    if (kind === 'none') {
+      updateLayer({ fill: { kind: 'none' } });
+      return;
+    }
     const preset = brandGradientFill();
-    const stops = layer.fill?.stops && layer.fill.stops.length >= 2 ? layer.fill.stops : preset.stops;
-    updateLayer({ fill: { ...preset, kind, stops, angle: layer.fill?.angle ?? preset.angle } });
+    const stops = isGradientFill(layer.fill) && layer.fill.stops && layer.fill.stops.length >= 2
+      ? layer.fill.stops
+      : preset.stops;
+    const angle = layer.fill?.kind === 'linear-gradient' ? layer.fill.angle : undefined;
+    updateLayer({ fill: { ...preset, kind, stops, angle: angle ?? preset.angle } });
   };
 
   const shadow = getShadow(layer);
@@ -261,11 +326,13 @@ export const LayerInspector = () => {
 
         <Section title="Color">
           <div className="grid grid-cols-2 gap-2.5">
-            <ColorField
-              label="Fill"
-              value={solidColor}
-              onChange={(event) => updateLayer({ fill: { kind: 'solid', color: event.target.value } })}
-            />
+            {layer.fill?.kind !== 'none' && (
+              <ColorField
+                label="Fill"
+                value={solidColor}
+                onChange={(event) => updateLayer({ fill: { kind: 'solid', color: event.target.value } })}
+              />
+            )}
             <NumberField
               label="Opacity"
               min="0"
@@ -280,12 +347,12 @@ export const LayerInspector = () => {
             value={layer.fill?.kind ?? 'solid'}
             onChange={(event) => setFillKind(event.target.value as Fill['kind'])}
           >
-            <option value="solid">Solid color</option>
-            <option value="linear-gradient">Linear gradient</option>
-            <option value="radial-gradient">Radial gradient</option>
+            {FILL_KIND_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </Select>
 
-          {layer.fill && layer.fill.kind !== 'solid' && (
+          {isGradientFill(layer.fill) && (
             <GradientEditor
               fill={layer.fill}
               onChange={(next) => updateLayer({ fill: next }, true)}

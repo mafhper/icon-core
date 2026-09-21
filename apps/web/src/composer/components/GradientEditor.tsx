@@ -1,16 +1,18 @@
 import { Plus, Trash2 } from 'lucide-react';
-import type { Fill } from '@iconcore/shared';
+import type { LinearGradientFill, RadialGradientFill } from '@iconcore/shared';
 import { Slider } from '@iconcore/ui';
 
+type GradientFill = LinearGradientFill | RadialGradientFill;
+
 interface GradientEditorProps {
-  fill: Fill;
+  fill: GradientFill;
   /** Transient update (no history commit). */
-  onChange: (fill: Fill) => void;
+  onChange: (fill: GradientFill) => void;
   /** Commit the current value to history. */
   onCommit: () => void;
 }
 
-type Stops = NonNullable<Fill['stops']>;
+type Stops = NonNullable<LinearGradientFill['stops']>;
 
 const PRESETS: Array<{ name: string; stops: Stops }> = [
   { name: 'Gold / Cyan', stops: [{ offset: 0, color: '#f3d18a' }, { offset: 1, color: '#6bb7d8' }] },
@@ -23,14 +25,13 @@ const PRESETS: Array<{ name: string; stops: Stops }> = [
 
 const sortStops = (stops: Stops): Stops => [...stops].sort((a, b) => a.offset - b.offset);
 
-const cssRamp = (stops: NonNullable<Fill['stops']>): string =>
+const cssRamp = (stops: Stops): string =>
   `linear-gradient(90deg, ${sortStops(stops).map((s) => `${s.color} ${Math.round(s.offset * 100)}%`).join(', ')})`;
 
 export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps) => {
-  if (fill.kind === 'solid') return null;
   const stops = fill.stops ?? [];
 
-  const setStops = (next: NonNullable<Fill['stops']>, commit = true) => {
+  const setStops = (next: Stops, commit = true) => {
     onChange({ ...fill, stops: sortStops(next) });
     if (commit) onCommit();
   };

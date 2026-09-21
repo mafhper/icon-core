@@ -124,6 +124,11 @@ export const createCanvasBackend = (): RenderBackend => {
     applyFill(ctx: RenderContext, fill: Fill, x: number, y: number, width: number, height: number): void {
       const native = ctx.native as CanvasRenderingContext2D;
 
+      if (fill.kind === 'none') {
+        // No paint: preserve the alpha channel.
+        return;
+      }
+
       if (fill.kind === 'solid') {
         native.fillStyle = fill.color ?? '#ffffff';
         native.fillRect(x, y, width, height);

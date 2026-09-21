@@ -1,6 +1,6 @@
 import type { IconTarget, IconVariant, IconCoreProject } from '@iconcore/shared';
 import type { RenderBackend, RenderOptions } from '@iconcore/renderer';
-import { renderProject } from '@iconcore/renderer';
+import { renderProject, resolveCanvasBackground } from '@iconcore/renderer';
 import { auditProject } from '@iconcore/validator';
 import type { ExportResult, ExportFile, TargetDefinition } from './types';
 import { webFavicon } from './targets/web-favicon';
@@ -46,6 +46,18 @@ export const exportTarget = async (
 
   const files: ExportFile[] = [];
   const warnings: string[] = [];
+
+  // Transparency is a property of the document (`canvas.background`); a task's
+  // `transparent` flag is only a capability: when it is `false` the target
+  // requires an opaque background, so a transparent project is flagged (we never
+  // invent a background).
+  if (resolveCanvasBackground(project, variant).kind === 'none') {
+    for (const task of definition.tasks) {
+      if (!task.transparent) {
+        warnings.push(`"${task.path}" requires an opaque background, but the project is transparent.`);
+      }
+    }
+  }
 
   for (const task of definition.tasks) {
     try {

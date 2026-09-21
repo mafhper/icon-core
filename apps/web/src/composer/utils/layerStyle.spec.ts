@@ -16,6 +16,7 @@ const shapeLayer = (kind: ShapeKind, cornerRadius?: number): IconLayer => ({
 describe('fillToCss', () => {
   it('handles missing fills, solids and gradients', () => {
     expect(fillToCss(undefined)).toBe('transparent');
+    expect(fillToCss({ kind: 'none' })).toBe('transparent');
     expect(fillToCss({ kind: 'solid', color: '#abcdef' })).toBe('#abcdef');
     expect(fillToCss({ kind: 'linear-gradient', angle: 90, stops: [{ offset: 0, color: '#000' }, { offset: 1, color: '#fff' }] }))
       .toBe('linear-gradient(90deg, #000 0%, #fff 100%)');

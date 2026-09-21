@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildTargetPlan, migrateV1ToV2, TARGET_REGISTRY } from '../../src/schema-v2';
+import { buildTargetPlan, migrateToCurrent, migrateV1ToV2, TARGET_REGISTRY } from '../../src/schema-v2';
 import type { IconCoreProject } from '@iconcore/shared';
 
 const minimalProject: IconCoreProject = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   metadata: {
     name: 'Test App',
     shortName: 'TestApp',
@@ -208,7 +208,7 @@ describe('migrateV1ToV2', () => {
       { width: 1024, height: 1024 }
     );
 
-    const plan = buildTargetPlan(project, 'pwa', 'default');
+    const plan = buildTargetPlan(migrateToCurrent(project), 'pwa', 'default');
     expect(plan.tasks.length).toBeGreaterThan(0);
     expect(plan.manifestFiles.length).toBeGreaterThan(0);
   });

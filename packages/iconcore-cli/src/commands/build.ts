@@ -1,4 +1,5 @@
 import type { IconCoreProject, IconTarget, IconVariant } from '@iconcore/shared';
+import { migrateToCurrent, type IconCoreProjectV2 } from '@iconcore/engine';
 import { exportTarget, generateReport } from '@iconcore/exporters';
 import { createNodeBackend } from '@iconcore/renderer';
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -22,11 +23,13 @@ export const buildCommand = async (args: string[]): Promise<void> => {
 
   console.log(`Loading project: ${projectPath}`);
   const content = readFileSync(projectPath, 'utf-8');
-  const project: IconCoreProject = JSON.parse(content);
+  const raw = JSON.parse(content) as { schemaVersion?: number };
 
-  if (project.schemaVersion !== 2) {
-    throw new Error(`Unsupported schema version: ${project.schemaVersion}. Expected 2.`);
+  if (raw.schemaVersion !== 2 && raw.schemaVersion !== 3) {
+    throw new Error(`Unsupported schema version: ${raw.schemaVersion}. Expected 2 or 3.`);
   }
+
+  const project: IconCoreProject = migrateToCurrent(raw as IconCoreProjectV2 | IconCoreProject);
 
   console.log(`Building target: ${target} (variant: ${variant})`);
   console.log(`Output directory: ${out}`);
