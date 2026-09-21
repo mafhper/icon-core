@@ -28,10 +28,14 @@ A imagem vive em `docs/images/releases/release.webp` e representa a linha `major
 Se preferir taguear à mão:
 
 ```bash
-node scripts/release-bump.mjs 1.5.0   # atualiza os arquivos de versão
-git commit -am "chore(release): bump version to v1.5.0"
+node scripts/release-bump.mjs 1.5.0            # atualiza os arquivos de versão
+# crie/atualize .github/release-notes/v1.5.0.md
+git add -A
+git commit -m "chore(release): bump version to v1.5.0"
 git tag -a v1.5.0 -m "Release v1.5.0"
 git push origin main v1.5.0  # tag dispara o workflow release
 ```
+
+> Use `git add` explícito (ou `-A`): `git commit -am` não inclui um arquivo de notas recém-criado.
 
 Pushes para `main` sozinhos nunca criam Release (apenas o deploy do GitHub Pages roda).
