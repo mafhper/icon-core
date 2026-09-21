@@ -1,41 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Eraser } from 'lucide-react';
-import type { Fill, GradientFill, GradientStop, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
-import { Button, ColorField, ControlRow, InlineField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
+import { Button, InlineField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
-import { brandGradientFill } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
 import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
-import { GradientEditor } from './GradientEditor';
+import { FillEditor } from './FillEditor';
 import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
 const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'squircle', 'triangle', 'line', 'star'];
-
-const FILL_KIND_OPTIONS = [
-  { value: 'solid', label: 'Solid color' },
-  { value: 'linear-gradient', label: 'Linear gradient' },
-  { value: 'radial-gradient', label: 'Radial gradient' },
-  { value: 'angular-gradient', label: 'Angular gradient' },
-  { value: 'diamond-gradient', label: 'Diamond gradient' },
-  { value: 'none', label: 'Transparent' }
-] as const;
-
-const makeGradient = (
-  kind: 'linear-gradient' | 'radial-gradient' | 'angular-gradient' | 'diamond-gradient',
-  stops: GradientStop[]
-): GradientFill => {
-  if (kind === 'linear-gradient') return { kind, stops, angle: 90 };
-  if (kind === 'angular-gradient') return { kind, stops, angle: 0, centerX: 0.5, centerY: 0.5 };
-  return { kind, stops, centerX: 0.5, centerY: 0.5, radius: 0.5 };
-};
-
-const isGradientFill = (fill: Fill | undefined): fill is GradientFill =>
-  fill?.kind === 'linear-gradient' ||
-  fill?.kind === 'radial-gradient' ||
-  fill?.kind === 'angular-gradient' ||
-  fill?.kind === 'diamond-gradient';
 
 const BACKDROP_OPTIONS = [
   { value: 'dots', label: 'Dots' },
@@ -56,52 +31,18 @@ const BackgroundFillSection = ({
   background: Fill;
   onChange: (fill: Fill, transient?: boolean) => void;
   onCommit: () => void;
-}) => {
-  const solid = background.kind === 'solid' ? background.color ?? '#ffffff' : '#ffffff';
+}) => (
+  <Section title="Background">
+    <FillEditor
+      label="Background fill"
+      fill={background}
+      onChange={onChange}
+      onCommit={onCommit}
+      noneNote="The exported image has a transparent background."
+    />
+  </Section>
+);
 
-  const setKind = (kind: Fill['kind']) => {
-    if (kind === 'solid') { onChange({ kind: 'solid', color: solid }); return; }
-    if (kind === 'none') { onChange({ kind: 'none' }); return; }
-    const preset = brandGradientFill();
-    const stops = isGradientFill(background) && background.stops && background.stops.length >= 2
-      ? background.stops
-      : preset.stops;
-    onChange(makeGradient(kind, stops ?? []));
-  };
-
-  return (
-    <Section title="Background">
-      <InlineField label="Fill">
-        <Select
-          variant="inline"
-          label="Fill type"
-          value={background.kind}
-          onChange={(event) => setKind(event.target.value as Fill['kind'])}
-        >
-          {FILL_KIND_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </Select>
-      </InlineField>
-      {background.kind === 'solid' && (
-        <ControlRow label="Color">
-          <ColorField
-            variant="inline"
-            label="Background colour"
-            value={{ color: solid, alpha: background.alpha ?? 1 }}
-            onChange={(next) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha })}
-          />
-        </ControlRow>
-      )}
-      {isGradientFill(background) && (
-        <GradientEditor fill={background} onChange={(next, transient) => onChange(next, transient)} onCommit={onCommit} />
-      )}
-      {background.kind === 'none' && (
-        <p className="ic-variant-scope-note">The exported image has a <strong>transparent</strong> background.</p>
-      )}
-    </Section>
-  );
-};
 
 export const LayerInspector = () => {
   const { state, dispatch } = useComposer();
@@ -198,24 +139,7 @@ export const LayerInspector = () => {
     });
   };
 
-  const setFillKind = (kind: Fill['kind']) => {
-    if (kind === 'solid') {
-      updateLayer({ fill: { kind: 'solid', color: solidColor } });
-      return;
-    }
-    if (kind === 'none') {
-      updateLayer({ fill: { kind: 'none' } });
-      return;
-    }
-    const preset = brandGradientFill();
-    const stops = isGradientFill(layer.fill) && layer.fill.stops && layer.fill.stops.length >= 2
-      ? layer.fill.stops
-      : preset.stops;
-    updateLayer({ fill: makeGradient(kind, stops ?? []) });
-  };
-
   const shadow = getShadow(layer);
-  const solidColor = fillColor(layer.fill);
   const isImage = baseLayer.kind === 'image' || baseLayer.kind === 'svg';
   const imageFilter = layer.imageFilter ?? {};
   const updateImageFilter = (patch: Partial<typeof imageFilter>, transient = false) =>
@@ -344,37 +268,12 @@ export const LayerInspector = () => {
         )}
 
         <Section title="Color">
-          <InlineField label="Fill">
-            <Select
-              variant="inline"
-              label="Fill type"
-              value={layer.fill?.kind ?? 'solid'}
-              onChange={(event) => setFillKind(event.target.value as Fill['kind'])}
-            >
-              {FILL_KIND_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </Select>
-          </InlineField>
-
-          {layer.fill?.kind === 'none' ? (
-            <p className="ic-variant-scope-note">No fill — the shape is transparent.</p>
-          ) : isGradientFill(layer.fill) ? (
-            <GradientEditor
-              fill={layer.fill}
-              onChange={(next, transient) => updateLayer({ fill: next }, transient)}
-              onCommit={commit}
-            />
-          ) : (
-            <ControlRow label="Color">
-              <ColorField
-                variant="inline"
-                label="Fill colour"
-                value={{ color: solidColor, alpha: layer.fill?.kind === 'solid' ? layer.fill.alpha ?? 1 : 1 }}
-                onChange={(next) => updateLayer({ fill: { kind: 'solid', color: next.color, alpha: next.alpha } })}
-              />
-            </ControlRow>
-          )}
+          <FillEditor
+            label="Fill"
+            fill={layer.fill ?? { kind: 'solid', color: fillColor(layer.fill) }}
+            onChange={(next, transient) => updateLayer({ fill: next }, transient)}
+            onCommit={commit}
+          />
 
           <Slider
             variant="inline"

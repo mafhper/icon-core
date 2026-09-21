@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Fill } from '@iconcore/shared';
 import {
   Circle,
   Grid3x3,
@@ -35,6 +36,8 @@ import {
   ToolbarDivider,
   Tooltip
 } from '@iconcore/ui';
+import { brandGradientFill } from '../constants';
+import { FillEditor } from '../components/FillEditor';
 
 type GalleryTheme = 'dark' | 'light';
 
@@ -60,6 +63,7 @@ export const UiGallery = () => {
   const [backdrop, setBackdrop] = useState<'dots' | 'grid' | 'plain'>('dots');
   const [switchOn, setSwitchOn] = useState(true);
   const [fillColor, setFillColor] = useState({ color: '#4a7cf0', alpha: 1 });
+  const [galleryFill, setGalleryFill] = useState<Fill>(() => brandGradientFill());
 
   const applyTheme = (next: GalleryTheme) => {
     setTheme(next);
@@ -228,6 +232,22 @@ export const UiGallery = () => {
               <ColorField label="Fill" value={fillColor} onChange={setFillColor} />
               <ColorField label="Disabled" value={fillColor} onChange={setFillColor} disabled />
             </div>
+          </div>
+        </Section>
+
+        <Section
+          title="Unified fill (240px)"
+          hint="One Fill control for every kind: the type selector on top, the matching adjustments below. Rendered inside a 240px column — the minimum inspector width — to prove nothing truncates."
+        >
+          <div className="grid gap-3 rounded-ic-md border border-ic-border p-3" style={{ width: 240 }}>
+            <FillEditor label="Fill" fill={galleryFill} onChange={setGalleryFill} onCommit={() => {}} />
+            <Slider variant="inline" label="Opacity" min="0" max="100" defaultValue={100} valueLabel="100%" />
+            <InlineField label="Blend">
+              <Select variant="inline" label="Blend mode" defaultValue="normal">
+                <option value="normal">normal</option>
+                <option value="multiply">multiply</option>
+              </Select>
+            </InlineField>
           </div>
         </Section>
 

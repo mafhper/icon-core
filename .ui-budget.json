@@ -9,7 +9,8 @@
   "hexScanDirs": ["apps/web/src", "apps/promo/src", "packages/iconcore-ui/src"],
   "hexExceptions": [
     "apps/web/src/composer/constants.ts",
-    "apps/web/src/composer/components/GradientEditor.tsx"
+    "apps/web/src/composer/components/GradientEditor.tsx",
+    "apps/web/src/composer/utils/fill.spec.ts"
   ],
   "orphanCheck": {
     "css": "apps/web/src/index.css",
