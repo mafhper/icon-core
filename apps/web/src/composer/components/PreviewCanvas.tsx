@@ -183,7 +183,7 @@ export const PreviewCanvas = () => {
         const dragged = resolveLayerVariant(baseLayer, state.activeVariant);
         const size = layerSize(dragged, canvasSize);
         const others = project.layers
-          .filter((item) => item.id !== drag.id && item.visible)
+          .filter((item) => item.id !== drag.id && item.visible && item.role !== 'background')
           .map((item) => resolveLayerVariant(item, state.activeVariant))
           .map((item) => {
             const s = layerSize(item, canvasSize);
@@ -345,7 +345,7 @@ export const PreviewCanvas = () => {
             )}
             {state.showGrid && <div className="ic-canvas-grid" />}
             {state.showKeylines && <KeylineOverlay />}
-            {layers.map((baseLayer) => {
+            {layers.filter((baseLayer) => baseLayer.role !== 'background').map((baseLayer) => {
               const layer = resolveLayerVariant(baseLayer, state.activeVariant);
               if (!layer.visible) return null;
               const selected = state.activeLayerId === layer.id;

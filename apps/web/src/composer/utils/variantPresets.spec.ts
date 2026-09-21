@@ -16,7 +16,7 @@ const layer = (id: string, color: string): IconLayer => ({
 });
 
 const project = (...colors: string[]): IconCoreProject => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   metadata: { name: 'T', shortName: 'T' },
   canvas: { size: 512, background: { kind: 'solid', color: '#ffffff' } },
   layers: colors.map((c, i) => layer(`l${i}`, c)),
@@ -45,14 +45,14 @@ describe('variant presets', () => {
 
   it('dark lightens very dark fills and uses a dark background', () => {
     const preset = generateVariantPreset(project('#111111'), 'dark');
-    expect(preset.background.color).toBe('#0f172a');
+    expect(preset.background.kind === 'solid' ? preset.background.color : undefined).toBe('#0f172a');
     const fill = preset.layerFills.l0;
     expect(luminanceOf(fill?.kind === 'solid' ? fill.color : undefined)).toBeGreaterThan(luminanceOf('#111111'));
   });
 
   it('light darkens very pale fills and uses a light background', () => {
     const preset = generateVariantPreset(project('#fafafa'), 'light');
-    expect(preset.background.color).toBe('#f8fafc');
+    expect(preset.background.kind === 'solid' ? preset.background.color : undefined).toBe('#f8fafc');
     const fill = preset.layerFills.l0;
     expect(luminanceOf(fill?.kind === 'solid' ? fill.color : undefined)).toBeLessThan(luminanceOf('#fafafa'));
   });

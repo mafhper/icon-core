@@ -19,7 +19,7 @@ export const DEFAULT_TARGETS: IconTarget[] = [
 ];
 
 export const createBlankProject = (name: string, size = 512): IconCoreProject => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   metadata: {
     name,
     shortName: name.slice(0, 12)
@@ -94,8 +94,30 @@ export const createShapeLayer = (canvasSize: number, zIndex: number): IconLayer 
   ]
 });
 
-export const createTextLayer = (canvasSize: number, zIndex: number): IconLayer => ({
+/**
+ * The Background layer is the selectable handle for `canvas.background`; it
+ * never produces pixels (the renderer skips `role: 'background'`). It keeps a
+ * benign full-canvas rectangle source so the generic layer utilities can still
+ * measure it, and deliberately carries no `fill`/`effects` — the image
+ * background lives in `canvas.background`.
+ */
+export const createBackgroundLayer = (canvasSize: number, zIndex: number): IconLayer => ({
   id: `layer-${crypto.randomUUID()}`,
+  name: 'Background',
+  role: 'background',
+  kind: 'shape',
+  visible: true,
+  zIndex,
+  source: {
+    type: 'reference',
+    path: '',
+    shape: { kind: 'rectangle', width: canvasSize, height: canvasSize }
+  },
+  transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+  opacity: 1
+});
+
+export const createTextLayer = (canvasSize: number, zIndex: number): IconLayer => ({  id: `layer-${crypto.randomUUID()}`,
   name: `Text ${zIndex + 1}`,
   kind: 'text',
   visible: true,

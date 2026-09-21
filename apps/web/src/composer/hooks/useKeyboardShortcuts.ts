@@ -90,7 +90,8 @@ export const useKeyboardShortcuts = () => {
 
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && state.activeLayerId && state.project) {
         const baseLayer = state.project.layers.find((item) => item.id === state.activeLayerId);
-        if (!baseLayer || baseLayer.locked) return;
+        // The background handle is not a movable layer.
+        if (!baseLayer || baseLayer.locked || baseLayer.role === 'background') return;
         e.preventDefault();
         const layer = resolveLayerVariant(baseLayer, state.activeVariant);
         const amount = e.shiftKey ? 10 : 1;

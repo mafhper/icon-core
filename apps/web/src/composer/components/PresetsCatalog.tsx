@@ -23,7 +23,7 @@ const presets: VisualPreset[] = [
       ...base,
       canvas: { ...base.canvas, size: 512, background: solidFill('#ffffff') },
       layers: [
-        { id: 'bg-circle', name: 'Background', kind: 'image', visible: true, zIndex: 0, opacity: 1, source: { type: 'reference', path: '', shape: shape('circle') }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#6366f1') },
+        { id: 'bg-circle', name: 'Base shape', kind: 'image', visible: true, zIndex: 0, opacity: 1, source: { type: 'reference', path: '', shape: shape('circle') }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#6366f1') },
         { id: 'inner-dot', name: 'Accent dot', kind: 'image', visible: true, zIndex: 1, opacity: 1, source: { type: 'reference', path: '', shape: shape('circle', 128, 128) }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#a5b4fc') }
       ]
     })
@@ -37,7 +37,7 @@ const presets: VisualPreset[] = [
       ...base,
       canvas: { ...base.canvas, size: 512, background: solidFill('#f8fafc') },
       layers: [
-        { id: 'bg-rect', name: 'Background', kind: 'image', visible: true, zIndex: 0, opacity: 1, source: { type: 'reference', path: '', shape: shape('rounded-rectangle') }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#0f172a') },
+        { id: 'bg-rect', name: 'Base shape', kind: 'image', visible: true, zIndex: 0, opacity: 1, source: { type: 'reference', path: '', shape: shape('rounded-rectangle') }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#0f172a') },
         { id: 'inner-sq', name: 'Inner accent', kind: 'image', visible: true, zIndex: 1, opacity: 0.9, source: { type: 'reference', path: '', shape: shape('rounded-rectangle', 256, 256) }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#38bdf8') }
       ]
     })
@@ -51,7 +51,7 @@ const presets: VisualPreset[] = [
       ...base,
       canvas: { ...base.canvas, size: 512, background: solidFill('#ffffff') },
       layers: [
-        { id: 'bg-squircle', name: 'Background', kind: 'image', visible: true, zIndex: 0, opacity: 1, source: { type: 'reference', path: '', shape: shape('squircle') }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#f472b6') },
+        { id: 'bg-squircle', name: 'Base shape', kind: 'image', visible: true, zIndex: 0, opacity: 1, source: { type: 'reference', path: '', shape: shape('squircle') }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#f472b6') },
         { id: 'inner', name: 'Inner shape', kind: 'image', visible: true, zIndex: 1, opacity: 1, source: { type: 'reference', path: '', shape: shape('circle', 160, 160) }, transform: { x: 0, y: 0, scale: 1, rotation: 0 }, fill: solidFill('#fce7f3') }
       ]
     })
@@ -111,7 +111,7 @@ export const PresetsCatalog = ({ onClose }: { onClose: () => void }) => {
       dispatch({ type: 'NEW_PROJECT', payload: { name: 'My Icon', size: 512 } });
     }
     const base = state.project ?? {
-      schemaVersion: 2,
+      schemaVersion: 3,
       metadata: { name: 'My Icon', shortName: 'My Icon' },
       canvas: { size: 512, background: { kind: 'solid', color: '#ffffff' } },
       layers: [],

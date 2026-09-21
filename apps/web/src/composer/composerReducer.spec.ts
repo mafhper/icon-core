@@ -11,9 +11,9 @@ const asset = {
 };
 
 describe('Icon Core workspaces state', () => {
-  it('creates a v2 project from an uploaded asset', () => {
+  it('creates a v3 project from an uploaded asset', () => {
     const project = createProjectFromAsset(asset);
-    expect(project.schemaVersion).toBe(2);
+    expect(project.schemaVersion).toBe(3);
     expect(project.layers).toHaveLength(1);
     expect(project.layers[0].source.type).toBe('inline');
     expect(project.targets.some((target) => target.target === 'web-favicon' && target.enabled)).toBe(true);
@@ -67,9 +67,46 @@ describe('Icon Core workspaces state', () => {
 
     const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
     expect(generated.project!.layers[0].variantOverrides?.dark?.fill).toBeDefined();
-    expect(generated.project!.variants.dark?.canvas?.background?.color).toBe('#0f172a');
+    const darkBg = generated.project!.variants.dark?.canvas?.background;
+    expect(darkBg?.kind === 'solid' ? darkBg.color : undefined).toBe('#0f172a');
 
     const cleared = composerReducer(generated, { type: 'CLEAR_VARIANT', payload: { variant: 'dark' } });
     expect(cleared.project!.layers[0].variantOverrides?.dark).toBeUndefined();
+  });
+});
+
+describe('background layer handle', () => {
+  const withProject = (project: ReturnType<typeof createProjectFromAsset>) =>
+    composerReducer(initialState, { type: 'LOAD_PROJECT', payload: { project, view: 'edit-space' } });
+
+  it('creates a non-rendering handle below the other layers without shifting them', () => {
+    const loaded = withProject(createProjectFromAsset(asset));
+    const before = loaded.project!.layers.map((layer) => layer.zIndex);
+
+    const added = composerReducer(loaded, { type: 'ADD_LAYER', payload: { background: true } });
+    const handle = added.project!.layers.find((layer) => layer.role === 'background');
+
+    expect(handle).toBeDefined();
+    expect(handle!.zIndex).toBeLessThan(Math.min(...before));
+    expect(added.project!.layers.filter((layer) => layer.role !== 'background').map((layer) => layer.zIndex)).toEqual(before);
+    expect(added.activeLayerId).toBe(handle!.id);
+  });
+
+  it('re-selects the existing handle instead of duplicating it', () => {
+    const loaded = withProject(createProjectFromAsset(asset));
+    const once = composerReducer(loaded, { type: 'ADD_LAYER', payload: { background: true } });
+    const twice = composerReducer(once, { type: 'ADD_LAYER', payload: { background: true } });
+
+    expect(twice.project!.layers.filter((layer) => layer.role === 'background')).toHaveLength(1);
+    expect(twice.project!.layers).toHaveLength(once.project!.layers.length);
+  });
+
+  it('accepts a transparent canvas background', () => {
+    const loaded = withProject(createProjectFromAsset(asset));
+    const next = composerReducer(loaded, {
+      type: 'SET_CANVAS_BACKGROUND',
+      payload: { background: { kind: 'none' } }
+    });
+    expect(next.project!.canvas.background).toEqual({ kind: 'none' });
   });
 });
