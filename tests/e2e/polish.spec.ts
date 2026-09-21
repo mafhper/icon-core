@@ -183,3 +183,59 @@ test('ui lab nested radii are not inverted', async ({ page }) => {
   const LAB_BASELINE = 2;
   expect(violations.length, violations.join('\n')).toBeLessThanOrEqual(LAB_BASELINE);
 });
+
+/**
+ * F6 sweep: the surfaces beyond the inspector are measured the same way, so the
+ * panel language holds everywhere (they were clean on the first pass — this keeps
+ * them that way). Wrapping text and `truncate` are skipped: they are not clipping.
+ */
+const SURFACES: Array<{ name: string; selector: string; needsProject: boolean }> = [
+  { name: 'welcome modal', selector: '.ic-welcome-modal', needsProject: false },
+  { name: 'layers panel', selector: '.ic-layer-list', needsProject: true },
+  { name: 'action bar', selector: '.ic-action-bar', needsProject: true },
+  { name: 'topbar', selector: '.ic-topbar, header', needsProject: true }
+];
+
+for (const surface of SURFACES) {
+  test(`${surface.name} does not clip control text`, async ({ page }) => {
+    await page.goto('/icon-core/app/?theme=dark');
+    if (surface.needsProject) {
+      await page.getByRole('button', { name: /^Create$/i }).first().click();
+      await page.waitForTimeout(800);
+    }
+
+    const clipped = await collect(page, surface.selector, (root) => {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const out: string[] = [];
+      for (const element of [...root.querySelectorAll('input, select, button, span, label, p, strong')]) {
+        const styles = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0 || !context) continue;
+        if (element.children.length > 0 && element.tagName !== 'BUTTON') continue;
+        const text = (element.tagName === 'SELECT'
+          ? element.selectedOptions[0]?.textContent
+          : (element as HTMLInputElement).value ?? element.textContent ?? ''
+        ).trim();
+        if (text.length < 2) continue;
+        if (element.tagName !== 'SELECT' && element.tagName !== 'INPUT') {
+          if (styles.whiteSpace !== 'nowrap' || styles.textOverflow === 'ellipsis') continue;
+        }
+        context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+        const needed = context.measureText(text).width;
+        const content =
+          rect.width -
+          (parseFloat(styles.paddingLeft) || 0) -
+          (parseFloat(styles.paddingRight) || 0) -
+          (parseFloat(styles.borderLeftWidth) || 0) -
+          (parseFloat(styles.borderRightWidth) || 0);
+        if (needed > content + 1) {
+          out.push(`${element.tagName.toLowerCase()}.${String(element.className).slice(0, 30)} "${text.slice(0, 16)}" ${Math.round(needed)}>${Math.round(content)}`);
+        }
+      }
+      return out;
+    });
+
+    expect(clipped, clipped.join('\n')).toEqual([]);
+  });
+}
