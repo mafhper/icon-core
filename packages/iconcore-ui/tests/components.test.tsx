@@ -435,3 +435,10 @@ describe('ColorField picker', () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ color: '#007AFF' }));
   }, 10_000);
 });
+
+describe('Icon stroke', () => {
+  it('matches the stroke to the adjacent text weight', () => {
+    render(<Button iconLeft={<svg data-testid="icon" strokeWidth={2} />}>Save</Button>);
+    expect(screen.getByTestId('icon')).toHaveAttribute('stroke-width', '1.5');
+  });
+});
