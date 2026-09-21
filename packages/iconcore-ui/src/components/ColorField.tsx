@@ -28,6 +28,11 @@ export interface ColorFieldProps {
   onChange: (value: ColorValue) => void;
   disabled?: boolean;
   className?: string;
+  /**
+   * `field` (default) stacks the label above; `inline` renders just the
+   * `[swatch][#hex][alpha%]` row so it can live inside `ControlRow`/`InlineField`.
+   */
+  variant?: 'field' | 'inline';
 }
 
 const RECENT_KEY = 'iconcore:recent-colors';
@@ -87,7 +92,7 @@ const parseAlpha = (text: string, fallback: number): number => {
  * Labelled colour swatch that opens an RGBA/HSLA picker (SV area + hue via
  * `react-colorful`, alpha slider, HEX/RGBA/HSLA fields and recent colours).
  */
-export const ColorField = ({ label, hint, value, onChange, disabled, className }: ColorFieldProps) => {
+export const ColorField = ({ label, hint, value, onChange, disabled, className, variant = 'field' }: ColorFieldProps) => {
   const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<ColorFormat>('hex');
   const [draft, setDraft] = useState(() => formatValue(value, 'hex'));
@@ -179,18 +184,17 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
   const rgb: Rgb = hexToRgb(value.color);
   const alphaPct = Math.round(value.alpha * 100);
 
-  return (
-    <Field label={label} hint={hint}>
+  const content = (
       <div ref={rootRef} className={cn('relative', className)}>
         {/* Compact row (Rune Icons pattern): swatch · #hex · alpha%. Fixed-width
             fields keep the control from overflowing in narrow columns. */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-[var(--ic-control-gap)]">
           <button
             type="button"
             ref={triggerRef}
             disabled={disabled}
             onClick={() => (open ? close() : setOpen(true))}
-            className="h-7 w-7 shrink-0 rounded-ic-sm border border-ic-border disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-[var(--ic-control-md)] w-[var(--ic-control-md)] shrink-0 rounded-ic-sm border border-ic-border disabled:cursor-not-allowed disabled:opacity-40"
             style={checkerStyle}
             aria-label={`${label} colour picker`}
             aria-haspopup="dialog"
@@ -199,7 +203,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
             <span className="block h-full w-full rounded-ic-sm" style={{ background: rgbToCss(rgb, value.alpha) }} />
           </button>
 
-          <div className="flex h-7 min-w-0 flex-1 items-center rounded-ic-sm border border-ic-border bg-ic-surface px-1.5 font-mono text-[11px]">
+          <div className="flex h-[var(--ic-control-md)] min-w-0 flex-1 items-center rounded-ic-sm border border-ic-border bg-ic-surface px-1.5 font-mono text-[11px]">
             <span className="select-none text-ic-text-muted">#</span>
             <input
               value={hexDraft}
@@ -216,7 +220,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
             />
           </div>
 
-          <div className="flex h-7 w-16 shrink-0 items-center justify-end rounded-ic-sm border border-ic-border bg-ic-surface px-1.5 font-mono text-[11px]">
+          <div className="flex h-[var(--ic-control-md)] w-16 shrink-0 items-center justify-end rounded-ic-sm border border-ic-border bg-ic-surface px-1.5 font-mono text-[11px]">
             <input
               type="number"
               min="0"
@@ -293,7 +297,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') commitDraft();
                 }}
-                className="h-7 min-w-0 flex-1 rounded-ic-sm border border-ic-border bg-ic-surface px-2 font-mono text-[11px] text-ic-text"
+                className="h-[var(--ic-control-md)] min-w-0 flex-1 rounded-ic-sm border border-ic-border bg-ic-surface px-2 font-mono text-[11px] text-ic-text"
               />
             </div>
 
@@ -319,6 +323,19 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className }
           document.body
         )}
       </div>
+  );
+
+  if (variant === 'inline') {
+    return (
+      <div role="group" aria-label={label}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Field label={label} hint={hint}>
+      {content}
     </Field>
   );
 };

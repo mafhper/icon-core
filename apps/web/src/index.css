@@ -1160,15 +1160,8 @@ input[type='range'] {
   text-transform: capitalize;
 }
 
-.ic-gradient-editor {
-  display: grid;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--ic-border);
-  border-radius: 12px;
-  background: var(--ic-elevated);
-}
-
+/* The gradient editor is frameless: the inspector `Section` is the only group,
+   so the editor must not add a second card inside it. */
 .ic-field-stack > .ic-section-head:not(:first-child),
 
 
@@ -1271,9 +1264,35 @@ input[type='range'] {
   flex-wrap: wrap;
 }
 
-.ic-gradient-stops {
-  display: grid;
-  gap: 6px;
+.ic-gradient-preset {
+  width: 28px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border);
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), border-color 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ic-gradient-preset:hover {
+  transform: translateY(-1px);
+  border-color: var(--ic-accent);
+}
+
+/* Explicit stop handle (do not depend on utility classes for a core affordance). */
+.ic-gradient-handle {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 2px solid var(--ic-surface);
+  box-shadow: 0 1px 3px var(--ic-shadow);
+  outline: none;
+  cursor: ew-resize;
+}
+
+.ic-gradient-handle:focus-visible {
+  box-shadow: 0 0 0 2px var(--ic-accent-ring);
 }
 
 /* Appearance switcher — floating mini-toolbar docked to the bottom of the

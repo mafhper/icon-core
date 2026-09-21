@@ -97,9 +97,18 @@
  * system does not invent a token for every visual decision.
  */
 :root {
+  --ic-control-xs: 24px;
   --ic-control-sm: 32px;
+  /* The single row height for inspector controls (IconButton, Input, Select,
+     swatch, slider). No component picks its own height. */
   --ic-control-md: 28px;
   --ic-control-lg: 34px;
+
+  /* Spacing rhythm for the inspector grammar. */
+  --ic-control-gap: 6px;
+  --ic-section-gap: 12px;
+  --ic-label-size: 10px;
+
   --ic-radius-sm: 8px;
   --ic-radius-md: 6px;
   --ic-radius-lg: 10px;

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { AlignHorizontalDistributeCenter, ArrowLeftRight, Plus, Trash2 } from 'lucide-react';
 import type { GradientFill, GradientStop } from '@iconcore/shared';
-import { Button, ColorField, IconButton, NumberField, Slider, type ColorValue } from '@iconcore/ui';
+import { Button, ColorField, ControlRow, IconButton, Slider, type ColorValue } from '@iconcore/ui';
 import { normalizeStops, sampleStopDetailed, sampleStops } from '@iconcore/renderer';
 
 interface GradientEditorProps {
@@ -40,6 +40,14 @@ const toColorValue = (stop: GradientStop): ColorValue => ({
   alpha: stop.alpha ?? 1
 });
 
+const pct = (value: number): string => `${Math.round(value * 100)}%`;
+
+/**
+ * Gradient editor. Deliberately frameless: the inspector's `Section` already
+ * provides the grouping, so the editor must not add a second card. Each stop is
+ * a two-line block (colour on top, position/remove below) instead of a card, and
+ * the gradient bar is the visual anchor.
+ */
 export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps) => {
   const stops = normalizeStops(fill.stops);
   const barRef = useRef<HTMLDivElement>(null);
@@ -54,10 +62,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
   };
 
   const addStop = () => {
-    const gaps = stops.slice(0, -1).map((stop, i) => ({
-      index: i,
-      size: stops[i + 1].offset - stop.offset
-    }));
+    const gaps = stops.slice(0, -1).map((stop, i) => ({ index: i, size: stops[i + 1].offset - stop.offset }));
     const widest = gaps.sort((a, b) => b.size - a.size)[0];
     const left = stops[widest?.index ?? 0];
     const right = stops[(widest?.index ?? 0) + 1] ?? left;
@@ -72,8 +77,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
   };
 
   const reverse = () => {
-    const next = [...stops].reverse().map((stop) => ({ ...stop, offset: 1 - stop.offset }));
-    setStops(next);
+    setStops([...stops].reverse().map((stop) => ({ ...stop, offset: 1 - stop.offset })));
   };
 
   const distribute = () => {
@@ -93,10 +97,10 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
   const isDiamond = fill.kind === 'diamond-gradient';
 
   return (
-    <div className="ic-gradient-editor">
+    <div className="grid gap-3">
       <div
         ref={barRef}
-        className="relative mx-2 h-6 w-[calc(100%-1rem)] cursor-pointer rounded-ic-sm border border-ic-border"
+        className="relative mx-2 h-6 cursor-pointer rounded-ic-sm border border-ic-border"
         style={{ background: barCss(stops) }}
         onPointerMove={(event) => {
           if (dragIndex.current === null) return;
@@ -118,7 +122,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(stop.offset * 100)}
-            aria-valuetext={`${Math.round(stop.offset * 100)}%`}
+            aria-valuetext={pct(stop.offset)}
             onPointerDown={(event) => {
               dragIndex.current = index;
               event.currentTarget.setPointerCapture(event.pointerId);
@@ -134,18 +138,18 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
               event.preventDefault();
               onCommit();
             }}
-            className="ic-gradient-handle absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize rounded-full border-2 border-white shadow outline-none focus-visible:ring-2 focus-visible:ring-ic-accent-ring"
-            style={{ left: `${stop.offset * 100}%`, background: stop.color }}
+            className="ic-gradient-handle"
+            style={{ left: pct(stop.offset), background: stop.color }}
           />
         ))}
       </div>
 
-      <div className="ic-gradient-presets mt-2">
+      <div className="ic-gradient-presets">
         {PRESETS.map((preset) => (
           <button
             key={preset.name}
             type="button"
-            className="h-6 w-10 rounded-ic-sm border border-ic-border"
+            className="ic-gradient-preset"
             style={{ background: barCss(preset.stops) }}
             title={`Apply ${preset.name}`}
             aria-label={`Apply ${preset.name} gradient`}
@@ -154,25 +158,35 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ))}
       </div>
 
-      <div className="ic-gradient-stops mt-2">
+      <div className="grid gap-3">
         {stops.map((stop, index) => (
-          <div key={index} className="grid gap-1.5 rounded-ic-sm border border-ic-border p-2">
-            <ColorField
-              label={`Stop ${index + 1}`}
-              value={toColorValue(stop)}
-              onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
-            />
-            <div className="grid grid-cols-[1fr_auto] items-end gap-2">
-              <NumberField
-                label="Position (%)"
-                min="0"
-                max="100"
-                value={Math.round(stop.offset * 100)}
-                onChange={(event) => updateStop(index, { offset: Number(event.target.value) / 100 }, true)}
+          <div key={index} className="grid gap-1.5">
+            <ControlRow label={`Stop ${index + 1}`}>
+              <ColorField
+                variant="inline"
+                label={`Stop ${index + 1} colour`}
+                value={toColorValue(stop)}
+                onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
               />
+            </ControlRow>
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <Slider
+                  variant="inline"
+                  label="Position"
+                  min="0"
+                  max="100"
+                  value={Math.round(stop.offset * 100)}
+                  valueLabel={pct(stop.offset)}
+                  onChange={(event) => updateStop(index, { offset: Number(event.target.value) / 100 }, true)}
+                  onPointerUp={onCommit}
+                  onKeyUp={onCommit}
+                />
+              </div>
               <IconButton
                 icon={<Trash2 size={12} />}
                 aria-label={`Remove stop ${index + 1}`}
+                title="Remove stop"
                 disabled={stops.length <= 2}
                 onClick={() => removeStop(index)}
               />
@@ -181,24 +195,31 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ))}
       </div>
 
-      <div className="mt-2 flex items-center gap-1.5">
-        <Button variant="secondary" iconLeft={<Plus size={12} />} onClick={addStop}>
-          Stop
+      <div className="flex flex-wrap gap-1.5">
+        <Button variant="secondary" iconLeft={<Plus size={12} />} title="Add a stop" onClick={addStop}>
+          Add stop
         </Button>
-        <IconButton icon={<ArrowLeftRight size={12} />} aria-label="Reverse stops" onClick={reverse} />
-        <IconButton
-          icon={<AlignHorizontalDistributeCenter size={12} />}
-          aria-label="Distribute stops evenly"
+        <Button variant="secondary" iconLeft={<ArrowLeftRight size={12} />} title="Reverse stops" onClick={reverse}>
+          Reverse
+        </Button>
+        <Button
+          variant="secondary"
+          iconLeft={<AlignHorizontalDistributeCenter size={12} />}
+          title="Distribute stops evenly"
           onClick={distribute}
-        />
+        >
+          Distribute
+        </Button>
       </div>
 
       {isLinear && (
         <Slider
-          label={`Angle (${fill.angle ?? 90}°)`}
+          variant="inline"
+          label="Angle"
           min="0"
           max="360"
           value={fill.angle ?? 90}
+          valueLabel={`${fill.angle ?? 90}°`}
           onChange={(event) => onChange({ ...fill, angle: Number(event.target.value) }, true)}
           onPointerUp={onCommit}
           onKeyUp={onCommit}
@@ -207,10 +228,12 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
 
       {isAngular && (
         <Slider
-          label={`Start angle (${fill.angle ?? 0}°)`}
+          variant="inline"
+          label="Start angle"
           min="0"
           max="360"
           value={fill.angle ?? 0}
+          valueLabel={`${fill.angle ?? 0}°`}
           onChange={(event) => onChange({ ...fill, angle: Number(event.target.value) }, true)}
           onPointerUp={onCommit}
           onKeyUp={onCommit}
@@ -218,39 +241,43 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
       )}
 
       {(isRadial || isDiamond || isAngular) && (
-        <div className="grid grid-cols-2 gap-2.5">
+        <>
           <Slider
-            label={`Center X (${Math.round((fill.centerX ?? 0.5) * 100)}%)`}
+            variant="inline"
+            label="Center X"
             min="0"
             max="100"
             value={Math.round((fill.centerX ?? 0.5) * 100)}
+            valueLabel={pct(fill.centerX ?? 0.5)}
             onChange={(event) => onChange({ ...fill, centerX: Number(event.target.value) / 100 }, true)}
             onPointerUp={onCommit}
             onKeyUp={onCommit}
           />
           <Slider
-            label={`Center Y (${Math.round((fill.centerY ?? 0.5) * 100)}%)`}
+            variant="inline"
+            label="Center Y"
             min="0"
             max="100"
             value={Math.round((fill.centerY ?? 0.5) * 100)}
+            valueLabel={pct(fill.centerY ?? 0.5)}
             onChange={(event) => onChange({ ...fill, centerY: Number(event.target.value) / 100 }, true)}
             onPointerUp={onCommit}
             onKeyUp={onCommit}
           />
           {(isRadial || isDiamond) && (
-            <div className="col-span-2">
-              <Slider
-                label={`Radius (${Math.round((fill.radius ?? 0.5) * 100)}%)`}
-                min="10"
-                max="100"
-                value={Math.round((fill.radius ?? 0.5) * 100)}
-                onChange={(event) => onChange({ ...fill, radius: Number(event.target.value) / 100 }, true)}
-                onPointerUp={onCommit}
-                onKeyUp={onCommit}
-              />
-            </div>
+            <Slider
+              variant="inline"
+              label="Radius"
+              min="10"
+              max="100"
+              value={Math.round((fill.radius ?? 0.5) * 100)}
+              valueLabel={pct(fill.radius ?? 0.5)}
+              onChange={(event) => onChange({ ...fill, radius: Number(event.target.value) / 100 }, true)}
+              onPointerUp={onCommit}
+              onKeyUp={onCommit}
+            />
           )}
-        </div>
+        </>
       )}
     </div>
   );

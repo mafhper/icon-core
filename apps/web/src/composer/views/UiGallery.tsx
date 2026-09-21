@@ -18,8 +18,10 @@ import {
   Button,
   ButtonGroup,
   ColorField,
+  ControlRow,
   Field,
   IconButton,
+  InlineField,
   Kbd,
   Menu,
   MenuItem,
@@ -226,6 +228,32 @@ export const UiGallery = () => {
               <ColorField label="Fill" value={fillColor} onChange={setFillColor} />
               <ColorField label="Disabled" value={fillColor} onChange={setFillColor} disabled />
             </div>
+          </div>
+        </Section>
+
+        <Section
+          title="Inspector grammar (240px)"
+          hint="The row primitives the Colours inspector uses: InlineField, ControlRow and the inline Slider. Rendered inside a 240px column to prove they fit the minimum panel width."
+        >
+          <div className="grid gap-3 rounded-ic-md border border-ic-border p-3" style={{ width: 240 }}>
+            <InlineField label="Fill">
+              <Select variant="inline" label="Fill type" defaultValue="linear-gradient">
+                <option value="solid">Solid color</option>
+                <option value="linear-gradient">Linear gradient</option>
+                <option value="diamond-gradient">Diamond gradient</option>
+              </Select>
+            </InlineField>
+            <ControlRow label="Color">
+              <ColorField variant="inline" label="Fill colour" value={fillColor} onChange={setFillColor} />
+            </ControlRow>
+            <Slider variant="inline" label="Opacity" min="0" max="100" defaultValue={100} valueLabel="100%" />
+            <Slider variant="inline" label="Angle" min="0" max="360" defaultValue={90} valueLabel="90°" />
+            <InlineField label="Blend">
+              <Select variant="inline" label="Blend mode" defaultValue="normal">
+                <option value="normal">normal</option>
+                <option value="multiply">multiply</option>
+              </Select>
+            </InlineField>
           </div>
         </Section>
 

@@ -3,15 +3,20 @@ import { cn } from '../utils/cn';
 import { Field } from './Field';
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  /** Field label. Rendered uppercase above the select. */
+  /** Field label. Rendered uppercase above the select, or to the left when `variant="inline"`. */
   label: string;
   /** Optional explanatory copy under the select. */
   hint?: ReactNode;
+  /**
+   * `field` (default) stacks the label above; `inline` renders the bare control
+   * so it can sit inside `InlineField`/`ControlRow` on a single row.
+   */
+  variant?: 'field' | 'inline';
 }
 
 const selectClasses =
-  'w-full appearance-none rounded-[0.66rem] border border-ic-border bg-ic-elevated px-[0.72rem] py-[0.58rem] ' +
-  'text-[0.82rem] font-normal normal-case tracking-normal text-ic-text outline-none ' +
+  'h-[var(--ic-control-md)] w-full appearance-none rounded-[var(--ic-radius-md)] border border-ic-border bg-ic-elevated px-[0.72rem] ' +
+  'text-[0.78rem] font-normal normal-case tracking-normal text-ic-text outline-none ' +
   'focus-visible:border-ic-accent';
 
 /**
@@ -21,14 +26,25 @@ const selectClasses =
  * provides the dropdown arrow.
  */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { className, label, hint, children, ...rest },
+  { className, label, hint, variant = 'field', children, ...rest },
   ref
 ) {
+  const control = (
+    <select
+      ref={ref}
+      aria-label={variant === 'inline' ? label : undefined}
+      className={cn(selectClasses, className)}
+      {...rest}
+    >
+      {children}
+    </select>
+  );
+
+  if (variant === 'inline') return control;
+
   return (
     <Field label={label} hint={hint}>
-      <select ref={ref} className={cn(selectClasses, className)} {...rest}>
-        {children}
-      </select>
+      {control}
     </Field>
   );
 });

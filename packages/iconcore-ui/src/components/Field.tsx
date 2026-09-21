@@ -22,7 +22,7 @@ export const Field = forwardRef<HTMLLabelElement, FieldProps>(function Field(
     <label
       ref={ref}
       className={cn(
-        'grid gap-2 text-[0.72rem] font-bold uppercase tracking-[0.04em] text-ic-text-muted',
+        'grid gap-[var(--ic-control-gap)] text-[length:var(--ic-label-size)] font-bold uppercase tracking-[0.04em] text-ic-text-muted',
         className
       )}
       {...rest}
@@ -30,7 +30,7 @@ export const Field = forwardRef<HTMLLabelElement, FieldProps>(function Field(
       <span>{label}</span>
       {children}
       {hint != null && (
-        <span className="text-[0.72rem] font-medium normal-case tracking-normal text-ic-text-muted">
+        <span className="text-[length:var(--ic-label-size)] font-medium normal-case tracking-normal text-ic-text-muted">
           {hint}
         </span>
       )}

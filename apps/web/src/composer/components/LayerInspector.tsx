@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Eraser } from 'lucide-react';
 import type { Fill, GradientFill, GradientStop, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
-import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import { Button, ColorField, ControlRow, InlineField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { brandGradientFill } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
@@ -71,24 +71,30 @@ const BackgroundFillSection = ({
 
   return (
     <Section title="Background">
-      <Select
-        label="Fill type"
-        value={background.kind}
-        onChange={(event) => setKind(event.target.value as Fill['kind'])}
-      >
-        {FILL_KIND_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </Select>
+      <InlineField label="Fill">
+        <Select
+          variant="inline"
+          label="Fill type"
+          value={background.kind}
+          onChange={(event) => setKind(event.target.value as Fill['kind'])}
+        >
+          {FILL_KIND_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </Select>
+      </InlineField>
       {background.kind === 'solid' && (
-        <ColorField
-          label="Color"
-          value={{ color: solid, alpha: background.kind === 'solid' ? background.alpha ?? 1 : 1 }}
-          onChange={(next) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha })}
-        />
+        <ControlRow label="Color">
+          <ColorField
+            variant="inline"
+            label="Background colour"
+            value={{ color: solid, alpha: background.alpha ?? 1 }}
+            onChange={(next) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha })}
+          />
+        </ControlRow>
       )}
       {isGradientFill(background) && (
-        <GradientEditor fill={background} onChange={(next) => onChange(next, true)} onCommit={onCommit} />
+        <GradientEditor fill={background} onChange={(next, transient) => onChange(next, transient)} onCommit={onCommit} />
       )}
       {background.kind === 'none' && (
         <p className="ic-variant-scope-note">The exported image has a <strong>transparent</strong> background.</p>
@@ -338,48 +344,60 @@ export const LayerInspector = () => {
         )}
 
         <Section title="Color">
-          <div className="grid grid-cols-2 gap-2.5">
-            {layer.fill?.kind !== 'none' && (
+          <InlineField label="Fill">
+            <Select
+              variant="inline"
+              label="Fill type"
+              value={layer.fill?.kind ?? 'solid'}
+              onChange={(event) => setFillKind(event.target.value as Fill['kind'])}
+            >
+              {FILL_KIND_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </Select>
+          </InlineField>
+
+          {layer.fill?.kind === 'none' ? (
+            <p className="ic-variant-scope-note">No fill — the shape is transparent.</p>
+          ) : isGradientFill(layer.fill) ? (
+            <GradientEditor
+              fill={layer.fill}
+              onChange={(next, transient) => updateLayer({ fill: next }, transient)}
+              onCommit={commit}
+            />
+          ) : (
+            <ControlRow label="Color">
               <ColorField
-                label="Fill"
+                variant="inline"
+                label="Fill colour"
                 value={{ color: solidColor, alpha: layer.fill?.kind === 'solid' ? layer.fill.alpha ?? 1 : 1 }}
                 onChange={(next) => updateLayer({ fill: { kind: 'solid', color: next.color, alpha: next.alpha } })}
               />
-            )}
-            <NumberField
-              label="Opacity"
-              min="0"
-              max="100"
-              value={Math.round(layer.opacity * 100)}
-              onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
-            />
-          </div>
-
-          <Select
-            label="Fill type"
-            value={layer.fill?.kind ?? 'solid'}
-            onChange={(event) => setFillKind(event.target.value as Fill['kind'])}
-          >
-            {FILL_KIND_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </Select>
-
-          {isGradientFill(layer.fill) && (
-            <GradientEditor
-              fill={layer.fill}
-              onChange={(next) => updateLayer({ fill: next }, true)}
-              onCommit={commit}
-            />
+            </ControlRow>
           )}
 
-          <Select
-            label="Blend mode"
-            value={layer.blendMode ?? 'normal'}
-            onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
-          >
-            {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-          </Select>
+          <Slider
+            variant="inline"
+            label="Opacity"
+            min="0"
+            max="100"
+            value={Math.round(layer.opacity * 100)}
+            valueLabel={`${Math.round(layer.opacity * 100)}%`}
+            onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
+            onPointerUp={commit}
+            onKeyUp={commit}
+          />
+
+          <InlineField label="Blend">
+            <Select
+              variant="inline"
+              label="Blend mode"
+              value={layer.blendMode ?? 'normal'}
+              onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
+            >
+              {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+            </Select>
+          </InlineField>
         </Section>
 
         <Section title="Effects">

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, TextField, NumberField, Select, Switch, Slider, ColorField, SegmentedControl, Menu, MenuItem } from '../src/index';
+import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, TextField, NumberField, Select, Switch, Slider, ColorField, ControlRow, InlineField, SegmentedControl, Menu, MenuItem } from '../src/index';
 
 describe('Button', () => {
   it('defaults type to "button" (never submits)', () => {
@@ -212,6 +212,32 @@ describe('Slider', () => {
       expect(screen.getByLabelText('Fill alpha percent')).toHaveValue(50);
       await user.click(screen.getByRole('button', { name: 'Fill colour picker' }));
       expect(screen.getByRole('dialog', { name: 'Fill picker' })).toBeInTheDocument();
+    });
+
+    it('inline variant drops the stacked label and exposes a labelled group', () => {
+      render(<ColorField variant="inline" label="Stop 1 colour" value={{ color: '#00ff00', alpha: 1 }} onChange={() => {}} />);
+      expect(screen.getByRole('group', { name: 'Stop 1 colour' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Stop 1 colour hex')).toHaveValue('00FF00');
+    });
+  });
+
+  describe('InlineField / ControlRow', () => {
+    it('InlineField labels its control from the row', () => {
+      render(
+        <InlineField label="Fill">
+          <input aria-label="probe" />
+        </InlineField>
+      );
+      expect(screen.getByLabelText('Fill')).toBeInTheDocument();
+    });
+
+    it('ControlRow groups a composed control under the row label', () => {
+      render(
+        <ControlRow label="Color">
+          <ColorField variant="inline" label="Color" value={{ color: '#ff0000', alpha: 1 }} onChange={() => {}} />
+        </ControlRow>
+      );
+      expect(screen.getByRole('group', { name: 'Color' })).toBeInTheDocument();
     });
   });
 
