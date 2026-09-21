@@ -19,3 +19,11 @@ export { InlineField, ControlRow, type InlineFieldProps, type ControlRowProps } 
 export { SegmentedControl, type SegmentedControlProps, type SegmentedOption } from './components/SegmentedControl';
 export { Menu, MenuItem, type MenuProps, type MenuItemProps } from './components/Menu';
 export { Popover, type PopoverProps } from './components/Popover';
+export {
+  COLOR_LIBRARY,
+  ALL_PALETTES,
+  DEFAULT_PALETTE_ID,
+  findPalette,
+  type ColorPalette,
+  type ColorSystem
+} from './library/colorLibrary';

@@ -173,38 +173,38 @@ export const LayerInspector = () => {
       )}
 
       <div className="ic-field-stack">
+        {layer.kind === 'text' && (
+          <Section title="Text" hint="Numa camada de texto, conteúdo e tipografia vêm primeiro.">
+            <TextField
+              label="Text"
+              value={layer.text?.content ?? ''}
+              onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
+            />
+            <div className="grid grid-cols-2 gap-2.5">
+              <NumberField
+                label="Size"
+                min="8"
+                value={layer.text?.fontSize ?? 64}
+                onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
+              />
+              <NumberField
+                label="Weight"
+                min="100"
+                max="900"
+                step="100"
+                value={layer.text?.fontWeight ?? 700}
+                onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
+              />
+            </div>
+          </Section>
+        )}
+
         <Section title="Layer">
           <TextField
             label="Name"
             value={baseLayer.name}
             onChange={(event) => dispatch({ type: 'UPDATE_LAYER', payload: { id: baseLayer.id, changes: { name: event.target.value } } })}
           />
-
-          {layer.kind === 'text' && (
-            <>
-              <TextField
-                label="Text"
-                value={layer.text?.content ?? ''}
-                onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
-              />
-              <div className="grid grid-cols-2 gap-2.5">
-                <NumberField
-                  label="Size"
-                  min="8"
-                  value={layer.text?.fontSize ?? 64}
-                  onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
-                />
-                <NumberField
-                  label="Weight"
-                  min="100"
-                  max="900"
-                  step="100"
-                  value={layer.text?.fontWeight ?? 700}
-                  onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
-                />
-              </div>
-            </>
-          )}
         </Section>
 
         <Section title="Composition">

@@ -3,6 +3,7 @@ import { HexColorPicker } from 'react-colorful';
 import { cn } from '../utils/cn';
 import { Field } from './Field';
 import { Popover } from './Popover';
+import { COLOR_LIBRARY, DEFAULT_PALETTE_ID, findPalette } from '../library/colorLibrary';
 import {
   hexToRgb,
   normalizeHex,
@@ -100,6 +101,8 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   const [draft, setDraft] = useState(() => formatValue(value, 'hex'));
   const [hexDraft, setHexDraft] = useState(() => normalizeHex(value.color).slice(1).toUpperCase());
   const [recent, setRecent] = useState<string[]>(() => readRecent());
+  const [paletteId, setPaletteId] = useState<string>(DEFAULT_PALETTE_ID);
+  const palette = findPalette(paletteId) ?? findPalette(DEFAULT_PALETTE_ID);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const PANEL_WIDTH = 300;
@@ -231,7 +234,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 value={alphaPct}
                 aria-label="Alpha percent"
                 onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-                className="w-11 rounded-[var(--ic-field-radius)] bg-ic-elevated px-1 py-0.5 text-center font-mono text-[0.6875rem] text-ic-text outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
+                className="h-[var(--ic-control-md)] w-14 rounded-[var(--ic-field-radius)] bg-ic-elevated px-1 py-0 text-center font-mono text-[length:var(--ic-control-font-size)] text-ic-text outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
               />
             </div>
 
@@ -240,7 +243,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 value={format}
                 aria-label="Colour format"
                 onChange={(event) => setFormat(event.target.value as ColorFormat)}
-                className="h-6 w-[78px] shrink-0 rounded-[var(--ic-field-radius)] bg-ic-elevated pl-2 text-[0.6875rem] text-ic-text outline-none"
+                className="h-[var(--ic-control-md)] w-[92px] shrink-0 rounded-[var(--ic-field-radius)] bg-ic-elevated py-0 pl-2 text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
               >
                 <option value="hex">HEX</option>
                 <option value="rgba">RGBA</option>
@@ -254,8 +257,46 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') commitDraft();
                 }}
-                className="h-6 min-w-0 flex-1 rounded-[var(--ic-field-radius)] bg-ic-elevated px-2 font-mono text-[0.6875rem] text-ic-text outline-none"
+                className="h-[var(--ic-control-md)] min-w-0 flex-1 rounded-[var(--ic-field-radius)] bg-ic-elevated px-2 py-0 font-mono text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
               />
+            </div>
+
+            <div className="mt-3">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">Library</span>
+                <select
+                  value={paletteId}
+                  aria-label="Colour palette"
+                  onChange={(event) => setPaletteId(event.target.value)}
+                  className="h-[var(--ic-control-md)] w-44 rounded-[var(--ic-field-radius)] bg-ic-elevated py-0 pl-2 text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
+                >
+                  {COLOR_LIBRARY.map((system) => (
+                    <optgroup key={system.id} label={system.name}>
+                      {system.palettes.map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                          {entry.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {(palette?.colors ?? []).map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    title={hex}
+                    aria-label={`Use ${hex}`}
+                    onClick={() => onChange({ ...value, color: hex })}
+                    className="h-5 w-5 rounded-[3px] border border-ic-border"
+                    style={{ background: hex }}
+                  />
+                ))}
+              </div>
+              {palette != null && (
+                <p className="mt-1 text-[0.6875rem] leading-snug text-ic-text-muted">{palette.purpose}</p>
+              )}
             </div>
 
             {recent.length > 0 && (
