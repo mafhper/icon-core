@@ -43,47 +43,46 @@ Todo se ejecuta localmente en el navegador o en la app desktop. No requiere cuen
 
 Requisitos:
 
-- Bun 1.3+
-- Node.js 20+
+- Node.js 22+ (npm)
 - Toolchain de Rust para builds desktop
 
 Instala dependencias:
 
 ```bash
-bun install
+npm install
 ```
 
 Ejecuta la app web:
 
 ```bash
-bun run dev:web
+npm run dev:web
 ```
 
 Ejecuta la landing page:
 
 ```bash
-bun run dev:promo
+npm run dev:promo
 ```
 
 Genera el build para GitHub Pages:
 
 ```bash
-bun run build
+npm run build
 ```
 
 Ejecuta la validación:
 
 ```bash
-bun audit --audit-level=high
-bun run lint
-bun run typecheck
-bun run test
+npm audit --audit-level=high
+npm run lint
+npm run typecheck
+npm run test
 ```
 
 Genera los bundles desktop:
 
 ```bash
-bun run build:desktop
+npm run build:desktop
 ```
 
 ## Repositorio

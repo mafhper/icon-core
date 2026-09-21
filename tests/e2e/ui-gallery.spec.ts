@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
  * are reviewable as PNGs. Capture-only (no snapshot assertions): open the
  * images before declaring a UI PR done.
  *
- * Run: `bun run ui:shots`
+ * Run: `npm run ui:shots`
  */
 
 const THEMES = ['dark', 'light'] as const;

@@ -12,7 +12,7 @@
     }
   },
   "dependencies": {
-    "@iconcore/shared": "workspace:*"
+    "@iconcore/shared": "*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

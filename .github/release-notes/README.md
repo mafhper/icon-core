@@ -35,7 +35,7 @@ release page.
 If you prefer to bump by hand:
 
 ```bash
-bun run release:bump 1.3.1   # updates the version files above
+node scripts/release-bump.mjs 1.3.1   # updates the version files above
 git commit -am "chore(release): bump version to v1.3.1"
 git tag -a v1.3.1 -m "Release v1.3.1"
 git push origin main v1.3.1  # tag push triggers release-desktop

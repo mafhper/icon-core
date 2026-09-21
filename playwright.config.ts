@@ -7,8 +7,8 @@ export default defineConfig({
   testIgnore: /ui-gallery\.spec\.ts/,
   webServer: {
     command: process.env.CI
-      ? 'bun run --filter @iconcore/promo preview --host 127.0.0.1 --port 4181'
-      : 'bun run build:promo && bun run --filter @iconcore/promo preview --host 127.0.0.1 --port 4181',
+      ? 'npm run preview --workspace=@iconcore/promo -- --host 127.0.0.1 --port 4181'
+      : 'npm run build:promo && npm run preview --workspace=@iconcore/promo -- --host 127.0.0.1 --port 4181',
     url: 'http://127.0.0.1:4181/icon-core/',
     reuseExistingServer: false,
     timeout: 120_000

@@ -14,7 +14,7 @@ dist-pages
 dist-ssr
 *.local
 bun.lockb
-package-lock.json
+bun.lock
 coverage
 playwright-report
 test-results

@@ -12,7 +12,7 @@
  * Ratchet philosophy (004): numbers only descend. To lower a budget after a
  * cleanup PR, edit `.ui-budget.json` in the same commit. Never raise one.
  *
- * Run in CI: bun scripts/check-ui-budget.mjs
+ * Run in CI: node scripts/check-ui-budget.mjs
  */
 
 import fs from 'node:fs';

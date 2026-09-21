@@ -1,5 +1,5 @@
 // One-off helper to capture README screenshots of the app and promo site.
-// Requires both dev servers running: `bun run dev:web` (5173) and `bun run dev:promo` (5174).
+// Requires both dev servers running: `npm run dev:web` (5173) and `npm run dev:promo` (5174).
 //   node scripts/capture-screenshots.mjs
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';

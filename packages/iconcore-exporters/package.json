@@ -16,9 +16,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@iconcore/shared": "workspace:*",
-    "@iconcore/renderer": "workspace:*",
-    "@iconcore/validator": "workspace:*"
+    "@iconcore/shared": "*",
+    "@iconcore/renderer": "*",
+    "@iconcore/validator": "*"
   },
   "devDependencies": {
     "typescript": "^5.9.2",
