@@ -65,15 +65,49 @@ export const hslToRgb = (h: number, s: number, l: number): Rgb => {
   return { r: clamp255((r1 + m) * 255), g: clamp255((g1 + m) * 255), b: clamp255((b1 + m) * 255) };
 };
 
-export const parseColor = (
-  text: string
-): { hex: string } | null => {
+const HEX_CHARS = '0123456789abcdef';
+
+const isHexBody = (value: string): boolean =>
+  (value.length === 3 || value.length === 6) && [...value.toLowerCase()].every((c) => HEX_CHARS.includes(c));
+
+/** Split `fn(...)` into comma-separated parts, without regex (avoids ReDoS). */
+const callArgs = (value: string): string[] | null => {
+  const open = value.indexOf('(');
+  const close = value.lastIndexOf(')');
+  if (open === -1 || close === -1 || close < open) return null;
+  return value.slice(open + 1, close).split(',').map((part) => part.trim());
+};
+
+const numberOrNull = (raw: string | undefined): number | null => {
+  if (raw === undefined) return null;
+  const value = Number(raw.replace('%', ''));
+  return Number.isFinite(value) ? value : null;
+};
+
+export const parseColor = (text: string): { hex: string } | null => {
   const value = text.trim();
-  const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(value);
-  if (rgb) return { hex: rgbToHex({ r: Number(rgb[1]), g: Number(rgb[2]), b: Number(rgb[3]) }) };
-  const hsl = /^hsla?\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%/i.exec(value);
-  if (hsl) return { hex: rgbToHex(hslToRgb(Number(hsl[1]), Number(hsl[2]), Number(hsl[3]))) };
-  const hex = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value);
-  if (hex) return { hex: normalizeHex(value) };
-  return null;
+  const lower = value.toLowerCase();
+
+  if (lower.startsWith('rgb')) {
+    const args = callArgs(lower);
+    if (!args || args.length < 3) return null;
+    const [r, g, b] = args.map(numberOrNull) as Array<number | null>;
+    if (r === null || g === null || b === null) return null;
+    if ([r, g, b].some((n) => n < 0 || n > 255)) return null;
+    return { hex: rgbToHex({ r, g, b }) };
+  }
+
+  if (lower.startsWith('hsl')) {
+    const args = callArgs(lower);
+    if (!args || args.length < 3) return null;
+    const h = numberOrNull(args[0]);
+    const s = numberOrNull(args[1]);
+    const l = numberOrNull(args[2]);
+    if (h === null || s === null || l === null) return null;
+    return { hex: rgbToHex(hslToRgb(h, s, l)) };
+  }
+
+  const body = lower.startsWith('#') ? lower.slice(1) : lower;
+  if (!isHexBody(body)) return null;
+  return { hex: normalizeHex(value) };
 };

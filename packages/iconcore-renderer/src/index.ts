@@ -1,11 +1,12 @@
 export { composeLayers } from './composeLayers';
 export { renderProject, resolveCanvasBackground } from './renderProject';
-export { parseHex, rgbToHex, toRgba, clamp01, toOklab, fromOklab, mixOklab } from './color';
+export { parseHex, rgbToHex, toRgba, clamp01, parseRgba, toOklab, fromOklab, mixOklab } from './color';
 export type { Rgb, Oklab } from './color';
 export {
   DEFAULT_STOPS,
   normalizeStops,
   sampleStops,
+  sampleStopDetailed,
   expandStops,
   expandStopsDetailed,
   cssAngleVector,

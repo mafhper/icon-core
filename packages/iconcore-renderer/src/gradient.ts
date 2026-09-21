@@ -1,5 +1,5 @@
 import type { GradientStop } from '@iconcore/shared';
-import { clamp01, mixOklab, parseHex, rgbToHex, toRgba } from './color';
+import { clamp01, mixOklab, parseHex, parseRgba, rgbToHex, toRgba } from './color';
 
 export const DEFAULT_STOPS: GradientStop[] = [
   { offset: 0, color: '#f3d18a' },
@@ -36,6 +36,19 @@ export const sampleStops = (stops: GradientStop[] | undefined, t: number): strin
   return toRgba(last.color, last.alpha);
 };
 
+/** Sample a gradient at `t` (0..1) into hex + alpha (no regex parsing). */
+export const sampleStopDetailed = (
+  stops: GradientStop[] | undefined,
+  t: number
+): { color: string; alpha: number } => {
+  const parsed = parseRgba(sampleStops(stops, t));
+  if (!parsed) return { color: '#ffffff', alpha: 1 };
+  const hex = `#${[parsed.r, parsed.g, parsed.b]
+    .map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
+    .join('')}`;
+  return { color: hex, alpha: clamp01(parsed.a) };
+};
+
 /**
  * Flatten stops into dense samples with hex + alpha kept apart (SVG wants
  * `stop-color`/`stop-opacity`; canvas wants rgba()).
@@ -48,27 +61,17 @@ export const expandStopsDetailed = (
   const out: Array<{ offset: number; color: string; alpha: number }> = [];
   const steps = Math.max(2, Math.round(stepsPerSegment));
 
-  const detailAt = (t: number): { color: string; alpha: number } => {
-    const rgba = sampleStops(list, t);
-    const match = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/.exec(rgba);
-    if (!match) return { color: rgba, alpha: 1 };
-    const hex = `#${[match[1], match[2], match[3]]
-      .map((v) => Number(v).toString(16).padStart(2, '0'))
-      .join('')}`;
-    return { color: hex, alpha: match[4] === undefined ? 1 : Number(match[4]) };
-  };
-
   for (let i = 0; i < list.length - 1; i++) {
     const a = list[i];
     const b = list[i + 1];
     for (let s = 0; s < steps; s++) {
       const local = s / steps;
       const offset = a.offset + (b.offset - a.offset) * local;
-      out.push({ offset, ...detailAt(offset) });
+      out.push({ offset, ...sampleStopDetailed(list, offset) });
     }
   }
   const last = list[list.length - 1];
-  out.push({ offset: last.offset, ...detailAt(last.offset) });
+  out.push({ offset: last.offset, ...sampleStopDetailed(list, last.offset) });
   return out;
 };
 

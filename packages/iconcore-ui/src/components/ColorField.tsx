@@ -68,11 +68,18 @@ const formatValue = (value: ColorValue, format: ColorFormat): string => {
   return `hsla(${h}, ${s}%, ${l}%, ${Number(value.alpha.toFixed(2))})`;
 };
 
+/**
+ * Alpha is the 4th component of `rgba()/hsla()`. Parsed by splitting on commas
+ * (no regex — keeps CodeQL free of polynomial-regexp alerts on typed input).
+ */
 const parseAlpha = (text: string, fallback: number): number => {
-  const match = /rgba?\([^)]*,\s*([\d.]+)\s*\)/i.exec(text) ?? /hsla?\([^)]*,\s*([\d.]+)\s*\)/i.exec(text);
-  if (!match) return fallback;
-  const a = Number(match[1]);
-  return Number.isFinite(a) ? Math.max(0, Math.min(1, a)) : fallback;
+  const open = text.indexOf('(');
+  const close = text.lastIndexOf(')');
+  if (open === -1 || close === -1 || close < open) return fallback;
+  const parts = text.slice(open + 1, close).split(',');
+  if (parts.length < 4) return fallback;
+  const value = Number(parts[3].trim());
+  return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : fallback;
 };
 
 /**

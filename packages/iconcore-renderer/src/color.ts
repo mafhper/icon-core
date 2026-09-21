@@ -81,6 +81,20 @@ export const fromOklab = ({ L, a, b }: Oklab): Rgb => {
   };
 };
 
+/** Parse `rgb()`/`rgba()`/`hsl()` sample output without regex (ReDoS-safe). */
+export const parseRgba = (text: string): { r: number; g: number; b: number; a: number } | null => {
+  const open = text.indexOf('(');
+  const close = text.lastIndexOf(')');
+  if (open === -1 || close === -1 || close < open) return null;
+  const value = text.slice(open + 1, close).trim();
+  const parts = value.split(',');
+  if (parts.length < 3) return null;
+  const [r, g, b] = parts.map((part) => Number(part.trim().replace('%', '')));
+  const a = parts.length >= 4 ? Number(parts[3].trim().replace('%', '')) : 1;
+  if (![r, g, b, a].every((n) => Number.isFinite(n))) return null;
+  return { r, g, b, a };
+};
+
 /** Interpolate two sRGB colours in Oklab. */
 export const mixOklab = (from: Rgb, to: Rgb, t: number): Rgb => {
   const k = clamp01(t);

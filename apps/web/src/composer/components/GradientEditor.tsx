@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { AlignHorizontalDistributeCenter, ArrowLeftRight, Plus, Trash2 } from 'lucide-react';
 import type { GradientFill, GradientStop } from '@iconcore/shared';
 import { Button, ColorField, IconButton, NumberField, Slider, type ColorValue } from '@iconcore/ui';
-import { normalizeStops, sampleStops } from '@iconcore/renderer';
+import { normalizeStops, sampleStopDetailed, sampleStops } from '@iconcore/renderer';
 
 interface GradientEditorProps {
   fill: GradientFill;
@@ -62,13 +62,8 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
     const left = stops[widest?.index ?? 0];
     const right = stops[(widest?.index ?? 0) + 1] ?? left;
     const offset = (left.offset + right.offset) / 2;
-    const midpoint = sampleStops(stops, offset);
-    const match = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/.exec(midpoint);
-    const hex = match
-      ? `#${[match[1], match[2], match[3]].map((v) => Number(v).toString(16).padStart(2, '0')).join('')}`
-      : '#ffffff';
-    const alpha = match?.[4] === undefined ? 1 : Number(match[4]);
-    setStops([...stops, { offset, color: hex, alpha }].sort((a, b) => a.offset - b.offset));
+    const { color, alpha } = sampleStopDetailed(stops, offset);
+    setStops([...stops, { offset, color, alpha }].sort((a, b) => a.offset - b.offset));
   };
 
   const removeStop = (index: number) => {
