@@ -2,7 +2,8 @@ import type { Fill, IconCoreProject, IconVariant } from '@iconcore/shared';
 import type { RenderBackend, RenderOptions } from './types';
 import { composeLayers } from './composeLayers';
 
-const resolveBackground = (project: IconCoreProject, variant: IconVariant): Fill => {
+/** Resolve the effective image background for a variant (variant override wins). */
+export const resolveCanvasBackground = (project: IconCoreProject, variant: IconVariant): Fill => {
   const overridden = project.variants[variant]?.canvas?.background;
   if (overridden) return overridden;
   return project.canvas.background;
@@ -16,7 +17,7 @@ export const renderProject = async (
   options: RenderOptions = {}
 ): Promise<Blob> => {
   const originalSize = project.canvas.size;
-  const background = resolveBackground(project, variant);
+  const background = resolveCanvasBackground(project, variant);
 
   // The safe area is a GUIDE only (shown via the keyline overlay and the quality
   // audit) — it never clips or masks the exported pixels. Icons render full-bleed

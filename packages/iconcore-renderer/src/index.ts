@@ -1,5 +1,5 @@
 export { composeLayers } from './composeLayers';
-export { renderProject } from './renderProject';
+export { renderProject, resolveCanvasBackground } from './renderProject';
 export { renderToSvg } from './renderToSvg';
 export { sanitizeSvg } from './sanitizeSvg';
 export { createCanvasBackend } from './backends/canvas';

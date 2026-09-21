@@ -102,7 +102,7 @@ describe('composeLayers', () => {
   const solidFill: Fill = { kind: 'solid', color: '#3366cc' };
 
   const createMinimalProject = (overrides?: Partial<IconCoreProject>): IconCoreProject => ({
-    schemaVersion: 2,
+    schemaVersion: 3,
     metadata: { name: 'Test', shortName: 'Test' },
     canvas: { size: 128, background: solidFill },
     layers: [],
@@ -182,6 +182,52 @@ describe('composeLayers', () => {
       backend
     );
     expect(blob).toBeDefined();
+    backend.destroy();
+  });
+
+  it('does not paint a transparent background', async () => {
+    const { composeLayers } = await import('../src/composeLayers');
+    const backend = createMockBackend();
+    const project = createMinimalProject({ canvas: { size: 128, background: { kind: 'none' } } });
+    await composeLayers(
+      project.layers,
+      project.canvas.size,
+      project.canvas.background,
+      'default',
+      undefined,
+      backend
+    );
+    expect(backend.applyFill).not.toHaveBeenCalled();
+    backend.destroy();
+  });
+
+  it('does not paint the background handle layer', async () => {
+    const { composeLayers } = await import('../src/composeLayers');
+    const backend = createMockBackend();
+    const project = createMinimalProject({
+      canvas: { size: 128, background: { kind: 'none' } },
+      layers: [{
+        id: 'bg-handle',
+        name: 'Background',
+        role: 'background',
+        kind: 'shape',
+        visible: true,
+        zIndex: -1,
+        source: { type: 'reference', path: '', shape: { kind: 'rectangle', width: 128, height: 128 } },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        fill: { kind: 'solid', color: '#ff00ff' }
+      }]
+    });
+    await composeLayers(
+      project.layers,
+      project.canvas.size,
+      project.canvas.background,
+      'default',
+      undefined,
+      backend
+    );
+    expect(backend.applyFill).not.toHaveBeenCalled();
     backend.destroy();
   });
 });
@@ -272,7 +318,7 @@ describe('renderToSvg', () => {
   it('generates valid SVG string from project', async () => {
     const { renderToSvg } = await import('../src/renderToSvg');
     const project: IconCoreProject = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       metadata: { name: 'Test', shortName: 'Test' },
       canvas: { size: 128, background: solidFill },
       layers: [],
@@ -291,7 +337,7 @@ describe('renderToSvg', () => {
   it('includes shape layers in SVG output', async () => {
     const { renderToSvg } = await import('../src/renderToSvg');
     const project: IconCoreProject = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       metadata: { name: 'Test', shortName: 'Test' },
       canvas: { size: 64, background: solidFill },
       layers: [{
@@ -312,6 +358,97 @@ describe('renderToSvg', () => {
 
     const svg = renderToSvg(project, 'default');
     expect(svg).toContain('<circle');
+  });
+
+  it('omits the background rect when the background is transparent', async () => {
+    const { renderToSvg } = await import('../src/renderToSvg');
+    const project: IconCoreProject = {
+      schemaVersion: 3,
+      metadata: { name: 'Test', shortName: 'Test' },
+      canvas: { size: 128, background: { kind: 'none' } },
+      layers: [],
+      variants: { default: {} },
+      targets: [{ target: 'web-favicon', enabled: true }],
+      exportProfile: { outputBaseName: 'test', quality: 0.95, generateReport: false }
+    };
+    const svg = renderToSvg(project, 'default');
+    expect(svg).not.toContain('<rect');
+  });
+
+  it('emits a gradient definition for a gradient background', async () => {
+    const { renderToSvg } = await import('../src/renderToSvg');
+    const project: IconCoreProject = {
+      schemaVersion: 3,
+      metadata: { name: 'Test', shortName: 'Test' },
+      canvas: {
+        size: 128,
+        background: {
+          kind: 'linear-gradient',
+          angle: 90,
+          stops: [{ offset: 0, color: '#000000' }, { offset: 1, color: '#ffffff' }]
+        }
+      },
+      layers: [],
+      variants: { default: {} },
+      targets: [{ target: 'web-favicon', enabled: true }],
+      exportProfile: { outputBaseName: 'test', quality: 0.95, generateReport: false }
+    };
+    const svg = renderToSvg(project, 'default');
+    expect(svg).toContain('<linearGradient');
+    expect(svg).toContain('url(#bg-background)');
+  });
+
+  it('does not paint a shape whose fill is none (no black fallback)', async () => {
+    const { renderToSvg } = await import('../src/renderToSvg');
+    const project: IconCoreProject = {
+      schemaVersion: 3,
+      metadata: { name: 'Test', shortName: 'Test' },
+      canvas: { size: 64, background: { kind: 'none' } },
+      layers: [{
+        id: 'none-fill',
+        name: 'None fill',
+        kind: 'shape',
+        visible: true,
+        zIndex: 0,
+        source: { type: 'reference', path: '', shape: { kind: 'rectangle', width: 40, height: 40 } },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        fill: { kind: 'none' }
+      }],
+      variants: { default: {} },
+      targets: [{ target: 'web-favicon', enabled: true }],
+      exportProfile: { outputBaseName: 'test', quality: 0.95, generateReport: false }
+    };
+    const svg = renderToSvg(project, 'default');
+    expect(svg).not.toContain('<rect');
+    expect(svg).not.toContain('#000000');
+  });
+
+  it('skips the background handle layer', async () => {
+    const { renderToSvg } = await import('../src/renderToSvg');
+    const project: IconCoreProject = {
+      schemaVersion: 3,
+      metadata: { name: 'Test', shortName: 'Test' },
+      canvas: { size: 64, background: solidFill },
+      layers: [{
+        id: 'bg-handle',
+        name: 'Background',
+        role: 'background',
+        kind: 'shape',
+        visible: true,
+        zIndex: -1,
+        source: { type: 'reference', path: '', shape: { kind: 'rectangle', width: 64, height: 64 } },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        fill: { kind: 'solid', color: '#ff00ff' }
+      }],
+      variants: { default: {} },
+      targets: [{ target: 'web-favicon', enabled: true }],
+      exportProfile: { outputBaseName: 'test', quality: 0.95, generateReport: false }
+    };
+    const svg = renderToSvg(project, 'default');
+    expect(svg).toContain('#ffffff');
+    expect(svg).not.toContain('#ff00ff');
   });
 });
 
@@ -437,7 +574,7 @@ describe('renderProject', () => {
   const solidFill: Fill = { kind: 'solid', color: '#ffffff' };
 
   const createProject = (overrides?: Partial<IconCoreProject>): IconCoreProject => ({
-    schemaVersion: 2,
+    schemaVersion: 3,
     metadata: { name: 'Test', shortName: 'Test' },
     canvas: { size: 128, background: solidFill },
     layers: [],
