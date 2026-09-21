@@ -4,5 +4,5 @@ This app wraps `@iconcore/web` and exposes a native command `save_generated_file
 
 ## Commands
 
-- `bun run --filter @iconcore/desktop tauri:dev`
-- `bun run --filter @iconcore/desktop tauri:build`
+- `npm run tauri:dev --workspace=@iconcore/desktop`
+- `npm run tauri:build --workspace=@iconcore/desktop`

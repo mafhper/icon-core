@@ -17,46 +17,47 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          bun-version: 1.3.14
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: npm ci
 
       - name: Audit dependencies
-        run: bun audit --audit-level=high
+        run: npm audit --audit-level=high
 
       - name: Lint
-        run: bun run lint
+        run: npm run lint
 
       - name: Third-party asset guard
-        run: bun scripts/check-third-party-assets.mjs
+        run: node scripts/check-third-party-assets.mjs
 
       - name: UI boundary guard (G6)
-        run: bun scripts/check-ui-boundary.mjs
+        run: node scripts/check-ui-boundary.mjs
 
       - name: UI budget guard (G1 + ratchets)
-        run: bun scripts/check-ui-budget.mjs
+        run: node scripts/check-ui-budget.mjs
 
       - name: UI contrast guard
-        run: bun scripts/check-ui-contrast.mjs
+        run: node scripts/check-ui-contrast.mjs
 
       - name: Typecheck
-        run: bun run typecheck
+        run: npm run typecheck
 
       - name: Unit tests
-        run: bun run test
+        run: npm run test
 
       - name: Build workspace
-        run: bun run build
+        run: npm run build
 
       - name: Install Playwright browser
-        run: bun x playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
 
       - name: End-to-end tests
-        run: bun run test:e2e
+        run: npm run test:e2e
 
   desktop-smoke:
     runs-on: windows-latest
@@ -65,10 +66,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          bun-version: 1.3.14
+          node-version: 22
+          cache: npm
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -79,10 +81,10 @@ jobs:
         run: cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml --check
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: npm ci
 
       - name: Build desktop (debug)
-        run: bun run desktop:smoke
+        run: npm run desktop:smoke
 
   dependency-review:
     if: github.event_name == 'pull_request'

@@ -16,7 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@iconcore/shared": "workspace:*"
+    "@iconcore/shared": "*"
   },
   "devDependencies": {
     "typescript": "^5.9.2",

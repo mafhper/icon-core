@@ -7,7 +7,7 @@
  *  - does not import `@iconcore/*` packages or anything under apps/;
  *  - exposes a deliberate public surface (no wildcard barrel surprises).
  *
- * Run in CI: bun scripts/check-ui-boundary.mjs
+ * Run in CI: node scripts/check-ui-boundary.mjs
  */
 
 import fs from 'node:fs';

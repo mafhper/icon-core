@@ -7,7 +7,7 @@
  * actually renders. `color-mix()` pairs are skipped (not statically
  * resolvable) and reported as such.
  *
- * Run in CI: bun scripts/check-ui-contrast.mjs
+ * Run in CI: node scripts/check-ui-contrast.mjs
  */
 
 import fs from 'node:fs';
