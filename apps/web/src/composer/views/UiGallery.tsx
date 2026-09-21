@@ -38,6 +38,13 @@ import {
 } from '@iconcore/ui';
 import { brandGradientFill } from '../constants';
 import { FillEditor } from '../components/FillEditor';
+import {
+  FillFixtures,
+  GradientDensityFixtures,
+  PendingFixtures,
+  RowGrammarFixtures,
+  StateFixtures
+} from './UiLabFixtures';
 
 type GalleryTheme = 'dark' | 'light';
 
@@ -290,6 +297,41 @@ export const UiGallery = () => {
           <p className="-mt-1 text-[0.78rem] text-ic-text-muted">
             Selected: <strong className="text-ic-text">{backdrop}</strong>
           </p>
+        </Section>
+
+        <Section
+          title="Fixtures — interaction grammar"
+          hint="Cada fixture responde a uma pergunta de design (ADR-012 §12). `real` usa o componente entregue, `proposta` é uma proposta sobre tokens existentes, `aguarda spec` registra a pergunta para as Fases 2–6. O Lab é um laboratório de fixtures: nada aqui instancia o Composer."
+        >
+          <RowGrammarFixtures />
+        </Section>
+
+        <Section
+          title="Fixtures — States"
+          hint="Estados isolados, para congelar a gramática (Fase 1): default, focus, disabled, selected. Hover/active são reais (CSS) — passe o mouse; onde não há visual próprio, o fixture denuncia."
+        >
+          <StateFixtures />
+        </Section>
+
+        <Section
+          title="Fixtures — Fill"
+          hint="Fill como objeto: cabeçalho (preview + tipo + opacity) com os ajustes do tipo abaixo. Renderizado a 240px com estado próprio."
+        >
+          <FillFixtures />
+        </Section>
+
+        <Section
+          title="Fixtures — Gradient density"
+          hint="Densidade de stops em 240px — o caso que costuma quebrar o layout."
+        >
+          <GradientDensityFixtures />
+        </Section>
+
+        <Section
+          title="Fixtures — pendentes do spec"
+          hint="Perguntas registradas, sem markup especulativo: Inspector, Layers e Responsive dependem do spec de interação (Fases 2, 5 e 6)."
+        >
+          <PendingFixtures />
         </Section>
       </main>
     </div>
