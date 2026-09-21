@@ -320,8 +320,11 @@ export const PreviewCanvas = () => {
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onClick={() => {
+        onClick={(event) => {
           setMenu(null);
+          // Canvas adjustments (work area) belong to the stage *around* the icon;
+          // a click inside the icon frame is the frame's own business.
+          if ((event.target as HTMLElement).closest('.ic-canvas-frame')) return;
           dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: null } });
         }}
       >
@@ -335,6 +338,14 @@ export const PreviewCanvas = () => {
               width: displaySize,
               height: displaySize,
               borderRadius: frameRadius
+            }}
+            onClick={(event) => {
+              // The Background layer produces no pixels, so it has no hit area of
+              // its own: clicking the icon's background selects its handle, which
+              // brings it up in the sidebar and in the inspector.
+              event.stopPropagation();
+              const background = layers.find((layer) => layer.role === 'background');
+              if (background) dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: background.id } });
             }}
           >
             {previewUrl && (

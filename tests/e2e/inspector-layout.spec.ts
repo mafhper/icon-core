@@ -76,6 +76,21 @@ test('inspector fits with the Background layer selected', async ({ page }) => {
   await expectFits(page);
 });
 
+test('clicking the icon area selects the Background layer; clicking the stage shows canvas adjustments', async ({ page }) => {
+  await openEditor(page, 288, false);
+  await page.getByRole('button', { name: /add background fill layer/i }).first().click();
+  await page.waitForTimeout(400);
+
+  // Inside the icon: the background handle becomes the selection.
+  await page.locator('.ic-canvas-frame').click();
+  await expect(page.locator('.ic-inspector')).toContainText('Background');
+  await expect(page.locator('.ic-layer-row', { hasText: /background/i }).first()).toHaveClass(/bg-ic-accent/);
+
+  // Outside the icon (stage padding): the canvas adjustments appear.
+  await page.locator('.ic-edit-stage').click({ position: { x: 6, y: 6 } });
+  await expect(page.locator('.ic-inspector')).toContainText(/Work area/i);
+});
+
 test('inspector fits with nothing selected', async ({ page }) => {
   await openEditor(page, 288, false);
   await page.locator('.ic-edit-stage').click({ position: { x: 5, y: 5 } });
