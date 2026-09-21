@@ -939,8 +939,9 @@ input[type='range'] {
   padding: 4px 8px;
   color: var(--ic-accent);
   font-size: 0.68rem;
-  font-weight: 760;
-  text-transform: uppercase;
+  font-weight: 600;
+  /* Sentence case (critique §17): the variant name reads "Default", not "DEFAULT".
+     Uppercase stays for state badges and codes, not for a name. */
 }
 
 .ic-field-stack {
