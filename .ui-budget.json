@@ -12,7 +12,9 @@
     "apps/web/src/composer/components/GradientEditor.tsx",
     "apps/web/src/composer/utils/fill.spec.ts",
     "apps/web/src/composer/components/FillEditor.spec.tsx",
-    "apps/web/src/composer/views/UiLabFixtures.tsx"
+    "apps/web/src/composer/views/UiLabFixtures.tsx",
+    "apps/web/src/composer/utils/gradientPresets.ts",
+    "apps/web/src/composer/utils/gradientPresets.spec.ts"
   ],
   "orphanCheck": {
     "css": "apps/web/src/index.css",
