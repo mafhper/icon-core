@@ -1,242 +1,229 @@
 import type { GradientFill, GradientStop } from '@iconcore/shared';
+import { findPalette } from '@iconcore/ui';
 import { makeGradient, type GradientKind } from './fill';
 
 /**
- * Icon-oriented gradient presets, one set per gradient kind.
+ * Gradient presets **sourced from the colour library**.
  *
- * The previous list was generic web gradients (Sunset, Neon, Violet…). An icon
- * needs the opposite: a light source, a material or a facet. Each preset carries
- * the geometry its kind actually uses (angle for linear/angular, centre and
- * radius for radial/diamond) so applying it produces the intended effect rather
- * than just recolouring the stops.
+ * Uniformity: instead of a hand-made colour list living next to the library, a
+ * preset names a library palette and the indices it uses, so the gradient row
+ * and the colour field speak the same language (and the tooltip can say where
+ * the colours come from). Geometry stays kind-specific: angle for linear/angular,
+ * centre and radius for radial/diamond.
  */
 export interface GradientPreset {
   name: string;
   /** What it is for — shown as the chip tooltip. */
   hint: string;
+  /** Library palette the colours come from. */
+  paletteId: string;
   stops: GradientStop[];
-  /** Degrees (linear/angular). */
   angle?: number;
   centerX?: number;
   centerY?: number;
   radius?: number;
 }
 
-const LINEAR: GradientPreset[] = [
+interface PresetSource {
+  name: string;
+  hint: string;
+  paletteId: string;
+  /** Indices into the palette, in gradient order. */
+  picks: Array<{ index: number; alpha?: number }>;
+  angle?: number;
+  centerX?: number;
+  centerY?: number;
+  radius?: number;
+}
+
+const colorAt = (paletteId: string, index: number): string =>
+  findPalette(paletteId)?.colors[index] ?? '#000000';
+
+const toPreset = (source: PresetSource): GradientPreset => {
+  const last = Math.max(1, source.picks.length - 1);
+  const stops: GradientStop[] = source.picks.map((pick, position) => ({
+    offset: Number((position / last).toFixed(3)),
+    color: colorAt(source.paletteId, pick.index),
+    ...(pick.alpha !== undefined ? { alpha: pick.alpha } : {})
+  }));
+  return {
+    name: source.name,
+    hint: source.hint,
+    paletteId: source.paletteId,
+    stops,
+    angle: source.angle,
+    centerX: source.centerX,
+    centerY: source.centerY,
+    radius: source.radius
+  };
+};
+
+const LINEAR_SOURCES: PresetSource[] = [
   {
     name: 'Metal',
-    hint: 'Aço escovado: brilho no topo, sombra na base',
+    hint: 'Aço escovado — Tailwind Slate & Gray',
+    paletteId: 'tw-neutral',
     angle: 90,
-    stops: [
-      { offset: 0, color: '#f8fafc' },
-      { offset: 0.45, color: '#94a3b8' },
-      { offset: 0.55, color: '#64748b' },
-      { offset: 1, color: '#334155' }
-    ]
+    picks: [{ index: 0 }, { index: 4 }, { index: 6 }, { index: 9 }]
   },
   {
     name: 'Gold',
-    hint: 'Dourado com reflexo central',
+    hint: 'Âmbar metálico — Tailwind Red → Amber',
+    paletteId: 'tw-warm',
     angle: 90,
-    stops: [
-      { offset: 0, color: '#fde68a' },
-      { offset: 0.5, color: '#d4a24a' },
-      { offset: 1, color: '#8a5a1e' }
-    ]
+    picks: [{ index: 11 }, { index: 10 }, { index: 9 }]
   },
   {
     name: 'Duotone',
-    hint: 'Duas cores sem brilho — base para ícones flat',
+    hint: 'Duas cores, flat — Tailwind Blue',
+    paletteId: 'tw-blue',
     angle: 135,
-    stops: [
-      { offset: 0, color: '#60a5fa' },
-      { offset: 1, color: '#1e3a8a' }
-    ]
+    picks: [{ index: 4 }, { index: 9 }]
   },
   {
     name: 'Gloss',
-    hint: 'Brilho de vidro no topo',
+    hint: 'Brilho de vidro no topo — Material 3 surface',
+    paletteId: 'm3-surface',
     angle: 90,
-    stops: [
-      { offset: 0, color: '#ffffff', alpha: 0.45 },
-      { offset: 0.5, color: '#ffffff', alpha: 0.08 },
-      { offset: 1, color: '#ffffff', alpha: 0 }
-    ]
+    picks: [{ index: 0, alpha: 0.45 }, { index: 0, alpha: 0.08 }, { index: 0, alpha: 0 }]
   },
   {
     name: 'Fade out',
-    hint: 'Some na base — reflexos e sombras',
+    hint: 'Some na base — Material 3 surface',
+    paletteId: 'm3-surface',
     angle: 90,
-    stops: [
-      { offset: 0, color: '#0f172a', alpha: 0.85 },
-      { offset: 1, color: '#0f172a', alpha: 0 }
-    ]
+    picks: [{ index: 4, alpha: 0.85 }, { index: 4, alpha: 0 }]
   }
 ];
 
-const RADIAL: GradientPreset[] = [
+const RADIAL_SOURCES: PresetSource[] = [
   {
     name: 'Highlight',
-    hint: 'Luz no canto superior esquerdo',
+    hint: 'Luz no canto superior esquerdo — Material 3 surface',
+    paletteId: 'm3-surface',
     centerX: 0.32,
     centerY: 0.28,
     radius: 0.75,
-    stops: [
-      { offset: 0, color: '#ffffff', alpha: 0.6 },
-      { offset: 0.55, color: '#ffffff', alpha: 0.12 },
-      { offset: 1, color: '#ffffff', alpha: 0 }
-    ]
+    picks: [{ index: 0, alpha: 0.6 }, { index: 0, alpha: 0.12 }, { index: 0, alpha: 0 }]
   },
   {
     name: 'Spotlight',
-    hint: 'Centro aceso, borda escura',
+    hint: 'Centro aceso, borda escura — Tailwind Red → Amber',
+    paletteId: 'tw-warm',
     centerX: 0.5,
     centerY: 0.5,
     radius: 0.6,
-    stops: [
-      { offset: 0, color: '#fde68a' },
-      { offset: 1, color: '#b45309' }
-    ]
+    picks: [{ index: 10 }, { index: 4 }]
   },
   {
     name: 'Inner shadow',
-    hint: 'Borda escura: profundidade',
+    hint: 'Borda escura, profundidade — Material 3 surface',
+    paletteId: 'm3-surface',
     centerX: 0.5,
     centerY: 0.5,
     radius: 0.7,
-    stops: [
-      { offset: 0, color: '#0f172a', alpha: 0 },
-      { offset: 0.7, color: '#0f172a', alpha: 0.05 },
-      { offset: 1, color: '#0f172a', alpha: 0.45 }
-    ]
+    picks: [{ index: 4, alpha: 0 }, { index: 4, alpha: 0.05 }, { index: 4, alpha: 0.45 }]
   },
   {
     name: 'Glow',
-    hint: 'Núcleo luminoso',
+    hint: 'Núcleo luminoso — Tailwind Blue → Sky',
+    paletteId: 'tw-blue',
     centerX: 0.5,
     centerY: 0.5,
     radius: 0.55,
-    stops: [
-      { offset: 0, color: '#a5f3fc' },
-      { offset: 0.6, color: '#22d3ee' },
-      { offset: 1, color: '#0e7490' }
-    ]
+    picks: [{ index: 3 }, { index: 10 }, { index: 8 }]
   }
 ];
 
-const ANGULAR: GradientPreset[] = [
+const ANGULAR_SOURCES: PresetSource[] = [
   {
     name: 'Chrome ring',
-    hint: 'Anel metálico: bandas claras e escuras',
+    hint: 'Bandas metálicas — Tailwind Slate & Gray',
+    paletteId: 'tw-neutral',
     angle: 0,
-    stops: [
-      { offset: 0, color: '#f8fafc' },
-      { offset: 0.25, color: '#64748b' },
-      { offset: 0.5, color: '#e2e8f0' },
-      { offset: 0.75, color: '#334155' },
-      { offset: 1, color: '#f8fafc' }
-    ]
+    picks: [{ index: 0 }, { index: 5 }, { index: 1 }, { index: 7 }, { index: 0 }]
   },
   {
     name: 'Cone light',
-    hint: 'Feixe de luz girando',
+    hint: 'Feixe girando — Material 3 surface',
+    paletteId: 'm3-surface',
     angle: 0,
-    stops: [
-      { offset: 0, color: '#ffffff', alpha: 0.5 },
-      { offset: 0.35, color: '#ffffff', alpha: 0 },
-      { offset: 0.65, color: '#ffffff', alpha: 0 },
-      { offset: 1, color: '#ffffff', alpha: 0.5 }
-    ]
+    picks: [{ index: 0, alpha: 0.5 }, { index: 0, alpha: 0 }, { index: 0, alpha: 0 }, { index: 0, alpha: 0.5 }]
   },
   {
     name: 'Rim light',
-    hint: 'Luz de contorno em um lado',
+    hint: 'Luz de contorno — Material 3 surface',
+    paletteId: 'm3-surface',
     angle: 0,
-    stops: [
-      { offset: 0, color: '#0f172a', alpha: 0.35 },
-      { offset: 0.2, color: '#0f172a', alpha: 0 },
-      { offset: 0.5, color: '#ffffff', alpha: 0.55 },
-      { offset: 0.8, color: '#0f172a', alpha: 0 },
-      { offset: 1, color: '#0f172a', alpha: 0.35 }
+    picks: [
+      { index: 4, alpha: 0.35 },
+      { index: 4, alpha: 0 },
+      { index: 0, alpha: 0.55 },
+      { index: 4, alpha: 0 },
+      { index: 4, alpha: 0.35 }
     ]
   },
   {
     name: 'Pinwheel',
-    hint: 'Quatro matizes — ícones lúdicos',
+    hint: 'Matizes girando — Tailwind Indigo → Fuchsia',
+    paletteId: 'tw-violet',
     angle: 0,
-    stops: [
-      { offset: 0, color: '#60a5fa' },
-      { offset: 0.25, color: '#a78bfa' },
-      { offset: 0.5, color: '#f472b6' },
-      { offset: 0.75, color: '#fbbf24' },
-      { offset: 1, color: '#60a5fa' }
-    ]
+    picks: [{ index: 4 }, { index: 7 }, { index: 9 }, { index: 10 }, { index: 4 }]
   }
 ];
 
-const DIAMOND: GradientPreset[] = [
+const DIAMOND_SOURCES: PresetSource[] = [
   {
     name: 'Gem',
-    hint: 'Faceta central clara',
+    hint: 'Faceta central clara — Tailwind Blue',
+    paletteId: 'tw-blue',
     centerX: 0.5,
     centerY: 0.5,
     radius: 0.75,
-    stops: [
-      { offset: 0, color: '#a5f3fc' },
-      { offset: 0.5, color: '#0891b2' },
-      { offset: 1, color: '#164e63' }
-    ]
+    picks: [{ index: 3 }, { index: 10 }, { index: 8 }]
   },
   {
     name: 'Facet',
-    hint: 'Faceta diagonal: canto claro → canto escuro',
+    hint: 'Faceta diagonal — Tailwind Slate & Gray',
+    paletteId: 'tw-neutral',
     centerX: 0.35,
     centerY: 0.35,
     radius: 0.9,
-    stops: [
-      { offset: 0, color: '#f8fafc' },
-      { offset: 1, color: '#64748b' }
-    ]
+    picks: [{ index: 0 }, { index: 5 }]
   },
   {
     name: 'Bevel',
-    hint: 'Chanfro suave nas bordas',
+    hint: 'Chanfro nas bordas — Material 3 surface',
+    paletteId: 'm3-surface',
     centerX: 0.5,
     centerY: 0.5,
     radius: 0.65,
-    stops: [
-      { offset: 0, color: '#ffffff', alpha: 0.45 },
-      { offset: 0.6, color: '#ffffff', alpha: 0.05 },
-      { offset: 1, color: '#0f172a', alpha: 0.3 }
-    ]
+    picks: [{ index: 0, alpha: 0.45 }, { index: 0, alpha: 0.05 }, { index: 4, alpha: 0.3 }]
   },
   {
     name: 'Emerald',
-    hint: 'Verde joia',
+    hint: 'Verde joia — Tailwind Emerald → Teal',
+    paletteId: 'tw-green',
     centerX: 0.5,
     centerY: 0.5,
     radius: 0.7,
-    stops: [
-      { offset: 0, color: '#a7f3d0' },
-      { offset: 1, color: '#047857' }
-    ]
+    picks: [{ index: 1 }, { index: 6 }]
   }
 ];
 
 export const GRADIENT_PRESETS: Record<GradientKind, GradientPreset[]> = {
-  'linear-gradient': LINEAR,
-  'radial-gradient': RADIAL,
-  'angular-gradient': ANGULAR,
-  'diamond-gradient': DIAMOND
+  'linear-gradient': LINEAR_SOURCES.map(toPreset),
+  'radial-gradient': RADIAL_SOURCES.map(toPreset),
+  'angular-gradient': ANGULAR_SOURCES.map(toPreset),
+  'diamond-gradient': DIAMOND_SOURCES.map(toPreset)
 };
 
 /** Presets available for the kind of the given fill. */
-export const presetsFor = (fill: GradientFill): GradientPreset[] => GRADIENT_PRESETS[fill.kind] ?? LINEAR;
+export const presetsFor = (fill: GradientFill): GradientPreset[] => GRADIENT_PRESETS[fill.kind] ?? [];
 
 /**
  * Apply a preset while keeping the fill's kind: stops always come from the
- * preset, geometry only from the axes the kind actually uses (so switching a
- * radial preset never writes a meaningless angle).
+ * preset, geometry only from the axes the kind actually uses.
  */
 export const applyGradientPreset = (fill: GradientFill, preset: GradientPreset): GradientFill =>
   makeGradient(
