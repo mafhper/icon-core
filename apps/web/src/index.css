@@ -27,6 +27,10 @@
   --font-body: "Sora", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --shadow-panel: 0 20px 40px rgba(0, 0, 0, 0.32);
+  /* Motion language (better-ui): one curve and one duration for utility
+     transitions, instead of Tailwind's default ease. */
+  --default-transition-duration: 120ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* A6: `--core-*` compat layer removed (counter at zero). Tokens resolve in
@@ -884,6 +888,17 @@ input[type='range'] {
      horizontal overflow. */
   overflow-x: hidden;
   scrollbar-gutter: stable;
+}
+
+/* One type size for every control inside the inspector. Nested inputs are form
+   controls, so they do not inherit the panel's font-size: without this they fell
+   back to the browser's 16px inside a 12px field, and a three-digit value was
+   clipped to a single digit. Panel buttons follow the same size. */
+.ic-inspector input,
+.ic-inspector select,
+.ic-inspector textarea,
+.ic-inspector button {
+  font-size: var(--ic-control-font-size);
 }
 
 .ic-inspector-head {

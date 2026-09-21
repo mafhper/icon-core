@@ -152,7 +152,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             ref={triggerRef}
             disabled={disabled}
             onClick={() => (open ? close() : setOpen(true))}
-            className="ml-1 h-4 w-4 shrink-0 rounded-[3px] border border-ic-border disabled:cursor-not-allowed disabled:opacity-40"
+            className="ml-0.5 h-4 w-4 shrink-0 rounded-[3px] border border-ic-border disabled:cursor-not-allowed disabled:opacity-40"
             style={checkerStyle}
             aria-label={`Choose ${label}`}
             aria-haspopup="dialog"
@@ -161,7 +161,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             <span className="block h-full w-full rounded-[3px]" style={{ background: rgbToCss(rgb, value.alpha) }} />
           </button>
 
-          <span className="select-none pl-1.5 font-mono text-ic-text-muted">#</span>
+          <span className="select-none pl-1 font-mono text-ic-text-muted">#</span>
           <input
             value={hexDraft}
             disabled={disabled}
@@ -173,7 +173,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             onKeyDown={(event) => {
               if (event.key === 'Enter') commitHex();
             }}
-            className="min-w-0 flex-1 bg-transparent pr-1 font-mono uppercase text-ic-text outline-none disabled:opacity-40"
+            className="min-w-0 flex-1 rounded-none bg-transparent p-0 font-mono text-[length:var(--ic-control-font-size)] uppercase text-ic-text outline-none disabled:opacity-40"
           />
 
           <span className="h-4 w-px shrink-0 bg-ic-border" />
@@ -186,9 +186,9 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             disabled={disabled}
             aria-label={`${label} alpha percent`}
             onChange={(event) => setAlpha(Number(event.target.value) / 100)}
-            className="w-9 shrink-0 bg-transparent text-right tabular-nums text-ic-text outline-none disabled:opacity-40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
+            className="w-8 shrink-0 rounded-none bg-transparent p-0 text-right tabular-nums text-[length:var(--ic-control-font-size)] text-ic-text outline-none disabled:opacity-40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
           />
-          <span className="select-none pr-1.5 text-ic-text-muted">%</span>
+          <span className="select-none pr-1 text-ic-text-muted">%</span>
         </div>
 
         <Popover

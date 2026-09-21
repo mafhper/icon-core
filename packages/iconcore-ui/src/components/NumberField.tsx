@@ -23,7 +23,7 @@ const fieldClasses =
   'hover:bg-ic-overlay focus:border-ic-accent tabular-nums';
 
 const bareInputClasses =
-  'min-w-0 w-full bg-transparent text-right tabular-nums outline-none ' +
+  'min-w-0 w-full rounded-none bg-transparent p-0 text-right tabular-nums text-[length:var(--ic-control-font-size)] outline-none ' +
   '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]';
 
 /**
