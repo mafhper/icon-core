@@ -226,10 +226,6 @@ input[type='range'] {
   border-color: var(--ic-accent);
 }
 
-.ic-device-rail .is-active {
-  background: var(--ic-brand-gradient);
-}
-
 .ic-card-icon {
   width: 44px;
   height: 44px;
@@ -402,10 +398,7 @@ input[type='range'] {
   border-color: var(--ic-accent);
 }
 
-.ic-welcome-card .ic-link-button,
-
-
-.ic-welcome-card .ic-button {
+.ic-welcome-card .ic-link-button {
   margin-top: auto;
 }
 
@@ -956,11 +949,6 @@ input[type='range'] {
 
 /* Export Utilities — output settings */
 
-.ic-segmented button.is-active {
-  background: color-mix(in srgb, var(--ic-accent) 22%, transparent);
-  color: var(--ic-accent);
-}
-
 /* Quality check — a compact chip pinned to the sidebar, expandable into a popover */
 .ic-quality-chip-wrap {
   position: relative;
@@ -1157,18 +1145,8 @@ input[type='range'] {
   text-transform: capitalize;
 }
 
-/* The gradient editor is frameless: the inspector `Section` is the only group,
-   so the editor must not add a second card inside it. */
-.ic-field-stack > .ic-section-head:not(:first-child),
-
-
-.ic-field-stack > .ic-inspector-section:not(:first-child),
-
-
-.ic-field-stack > section:not(:first-child),
-
-
-.ic-field-stack > .ic-image-filters {
+/* Section separation inside the inspector stack. */
+.ic-field-stack > section:not(:first-child) {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--ic-border);
@@ -1296,19 +1274,6 @@ input[type='range'] {
 .ic-picker .react-colorful {
   width: 100%;
   height: 176px;
-}
-
-/* Appearance switcher — floating mini-toolbar docked to the bottom of the
-   canvas stage (RuneIcons style). The active variant is highlighted; the
-   others stay dimmed to signal that only one mode is being edited. */
-
-.ic-floating-appearance .ic-appearance-thumb.is-active {
-  opacity: 1;
-  filter: none;
-}
-
-.ic-appearance-thumb.is-active .ic-thumb-frame {
-  box-shadow: 0 0 0 2px var(--ic-accent);
 }
 
 .ic-sizes-control {
