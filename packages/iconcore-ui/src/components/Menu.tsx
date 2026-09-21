@@ -1,6 +1,7 @@
 import * as MenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { type ReactNode, forwardRef } from 'react';
 import { cn } from '../utils/cn';
+import { withIconStroke } from '../utils/icon';
 
 export interface MenuProps {
   /** Trigger element (typically an `IconButton` with its own `aria-label`). */
@@ -64,7 +65,7 @@ export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(function MenuI
         className
       )}
     >
-      {icon != null && <span className="flex shrink-0 items-center text-ic-text-muted">{icon}</span>}
+      {icon != null && <span className="flex shrink-0 items-center text-ic-text-muted">{withIconStroke(icon)}</span>}
       <span>{label}</span>
     </MenuPrimitive.Item>
   );

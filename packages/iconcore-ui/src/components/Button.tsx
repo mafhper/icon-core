@@ -1,5 +1,6 @@
 import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from 'react';
 import { cn } from '../utils/cn';
+import { withIconStroke } from '../utils/icon';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -49,9 +50,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         className
       )}
     >
-      {iconLeft}
+      {withIconStroke(iconLeft)}
       {children}
-      {iconRight}
+      {withIconStroke(iconRight)}
     </button>
   );
 });
