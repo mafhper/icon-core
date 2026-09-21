@@ -29,11 +29,17 @@ A tag com sufixo semver (`vX.Y.Z-rc.1`) é publicada automaticamente como **prer
 git checkout -b rc/vX.Y.Z main
 node scripts/release-bump.mjs X.Y.Z
 # crie .github/release-notes/vX.Y.Z-rc.N.md
-git commit -am "chore(release): vX.Y.Z-rc.N"
+git add package.json apps/desktop/package.json \
+  apps/desktop/src-tauri/tauri.conf.json \
+  apps/desktop/src-tauri/Cargo.toml apps/desktop/src-tauri/Cargo.lock \
+  .github/release-notes/vX.Y.Z-rc.N.md
+git commit -m "chore(release): vX.Y.Z-rc.N"
 git push origin rc/vX.Y.Z
 git tag -a vX.Y.Z-rc.N -m "Release vX.Y.Z-rc.N"
 git push origin vX.Y.Z-rc.N
 ```
+
+> Use `git add` explícito: `git commit -am` **não** inclui o arquivo de notas recém-criado (untracked) e a release sairia sem elas.
 
 A tag (não a branch) identifica a release. Apague a branch `rc/*` depois de validar.
 
