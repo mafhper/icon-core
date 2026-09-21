@@ -222,25 +222,27 @@ export const LayerInspector = () => {
           </div>
 
           <Slider
-            label={`Scale (${Math.round(layer.transform.scale * 100)}%)`}
+            variant="inline"
+            label="Scale"
+            unit="×"
             min="0.08"
             max="4"
             step="0.01"
             value={layer.transform.scale}
             onChange={(event) => updateTransform({ scale: Number(event.target.value) })}
-            onPointerUp={commit}
-            onKeyUp={commit}
+            onCommit={commit}
           />
 
           <Slider
-            label={`Rotation (${Math.round(layer.transform.rotation)}°)`}
+            variant="inline"
+            label="Rotation"
+            unit="°"
             min="-180"
             max="180"
             step="1"
             value={layer.transform.rotation}
             onChange={(event) => updateTransform({ rotation: Number(event.target.value) })}
-            onPointerUp={commit}
-            onKeyUp={commit}
+            onCommit={commit}
           />
         </Section>
 
@@ -255,13 +257,14 @@ export const LayerInspector = () => {
             </Select>
             {shape.kind === 'rounded-rectangle' && (
               <Slider
-                label={`Corner radius (${Math.round(shape.cornerRadius ?? 32)})`}
+                variant="inline"
+                label="Corner radius"
+                unit="px"
                 min="0"
                 max={Math.round(Math.min(shape.width, shape.height) / 2)}
                 value={Math.round(shape.cornerRadius ?? 32)}
                 onChange={(event) => updateShape({ cornerRadius: Number(event.target.value) }, true)}
-                onPointerUp={commit}
-                onKeyUp={commit}
+                onCommit={commit}
               />
             )}
           </Section>
@@ -278,13 +281,12 @@ export const LayerInspector = () => {
           <Slider
             variant="inline"
             label="Opacity"
+            unit="%"
             min="0"
             max="100"
             value={Math.round(layer.opacity * 100)}
-            valueLabel={`${Math.round(layer.opacity * 100)}%`}
             onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
-            onPointerUp={commit}
-            onKeyUp={commit}
+            onCommit={commit}
           />
 
           <Select
@@ -303,7 +305,9 @@ export const LayerInspector = () => {
           />
 
           <Slider
-            label={`Shadow blur (${Number(shadow.params.blur ?? 34)})`}
+            variant="inline"
+            label="Shadow blur"
+            unit="px"
             min="0"
             max="80"
             value={Number(shadow.params.blur ?? 34)}
@@ -314,53 +318,58 @@ export const LayerInspector = () => {
           />
 
           <Slider
-            label={`Layer blur (${blurRadius})`}
+            variant="inline"
+            label="Layer blur"
+            unit="px"
             min="0"
             max="60"
             value={blurRadius}
             onChange={(event) => setBlur(Number(event.target.value), true)}
-            onPointerUp={commit}
-            onKeyUp={commit}
+            onCommit={commit}
           />
         </Section>
 
         {isImage && (
           <Section title="Image adjustments">
             <Slider
-              label={`Hue (${imageFilter.hue ?? 0}°)`}
+              variant="inline"
+              label="Hue"
+              unit="°"
               min="-180"
               max="180"
               value={imageFilter.hue ?? 0}
               onChange={(event) => updateImageFilter({ hue: Number(event.target.value) }, true)}
-              onPointerUp={commit}
-              onKeyUp={commit}
+              onCommit={commit}
             />
             <Slider
-              label={`Saturation (${imageFilter.saturation ?? 100}%)`}
+              variant="inline"
+              label="Saturation"
+              unit="%"
               min="0"
               max="200"
               value={imageFilter.saturation ?? 100}
               onChange={(event) => updateImageFilter({ saturation: Number(event.target.value) }, true)}
-              onPointerUp={commit}
-              onKeyUp={commit}
+              onCommit={commit}
             />
             <Slider
-              label={`Brightness (${imageFilter.brightness ?? 100}%)`}
+              variant="inline"
+              label="Brightness"
+              unit="%"
               min="0"
               max="200"
               value={imageFilter.brightness ?? 100}
               onChange={(event) => updateImageFilter({ brightness: Number(event.target.value) }, true)}
-              onPointerUp={commit}
-              onKeyUp={commit}
+              onCommit={commit}
             />
             <Slider
-              label={`Contrast (${imageFilter.contrast ?? 100}%)`}
+              variant="inline"
+              label="Contrast"
+              unit="%"
               min="0"
               max="200"
               value={imageFilter.contrast ?? 100}
               onChange={(event) => updateImageFilter({ contrast: Number(event.target.value) }, true)}
-              onPointerUp={commit}
-              onKeyUp={commit}
+              onCommit={commit}
             />
             {baseLayer.source.type === 'inline' && baseLayer.source.mimeType !== 'image/svg+xml' && (
               <Button

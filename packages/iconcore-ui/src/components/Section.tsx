@@ -22,7 +22,7 @@ export const Section = forwardRef<HTMLElement, SectionProps>(function Section(
   ref
 ) {
   return (
-    <section ref={ref} className={cn('grid grid-cols-[minmax(0,1fr)] gap-2.5', className)} {...rest}>
+    <section ref={ref} className={cn('grid grid-cols-[minmax(0,1fr)] gap-3', className)} {...rest}>
       <h3 className="m-0 text-[length:var(--ic-label-size)] font-semibold text-ic-text">{title}</h3>
       {hint != null && (
         <p className="m-0 text-[0.72rem] font-normal leading-snug text-ic-text-muted">{hint}</p>

@@ -938,8 +938,8 @@ input[type='range'] {
      child's min-content, and a row of inputs (each ~223px of min-content) blew
      the column past the panel — `overflow-x: hidden` then clipped it. */
   grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  margin-top: 14px;
+  gap: 18px;
+  margin-top: 18px;
 }
 
 /* Export Utilities — output settings */
@@ -1142,8 +1142,8 @@ input[type='range'] {
 
 /* Section separation inside the inspector stack. */
 .ic-field-stack > section:not(:first-child) {
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
   border-top: 1px solid var(--ic-border);
 }
 

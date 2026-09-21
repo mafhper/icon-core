@@ -19,7 +19,7 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
  * global `select` rule (unlayered, so it survives the flat background).
  */
 const selectClasses =
-  'h-[var(--ic-control-md)] w-full rounded-[var(--ic-field-radius)] border border-transparent bg-ic-elevated px-2 ' +
+  'h-[var(--ic-control-md)] w-full rounded-[var(--ic-field-radius)] border border-transparent bg-ic-elevated px-2 py-0 ' +
   'text-[0.75rem] text-ic-text outline-none ' +
   'hover:bg-ic-overlay focus:border-ic-accent';
 
