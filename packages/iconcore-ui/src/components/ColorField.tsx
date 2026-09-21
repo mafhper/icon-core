@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import { HexColorPicker } from 'react-colorful';
 import { cn } from '../utils/cn';
 import { Field } from './Field';
+import { Popover } from './Popover';
 import {
   hexToRgb,
   normalizeHex,
@@ -100,10 +100,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   const [draft, setDraft] = useState(() => formatValue(value, 'hex'));
   const [hexDraft, setHexDraft] = useState(() => normalizeHex(value.color).slice(1).toUpperCase());
   const [recent, setRecent] = useState<string[]>(() => readRecent());
-  const rootRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(null);
 
   const PANEL_WIDTH = 300;
 
@@ -114,49 +111,6 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   useEffect(() => {
     setHexDraft(normalizeHex(value.color).slice(1).toUpperCase());
   }, [value.color]);
-
-  useEffect(() => {
-    if (!open) {
-      setPanelPos(null);
-      return;
-    }
-
-    const place = () => {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const left = Math.min(
-        Math.max(8, rect.right - PANEL_WIDTH),
-        Math.max(8, window.innerWidth - PANEL_WIDTH - 8)
-      );
-      const below = rect.bottom + 6;
-      // Flip above when there is not enough room below.
-      const top = below + 330 > window.innerHeight ? Math.max(8, rect.top - 336) : below;
-      setPanelPos({ left, top });
-    };
-    place();
-
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    // The panel is portaled with fixed coordinates, so any scroll/resize closes it.
-    const onViewportChange = () => setOpen(false);
-
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    window.addEventListener('resize', onViewportChange);
-    window.addEventListener('scroll', onViewportChange, true);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('resize', onViewportChange);
-      window.removeEventListener('scroll', onViewportChange, true);
-    };
-  }, [open]);
 
   const close = () => {
     setRecent(pushRecent(normalizeHex(value.color)));
@@ -188,7 +142,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   const alphaPct = Math.round(value.alpha * 100);
 
   const content = (
-      <div ref={rootRef} className={cn('relative', className)}>
+      <div className={cn('relative', className)}>
         {/* Paint field (OpenPencil): `[swatch][#hex][| 100 %]` is ONE flat
             surface. No nested boxes, no stretched sub-fields — the single row
             keeps its height and the hex input absorbs the slack. */}
@@ -200,7 +154,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             onClick={() => (open ? close() : setOpen(true))}
             className="ml-1 h-4 w-4 shrink-0 rounded-[3px] border border-ic-border disabled:cursor-not-allowed disabled:opacity-40"
             style={checkerStyle}
-            aria-label={`${label} colour picker`}
+            aria-label={`Choose ${label}`}
             aria-haspopup="dialog"
             aria-expanded={open}
           >
@@ -237,14 +191,13 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
           <span className="select-none pr-1.5 text-ic-text-muted">%</span>
         </div>
 
-        {open && panelPos && createPortal(
-          <div
-            ref={panelRef}
-            role="dialog"
-            aria-label={`${label} picker`}
-            style={{ position: 'fixed', left: panelPos.left, top: panelPos.top, width: PANEL_WIDTH }}
-            className="z-50 rounded-ic-md border border-ic-border bg-ic-overlay p-3 shadow-xl"
-          >
+        <Popover
+          open={open}
+          anchorRef={triggerRef}
+          onClose={close}
+          width={PANEL_WIDTH}
+          aria-label={`${label} picker`}
+        >
             <div className="ic-picker">
               <HexColorPicker
                 color={normalizeHex(value.color)}
@@ -323,9 +276,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 </div>
               </div>
             )}
-          </div>,
-          document.body
-        )}
+        </Popover>
       </div>
   );
 
