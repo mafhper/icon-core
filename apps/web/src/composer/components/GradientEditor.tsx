@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { AlignHorizontalDistributeCenter, ArrowLeftRight, Plus, Trash2 } from 'lucide-react';
 import type { GradientFill, GradientStop } from '@iconcore/shared';
-import { Button, ColorField, ControlRow, IconButton, Slider, type ColorValue } from '@iconcore/ui';
+import { Button, ColorField, IconButton, NumberField, Slider, type ColorValue } from '@iconcore/ui';
 import { normalizeStops, sampleStopDetailed, sampleStops } from '@iconcore/renderer';
 
 interface GradientEditorProps {
@@ -97,7 +97,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
   const isDiamond = fill.kind === 'diamond-gradient';
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3.5">
       <div
         ref={barRef}
         className="relative mx-2 h-6 cursor-pointer rounded-ic-sm border border-ic-border"
@@ -158,29 +158,38 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ))}
       </div>
 
-      <div className="grid gap-3">
-        {stops.map((stop, index) => (
-          <div key={index} className="grid gap-1.5">
-            <ControlRow label={`Stop ${index + 1}`}>
-              <ColorField
+      <div className="grid gap-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[length:var(--ic-label-size)] font-bold uppercase tracking-[0.04em] text-ic-text-muted">
+            Stops
+          </span>
+          <IconButton icon={<Plus size={12} />} aria-label="Add stop" title="Add stop" onClick={addStop} />
+        </div>
+
+        <div className="grid gap-2.5">
+          {stops.map((stop, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <NumberField
                 variant="inline"
-                label={`Stop ${index + 1} colour`}
-                value={toColorValue(stop)}
-                onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
+                unit="%"
+                label={`Stop ${index + 1} position`}
+                min="0"
+                max="100"
+                value={Math.round(stop.offset * 100)}
+                onChange={(event) => updateStop(index, { offset: Number(event.target.value) / 100 }, true)}
+                onBlur={onCommit}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') onCommit();
+                }}
+                className="w-16 shrink-0"
               />
-            </ControlRow>
-            <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
-                <Slider
+                <ColorField
                   variant="inline"
-                  label="Position"
-                  min="0"
-                  max="100"
-                  value={Math.round(stop.offset * 100)}
-                  valueLabel={pct(stop.offset)}
-                  onChange={(event) => updateStop(index, { offset: Number(event.target.value) / 100 }, true)}
-                  onPointerUp={onCommit}
-                  onKeyUp={onCommit}
+                  label={`Stop ${index + 1} colour`}
+                  value={toColorValue(stop)}
+                  onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
+                  onCommit={onCommit}
                 />
               </div>
               <IconButton
@@ -191,14 +200,11 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
                 onClick={() => removeStop(index)}
               />
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        <Button variant="secondary" iconLeft={<Plus size={12} />} title="Add a stop" onClick={addStop}>
-          Add stop
-        </Button>
         <Button variant="secondary" iconLeft={<ArrowLeftRight size={12} />} title="Reverse stops" onClick={reverse}>
           Reverse
         </Button>

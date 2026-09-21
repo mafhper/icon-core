@@ -33,6 +33,8 @@ export interface ColorFieldProps {
    * `[swatch][#hex][alpha%]` row so it can live inside `ControlRow`/`InlineField`.
    */
   variant?: 'field' | 'inline';
+  /** Called when the picker closes, so transient edits can be committed once. */
+  onCommit?: () => void;
 }
 
 const RECENT_KEY = 'iconcore:recent-colors';
@@ -92,7 +94,7 @@ const parseAlpha = (text: string, fallback: number): number => {
  * Labelled colour swatch that opens an RGBA/HSLA picker (SV area + hue via
  * `react-colorful`, alpha slider, HEX/RGBA/HSLA fields and recent colours).
  */
-export const ColorField = ({ label, hint, value, onChange, disabled, className, variant = 'field' }: ColorFieldProps) => {
+export const ColorField = ({ label, hint, value, onChange, disabled, className, variant = 'field', onCommit }: ColorFieldProps) => {
   const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<ColorFormat>('hex');
   const [draft, setDraft] = useState(() => formatValue(value, 'hex'));
@@ -103,7 +105,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(null);
 
-  const PANEL_WIDTH = 248;
+  const PANEL_WIDTH = 300;
 
   useEffect(() => {
     setDraft(formatValue(value, format));
@@ -159,6 +161,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   const close = () => {
     setRecent(pushRecent(normalizeHex(value.color)));
     setOpen(false);
+    onCommit?.();
   };
 
   const commitDraft = () => {
@@ -243,10 +246,12 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             style={{ position: 'fixed', left: panelPos.left, top: panelPos.top, width: PANEL_WIDTH }}
             className="z-50 rounded-ic-md border border-ic-border bg-ic-overlay p-3 shadow-xl"
           >
-            <HexColorPicker
-              color={normalizeHex(value.color)}
-              onChange={(hex) => onChange({ ...value, color: hex })}
-            />
+            <div className="ic-picker">
+              <HexColorPicker
+                color={normalizeHex(value.color)}
+                onChange={(hex) => onChange({ ...value, color: hex })}
+              />
+            </div>
 
             <div className="mt-3 flex items-center gap-2">
               <span className="h-4 w-8 shrink-0 rounded-ic-sm border border-ic-border" style={checkerStyle}>
@@ -283,7 +288,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 value={format}
                 aria-label="Colour format"
                 onChange={(event) => setFormat(event.target.value as ColorFormat)}
-                className="h-7 rounded-ic-sm border border-ic-border bg-ic-surface px-1 text-[11px] text-ic-text"
+                className="h-7 w-[84px] shrink-0 rounded-ic-sm border border-ic-border bg-ic-surface px-1 text-[11px] text-ic-text"
               >
                 <option value="hex">HEX</option>
                 <option value="rgba">RGBA</option>
