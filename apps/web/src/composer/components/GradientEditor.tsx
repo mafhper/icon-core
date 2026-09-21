@@ -3,6 +3,7 @@ import { AlignHorizontalDistributeCenter, ArrowLeftRight, Plus, Trash2 } from 'l
 import type { GradientFill, GradientStop } from '@iconcore/shared';
 import { Button, ColorField, IconButton, NumberField, Slider, type ColorValue } from '@iconcore/ui';
 import { normalizeStops, sampleStopDetailed, sampleStops } from '@iconcore/renderer';
+import { applyGradientPreset, presetsFor } from '../utils/gradientPresets';
 
 interface GradientEditorProps {
   fill: GradientFill;
@@ -11,20 +12,6 @@ interface GradientEditorProps {
   /** Commit the current value to history. */
   onCommit: () => void;
 }
-
-interface Preset {
-  name: string;
-  stops: GradientStop[];
-}
-
-const PRESETS: Preset[] = [
-  { name: 'Sunset', stops: [{ offset: 0, color: '#ff7e5f' }, { offset: 1, color: '#feb47b' }] },
-  { name: 'Ocean', stops: [{ offset: 0, color: '#2193b0' }, { offset: 1, color: '#6dd5ed' }] },
-  { name: 'Violet', stops: [{ offset: 0, color: '#7028e4' }, { offset: 1, color: '#e5b2ca' }] },
-  { name: 'Neon', stops: [{ offset: 0, color: '#00f5d4' }, { offset: 0.5, color: '#00bbf9' }, { offset: 1, color: '#f15bb5' }] },
-  { name: 'Mono', stops: [{ offset: 0, color: '#f8fafc' }, { offset: 1, color: '#64748b' }] },
-  { name: 'Fade out', stops: [{ offset: 0, color: '#ffffff', alpha: 1 }, { offset: 1, color: '#ffffff', alpha: 0 }] }
-];
 
 const STOP_SAMPLES = 20;
 
@@ -138,18 +125,21 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
         ))}
       </div>
 
-      <div className="ic-gradient-presets">
-        {PRESETS.map((preset) => (
-          <button
-            key={preset.name}
-            type="button"
-            className="ic-gradient-preset"
-            style={{ background: barCss(preset.stops) }}
-            title={`Apply ${preset.name}`}
-            aria-label={`Apply ${preset.name} gradient`}
-            onClick={() => setStops(preset.stops.map((stop) => ({ ...stop })))}
-          />
-        ))}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-2">
+        <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">Presets</span>
+        <div className="ic-gradient-presets">
+          {presetsFor(fill).map((preset) => (
+            <button
+              key={preset.name}
+              type="button"
+              className="ic-gradient-preset"
+              style={{ background: barCss(preset.stops) }}
+              title={`${preset.name} — ${preset.hint}`}
+              aria-label={`Apply ${preset.name} gradient`}
+              onClick={() => onChange(applyGradientPreset(fill, preset))}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
