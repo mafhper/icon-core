@@ -1,5 +1,5 @@
 # When a release/vX.Y.Z bump PR is merged, tags main as vX.Y.Z and triggers the
-# desktop release (a tag pushed via GITHUB_TOKEN would not fire workflows by itself).
+# release workflow (a tag pushed via GITHUB_TOKEN would not fire workflows by itself).
 name: release-tag
 
 on:
@@ -42,4 +42,4 @@ jobs:
           git tag -a "v${VERSION}" -m "Release v${VERSION}"
           git push "$REPO_URL" "v${VERSION}"
           echo "pushed tag v${VERSION}"
-          gh workflow run release-desktop.yml -f tag="v${VERSION}"
+          gh workflow run release.yml -f tag="v${VERSION}"
