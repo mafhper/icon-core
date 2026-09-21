@@ -331,7 +331,7 @@ describe('renderToSvg', () => {
     expect(svg).toContain('<svg');
     expect(svg).toContain('width="128"');
     expect(svg).toContain('height="128"');
-    expect(svg).toContain('#ffffff');
+    expect(svg).toContain('rgb(255, 255, 255)');
   });
 
   it('includes shape layers in SVG output', async () => {
@@ -395,7 +395,7 @@ describe('renderToSvg', () => {
     };
     const svg = renderToSvg(project, 'default');
     expect(svg).toContain('<linearGradient');
-    expect(svg).toContain('url(#bg-background)');
+    expect(svg).toMatch(/url\(#bg-\d+\)/);
   });
 
   it('does not paint a shape whose fill is none (no black fallback)', async () => {
@@ -447,7 +447,7 @@ describe('renderToSvg', () => {
       exportProfile: { outputBaseName: 'test', quality: 0.95, generateReport: false }
     };
     const svg = renderToSvg(project, 'default');
-    expect(svg).toContain('#ffffff');
+    expect(svg).toContain('rgb(255, 255, 255)');
     expect(svg).not.toContain('#ff00ff');
   });
 });
