@@ -1396,14 +1396,7 @@ input[type='range'] {
     padding: 16px;
   }
 
-/* The default (no explicit data-editor-backdrop) keeps a subtle plain mid-tone
-   without fighting the icon */
-.ic-edit-stage:not([data-editor-backdrop]) {
-  background-image: none;
-  background-color: color-mix(in srgb, var(--ic-bg) 94%, #cbd6e4 6%);
-}
-
-.ic-drop-zone {
+  .ic-drop-zone {
     padding: 24px 18px;
   }
 }

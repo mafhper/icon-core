@@ -1,7 +1,7 @@
 {
   "ratchetSlack": 120,
   "cssLineBudget": {
-    "apps/web/src/index.css": 1659,
+    "apps/web/src/index.css": 1652,
     "apps/promo/src/index.css": 780
   },
   "coreTsxBudget": 0,
