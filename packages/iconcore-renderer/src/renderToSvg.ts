@@ -1,6 +1,8 @@
 import type { Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition } from '@iconcore/shared';
 import { toRgba } from './color';
+import { layerBaseRect } from './geometry';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
+import { parseSvgIntrinsicSize, setSvgViewport } from './svgSize';
 
 const resolveLayer = (layer: IconLayer, variant: IconVariant): IconLayer => {
   const override = layer.variantOverrides?.[variant];
@@ -205,7 +207,24 @@ export const renderToSvg = (
     if (layer.source.type === 'inline' && layer.source.data && layer.source.mimeType === 'image/svg+xml') {
       try {
         const svgContent = atob(layer.source.data);
-        svgLayers += `<g opacity="${opacity}" transform="${transformAttr}">${svgContent}</g>\n`;
+        const natural = parseSvgIntrinsicSize(svgContent);
+        if (!natural) {
+          // No intrinsic size to align with: embed as-is (previous behaviour).
+          svgLayers += `<g opacity="${opacity}" transform="${transformAttr}">${svgContent}</g>\n`;
+          continue;
+        }
+        // The Canvas2D backend draws the asset into the layer rectangle, so the
+        // SVG export must place it in the same rectangle: pin the document's
+        // viewport to its intrinsic size, then map that onto the rect. Without
+        // this, PNG and SVG exports of the same project disagreed.
+        const layerRect = layerBaseRect({ source: layer.source }, size, natural);
+        const placement =
+          `translate(${layerRect.cx - layerRect.w / 2},${layerRect.cy - layerRect.h / 2}) ` +
+          `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
+        svgLayers +=
+          `<g opacity="${opacity}" transform="${transformAttr}">` +
+          `<g transform="${placement}">${setSvgViewport(svgContent, natural.width, natural.height)}</g>` +
+          `</g>\n`;
       } catch {
         // Skip layers with invalid base64
       }

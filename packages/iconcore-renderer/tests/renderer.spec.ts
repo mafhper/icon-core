@@ -334,6 +334,46 @@ describe('renderToSvg', () => {
     expect(svg).toContain('rgb(255, 255, 255)');
   });
 
+  it('places an inline SVG layer in the same rectangle the PNG backend uses', async () => {
+    const { renderToSvg } = await import('../src/renderToSvg');
+    const inline = '<svg viewBox="0 0 48 24"><rect width="48" height="24" fill="red"/></svg>';
+    const project: IconCoreProject = {
+      schemaVersion: 3,
+      metadata: { name: 'Test', shortName: 'Test' },
+      canvas: { size: 128, background: solidFill },
+      layers: [
+        {
+          id: 'logo',
+          name: 'logo',
+          kind: 'svg',
+          visible: true,
+          zIndex: 0,
+          source: {
+            type: 'inline',
+            mimeType: 'image/svg+xml',
+            data: btoa(inline),
+            shape: { kind: 'rectangle', width: 96, height: 48 }
+          },
+          transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+          opacity: 1
+        }
+      ],
+      variants: { default: {} },
+      targets: [{ target: 'web-favicon', enabled: true }],
+      exportProfile: { outputBaseName: 'test', quality: 0.95, generateReport: false }
+    };
+
+    const svg = renderToSvg(project, 'default');
+
+    // Canvas 128, layer rect 96x48 centred at (64,64) -> origin (16,40),
+    // intrinsic 48x24 -> scale 2. Previously the SVG export embedded the
+    // document at its own size/origin and disagreed with the PNG.
+    expect(svg).toContain('translate(16,40)');
+    expect(svg).toContain('scale(2,2)');
+    expect(svg).toContain('width="48" height="24"');
+    expect(svg).toContain('<rect width="48" height="24" fill="red"/>');
+  });
+
   it('includes shape layers in SVG output', async () => {
     const { renderToSvg } = await import('../src/renderToSvg');
     const project: IconCoreProject = {
