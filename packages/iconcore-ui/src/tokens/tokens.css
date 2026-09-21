@@ -115,6 +115,11 @@
      Nested inputs used to fall back to the browser's 16px inside a 12px field. */
   --ic-control-font-size: 0.75rem;
 
+  /* Surfaces (cards, section frames, demo boxes) are rounder than the controls
+     they contain — decision C, critique §3. Controls keep their own scale; the
+     only invariant enforced is `inner <= outer`. */
+  --ic-radius-surface: 16px;
+
   --ic-radius-sm: 8px;
   --ic-radius-md: 6px;
   --ic-radius-lg: 10px;

@@ -180,7 +180,7 @@ test('ui lab nested radii are not inverted', async ({ page }) => {
   // Ratchet: the UI Lab is fixture markup whose radii follow the design tokens;
   // the recorded cases are nested controls, not nested surfaces. The spec
   // redefines the Lab's radius scale, so this number may only go down.
-  const LAB_BASELINE = 2;
+  const LAB_BASELINE = 0;
   expect(violations.length, violations.join('\n')).toBeLessThanOrEqual(LAB_BASELINE);
 });
 
