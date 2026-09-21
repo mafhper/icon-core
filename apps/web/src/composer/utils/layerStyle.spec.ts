@@ -17,11 +17,13 @@ describe('fillToCss', () => {
   it('handles missing fills, solids and gradients', () => {
     expect(fillToCss(undefined)).toBe('transparent');
     expect(fillToCss({ kind: 'none' })).toBe('transparent');
-    expect(fillToCss({ kind: 'solid', color: '#abcdef' })).toBe('#abcdef');
+    expect(fillToCss({ kind: 'solid', color: '#abcdef' })).toBe('rgb(171, 205, 239)');
+    expect(fillToCss({ kind: 'solid', color: '#abcdef', alpha: 0.5 })).toBe('rgba(171, 205, 239, 0.5)');
     expect(fillToCss({ kind: 'linear-gradient', angle: 90, stops: [{ offset: 0, color: '#000' }, { offset: 1, color: '#fff' }] }))
-      .toBe('linear-gradient(90deg, #000 0%, #fff 100%)');
+      .toBe('linear-gradient(90deg, rgb(0, 0, 0) 0%, rgb(255, 255, 255) 100%)');
     expect(fillToCss({ kind: 'radial-gradient', stops: [] })).toContain('radial-gradient(ellipse');
     expect(fillToCss({ kind: 'radial-gradient', stops: [], centerX: 0.25, centerY: 0.75 })).toContain('at 25% 75%');
+    expect(fillToCss({ kind: 'angular-gradient', stops: [], angle: 45 })).toContain('conic-gradient(from 45deg');
   });
 });
 

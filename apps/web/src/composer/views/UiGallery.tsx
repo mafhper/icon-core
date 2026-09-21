@@ -57,6 +57,7 @@ export const UiGallery = () => {
   const [theme, setTheme] = useState<GalleryTheme>(readTheme);
   const [backdrop, setBackdrop] = useState<'dots' | 'grid' | 'plain'>('dots');
   const [switchOn, setSwitchOn] = useState(true);
+  const [fillColor, setFillColor] = useState({ color: '#4a7cf0', alpha: 1 });
 
   const applyTheme = (next: GalleryTheme) => {
     setTheme(next);
@@ -222,8 +223,8 @@ export const UiGallery = () => {
             <Slider label="Scale (100%)" min={8} max={400} defaultValue={100} />
             <Slider label="Rotation (0°)" min={-180} max={180} defaultValue={0} disabled />
             <div className="grid gap-3 sm:grid-cols-2">
-              <ColorField label="Fill" defaultValue="#4a7cf0" />
-              <ColorField label="Disabled" defaultValue="#4a7cf0" disabled />
+              <ColorField label="Fill" value={fillColor} onChange={setFillColor} />
+              <ColorField label="Disabled" value={fillColor} onChange={setFillColor} disabled />
             </div>
           </div>
         </Section>

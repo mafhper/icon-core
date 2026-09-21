@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Eraser } from 'lucide-react';
-import type { Fill, IconLayer, LinearGradientFill, RadialGradientFill, ShapeDefinition, ShapeKind } from '@iconcore/shared';
+import type { Fill, GradientFill, GradientStop, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
 import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { brandGradientFill } from '../constants';
@@ -17,11 +17,25 @@ const FILL_KIND_OPTIONS = [
   { value: 'solid', label: 'Solid color' },
   { value: 'linear-gradient', label: 'Linear gradient' },
   { value: 'radial-gradient', label: 'Radial gradient' },
+  { value: 'angular-gradient', label: 'Angular gradient' },
+  { value: 'diamond-gradient', label: 'Diamond gradient' },
   { value: 'none', label: 'Transparent' }
 ] as const;
 
-const isGradientFill = (fill: Fill | undefined): fill is LinearGradientFill | RadialGradientFill =>
-  fill?.kind === 'linear-gradient' || fill?.kind === 'radial-gradient';
+const makeGradient = (
+  kind: 'linear-gradient' | 'radial-gradient' | 'angular-gradient' | 'diamond-gradient',
+  stops: GradientStop[]
+): GradientFill => {
+  if (kind === 'linear-gradient') return { kind, stops, angle: 90 };
+  if (kind === 'angular-gradient') return { kind, stops, angle: 0, centerX: 0.5, centerY: 0.5 };
+  return { kind, stops, centerX: 0.5, centerY: 0.5, radius: 0.5 };
+};
+
+const isGradientFill = (fill: Fill | undefined): fill is GradientFill =>
+  fill?.kind === 'linear-gradient' ||
+  fill?.kind === 'radial-gradient' ||
+  fill?.kind === 'angular-gradient' ||
+  fill?.kind === 'diamond-gradient';
 
 const BACKDROP_OPTIONS = [
   { value: 'dots', label: 'Dots' },
@@ -52,7 +66,7 @@ const BackgroundFillSection = ({
     const stops = isGradientFill(background) && background.stops && background.stops.length >= 2
       ? background.stops
       : preset.stops;
-    onChange({ ...preset, kind, stops });
+    onChange(makeGradient(kind, stops ?? []));
   };
 
   return (
@@ -69,8 +83,8 @@ const BackgroundFillSection = ({
       {background.kind === 'solid' && (
         <ColorField
           label="Color"
-          value={solid}
-          onChange={(event) => onChange({ kind: 'solid', color: event.target.value })}
+          value={{ color: solid, alpha: background.kind === 'solid' ? background.alpha ?? 1 : 1 }}
+          onChange={(next) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha })}
         />
       )}
       {isGradientFill(background) && (
@@ -191,8 +205,7 @@ export const LayerInspector = () => {
     const stops = isGradientFill(layer.fill) && layer.fill.stops && layer.fill.stops.length >= 2
       ? layer.fill.stops
       : preset.stops;
-    const angle = layer.fill?.kind === 'linear-gradient' ? layer.fill.angle : undefined;
-    updateLayer({ fill: { ...preset, kind, stops, angle: angle ?? preset.angle } });
+    updateLayer({ fill: makeGradient(kind, stops ?? []) });
   };
 
   const shadow = getShadow(layer);
@@ -329,8 +342,8 @@ export const LayerInspector = () => {
             {layer.fill?.kind !== 'none' && (
               <ColorField
                 label="Fill"
-                value={solidColor}
-                onChange={(event) => updateLayer({ fill: { kind: 'solid', color: event.target.value } })}
+                value={{ color: solidColor, alpha: layer.fill?.kind === 'solid' ? layer.fill.alpha ?? 1 : 1 }}
+                onChange={(next) => updateLayer({ fill: { kind: 'solid', color: next.color, alpha: next.alpha } })}
               />
             )}
             <NumberField
