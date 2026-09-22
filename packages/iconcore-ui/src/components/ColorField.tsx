@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { cn } from '../utils/cn';
-import { Field } from './Field';
+import { FieldGroup } from './FieldGroup';
 import { Popover } from './Popover';
 import { COLOR_LIBRARY, DEFAULT_PALETTE_ID, findPalette } from '../library/colorLibrary';
 import {
@@ -102,6 +102,9 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   const [hexDraft, setHexDraft] = useState(() => normalizeHex(value.color).slice(1).toUpperCase());
   const [recent, setRecent] = useState<string[]>(() => readRecent());
   const [paletteId, setPaletteId] = useState<string>(DEFAULT_PALETTE_ID);
+  // Alpha keeps a text draft while typing, like `NumberField`: clearing the field
+  // must not write 0 to the model before the user has finished.
+  const [alphaDraft, setAlphaDraft] = useState<string | null>(null);
   const palette = findPalette(paletteId) ?? findPalette(DEFAULT_PALETTE_ID);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -143,6 +146,13 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   };
   const rgb: Rgb = hexToRgb(value.color);
   const alphaPct = Math.round(value.alpha * 100);
+  const alphaDisplay = alphaDraft ?? String(alphaPct);
+  const changeAlpha = (raw: string) => {
+    setAlphaDraft(raw);
+    if (raw.trim() === '') return; // keep the model until blur/Enter
+    const next = Number(raw);
+    if (Number.isFinite(next)) setAlpha(next / 100);
+  };
 
   const content = (
       <div className={cn('relative', className)}>
@@ -185,10 +195,14 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             type="number"
             min="0"
             max="100"
-            value={alphaPct}
+            value={alphaDisplay}
             disabled={disabled}
             aria-label={`${label} alpha percent`}
-            onChange={(event) => setAlpha(Number(event.target.value) / 100)}
+            onChange={(event) => changeAlpha(event.target.value)}
+            onBlur={() => setAlphaDraft(null)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') setAlphaDraft(null);
+            }}
             className="w-8 shrink-0 rounded-none bg-transparent p-0 text-right tabular-nums text-[length:var(--ic-control-font-size)] text-ic-text outline-none disabled:opacity-40 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
           />
           <span className="select-none pr-1 text-ic-text-muted">%</span>
@@ -231,9 +245,13 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 type="number"
                 min="0"
                 max="100"
-                value={alphaPct}
+                value={alphaDisplay}
                 aria-label="Alpha percent"
-                onChange={(event) => setAlpha(Number(event.target.value) / 100)}
+                onChange={(event) => changeAlpha(event.target.value)}
+                onBlur={() => setAlphaDraft(null)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') setAlphaDraft(null);
+                }}
                 className="h-[var(--ic-control-md)] w-14 rounded-[var(--ic-field-radius)] bg-ic-elevated px-1 py-0 text-center font-mono text-[length:var(--ic-control-font-size)] text-ic-text outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [appearance:textfield]"
               />
             </div>
@@ -241,7 +259,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             <div className="mt-3 flex items-center gap-2">
               <select
                 value={format}
-                aria-label="Colour format"
+                aria-label="Color format"
                 onChange={(event) => setFormat(event.target.value as ColorFormat)}
                 className="h-[var(--ic-control-md)] w-[92px] shrink-0 rounded-[var(--ic-field-radius)] bg-ic-elevated py-0 pl-2 text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
               >
@@ -251,7 +269,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
               </select>
               <input
                 value={draft}
-                aria-label="Colour value"
+                aria-label="Color value"
                 onChange={(event) => setDraft(event.target.value)}
                 onBlur={commitDraft}
                 onKeyDown={(event) => {
@@ -266,7 +284,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">Library</span>
                 <select
                   value={paletteId}
-                  aria-label="Colour palette"
+                  aria-label="Color palette"
                   onChange={(event) => setPaletteId(event.target.value)}
                   className="h-[var(--ic-control-md)] w-44 rounded-[var(--ic-field-radius)] bg-ic-elevated py-0 pl-2 text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
                 >
@@ -330,8 +348,8 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   }
 
   return (
-    <Field label={label} hint={hint}>
+    <FieldGroup label={label} hint={hint}>
       {content}
-    </Field>
+    </FieldGroup>
   );
 };

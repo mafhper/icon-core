@@ -1,9 +1,10 @@
-import { Circle, Grid3x3, Magnet, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, RectangleHorizontal, Redo2, RotateCcw, Square, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Circle, Crosshair, Grid3x3, Magnet, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, RectangleHorizontal, Redo2, RotateCcw, Square, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 import { ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { SizePreview } from './SizePreview';
 import { AppearanceSwitcher } from './AppearanceSwitcher';
+import { modKey } from '../utils/platform';
 
 const PLATFORM_LABELS: Record<string, string> = {
   square: 'Square',
@@ -72,14 +73,14 @@ export const ActionBar = ({
               onClick={() => dispatch({ type: 'UNDO' })}
               disabled={state.historyIndex <= 0}
               icon={<Undo2 size={15} />}
-              title="Undo (Ctrl+Z)"
+              title={`Undo (${modKey()}+Z)`}
               aria-label="Undo"
             />
             <IconButton
               onClick={() => dispatch({ type: 'REDO' })}
               disabled={state.historyIndex >= state.history.length - 1}
               icon={<Redo2 size={15} />}
-              title="Redo (Ctrl+Shift+Z)"
+              title={`Redo (${modKey()}+Shift+Z)`}
               aria-label="Redo"
             />
           </ButtonGroup>
@@ -126,6 +127,14 @@ export const ActionBar = ({
                 onClick={() => dispatch({ type: 'TOGGLE_SNAPPING' })}
                 icon={<Magnet size={15} />}
                 aria-label="Toggle snapping"
+              />
+            </Tooltip>
+            <Tooltip content="Toggle keyline grid">
+              <IconButton
+                selected={state.showKeylines}
+                onClick={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
+                icon={<Crosshair size={15} />}
+                aria-label="Toggle keyline grid"
               />
             </Tooltip>
           </ButtonGroup>

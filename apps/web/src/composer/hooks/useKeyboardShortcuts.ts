@@ -11,7 +11,11 @@ export const useKeyboardShortcuts = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
       const target = e.target as HTMLElement;
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable;
+
+      // A dialog or a menu owns the keyboard while it is open; the `window`
+      // listener would otherwise delete layers / toggle the grid underneath it.
+      if (document.querySelector('[aria-modal="true"], [role="menu"]')) return;
 
       if (isInput) return;
 

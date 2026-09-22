@@ -37,6 +37,10 @@
   --ic-text-faint: #6b6d74;
   --ic-accent: #3f6ce0;
   --ic-accent-hover: #4a76e8;
+  /* Accent as *foreground* (text, labels, icons). `--ic-accent` is a fill/border
+     role and only clears 3:1 as a glyph; small labels need 4.5:1, so accent text
+     uses this lighter step. Verified by scripts/check-ui-contrast.mjs. */
+  --ic-accent-text: #8aa9ff;
   --ic-accent-soft: color-mix(in oklab, var(--ic-accent) 20%, transparent);
   --ic-accent-ring: color-mix(in oklab, var(--ic-accent) 70%, transparent);
   --ic-on-accent: #ffffff;
@@ -74,6 +78,8 @@
   --ic-text-faint: #86898f;
   --ic-accent: #3a6ce5;
   --ic-accent-hover: #2f5ed6;
+  /* Accent as foreground on light surfaces. See the dark block note. */
+  --ic-accent-text: #234a9e;
   --ic-accent-soft: color-mix(in oklab, var(--ic-accent) 20%, transparent);
   --ic-accent-ring: color-mix(in oklab, var(--ic-accent) 70%, transparent);
   --ic-on-accent: #ffffff;

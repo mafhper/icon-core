@@ -93,7 +93,7 @@ export const UiGallery = () => {
       <header className="sticky top-0 z-10 border-b border-ic-border bg-ic-bg/90 backdrop-blur">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 px-6 py-4">
           <div className="mr-auto">
-            <p className="text-[0.66rem] font-extrabold uppercase tracking-[0.14em] text-ic-accent">
+            <p className="text-[0.66rem] font-extrabold uppercase tracking-[0.14em] text-ic-accent-text">
               Icon Core · UI Kit
             </p>
             <h1 className="m-0 text-lg font-bold">Component gallery</h1>
@@ -271,7 +271,7 @@ export const UiGallery = () => {
 
         <Section
           title="Inspector grammar (240px)"
-          hint="The row primitives the Colours inspector uses: InlineField, ControlRow and the inline Slider. Rendered inside a 240px column to prove they fit the minimum panel width."
+          hint="The row primitives the Colors inspector uses: InlineField, ControlRow and the inline Slider. Rendered inside a 240px column to prove they fit the minimum panel width."
         >
           <div className="grid gap-3 rounded-[var(--ic-radius-surface)] border border-ic-border p-3" style={{ width: 240 }}>
             <InlineField label="Fill">
@@ -282,7 +282,7 @@ export const UiGallery = () => {
               </Select>
             </InlineField>
             <ControlRow label="Color">
-              <ColorField variant="inline" label="Fill colour" value={fillColor} onChange={setFillColor} />
+              <ColorField variant="inline" label="Fill color" value={fillColor} onChange={setFillColor} />
             </ControlRow>
             <Slider variant="inline" label="Opacity" min="0" max="100" defaultValue={100} valueLabel="100%" />
             <Slider variant="inline" label="Angle" min="0" max="360" defaultValue={90} valueLabel="90°" />
@@ -312,35 +312,35 @@ export const UiGallery = () => {
 
         <Section
           title="Fixtures — interaction grammar"
-          hint="Cada fixture responde a uma pergunta de design (ADR-012 §12). `real` usa o componente entregue, `proposta` é uma proposta sobre tokens existentes, `aguarda spec` registra a pergunta para as Fases 2–6. O Lab é um laboratório de fixtures: nada aqui instancia o Composer."
+          hint="Each fixture answers one design question (ADR-012 §12). `Shipped` uses the delivered component, `Proposed` is a proposal built on existing tokens, `Awaiting spec` records the question for Phases 2–6. The Lab is a fixture laboratory: nothing here instantiates the Composer."
         >
           <RowGrammarFixtures />
         </Section>
 
         <Section
           title="Fixtures — States"
-          hint="Estados isolados, para congelar a gramática (Fase 1): default, focus, disabled, selected. Hover/active são reais (CSS) — passe o mouse; onde não há visual próprio, o fixture denuncia."
+          hint="Isolated states, to freeze the grammar (Phase 1): default, focus, disabled, selected. Hover/active are real (CSS) — hover them; where there is no visual of its own, the fixture says so."
         >
           <StateFixtures />
         </Section>
 
         <Section
           title="Fixtures — Fill"
-          hint="Fill como objeto: cabeçalho (preview + tipo + opacity) com os ajustes do tipo abaixo. Renderizado a 240px com estado próprio."
+          hint="Fill as an object: header (preview + kind + opacity) with the kind's adjustments below. Rendered at 240px with its own state."
         >
           <FillFixtures />
         </Section>
 
         <Section
           title="Fixtures — Gradient density"
-          hint="Densidade de stops em 240px — o caso que costuma quebrar o layout."
+          hint="Gradient stop density at 240px — the case that usually breaks the layout."
         >
           <GradientDensityFixtures />
         </Section>
 
         <Section
           title="Fixtures — pendentes do spec"
-          hint="Perguntas registradas, sem markup especulativo: Inspector, Layers e Responsive dependem do spec de interação (Fases 2, 5 e 6)."
+          hint="Recorded questions, no speculative markup: Inspector, Layers and Responsive wait on the interaction spec (Phases 2, 5 and 6)."
         >
           <PendingFixtures />
         </Section>

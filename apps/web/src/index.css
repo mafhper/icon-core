@@ -15,6 +15,7 @@
   --color-ic-text-faint: var(--ic-text-faint);
   --color-ic-accent: var(--ic-accent);
   --color-ic-accent-hover: var(--ic-accent-hover);
+  --color-ic-accent-text: var(--ic-accent-text);
   --color-ic-accent-soft: var(--ic-accent-soft);
   --color-ic-accent-ring: var(--ic-accent-ring);
   --color-ic-on-accent: var(--ic-on-accent);
@@ -179,7 +180,7 @@ input[type='range'] {
 
 .ic-product-mark {
   margin: 0;
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
   font-size: 0.86rem;
   font-weight: 760;
   letter-spacing: 0.02em;
@@ -213,7 +214,7 @@ input[type='range'] {
   place-items: center;
   border: 1px solid var(--ic-border);
   border-radius: 14px;
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
   background: var(--ic-elevated);
 }
 
@@ -619,7 +620,9 @@ input[type='range'] {
    where the toolbar wraps and space is scarce. */
 .ic-toolbar-label {
   padding: 0 4px;
-  color: var(--ic-text-faint);
+  /* Was --ic-text-faint (3.1–3.8:1); the caption is small text, so it uses the
+     muted token (4.6–7.1:1). `--ic-text-faint` stays for decorative use. */
+  color: var(--ic-text-muted);
   font-size: 0.66rem;
   font-weight: 720;
   text-transform: uppercase;
@@ -937,7 +940,7 @@ input[type='range'] {
   border: 1px solid var(--ic-border);
   border-radius: 999px;
   padding: 4px 8px;
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
   font-size: 0.68rem;
   font-weight: 600;
   /* Sentence case (critique §17): the variant name reads "Default", not "DEFAULT".
@@ -987,7 +990,7 @@ input[type='range'] {
 }
 
 .ic-quality-chip.is-warning {
-  border-color: color-mix(in srgb, #eab308 45%, var(--ic-border));
+  border-color: color-mix(in srgb, var(--ic-warning) 45%, var(--ic-border));
 }
 
 .ic-quality-score {
@@ -1003,7 +1006,7 @@ input[type='range'] {
   place-items: center;
   border-radius: 999px;
   background: color-mix(in srgb, var(--ic-accent) 22%, transparent);
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
   font-size: 0.68rem;
 }
 
@@ -1132,7 +1135,7 @@ input[type='range'] {
 .ic-variant-action.is-active {
   border-color: var(--ic-accent);
   background: color-mix(in srgb, var(--ic-accent) 18%, var(--ic-elevated));
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
 }
 
 .ic-variant-scope-note {
@@ -1148,7 +1151,7 @@ input[type='range'] {
 }
 
 .ic-variant-scope-note strong {
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
   text-transform: capitalize;
 }
 
@@ -1316,7 +1319,7 @@ input[type='range'] {
 
 
 .ic-sizes-button.is-active {
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
   border-color: var(--ic-accent);
 }
 
@@ -1563,7 +1566,7 @@ input[type='range'] {
 }
 
 .ic-toast-info .ic-toast-icon {
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
 }
 
 /* --- Focus ownership (critique §4, decision B) ---
@@ -1685,6 +1688,6 @@ textarea:focus-visible,
   align-items: center;
   gap: 6px;
   font-size: 0.78rem;
-  color: var(--ic-accent);
+  color: var(--ic-accent-text);
   width: fit-content;
 }

@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { parseProjectFile } from '../utils/projectGuard';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { modKey } from '../utils/platform';
+import { COMMAND_PALETTE_EVENT } from '../utils/commandPalette';
 
 interface Command {
   id: string;
@@ -20,13 +24,15 @@ export const CommandPalette = () => {
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const mod = modKey();
 
   const commands: Command[] = [
     {
       id: 'new-project',
       label: 'Workspaces',
       description: 'Return to Workspaces',
-      shortcut: '⌘N',
+      shortcut: `${mod}+N`,
       category: 'navigation',
       action: () => navigate('workspaces')
     },
@@ -34,7 +40,7 @@ export const CommandPalette = () => {
       id: 'open-project',
       label: 'Open Project',
       description: 'Open an existing .iconcore.json file',
-      shortcut: '⌘O',
+      shortcut: `${mod}+O`,
       category: 'navigation',
       action: () => {
         const input = document.createElement('input');
@@ -58,7 +64,7 @@ export const CommandPalette = () => {
       id: 'save-project',
       label: 'Save Project',
       description: 'Download project as .iconcore.json',
-      shortcut: '⌘S',
+      shortcut: `${mod}+S`,
       category: 'navigation',
       action: () => {
         if (!state.project) return;
@@ -78,7 +84,7 @@ export const CommandPalette = () => {
       id: 'undo',
       label: 'Undo',
       description: 'Undo last action',
-      shortcut: '⌘Z',
+      shortcut: `${mod}+Z`,
       category: 'edit',
       action: () => dispatch({ type: 'UNDO' })
     },
@@ -86,7 +92,7 @@ export const CommandPalette = () => {
       id: 'redo',
       label: 'Redo',
       description: 'Redo last undone action',
-      shortcut: '⌘⇧Z',
+      shortcut: `${mod}+Shift+Z`,
       category: 'edit',
       action: () => dispatch({ type: 'REDO' })
     },
@@ -94,7 +100,7 @@ export const CommandPalette = () => {
       id: 'add-layer',
       label: 'Add Layer',
       description: 'Add a new shape layer',
-      shortcut: '⌘L',
+      shortcut: `${mod}+L`,
       category: 'layers',
       action: () => dispatch({ type: 'ADD_LAYER', payload: { shape: { kind: 'circle', width: 100, height: 100 } } })
     },
@@ -102,7 +108,7 @@ export const CommandPalette = () => {
       id: 'delete-layer',
       label: 'Delete Layer',
       description: 'Remove selected layer',
-      shortcut: '⌫',
+      shortcut: 'Del',
       category: 'layers',
       action: () => {
         if (state.activeLayerId) {
@@ -114,7 +120,7 @@ export const CommandPalette = () => {
       id: 'duplicate-layer',
       label: 'Duplicate Layer',
       description: 'Duplicate selected layer',
-      shortcut: '⌘D',
+      shortcut: `${mod}+D`,
       category: 'layers',
       action: () => {
         if (state.activeLayerId) {
@@ -134,7 +140,7 @@ export const CommandPalette = () => {
       id: 'zoom-in',
       label: 'Zoom In',
       description: 'Increase preview zoom',
-      shortcut: '⌘+',
+      shortcut: `${mod}+`,
       category: 'view',
       action: () => dispatch({ type: 'SET_ZOOM', payload: Math.min(ZOOM_MAX, state.zoom + ZOOM_STEP) })
     },
@@ -142,7 +148,7 @@ export const CommandPalette = () => {
       id: 'zoom-out',
       label: 'Zoom Out',
       description: 'Decrease preview zoom',
-      shortcut: '⌘-',
+      shortcut: `${mod}+-`,
       category: 'view',
       action: () => dispatch({ type: 'SET_ZOOM', payload: Math.max(ZOOM_MIN, state.zoom - ZOOM_STEP) })
     },
@@ -150,7 +156,7 @@ export const CommandPalette = () => {
       id: 'zoom-reset',
       label: 'Reset Zoom',
       description: 'Reset zoom to 100%',
-      shortcut: '⌘0',
+      shortcut: `${mod}+0`,
       category: 'view',
       action: () => dispatch({ type: 'SET_ZOOM', payload: 1 })
     },
@@ -179,7 +185,7 @@ export const CommandPalette = () => {
       id: 'export',
       label: 'Open Export Utilities',
       description: 'Export icons for selected targets',
-      shortcut: '⌘E',
+      shortcut: `${mod}+E`,
       category: 'export',
       action: () => navigate('export-utilities')
     },
@@ -229,10 +235,17 @@ export const CommandPalette = () => {
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
+    const open = () => {
+      setIsOpen(true);
+      setSearch('');
+      setSelectedIndex(0);
+    };
+    document.addEventListener(COMMAND_PALETTE_EVENT, open);
+    return () => document.removeEventListener(COMMAND_PALETTE_EVENT, open);
+  }, []);
+
+  // Modal focus: move into the search field, keep Tab inside, restore on close.
+  useFocusTrap(dialogRef, isOpen, inputRef);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -258,18 +271,27 @@ export const CommandPalette = () => {
 
   const categories = ['navigation', 'edit', 'layers', 'view', 'export'] as const;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-black/50 backdrop-blur-sm" onClick={() => setIsOpen(false)}>
-      <div className="w-full max-w-2xl bg-ic-surface border border-ic-border rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+        tabIndex={-1}
+        className="ic-command-palette w-full max-w-2xl bg-ic-surface border border-ic-border rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 border-b border-ic-border">
           <input
             ref={inputRef}
             type="text"
             value={search}
+            aria-label="Search commands"
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a command..."
-            className="w-full px-4 py-3 bg-ic-elevated border border-ic-border rounded-xl text-sm focus:outline-none focus:border-ic-accent"
+            className="w-full px-4 py-3 bg-ic-elevated border border-ic-border rounded-xl text-sm outline-none focus:border-ic-accent focus:ring-2 focus:ring-ic-accent-ring"
           />
         </div>
         <div className="max-h-[400px] overflow-y-auto p-2">
@@ -279,7 +301,7 @@ export const CommandPalette = () => {
 
             return (
               <div key={category} className="mb-2">
-                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ic-muted">
+                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-ic-text-muted">
                   {category}
                 </div>
                 {categoryCommands.map((cmd) => {
@@ -293,18 +315,18 @@ export const CommandPalette = () => {
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition ${
                         globalIdx === selectedIndex
-                          ? 'bg-ic-accent/20 text-ic-accent'
+                          ? 'bg-ic-accent/20 text-ic-accent-text'
                           : 'hover:bg-ic-elevated text-ic-text'
                       }`}
                     >
                       <div className="flex-1">
                         <div className="text-sm font-medium">{cmd.label}</div>
                         {cmd.description && (
-                          <div className="text-xs text-ic-muted mt-0.5">{cmd.description}</div>
+                          <div className="text-xs text-ic-text-muted mt-0.5">{cmd.description}</div>
                         )}
                       </div>
                       {cmd.shortcut && (
-                        <div className="text-xs text-ic-muted font-mono ml-4">{cmd.shortcut}</div>
+                        <div className="text-xs text-ic-text-muted font-mono ml-4">{cmd.shortcut}</div>
                       )}
                     </button>
                   );
@@ -313,12 +335,12 @@ export const CommandPalette = () => {
             );
           })}
           {filteredCommands.length === 0 && (
-            <div className="px-3 py-8 text-center text-sm text-ic-muted">
+            <div className="px-3 py-8 text-center text-sm text-ic-text-muted">
               No commands found
             </div>
           )}
         </div>
-        <div className="px-4 py-3 border-t border-ic-border bg-ic-elevated flex items-center justify-between text-xs text-ic-muted">
+        <div className="px-4 py-3 border-t border-ic-border bg-ic-elevated flex items-center justify-between text-xs text-ic-text-muted">
           <div className="flex items-center gap-4">
             <span><kbd className="px-1.5 py-0.5 bg-ic-surface rounded">↑↓</kbd> Navigate</span>
             <span><kbd className="px-1.5 py-0.5 bg-ic-surface rounded">↵</kbd> Select</span>
@@ -327,6 +349,7 @@ export const CommandPalette = () => {
           <span>{filteredCommands.length} commands</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

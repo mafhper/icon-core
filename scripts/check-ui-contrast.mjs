@@ -18,7 +18,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const tokensPath = path.join(rootDir, 'packages', 'iconcore-ui', 'src', 'tokens', 'tokens.css');
 
-const css = fs.readFileSync(tokensPath, 'utf8');
+// Comments are stripped first: the tokens header comment mentions `:root` and
+// `[data-theme='light']`, and `indexOf` used to hit the mention, so the light
+// block silently resolved to the dark one (the light theme was never checked).
+const css = fs.readFileSync(tokensPath, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 // Split into theme blocks. Dark lives in `:root, [data-theme='dark'] {...}`
 // (a second bare `:root {...}` holds theme-independent Layer 3 sizes).
@@ -99,7 +102,10 @@ const PAIRS = [
   ['--ic-text-muted', '--ic-elevated', 4.5, 'secondary text on controls'],
   ['--ic-text-faint', '--ic-bg', 3.0, 'decorative only (labels carry text via stronger tokens)'],
   ['--ic-on-accent', '--ic-accent', 4.5, 'text on accent fills'],
-  ['--ic-accent', '--ic-bg', 3.0, 'accent as text (large/bold headings only)'],
+  ['--ic-accent-text', '--ic-bg', 4.5, 'accent foreground on the page'],
+  ['--ic-accent-text', '--ic-surface', 4.5, 'accent foreground on panels'],
+  ['--ic-accent-text', '--ic-elevated', 4.5, 'accent foreground on controls'],
+  ['--ic-accent', '--ic-bg', 3.0, 'accent glyph/border only; foreground uses --ic-accent-text'],
   ['--ic-danger', '--ic-bg', 3.0, 'danger as text (large/bold only)'],
   ['--ic-success', '--ic-bg', 3.0, 'success as text (large/bold only)'],
   ['--ic-warning', '--ic-bg', 3.0, 'warning as text (large/bold only)']
@@ -114,6 +120,9 @@ const themes = {
 // light faint #8f9297 -> #86898f; primary Button flattened), so every pair
 // below is enforced: any regression fails the gate. `--ic-text-faint` keeps
 // a 3.0 floor (decorative by contract, never the sole carrier).
+// Accent *foreground* (small labels, selected states) moved to
+// `--ic-accent-text` at 4.5:1; `--ic-accent` remains a fill/border role whose
+// 3.0 pair covers accent glyphs and outlines.
 const ADVISORY = new Set();
 
 let failed = 0;

@@ -28,12 +28,21 @@ import { FillEditor } from '../components/FillEditor';
  * - `proposta` — a proposal built from shipped tokens/primitives;
  * - `aguarda spec` — listed so the question is not lost, to be filled by the
  *   interaction spec (Fases 2–6 of the ADR) instead of guessed here.
+ *
+ * The keys keep the vocabulary ADR-012 documents; the badge shows the English
+ * label, since the shipped UI is English-only.
  */
 
 export type FixtureStatus = 'real' | 'proposta' | 'aguarda spec';
 
+const STATUS_LABELS: Record<FixtureStatus, string> = {
+  real: 'Shipped',
+  proposta: 'Proposed',
+  'aguarda spec': 'Awaiting spec'
+};
+
 const statusClasses: Record<FixtureStatus, string> = {
-  real: 'border-ic-accent/40 text-ic-accent',
+  real: 'border-ic-accent/40 text-ic-accent-text',
   proposta: 'border-ic-border text-ic-text-muted',
   'aguarda spec': 'border-ic-warning/40 text-ic-warning'
 };
@@ -57,7 +66,7 @@ export const Fixture = ({
       <span
         className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] ${statusClasses[status]}`}
       >
-        {status}
+        {STATUS_LABELS[status]}
       </span>
     </div>
     <p className="m-0 text-[0.72rem] leading-snug text-ic-text-muted">{question}</p>
@@ -73,32 +82,32 @@ export const Fixture = ({
 
 export const RowGrammarFixtures = () => (
   <>
-    <Fixture title="PropertyRow / default" question="Uma linha é lida como “propriedade = valor” sem depender de rótulo uppercase?">
+    <Fixture title="PropertyRow / default" question="Does a row read as “property = value” without relying on an uppercase label?">
       <TextField label="Name" defaultValue="Center" />
     </Fixture>
 
-    <Fixture title="PropertyRow / focused" question="O foco é perceptível sem cor arbitrária (usa o ring do kit)?">
+    <Fixture title="PropertyRow / focused" question="Is focus perceivable without an arbitrary colour (uses the kit ring)?">
       <TextField label="Name" defaultValue="Center" autoFocus />
     </Fixture>
 
-    <Fixture title="PropertyRow / disabled" question="O estado desabilitado é inequívoco e não parece apenas “apagado”?">
+    <Fixture title="PropertyRow / disabled" question="Is the disabled state unmistakable, not merely “dimmed”?">
       <TextField label="Name" defaultValue="Locked" disabled />
     </Fixture>
 
     <Fixture
       title="PropertyRow / modified"
       status="proposta"
-      question="Uma propriedade que difere do default se anuncia sem poluir a linha?"
+      question="Does a property that differs from the default announce itself without cluttering the row?"
     >
       <Field label="Fill">
         <span className="flex items-center justify-between gap-2 text-[0.75rem] text-ic-text">
           <span className="font-mono">#FFAA00</span>
-          <span className="text-[9px] font-bold uppercase tracking-[0.06em] text-ic-accent">≠ Default</span>
+          <span className="text-[9px] font-bold uppercase tracking-[0.06em] text-ic-accent-text">≠ Default</span>
         </span>
       </Field>
     </Fixture>
 
-    <Fixture title="Section / expanded" question="Agrupador sem card, título que nomeia a intenção (Appearance, Composition…)">
+    <Fixture title="Section / expanded" question="Card-less grouper with a title that names the intent (Appearance, Composition…)">
       <Section title="Composition">
         <NumberField label="X" defaultValue={0} />
         <NumberField label="Y" defaultValue={0} />
@@ -108,7 +117,7 @@ export const RowGrammarFixtures = () => (
     <Fixture
       title="Section / collapsed"
       status="proposta"
-      question="O disclosure fecha a seção sem esconder que ela existe? (Fase 2 — hoje `Section` não colapsa)"
+      question="Does the disclosure close the section without hiding that it exists? (Phase 2 — `Section` does not collapse today)"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[length:var(--ic-label-size)] font-semibold text-ic-text">Composition</span>
@@ -122,7 +131,7 @@ export const RowGrammarFixtures = () => (
 
 export const StateFixtures = () => (
   <>
-    <Fixture title="IconButton / default · hover · active" question="Hover e active são distinguíveis de default? (hoje `active` não tem visual próprio)">
+    <Fixture title="IconButton / default · hover · active" question="Are hover and active distinguishable from default? (`active` has no visual of its own today)">
       <div className="flex items-center gap-1">
         <IconButton icon={<span aria-hidden>⊕</span>} aria-label="Default state" />
         <IconButton icon={<span aria-hidden>⊕</span>} aria-label="Hover state (hover me)" />
@@ -130,7 +139,7 @@ export const StateFixtures = () => (
       </div>
     </Fixture>
 
-    <Fixture title="IconButton / disabled · selected" question="Seleção persistente se distingue de foco e de desabilitado?">
+    <Fixture title="IconButton / disabled · selected" question="Is persistent selection distinguishable from focus and from disabled?">
       <div className="flex items-center gap-1">
         <IconButton icon={<span aria-hidden>⊕</span>} aria-label="Disabled state" disabled />
         <IconButton icon={<span aria-hidden>⊕</span>} aria-label="Selected state" selected />
@@ -138,17 +147,17 @@ export const StateFixtures = () => (
       </div>
     </Fixture>
 
-    <Fixture title="Field / default · focus · disabled" question="Um campo plano comunica onde se pode digitar?">
+    <Fixture title="Field / default · focus · disabled" question="Does a flat field communicate where you can type?">
       <TextField label="Default" defaultValue="Sora" />
       <TextField label="Focus" defaultValue="Sora" autoFocus />
       <TextField label="Disabled" defaultValue="Sora" disabled />
     </Fixture>
 
-    <Fixture title="Field / invalid" status="proposta" question="Erro é sinalizado por borda/semântica, não só por texto? (não existe hoje)">
+    <Fixture title="Field / invalid" status="proposta" question="Is an error signalled by border/semantics, not text alone? (does not exist today)">
       <TextField label="Invalid" defaultValue="not-a-hex" aria-invalid className="border-ic-danger" />
     </Fixture>
 
-    <Fixture title="Button / primary · secondary · ghost" question="As três hierarquias de ação continuam legíveis lado a lado?">
+    <Fixture title="Button / primary · secondary · ghost" question="Do the three action hierarchies stay legible side by side?">
       <div className="flex flex-wrap gap-1.5">
         <Button variant="primary">Export</Button>
         <Button variant="secondary">Cancel</Button>
@@ -156,7 +165,7 @@ export const StateFixtures = () => (
       </div>
     </Fixture>
 
-    <Fixture title="Slider · Switch · SegmentedControl · Select" question="Controles contínuos, binários e de conjunto compartilham a mesma altura e o mesmo peso visual?">
+    <Fixture title="Slider · Switch · SegmentedControl · Select" question="Do continuous, binary and set controls share one height and one visual weight?">
       <Slider variant="inline" label="Opacity" min="0" max="100" defaultValue={100} valueLabel="100%" />
       <Switch label="Depth shadow" defaultChecked />
       <SegmentedControl
@@ -200,33 +209,33 @@ export const FillFixtures = () => (
   <>
     <FillFixture
       title="Fill / solid"
-      question="O cabeçalho comunica preview + tipo + opacity + ações?"
+      question="Does the header communicate preview + kind + opacity + actions?"
       initial={{ kind: 'solid', color: '#f8fafc', alpha: 1 }}
     />
     <FillFixture
       title="Fill / linear"
-      question="A transição entre o cabeçalho e os controles específicos do tipo é clara?"
+      question="Is the transition between the header and the kind-specific controls clear?"
       initial={brandGradientFill()}
     />
     <FillFixture
       title="Fill / radial"
-      question="Centro/raio aparecem só quando o tipo pede?"
+      question="Do center/radius appear only when the kind asks for them?"
       initial={{ ...brandGradientFill(), kind: 'radial-gradient', centerX: 0.5, centerY: 0.5, radius: 0.5 }}
     />
     <FillFixture
       title="Fill / angular"
-      question="Ângulo inicial e centro são compreensíveis sem preview no canvas?"
+      question="Are start angle and center understandable without a canvas preview?"
       initial={{ ...brandGradientFill(), kind: 'angular-gradient', angle: 0, centerX: 0.5, centerY: 0.5 }}
     />
     <FillFixture
       title="Fill / diamond"
-      question="O tipo se distingue de radial apenas pelo rótulo?"
+      question="Is the kind distinguishable from radial by more than its label?"
       initial={{ ...brandGradientFill(), kind: 'diamond-gradient', centerX: 0.5, centerY: 0.5, radius: 0.5 }}
     />
     <Fixture
       title="Fill / image"
       status="aguarda spec"
-      question="Texture é uma terceira linguagem (Mode Fill/Fit/Crop/Tile + Scale + Position + Adjustments) — o modelo ainda não tem image fill."
+      question="Texture is a third language (Mode Fill/Fit/Crop/Tile + Scale + Position + Adjustments) — the model has no image fill yet."
     />
   </>
 );
@@ -235,17 +244,17 @@ export const GradientDensityFixtures = () => (
   <>
     <FillFixture
       title="Gradient / 2 stops"
-      question="O caso base mantém a barra como âncora visual?"
+      question="Does the base case keep the bar as the visual anchor?"
       initial={withStops(2)}
     />
     <FillFixture
       title="Gradient / 3 stops"
-      question="Adicionar um stop intermediário continua legível em 240px?"
+      question="Does adding an intermediate stop stay legible at 240px?"
       initial={withStops(3)}
     />
     <FillFixture
       title="Gradient / 5 stops"
-      question="O controle continua utilizável em alta densidade (linhas alinhadas, sem overflow)?"
+      question="Does the control stay usable at high density (aligned rows, no overflow)?"
       initial={withStops(5)}
     />
   </>
@@ -254,16 +263,16 @@ export const GradientDensityFixtures = () => (
 /* --------------------------------------------------------------- pendentes -- */
 
 const PENDING: Array<{ title: string; question: string }> = [
-  { title: 'Inspector / empty', question: 'Sem seleção, o painel explica o próximo passo em vez de ficar vazio?' },
-  { title: 'Inspector / shape', question: 'A hierarquia Section → Row é compreensível?' },
-  { title: 'Inspector / text', question: 'Texto convive com composição e aparência sem virar formulário?' },
-  { title: 'Inspector / image', question: 'Imagem acomoda Transform / Fit / Adjustments sem virar formulário?' },
-  { title: 'Inspector / background', question: 'O handle de fundo se distingue do backdrop do editor?' },
-  { title: 'Layers / empty', question: 'Lista vazia orienta a primeira ação (importar/desenhar)?' },
-  { title: 'Layers / 10 layers', question: 'A leitura da hierarquia continua clara com densidade?' },
-  { title: 'Layers / hidden', question: 'Visibilidade é descobrível fora do context menu?' },
-  { title: 'Layers / locked', question: 'Lock é descobrível e não bloqueia a seleção silenciosamente?' },
-  { title: 'Responsive / 1440 · 1180 · 900 · 768', question: 'O shell realmente muda de estratégia (drawer/sheet) ou só encolhe?' }
+  { title: 'Inspector / empty', question: 'With nothing selected, does the panel explain the next step instead of sitting empty?' },
+  { title: 'Inspector / shape', question: 'Is the Section → Row hierarchy understandable?' },
+  { title: 'Inspector / text', question: 'Does text coexist with composition and appearance without becoming a form?' },
+  { title: 'Inspector / image', question: 'Does an image accommodate Transform / Fit / Adjustments without becoming a form?' },
+  { title: 'Inspector / background', question: 'Is the background handle distinguishable from the editor backdrop?' },
+  { title: 'Layers / empty', question: 'Does the empty list point to the first action (import/draw)?' },
+  { title: 'Layers / 10 layers', question: 'Does the hierarchy stay readable at density?' },
+  { title: 'Layers / hidden', question: 'Is visibility discoverable outside the context menu?' },
+  { title: 'Layers / locked', question: 'Is lock discoverable, and does it not block selection silently?' },
+  { title: 'Responsive / 1440 · 1180 · 900 · 768', question: 'Does the shell actually change strategy (drawer/sheet) or just shrink?' }
 ];
 
 export const PendingFixtures = () => (

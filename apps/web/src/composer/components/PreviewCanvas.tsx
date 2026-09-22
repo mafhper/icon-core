@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Circle, Crosshair, ImagePlus, Shapes, Slash, Square, Squircle, Star, Triangle, Type } from 'lucide-react';
+import { Circle, ImagePlus, Shapes, Slash, Square, Squircle, Star, Triangle, Type } from 'lucide-react';
 import type { IconLayer, IconVariant, IconCoreProject, ShapeDefinition } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
-import { ButtonGroup, IconButton, Menu, MenuItem, ToolbarDivider, Tooltip } from '@iconcore/ui';
+import { ButtonGroup, IconButton, Menu, MenuItem, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useLayerImport } from '../hooks/useLayerImport';
 import { resolveLayerVariant } from '../utils/layerResolve';
@@ -309,22 +309,6 @@ export const PreviewCanvas = () => {
             multiple
             onChange={handleFileUpload}
           />
-        </div>
-        <ToolbarDivider />
-        <div className="flex min-w-0 items-center gap-1">
-          <span className="ic-toolbar-label" aria-hidden="true">
-            View
-          </span>
-          <ButtonGroup label="Canvas view" className="ic-toolbar-group">
-            <Tooltip content="Toggle keyline grid">
-              <IconButton
-                selected={state.showKeylines}
-                onClick={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
-                icon={<Crosshair size={16} />}
-                aria-label="Toggle keyline grid"
-              />
-            </Tooltip>
-          </ButtonGroup>
         </div>
       </div>
       <div

@@ -58,7 +58,7 @@ export const LayerInspector = () => {
   if (!state.project) {
     return (
       <aside className="ic-inspector">
-        <p className="text-xs text-ic-muted text-center py-8">No project open.</p>
+        <p className="text-xs text-ic-text-muted text-center py-8">No project open.</p>
       </aside>
     );
   }
@@ -174,7 +174,7 @@ export const LayerInspector = () => {
 
       <div className="ic-field-stack">
         {layer.kind === 'text' && (
-          <Section title="Text" hint="Numa camada de texto, conteúdo e tipografia vêm primeiro.">
+          <Section title="Text" hint="On a text layer, content and typography come first.">
             <TextField
               label="Text"
               value={layer.text?.content ?? ''}

@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ExternalLink, Info, X } from 'lucide-react';
 import { withIconStroke } from '@iconcore/ui';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const THIRD_PARTY = [
   {
@@ -26,6 +27,8 @@ const THIRD_PARTY = [
  * `third-party/manifest.json` and `THIRD_PARTY_LICENSES.md`.
  */
 export const AboutModal = ({ onClose }: { onClose: () => void }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -34,6 +37,8 @@ export const AboutModal = ({ onClose }: { onClose: () => void }) => {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  useFocusTrap(dialogRef, true);
+
   // Portalled to <body>: the topbar `<header>` carries `backdrop-filter`, which
   // becomes the containing block for `position: fixed` descendants — rendering
   // here kept the overlay trapped inside the 50px header and pushed the dialog
@@ -41,6 +46,8 @@ export const AboutModal = ({ onClose }: { onClose: () => void }) => {
   return createPortal(
     <div className="ic-modal-overlay" onClick={onClose}>
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="ic-welcome-modal ic-about-modal"
         role="dialog"
         aria-modal="true"

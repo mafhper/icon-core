@@ -29,6 +29,18 @@ const toColorValue = (stop: GradientStop): ColorValue => ({
 
 const pct = (value: number): string => `${Math.round(value * 100)}%`;
 
+let stopSeq = 0;
+const nextStopId = (): string => `stop-${(stopSeq += 1)}`;
+
+/**
+ * Give every stop a stable `id` so React keys survive a reorder: `key={index}`
+ * reused a row for a different stop when a drag crossed a neighbour and the list
+ * re-sorted on commit. `normalizeStops` spreads each stop, so the id is preserved
+ * through sorting, sampling and the saved project (the renderer ignores it).
+ */
+const withStopIds = (stops: GradientStop[]): GradientStop[] =>
+  stops.map((stop) => (stop.id ? stop : { ...stop, id: nextStopId() }));
+
 export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps) => {
   const barRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<number | null>(null);
@@ -39,7 +51,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
     dragging !== null && fill.stops && fill.stops.length >= 2 ? fill.stops : normalizeStops(fill.stops);
 
   const setStops = (next: GradientStop[], transient = false) => {
-    onChange({ ...fill, stops: next }, transient);
+    onChange({ ...fill, stops: withStopIds(next) }, transient);
   };
 
   const updateStop = (index: number, patch: Partial<GradientStop>, transient = false) => {
@@ -113,7 +125,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
       >
         {stops.map((stop, index) => (
           <div
-            key={index}
+            key={stop.id ?? index}
             role="slider"
             tabIndex={0}
             aria-label={`Stop ${index + 1}`}
@@ -153,7 +165,10 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
               style={{ background: barCss(preset.stops) }}
               title={`${preset.name} — ${preset.hint}`}
               aria-label={`Apply ${preset.name} gradient`}
-              onClick={() => onChange(applyGradientPreset(fill, preset))}
+              onClick={() => {
+                const next = applyGradientPreset(fill, preset);
+                onChange({ ...next, stops: next.stops ? withStopIds(next.stops) : next.stops });
+              }}
             />
           ))}
         </div>
@@ -176,7 +191,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
 
         <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
           {stops.map((stop, index) => (
-            <div key={index} className="flex flex-wrap items-center gap-2">
+            <div key={stop.id ?? index} className="flex flex-wrap items-center gap-2">
               <NumberField
                 variant="inline"
                 unit="%"
@@ -194,7 +209,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
               <div className="min-w-[9rem] flex-1">
                 <ColorField
                   variant="inline"
-                  label={`Stop ${index + 1} colour`}
+                  label={`Stop ${index + 1} color`}
                   value={toColorValue(stop)}
                   onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
                   onCommit={onCommit}

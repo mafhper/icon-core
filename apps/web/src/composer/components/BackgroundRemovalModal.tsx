@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { IconLayer } from '@iconcore/shared';
 import { Button, ColorField, Slider } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import { detectBorderColor, removeBackground, dataUrlToBase64 } from '../utils/chromaKey';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export const BackgroundRemovalModal = ({ layer, onClose }: { layer: IconLayer; onClose: () => void }) => {
   const { dispatch } = useComposer();
@@ -18,6 +20,18 @@ export const BackgroundRemovalModal = ({ layer, onClose }: { layer: IconLayer; o
   const [tolerance, setTolerance] = useState(12);
   const [preview, setPreview] = useState(src);
   const resultRef = useRef(src);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Escape must close this dialog too (it previously had no dismissal key).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  useFocusTrap(dialogRef, true);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,9 +65,9 @@ export const BackgroundRemovalModal = ({ layer, onClose }: { layer: IconLayer; o
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="ic-modal-overlay" onClick={onClose}>
-      <div className="ic-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-label="Remove background">
+      <div ref={dialogRef} tabIndex={-1} className="ic-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Remove background">
         <div className="ic-modal-head">
           <h2>Remove background</h2>
           <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
@@ -89,6 +103,7 @@ export const BackgroundRemovalModal = ({ layer, onClose }: { layer: IconLayer; o
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

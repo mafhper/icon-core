@@ -1,9 +1,11 @@
-import { Download, FolderOpen, Info, Save } from 'lucide-react';
+import { Download, FolderOpen, Info, Save, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button, ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import { parseProjectFile } from '../utils/projectGuard';
+import { openCommandPalette } from '../utils/commandPalette';
+import { modKey } from '../utils/platform';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 import { AboutModal } from './AboutModal';
 
@@ -11,6 +13,7 @@ export const Topbar = () => {
   const { state, dispatch, navigate } = useComposer();
   const toast = useToast();
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const projectName = state.project?.metadata.name ?? 'Icon Core';
 
   const handleSave = () => {
     if (!state.project) return;
@@ -53,17 +56,16 @@ export const Topbar = () => {
             className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-left text-inherit hover:bg-ic-elevated"
             onClick={() => navigate('workspaces')}
             title="Home — start or open a project"
+            aria-label={state.isDirty ? `${projectName}, unsaved changes` : projectName}
           >
             <AnimatedIconCoreLogo className="block h-[22px] w-[22px] shrink-0" animated={false} />
             <span className="truncate text-[0.9rem] font-semibold tracking-tight text-ic-text">
-              {state.project?.metadata.name ?? 'Icon Core'}
+              {projectName}
             </span>
+            {/* Decorative: the dirty state rides in the button's accessible name
+                (a label on a bare span is ignored by assistive tech). */}
             {state.isDirty && (
-              <span
-                className="h-[7px] w-[7px] shrink-0 rounded-full bg-ic-gold"
-                title="Unsaved changes"
-                aria-label="Unsaved changes"
-              />
+              <span aria-hidden="true" title="Unsaved changes" className="h-[7px] w-[7px] shrink-0 rounded-full bg-ic-gold" />
             )}
           </button>
         </div>
@@ -80,6 +82,20 @@ export const Topbar = () => {
                 onClick={handleSave}
                 disabled={!state.project}
                 title="Save project"
+              />
+            </Tooltip>
+          </ButtonGroup>
+
+          <ToolbarDivider />
+
+          {/* Discoverability for the keyboard-first palette: the only visible
+              entry point (Ctrl/Cmd+K still works). */}
+          <ButtonGroup label="Commands">
+            <Tooltip content={`Command palette (${modKey()}+K)`}>
+              <IconButton
+                icon={<Search size={15} />}
+                aria-label="Open command palette"
+                onClick={openCommandPalette}
               />
             </Tooltip>
           </ButtonGroup>

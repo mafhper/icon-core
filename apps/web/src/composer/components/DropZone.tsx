@@ -58,11 +58,11 @@ export const DropZone = () => {
         className="hidden"
         onChange={handleChange}
       />
-      <Upload size={48} className="mx-auto mb-4 text-ic-muted" />
-      <p className="text-sm text-ic-muted mb-2">
+      <Upload size={48} className="mx-auto mb-4 text-ic-text-muted" />
+      <p className="text-sm text-ic-text-muted mb-2">
         Drop SVG, PNG or WebP files here
       </p>
-      <p className="text-xs text-ic-muted">
+      <p className="text-xs text-ic-text-muted">
         or click to browse your files
       </p>
     </div>
