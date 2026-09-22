@@ -34,7 +34,7 @@ const APPLE: ColorSystem = {
     {
       id: 'apple-system',
       name: 'System',
-      purpose: 'As cores de sistema da Apple: reconhecíveis e já acessíveis em claro e escuro.',
+      purpose: "Apple's system colours: recognisable and already accessible in light and dark.",
       colors: [
         '#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF3B30', '#FF9500',
         '#FFCC00', '#34C759', '#30B0C7', '#00C7BE', '#32ADE6', '#A2845E'
@@ -43,7 +43,7 @@ const APPLE: ColorSystem = {
     {
       id: 'apple-greys',
       name: 'Greys',
-      purpose: 'Escala neutra para superfícies, contornos e estados desabilitados.',
+      purpose: 'A neutral scale for surfaces, outlines and disabled states.',
       colors: ['#8E8E93', '#636366', '#48484A', '#3A3A3C', '#2C2C2E', '#1C1C1E', '#F2F2F7', '#E5E5EA', '#D1D1D6', '#C7C7CC']
     }
   ]
@@ -58,25 +58,25 @@ const MATERIAL: ColorSystem = {
     {
       id: 'm3-primary',
       name: 'Primary',
-      purpose: 'A cor de marca e seus pares de contêiner: ação principal de um ícone.',
+      purpose: "The brand colour and its container pairs: an icon's primary action.",
       colors: ['#6750A4', '#EADDFF', '#21005D', '#D0BCFF', '#4F378B', '#7F67BE']
     },
     {
       id: 'm3-secondary-tertiary',
       name: 'Secondary & Tertiary',
-      purpose: 'Acentos de apoio, menos dominantes que a primária.',
+      purpose: 'Supporting accents, less dominant than the primary.',
       colors: ['#625B71', '#E8DEF8', '#1D192B', '#CCC2DC', '#7D5260', '#FFD8E4', '#31111D', '#EFB8C8']
     },
     {
       id: 'm3-surface',
       name: 'Surface & Outline',
-      purpose: 'Fundos, contornos e texto: a estrutura neutra do Material 3.',
+      purpose: "Backgrounds, outlines and text: Material 3's neutral structure.",
       colors: ['#FFFBFE', '#E7E0EC', '#79747E', '#CAC4D0', '#1C1B1F', '#49454F', '#F5EFF7', '#DED8E1']
     },
     {
       id: 'm3-error',
       name: 'Error',
-      purpose: 'Estados de erro e alerta, com contêiner claro.',
+      purpose: 'Error and alert states, with a light container.',
       colors: ['#B3261E', '#F9DEDC', '#410E0B', '#F2B8B5', '#8C1D18', '#601410']
     }
   ]
@@ -91,31 +91,31 @@ const TAILWIND: ColorSystem = {
     {
       id: 'tw-blue',
       name: 'Blue → Sky',
-      purpose: 'Azuis: a família mais usada em ícones de produto e estado informativo.',
+      purpose: 'Blues: the most used family for product icons and informational state.',
       colors: ['#eff6ff', '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a', '#0ea5e9']
     },
     {
       id: 'tw-violet',
       name: 'Indigo → Fuchsia',
-      purpose: 'Violetas e rosas: marca, destaque e gradientes de alto contraste.',
+      purpose: 'Violets and pinks: brand, emphasis and high-contrast gradients.',
       colors: ['#e0e7ff', '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#8b5cf6', '#a855f7', '#d946ef', '#c026d3']
     },
     {
       id: 'tw-warm',
       name: 'Red → Amber',
-      purpose: 'Quentes: erro, aviso, energia — do vermelho ao âmbar.',
+      purpose: 'Warm tones: error, warning, energy — from red to amber.',
       colors: ['#fee2e2', '#fecaca', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#fed7aa', '#fb923c', '#f97316', '#f59e0b', '#fbbf24', '#fde68a']
     },
     {
       id: 'tw-green',
       name: 'Emerald → Teal',
-      purpose: 'Verdes: sucesso, crescimento, confirmação.',
+      purpose: 'Greens: success, growth, confirmation.',
       colors: ['#d1fae5', '#a7f3d0', '#6ee7b7', '#34d399', '#10b981', '#059669', '#047857', '#065f46', '#14b8a6', '#0d9488', '#2dd4bf', '#0f766e']
     },
     {
       id: 'tw-neutral',
       name: 'Slate & Gray',
-      purpose: 'Neutros: base para metal, vidro e contornos sem matiz dominante.',
+      purpose: 'Neutrals: a base for metal, glass and outlines with no dominant hue.',
       colors: ['#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155', '#1e293b', '#0f172a', '#f3f4f6', '#6b7280']
     }
   ]
