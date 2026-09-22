@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { TriangleAlert, Info, CircleX, CircleCheck, ChevronUp } from 'lucide-react';
+import { withIconStroke } from '@iconcore/ui';
 import { auditProject, type ValidationIssue } from '@iconcore/validator';
 import { useComposer } from '../ComposerContext';
 
@@ -45,7 +46,7 @@ export const QualityWarnings = () => {
           <div className="ic-quality-pop-list">
             {visibleIssues.map((issue) => (
               <div key={issue.code} className="ic-quality-issue">
-                {iconFor(issue.severity)}
+                {withIconStroke(iconFor(issue.severity))}
                 <button
                   type="button"
                   className="ic-quality-issue-msg"
@@ -75,16 +76,19 @@ export const QualityWarnings = () => {
         aria-expanded={open}
         title="Icon quality check"
       >
-        {tone === 'ok'
-          ? <CircleCheck size={14} className="text-ic-success" />
-          : tone === 'error'
-            ? <CircleX size={14} className="text-ic-danger" />
-            : <TriangleAlert size={14} className="text-yellow-500" />}
+        {withIconStroke(
+          tone === 'ok'
+            ? <CircleCheck size={14} className="text-ic-success" />
+            : tone === 'error'
+              ? <CircleX size={14} className="text-ic-danger" />
+              : <TriangleAlert size={14} className="text-yellow-500" />,
+          'semibold'
+        )}
         <span className="ic-quality-score">{result.score}</span>
         {visibleIssues.length > 0 && (
           <span className="ic-quality-count">{visibleIssues.length}</span>
         )}
-        {visibleIssues.length > 0 && <ChevronUp size={13} className={`ic-quality-caret ${open ? 'is-open' : ''}`} />}
+        {visibleIssues.length > 0 && withIconStroke(<ChevronUp size={13} className={`ic-quality-caret ${open ? 'is-open' : ''}`} />, 'semibold')}
       </button>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ArrowLeft, Download, Check, LoaderCircle, FileText, TriangleAlert, FolderOpen } from 'lucide-react';
 import type { IconTarget, IconVariant, OutputFormat, ExportStructure, ZipCompression } from '@iconcore/shared';
-import { Button, Field, SegmentedControl, Slider, Switch } from '@iconcore/ui';
+import { Button, Field, SegmentedControl, Slider, Switch, withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import {
@@ -176,7 +176,7 @@ export const ExportView = () => {
           onClick={() => navigate('edit-space')}
           className="inline-flex items-center gap-2 text-sm text-ic-muted hover:text-ic-text transition"
         >
-          <ArrowLeft size={16} />
+          {withIconStroke(<ArrowLeft size={16} />)}
           Back to Edit Space
         </button>
 
