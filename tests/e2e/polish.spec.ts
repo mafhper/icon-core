@@ -316,3 +316,103 @@ for (const surface of SURFACES) {
     expect(clipped, clipped.join('\n')).toEqual([]);
   });
 }
+
+/**
+ * Icon stroke follows the adjacent text weight (better-ui `icons.md`): a 24-grid
+ * icon beside regular (400) text carries 1.5px, so a bare lucide default (2px)
+ * must never land there. Text at 500+ keeps the set's native 2px. The kit's
+ * `Button`/`MenuItem` own the rule; this locks the app's raw markup to the same
+ * scale. Fill-only marks (brand logo, GitHub glyph) carry no stroke and are out
+ * of scope; icon-only controls have no adjacent text.
+ */
+test('icon stroke matches the adjacent text weight', async ({ page }) => {
+  const violations: string[] = [];
+
+  const audit = async (scope: string, state: string) => {
+    const found = await page.locator(scope).first().evaluate((root) => {
+      const out: string[] = [];
+      for (const control of [...root.querySelectorAll('button, a, [role="menuitem"]')]) {
+        const svg = control.querySelector('svg');
+        if (!svg || svg.getAttribute('stroke-width') === null) continue;
+
+        const walker = document.createTreeWalker(control, NodeFilter.SHOW_TEXT);
+        let node: Node | null = null;
+        while (walker.nextNode()) {
+          if ((walker.currentNode.textContent ?? '').trim().length > 1) {
+            node = walker.currentNode;
+            break;
+          }
+        }
+        if (!node) continue;
+
+        const weight = parseFloat(getComputedStyle(node.parentElement ?? control).fontWeight) || 400;
+        if (weight >= 500) continue;
+
+        const stroke = parseFloat(svg.getAttribute('stroke-width') ?? '');
+        if (Math.abs(stroke - 1.5) > 0.01) {
+          out.push(
+            `${control.tagName.toLowerCase()}.${String(control.className).slice(0, 30)} "${node.textContent?.trim().slice(0, 16)}" stroke=${stroke} weight=${weight}`
+          );
+        }
+      }
+      return out;
+    });
+    violations.push(...found.map((entry) => `[${state}] ${entry}`));
+  };
+
+  // Welcome (no project): the editor renders behind the welcome modal.
+  await page.goto('/icon-core/app/?theme=dark');
+  await expect(page.locator('.ic-welcome-modal')).toBeVisible();
+  await audit('body', 'welcome');
+
+  // Editor with a shape: topbar, layers panel, action bar, inspector.
+  await openInspector(page, true);
+  await audit('body', 'editor');
+
+  // Variant panel (a non-default variant is generatable).
+  await page.keyboard.press('2');
+  await expect(page.locator('.ic-variant-panel')).toBeVisible();
+  await audit('.ic-variant-panel', 'variant panel');
+
+  // Export Utilities.
+  await page.getByRole('button', { name: /export icon pack/i }).click();
+  await expect(page.getByRole('heading', { name: 'Export Utilities' })).toBeVisible();
+  await audit('body', 'export');
+
+  // About modal (portalled to <body>; audited last, so it need not be dismissed).
+  await page.getByRole('button', { name: /back to edit space/i }).click();
+  await page.getByRole('button', { name: /about/i }).click();
+  await expect(page.locator('.ic-about-modal')).toBeVisible();
+  await audit('.ic-about-modal', 'about modal');
+
+  expect(violations, violations.join('\n')).toEqual([]);
+});
+
+/**
+ * A fixed overlay must be positioned against the viewport, not an ancestor
+ * containing block: `backdrop-filter` on the topbar `<header>` turns
+ * `position: fixed` descendants into header-relative ones, which trapped the
+ * About modal inside the 50px header and pushed it off-screen. The modal is
+ * portalled to `<body>` — this locks the overlay to the viewport and keeps the
+ * dialog (and its close affordance) on screen.
+ */
+test('modal overlays cover the viewport', async ({ page }) => {
+  await openInspector(page, false);
+  await page.getByRole('button', { name: /about/i }).click();
+  await expect(page.locator('.ic-about-modal')).toBeVisible();
+
+  const viewport = page.viewportSize()!;
+  const overlay = await page.locator('.ic-about-modal').evaluate((element) => {
+    const rect = element.parentElement!.getBoundingClientRect();
+    return { top: rect.top, height: rect.height };
+  });
+  expect(overlay.top, 'overlay starts at the viewport top').toBeLessThanOrEqual(1);
+  expect(overlay.height, 'overlay fills the viewport').toBeGreaterThanOrEqual(viewport.height - 1);
+
+  const dialog = await page.locator('.ic-about-modal').boundingBox();
+  expect(dialog!.y, 'dialog top is on screen').toBeGreaterThanOrEqual(0);
+  expect(dialog!.y + dialog!.height, 'dialog bottom is on screen').toBeLessThanOrEqual(viewport.height + 1);
+
+  await page.locator('.ic-about-modal .ic-modal-close').click();
+  await expect(page.locator('.ic-about-modal')).toBeHidden();
+});

@@ -1,4 +1,5 @@
 import { TriangleAlert, CircleCheck, Info, X } from 'lucide-react';
+import { withIconStroke } from '@iconcore/ui';
 import { useToast, type ToastVariant } from './ToastContext';
 
 const icons: Record<ToastVariant, typeof Info> = {
@@ -18,7 +19,7 @@ export const ToastViewport = () => {
         const Icon = icons[toast.variant];
         return (
           <div key={toast.id} className={`ic-toast ic-toast-${toast.variant}`} role="status">
-            <Icon size={16} className="ic-toast-icon" aria-hidden="true" />
+            {withIconStroke(<Icon size={16} className="ic-toast-icon" aria-hidden="true" />)}
             <span className="ic-toast-message">{toast.message}</span>
             <button
               type="button"

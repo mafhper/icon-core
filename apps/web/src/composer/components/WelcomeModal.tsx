@@ -4,7 +4,7 @@ import { useComposer } from '../ComposerContext';
 import { fileToLayerAsset, isSupportedLayerFile } from '../utils/fileLayers';
 import { createProjectFromAsset } from '../utils/projectFactory';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
-import { Button, TextField } from '@iconcore/ui';
+import { Button, TextField, withIconStroke } from '@iconcore/ui';
 
 type UploadMode = 'edit' | 'export';
 
@@ -104,7 +104,7 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
             <h2>Upload → Export</h2>
             <p>Skip editing and generate favicon, PWA and desktop assets straight from a file.</p>
             <button type="button" className="ic-link-button" onClick={() => requestUpload('export')} disabled={isImporting}>
-              Select file <ArrowRight size={15} />
+              Select file {withIconStroke(<ArrowRight size={15} />, 'semibold')}
             </button>
           </article>
 
@@ -113,14 +113,14 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
             <h2>Upload → Edit → Export</h2>
             <p>Open the file in Edit Space, tune variants and positioning, then export.</p>
             <button type="button" className="ic-link-button" onClick={() => requestUpload('edit')} disabled={isImporting}>
-              Upload into Edit Space <ArrowRight size={15} />
+              Upload into Edit Space {withIconStroke(<ArrowRight size={15} />, 'semibold')}
             </button>
           </article>
         </div>
 
         <footer className="ic-welcome-foot">
           <a href="https://github.com/mafhper/icon-core/releases/latest" target="_blank" rel="noreferrer">
-            <MonitorDown size={15} />
+            {withIconStroke(<MonitorDown size={15} />, 'semibold')}
             Download Desktop
           </a>
           <a href="https://github.com/mafhper/icon-core" target="_blank" rel="noreferrer">

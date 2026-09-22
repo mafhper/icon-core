@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Eye, EyeOff, Lock, Unlock, Trash2, Copy } from 'lucide-react';
+import { withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { QualityWarnings } from './QualityWarnings';
 import { LayerContextMenu } from './LayerContextMenu';
@@ -178,7 +179,7 @@ export const LayerList = () => {
           onClick={() => state.activeLayerId && dispatch({ type: 'DUPLICATE_LAYER', payload: { id: state.activeLayerId } })}
           className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-ic-elevated text-xs hover:bg-ic-border"
         >
-          <Copy size={12} />
+          {withIconStroke(<Copy size={12} />)}
           Duplicate
         </button>
         <button
@@ -187,7 +188,7 @@ export const LayerList = () => {
           onClick={() => state.activeLayerId && dispatch({ type: 'REMOVE_LAYER', payload: { id: state.activeLayerId } })}
           className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-ic-danger/20 text-ic-danger text-xs hover:bg-ic-danger/30"
         >
-          <Trash2 size={12} />
+          {withIconStroke(<Trash2 size={12} />)}
           Delete
         </button>
       </div>
