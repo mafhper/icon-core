@@ -1,4 +1,5 @@
 import { Sparkles, RotateCcw, Layers2, ArrowUpToLine } from 'lucide-react';
+import { withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import { isGeneratableVariant } from '../utils/variantPresets';
@@ -24,7 +25,7 @@ export const VariantPanel = () => {
         }}
         title="Auto-generate this variant's colors from the default"
       >
-        <Sparkles size={13} />
+        {withIconStroke(<Sparkles size={13} />, 'semibold')}
         <span>Generate from default</span>
       </button>
       <button
@@ -36,7 +37,7 @@ export const VariantPanel = () => {
         }}
         title="Remove this variant's overrides"
       >
-        <RotateCcw size={13} />
+        {withIconStroke(<RotateCcw size={13} />, 'semibold')}
         <span>Reset</span>
       </button>
       <button
@@ -48,7 +49,7 @@ export const VariantPanel = () => {
         }}
         title="Merge this variant's changes into the base layer, applying them to all variants"
       >
-        <ArrowUpToLine size={13} />
+        {withIconStroke(<ArrowUpToLine size={13} />, 'semibold')}
         <span>Apply to base</span>
       </button>
       <button
@@ -58,7 +59,7 @@ export const VariantPanel = () => {
         title="Show the default as a faint overlay for comparison"
         aria-pressed={state.compareDefault}
       >
-        <Layers2 size={13} />
+        {withIconStroke(<Layers2 size={13} />, 'semibold')}
         <span>Compare default</span>
       </button>
     </div>

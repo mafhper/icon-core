@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ExternalLink, Info, X } from 'lucide-react';
+import { withIconStroke } from '@iconcore/ui';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 
 const THIRD_PARTY = [
@@ -32,7 +34,11 @@ export const AboutModal = ({ onClose }: { onClose: () => void }) => {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  // Portalled to <body>: the topbar `<header>` carries `backdrop-filter`, which
+  // becomes the containing block for `position: fixed` descendants — rendering
+  // here kept the overlay trapped inside the 50px header and pushed the dialog
+  // off-screen. The portal restores viewport-fixed positioning.
+  return createPortal(
     <div className="ic-modal-overlay" onClick={onClose}>
       <div
         className="ic-welcome-modal ic-about-modal"
@@ -56,7 +62,7 @@ export const AboutModal = ({ onClose }: { onClose: () => void }) => {
 
         <section className="ic-about-section">
           <h2>
-            <Info size={15} aria-hidden="true" />
+            {withIconStroke(<Info size={15} aria-hidden="true" />, 'semibold')}
             Third-party licenses
           </h2>
           <p>Icon Core redistributes the following components. Full texts and terms live in <code>THIRD_PARTY_LICENSES.md</code>.</p>
@@ -67,7 +73,7 @@ export const AboutModal = ({ onClose }: { onClose: () => void }) => {
                 <span className="ic-about-license">{component.license}</span>
                 <span className="ic-about-note">{component.note}</span>
                 <a href={component.source} target="_blank" rel="noreferrer">
-                  {component.source.replace('https://', '')} <ExternalLink size={12} aria-hidden="true" />
+                  {component.source.replace('https://', '')} {withIconStroke(<ExternalLink size={12} aria-hidden="true" />)}
                 </a>
               </li>
             ))}
@@ -76,15 +82,16 @@ export const AboutModal = ({ onClose }: { onClose: () => void }) => {
 
         <footer className="ic-welcome-foot">
           <a href="https://github.com/mafhper/icon-core/blob/main/THIRD_PARTY_LICENSES.md" target="_blank" rel="noreferrer">
-            <ExternalLink size={15} />
+            {withIconStroke(<ExternalLink size={15} />, 'semibold')}
             THIRD_PARTY_LICENSES.md
           </a>
           <a href="https://github.com/mafhper/icon-core" target="_blank" rel="noreferrer">
-            <ExternalLink size={15} />
+            {withIconStroke(<ExternalLink size={15} />, 'semibold')}
             GitHub repository
           </a>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
