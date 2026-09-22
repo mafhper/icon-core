@@ -6,6 +6,7 @@ import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { parseProjectFile } from '../utils/projectGuard';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { modKey } from '../utils/platform';
+import { COMMAND_PALETTE_EVENT } from '../utils/commandPalette';
 
 interface Command {
   id: string;
@@ -232,6 +233,16 @@ export const CommandPalette = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
+
+  useEffect(() => {
+    const open = () => {
+      setIsOpen(true);
+      setSearch('');
+      setSelectedIndex(0);
+    };
+    document.addEventListener(COMMAND_PALETTE_EVENT, open);
+    return () => document.removeEventListener(COMMAND_PALETTE_EVENT, open);
+  }, []);
 
   // Modal focus: move into the search field, keep Tab inside, restore on close.
   useFocusTrap(dialogRef, isOpen, inputRef);

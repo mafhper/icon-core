@@ -289,7 +289,9 @@ export const ExportView = () => {
 
           {isLossy && (
             <Slider
-              label={`Quality (${Math.round(quality * 100)}%)`}
+              variant="inline"
+              label="Quality"
+              unit="%"
               min={10}
               max={100}
               value={Math.round(quality * 100)}
@@ -331,7 +333,9 @@ export const ExportView = () => {
               />
               {compression === 'deflate' && (
                 <Slider
-                  label={`Deflate level (${compressionLevel})`}
+                  variant="inline"
+                  label="Deflate level"
+                  unit=""
                   min={0}
                   max={9}
                   value={compressionLevel}

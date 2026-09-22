@@ -27,6 +27,11 @@ export interface GradientStop {
   color: string;
   /** 0..1 (default 1). */
   alpha?: number;
+  /**
+   * Stable identity for the editor (React keys). Optional and ignored by the
+   * renderer; assigned by the UI so a stop keeps its row when the list reorders.
+   */
+  id?: string;
 }
 
 export interface SolidFill {

@@ -1,9 +1,11 @@
-import { Download, FolderOpen, Info, Save } from 'lucide-react';
+import { Download, FolderOpen, Info, Save, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button, ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import { parseProjectFile } from '../utils/projectGuard';
+import { openCommandPalette } from '../utils/commandPalette';
+import { modKey } from '../utils/platform';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 import { AboutModal } from './AboutModal';
 
@@ -80,6 +82,20 @@ export const Topbar = () => {
                 onClick={handleSave}
                 disabled={!state.project}
                 title="Save project"
+              />
+            </Tooltip>
+          </ButtonGroup>
+
+          <ToolbarDivider />
+
+          {/* Discoverability for the keyboard-first palette: the only visible
+              entry point (Ctrl/Cmd+K still works). */}
+          <ButtonGroup label="Commands">
+            <Tooltip content={`Command palette (${modKey()}+K)`}>
+              <IconButton
+                icon={<Search size={15} />}
+                aria-label="Open command palette"
+                onClick={openCommandPalette}
               />
             </Tooltip>
           </ButtonGroup>
