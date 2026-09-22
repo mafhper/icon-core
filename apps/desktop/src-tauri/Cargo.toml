@@ -1,6 +1,6 @@
 [package]
 name = "iconcore-desktop"
-version = "1.4.1"
+version = "1.5.0"
 description = "IconCore desktop shell"
 authors = ["IconCore"]
 license = "MIT"
