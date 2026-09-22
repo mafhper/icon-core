@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, TextField, NumberField, Select, Switch, Slider, ColorField, ControlRow, InlineField, SegmentedControl, Menu, MenuItem, Popover } from '../src/index';
+import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, FieldGroup, TextField, NumberField, Select, Switch, Slider, ColorField, ControlRow, InlineField, SegmentedControl, Menu, MenuItem, Popover } from '../src/index';
 
 describe('Button', () => {
   it('defaults type to "button" (never submits)', () => {
@@ -159,6 +159,22 @@ describe('Field', () => {
   });
 });
 
+describe('FieldGroup', () => {
+  it('names a composed control without a <label> (a label would bind to the first control only)', () => {
+    render(
+      <FieldGroup label="Format">
+        <button type="button">PNG</button>
+        <button type="button">WebP</button>
+      </FieldGroup>
+    );
+
+    const group = screen.getByRole('group', { name: 'Format' });
+    expect(group.tagName).toBe('DIV');
+    expect(screen.getByRole('button', { name: 'PNG' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'WebP' })).toBeInTheDocument();
+  });
+});
+
 describe('TextField', () => {
   it('renders labelled text input', () => {
     render(<TextField label="Name" defaultValue="icon" />);
@@ -243,9 +259,9 @@ describe('Slider', () => {
     });
 
     it('inline variant drops the stacked label and exposes a labelled group', () => {
-      render(<ColorField variant="inline" label="Stop 1 colour" value={{ color: '#00ff00', alpha: 1 }} onChange={() => {}} />);
-      expect(screen.getByRole('group', { name: 'Stop 1 colour' })).toBeInTheDocument();
-      expect(screen.getByLabelText('Stop 1 colour hex')).toHaveValue('00FF00');
+      render(<ColorField variant="inline" label="Stop 1 color" value={{ color: '#00ff00', alpha: 1 }} onChange={() => {}} />);
+      expect(screen.getByRole('group', { name: 'Stop 1 color' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Stop 1 color hex')).toHaveValue('00FF00');
     });
   });
 
@@ -362,7 +378,7 @@ describe('Popover', () => {
             setOpen(false);
             onClose();
           }}
-          aria-label="Colour picker"
+          aria-label="Color picker"
         >
           <p>Panel content</p>
         </Popover>
@@ -376,7 +392,7 @@ describe('Popover', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open panel' }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Colour picker' });
+    const dialog = screen.getByRole('dialog', { name: 'Color picker' });
     expect(dialog.parentElement).toBe(document.body);
     expect(screen.getByText('Panel content')).toBeInTheDocument();
     expect(dialog).toHaveStyle({ position: 'fixed' });
@@ -409,18 +425,18 @@ describe('Popover', () => {
 describe('ColorField picker', () => {
   it('opens in a portaled dialog and closes with Escape', async () => {
     const user = userEvent.setup();
-    render(<ColorField label="Fill colour" value={{ color: '#f8fafc', alpha: 1 }} onChange={() => {}} />);
+    render(<ColorField label="Fill color" value={{ color: '#f8fafc', alpha: 1 }} onChange={() => {}} />);
 
-    await user.click(screen.getByRole('button', { name: 'Choose Fill colour' }));
+    await user.click(screen.getByRole('button', { name: 'Choose Fill color' }));
 
-    const dialog = await screen.findByRole('dialog', { name: 'Fill colour picker' });
+    const dialog = await screen.findByRole('dialog', { name: 'Fill color picker' });
     expect(dialog.parentElement).toBe(document.body);
 
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog', { name: 'Fill colour picker' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Fill color picker' })).not.toBeInTheDocument();
   }, 10_000);
 
-  it('browses the colour library and applies a palette swatch', async () => {
+  it('browses the color library and applies a palette swatch', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<ColorField label="Fill" value={{ color: '#000000', alpha: 1 }} onChange={onChange} />);
@@ -428,7 +444,7 @@ describe('ColorField picker', () => {
     await user.click(screen.getByRole('button', { name: 'Choose Fill' }));
 
     // Palettes are grouped by system; switching palette swaps the swatches.
-    const paletteSelect = screen.getByLabelText('Colour palette');
+    const paletteSelect = screen.getByLabelText('Color palette');
     await user.selectOptions(paletteSelect, 'apple-system');
     await user.click(screen.getByRole('button', { name: 'Use #007AFF' }));
 

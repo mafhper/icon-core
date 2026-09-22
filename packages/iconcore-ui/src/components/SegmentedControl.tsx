@@ -49,7 +49,7 @@ function SegmentedControlInner<T extends string>(
             onClick={() => onChange(option.value)}
             className={cn(
               'min-h-8 flex-1 cursor-pointer whitespace-nowrap rounded-[9px] px-3 text-[0.78rem] font-semibold transition-colors duration-150',
-              active ? 'bg-ic-accent-soft text-ic-accent' : 'bg-transparent text-ic-text-muted hover:text-ic-text'
+              active ? 'bg-ic-accent-soft text-ic-accent-text' : 'bg-transparent text-ic-text-muted hover:text-ic-text'
             )}
           >
             {option.label}

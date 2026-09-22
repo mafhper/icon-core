@@ -266,20 +266,52 @@ test('icon and label share an optical centre', async ({ page }) => {
  * panel language holds everywhere (they were clean on the first pass — this keeps
  * them that way). Wrapping text and `truncate` are skipped: they are not clipping.
  */
-const SURFACES: Array<{ name: string; selector: string; needsProject: boolean }> = [
+const SURFACES: Array<{
+  name: string;
+  selector: string;
+  needsProject: boolean;
+  /** Steps to bring the surface on screen once the editor is ready. */
+  open?: (page: Page) => Promise<void>;
+}> = [
   { name: 'welcome modal', selector: '.ic-welcome-modal', needsProject: false },
   { name: 'layers panel', selector: '.ic-layer-list', needsProject: true },
   { name: 'action bar', selector: '.ic-action-bar', needsProject: true },
-  { name: 'topbar', selector: '.ic-topbar, header', needsProject: true }
+  { name: 'topbar', selector: '.ic-topbar, header', needsProject: true },
+  // F6 — 2ª passada: as duas superfícies que ficaram sem contrato na 1ª.
+  {
+    name: 'command palette',
+    selector: '.ic-command-palette',
+    needsProject: true,
+    open: async (page) => {
+      // The palette only opens on lowercase k (the handler is case-sensitive).
+      await page.keyboard.press('Control+k');
+      await expect(page.locator('.ic-command-palette')).toBeVisible();
+    }
+  },
+  {
+    name: 'export utilities',
+    selector: '.ic-export-view',
+    needsProject: true,
+    open: async (page) => {
+      await page.getByRole('button', { name: /export icon pack/i }).click();
+      await expect(page.locator('.ic-export-view')).toBeVisible();
+    }
+  }
 ];
+
+/** Boots the editor and opens `surface` (project + navigation as needed). */
+const openSurface = async (page: Page, surface: (typeof SURFACES)[number]) => {
+  await page.goto('/icon-core/app/?theme=dark');
+  if (surface.needsProject) {
+    await page.getByRole('button', { name: /^Create$/i }).first().click();
+    await page.waitForTimeout(800);
+  }
+  await surface.open?.(page);
+};
 
 for (const surface of SURFACES) {
   test(`${surface.name} does not clip control text`, async ({ page }) => {
-    await page.goto('/icon-core/app/?theme=dark');
-    if (surface.needsProject) {
-      await page.getByRole('button', { name: /^Create$/i }).first().click();
-      await page.waitForTimeout(800);
-    }
+    await openSurface(page, surface);
 
     const clipped = await collect(page, surface.selector, (root) => {
       const canvas = document.createElement('canvas');
@@ -289,6 +321,9 @@ for (const surface of SURFACES) {
         const styles = getComputedStyle(element);
         const rect = element.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0 || !context) continue;
+        // Sliders, checkboxes and colour wells render no text: `.value` is not a
+        // label to clip against (a checkbox reports "on").
+        if (element.tagName === 'INPUT' && ['range', 'checkbox', 'radio', 'color', 'file'].includes((element as HTMLInputElement).type)) continue;
         if (element.children.length > 0 && element.tagName !== 'BUTTON') continue;
         const raw = element.tagName === 'SELECT'
           ? element.selectedOptions[0]?.textContent ?? ''
@@ -314,6 +349,75 @@ for (const surface of SURFACES) {
     });
 
     expect(clipped, clipped.join('\n')).toEqual([]);
+  });
+}
+
+/**
+ * F6 — 2ª passada (Command Palette, Export Utilities). The two surfaces that had
+ * no contract in the first pass are held to the same polish rules as the
+ * inspector: transitions name their properties and use the project curve, and
+ * every interactive control shows a visible focus indicator.
+ */
+const EXTRA_SURFACES = SURFACES.filter((surface) => surface.open != null);
+
+for (const surface of EXTRA_SURFACES) {
+  test(`${surface.name}: transitions name their properties and use the project curve`, async ({ page }) => {
+    await openSurface(page, surface);
+
+    const findings = await collect(page, surface.selector, (root) => {
+      const out: string[] = [];
+      for (const element of [root, ...root.querySelectorAll('*')]) {
+        const styles = getComputedStyle(element);
+        const durations = styles.transitionDuration.split(',').map((value) => parseFloat(value) || 0);
+        if (!durations.some((value) => value > 0)) continue;
+        const label = String(element.className).slice(0, 40) || element.tagName.toLowerCase();
+        if (styles.transitionProperty === 'all') out.push(`transition: all -> ${label}`);
+        if (styles.transitionTimingFunction.includes('0.4, 0, 0.2, 1')) {
+          out.push(`default ease instead of cubic-bezier(0.2, 0, 0, 1) -> ${label}`);
+        }
+      }
+      return out;
+    });
+
+    expect(findings, findings.join('\n')).toEqual([]);
+  });
+
+  test(`${surface.name}: every interactive control shows a focus indicator`, async ({ page }) => {
+    await openSurface(page, surface);
+
+    // Real keyboard focus: script `focus()` does not reliably match
+    // `:focus-visible` in Chromium. Tabs until focus enters the surface, checks
+    // while it stays inside, and stops the first time focus leaves again.
+    const missing = new Set<string>();
+    let entered = false;
+
+    for (let step = 0; step < 80; step += 1) {
+      await page.keyboard.press('Tab');
+      const current = await page.evaluate((selector) => {
+        const root = document.querySelector(selector);
+        const element = document.activeElement as HTMLElement | null;
+        if (!root || !element || element === document.body) return null;
+        if (!root.contains(element)) return { inside: false, key: '', label: '', hasIndicator: true };
+        const styles = getComputedStyle(element);
+        const outline = styles.outlineStyle !== 'none' && (parseFloat(styles.outlineWidth) || 0) > 0;
+        return {
+          inside: true,
+          key: `${element.tagName.toLowerCase()}.${String(element.className).split(' ').slice(0, 2).join('.').slice(0, 40)}`,
+          label: element.getAttribute('aria-label') ?? (element.textContent ?? '').trim().slice(0, 18),
+          hasIndicator: outline || styles.boxShadow !== 'none'
+        };
+      }, surface.selector);
+
+      if (!current) break;
+      if (!current.inside) {
+        if (entered) break;
+        continue;
+      }
+      entered = true;
+      if (!current.hasIndicator) missing.add(`${current.key} [${current.label}]`);
+    }
+
+    expect([...missing], `sem indicador de foco:\n${[...missing].join('\n')}`).toEqual([]);
   });
 }
 

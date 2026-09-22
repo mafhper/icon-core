@@ -28,9 +28,9 @@ describe('UiGallery (UI Lab)', () => {
   it('states the question each fixture must answer', () => {
     renderLab();
 
-    expect(screen.getAllByText(/alta densidade/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/O foco é perceptível/i)).toBeInTheDocument();
-    expect(screen.getByText(/muda de estratégia/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/high density/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Is focus perceivable/i)).toBeInTheDocument();
+    expect(screen.getByText(/change strategy/i)).toBeInTheDocument();
   });
 
   it('marks what still waits for the interaction spec', () => {
@@ -38,7 +38,7 @@ describe('UiGallery (UI Lab)', () => {
 
     // Pending fixtures are registered (with their question) but carry no
     // speculative markup, so the status badge must be visible.
-    expect(screen.getAllByText('aguarda spec').length).toBeGreaterThanOrEqual(10);
+    expect(screen.getAllByText('Awaiting spec').length).toBeGreaterThanOrEqual(10);
   });
 
   it('renders without a Composer project', () => {

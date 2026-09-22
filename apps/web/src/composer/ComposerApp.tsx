@@ -37,6 +37,12 @@ const ComposerShell = () => {
         </>
       )}
       {showWelcome && <WelcomeModal dismissible={Boolean(state.project)} />}
+      {/* Stable polite region: announces the dirty flag without relying on the
+          gold dot (colour alone), and sits outside the surfaces the polish
+          contract measures. */}
+      <span className="sr-only" role="status">
+        {state.isDirty ? 'You have unsaved changes' : ''}
+      </span>
     </>
   );
 };

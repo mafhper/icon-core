@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { cn } from '../utils/cn';
-import { Field } from './Field';
+import { FieldGroup } from './FieldGroup';
 import { Popover } from './Popover';
 import { COLOR_LIBRARY, DEFAULT_PALETTE_ID, findPalette } from '../library/colorLibrary';
 import {
@@ -241,7 +241,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
             <div className="mt-3 flex items-center gap-2">
               <select
                 value={format}
-                aria-label="Colour format"
+                aria-label="Color format"
                 onChange={(event) => setFormat(event.target.value as ColorFormat)}
                 className="h-[var(--ic-control-md)] w-[92px] shrink-0 rounded-[var(--ic-field-radius)] bg-ic-elevated py-0 pl-2 text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
               >
@@ -251,7 +251,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
               </select>
               <input
                 value={draft}
-                aria-label="Colour value"
+                aria-label="Color value"
                 onChange={(event) => setDraft(event.target.value)}
                 onBlur={commitDraft}
                 onKeyDown={(event) => {
@@ -266,7 +266,7 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
                 <span className="text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">Library</span>
                 <select
                   value={paletteId}
-                  aria-label="Colour palette"
+                  aria-label="Color palette"
                   onChange={(event) => setPaletteId(event.target.value)}
                   className="h-[var(--ic-control-md)] w-44 rounded-[var(--ic-field-radius)] bg-ic-elevated py-0 pl-2 text-[length:var(--ic-control-font-size)] text-ic-text outline-none"
                 >
@@ -330,8 +330,8 @@ export const ColorField = ({ label, hint, value, onChange, disabled, className, 
   }
 
   return (
-    <Field label={label} hint={hint}>
+    <FieldGroup label={label} hint={hint}>
       {content}
-    </Field>
+    </FieldGroup>
   );
 };

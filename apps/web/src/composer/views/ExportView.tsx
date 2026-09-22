@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ArrowLeft, Download, Check, LoaderCircle, FileText, TriangleAlert, FolderOpen } from 'lucide-react';
 import type { IconTarget, IconVariant, OutputFormat, ExportStructure, ZipCompression } from '@iconcore/shared';
-import { Button, Field, SegmentedControl, Slider, Switch, withIconStroke } from '@iconcore/ui';
+import { Button, FieldGroup, SegmentedControl, Slider, Switch, withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { useToast } from '../toast/ToastContext';
 import {
@@ -169,28 +169,28 @@ export const ExportView = () => {
     : [{ id: 'zip', label: 'ZIP archive' }, { id: 'files', label: 'Separate files' }];
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="ic-export-view min-h-screen p-8">
       <div className="max-w-2xl mx-auto space-y-6">
         <button
           type="button"
           onClick={() => navigate('edit-space')}
-          className="inline-flex items-center gap-2 text-sm text-ic-muted hover:text-ic-text transition"
+          className="inline-flex items-center gap-2 text-sm text-ic-text-muted hover:text-ic-text transition"
         >
           {withIconStroke(<ArrowLeft size={16} />)}
           Back to Edit Space
         </button>
 
         <div>
-          <h1 className="font-display text-2xl uppercase tracking-[0.18em] mb-2">
+          <h1 className="font-display text-2xl font-semibold tracking-tight mb-2">
             Export Utilities
           </h1>
-          <p className="text-sm text-ic-muted">
+          <p className="text-sm text-ic-text-muted">
             Pick targets, variants and output settings. Everything renders through the same engine you see on the canvas.
           </p>
         </div>
 
         <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-6 space-y-3">
-          <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">
+          <h2 className="font-display text-sm font-semibold tracking-tight text-ic-accent-text">
             Variants
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -203,7 +203,7 @@ export const ExportView = () => {
                     : 'border-ic-border hover:border-ic-accent/50'
                 }`}
               >
-                <span className="text-xs font-semibold uppercase tracking-[0.08em]">{variant}</span>
+                <span className="text-xs font-semibold capitalize">{variant}</span>
                 <input
                   type="checkbox"
                   checked={selectedVariants.has(variant)}
@@ -216,10 +216,11 @@ export const ExportView = () => {
 
         <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">
+            <h2 className="font-display text-sm font-semibold tracking-tight text-ic-accent-text">
               Export Targets
             </h2>
             <select
+              aria-label="Quick select targets"
               onChange={(e) => {
                 const val = e.target.value;
                 if (val === 'all') {
@@ -246,7 +247,7 @@ export const ExportView = () => {
             {EXPORT_TARGETS.map((target) => (
               <label
                 key={target.id}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${
                   selectedTargets.has(target.id)
                     ? 'border-ic-accent bg-ic-accent/10'
                     : 'border-ic-border hover:border-ic-accent/50'
@@ -260,12 +261,12 @@ export const ExportView = () => {
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{target.name}</p>
-                  <p className="text-xs text-ic-muted">
+                  <p className="text-xs text-ic-text-muted">
                     {target.tasks.length} files
                   </p>
                 </div>
                 {selectedTargets.has(target.id) && (
-                  <Check size={16} className="text-ic-accent shrink-0" />
+                  <Check size={16} className="text-ic-accent-text shrink-0" />
                 )}
               </label>
             ))}
@@ -273,18 +274,18 @@ export const ExportView = () => {
         </div>
 
         <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-6 space-y-5">
-          <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">
+          <h2 className="font-display text-sm font-semibold tracking-tight text-ic-accent-text">
             Output
           </h2>
 
-          <Field label="Format">
+          <FieldGroup label="Format">
             <SegmentedControl
               aria-label="Format"
               value={format}
               onChange={setFormat}
               options={[{ value: 'png', label: 'PNG' }, { value: 'webp', label: 'WebP' }, { value: 'jpeg', label: 'JPEG' }]}
             />
-          </Field>
+          </FieldGroup>
 
           {isLossy && (
             <Slider
@@ -296,32 +297,32 @@ export const ExportView = () => {
             />
           )}
 
-          <Field label="Folder structure">
+          <FieldGroup label="Folder structure">
             <SegmentedControl
               aria-label="Folder structure"
               value={structure}
               onChange={setStructure}
               options={[{ value: 'nested', label: 'Nested (target/variant)' }, { value: 'flat', label: 'Flat' }]}
             />
-          </Field>
+          </FieldGroup>
 
-          <Field label="Destination">
+          <FieldGroup label="Destination">
             <SegmentedControl
               aria-label="Destination"
               value={destination}
               onChange={setDestination}
               options={destinationOptions.map((o) => ({ value: o.id, label: o.label }))}
             />
-          </Field>
+          </FieldGroup>
           {destination === 'files' && (
-            <p className="text-xs text-ic-muted mt-1.5">Each file downloads separately (paths flattened into the filename).</p>
+            <p className="text-xs text-ic-text-muted mt-1.5">Each file downloads separately (paths flattened into the filename).</p>
           )}
           {destination === 'folder' && (
-            <p className="text-xs text-ic-muted mt-1.5">You'll be asked to choose a folder; the full tree is written there, uncompressed.</p>
+            <p className="text-xs text-ic-text-muted mt-1.5">You'll be asked to choose a folder; the full tree is written there, uncompressed.</p>
           )}
 
           {destination === 'zip' && (
-            <Field label="Compression">
+            <FieldGroup label="Compression">
               <SegmentedControl
                 aria-label="Compression"
                 value={compression}
@@ -337,7 +338,7 @@ export const ExportView = () => {
                   onChange={(e) => setCompressionLevel(Number(e.target.value))}
                 />
               )}
-            </Field>
+            </FieldGroup>
           )}
 
           <Switch
@@ -356,14 +357,14 @@ export const ExportView = () => {
           <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-6 composer-scale-in">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                {progress.phase === 'exporting' && <LoaderCircle size={20} className="animate-spin text-ic-accent" />}
-                {progress.phase === 'archiving' && <FileText size={20} className="text-ic-accent composer-pulse" />}
+                {progress.phase === 'exporting' && <LoaderCircle size={20} className="animate-spin text-ic-accent-text" />}
+                {progress.phase === 'archiving' && <FileText size={20} className="text-ic-accent-text composer-pulse" />}
                 <div>
                   <p className="text-sm font-semibold">
                     {progress.phase === 'exporting' && `Rendering ${progress.currentTarget}`}
                     {progress.phase === 'archiving' && (destination === 'folder' ? 'Writing files…' : 'Packaging archive…')}
                   </p>
-                  <p className="text-xs text-ic-muted">
+                  <p className="text-xs text-ic-text-muted">
                     {progress.currentTask} / {progress.totalTasks} render tasks
                     {elapsed > 0 && ` · ${formatElapsed(elapsed)}`}
                   </p>
@@ -373,9 +374,16 @@ export const ExportView = () => {
                 {totalTasks > 0 ? Math.round((progress.currentTask / totalTasks) * 100) : 0}%
               </span>
             </div>
-            <div className="w-full bg-ic-elevated rounded-full h-2 overflow-hidden">
+            <div
+              className="w-full bg-ic-elevated rounded-full h-2 overflow-hidden"
+              role="progressbar"
+              aria-label="Export progress"
+              aria-valuemin={0}
+              aria-valuemax={totalTasks}
+              aria-valuenow={progress.currentTask}
+            >
               <div
-                className="bg-ic-accent h-2 rounded-full transition-all duration-300"
+                className="bg-ic-accent h-2 rounded-full transition-[width] duration-300"
                 style={{ width: `${totalTasks > 0 ? (progress.currentTask / totalTasks) * 100 : 0}%` }}
               />
             </div>
@@ -390,7 +398,7 @@ export const ExportView = () => {
               </div>
               <div>
                 <p className="text-sm font-semibold">Export complete!</p>
-                <p className="text-xs text-ic-muted">
+                <p className="text-xs text-ic-text-muted">
                   {formatElapsed(elapsed)}
                 </p>
               </div>
@@ -411,7 +419,7 @@ export const ExportView = () => {
           variant="primary"
           onClick={handleExport}
           disabled={selectedTargets.size === 0 || busy}
-          className="w-full px-4 py-3 text-sm font-semibold uppercase tracking-[0.08em]"
+          className="w-full px-4 py-3 text-sm font-semibold"
           iconLeft={destination === 'folder' ? <FolderOpen size={16} /> : <Download size={16} />}
         >
           {busy

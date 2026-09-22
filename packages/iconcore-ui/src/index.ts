@@ -10,6 +10,7 @@ export { Tooltip, TooltipProvider, type TooltipProps } from './components/Toolti
 export { Kbd, type KbdProps } from './components/Kbd';
 export { Section, type SectionProps } from './components/Section';
 export { Field, type FieldProps } from './components/Field';
+export { FieldGroup, type FieldGroupProps } from './components/FieldGroup';
 export { TextField, type TextFieldProps } from './components/TextField';
 export { NumberField, type NumberFieldProps } from './components/NumberField';
 export { Select, type SelectProps } from './components/Select';

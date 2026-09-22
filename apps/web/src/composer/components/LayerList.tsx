@@ -52,7 +52,7 @@ export const LayerList = () => {
   return (
     <aside className="ic-layer-list">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-sm uppercase tracking-[0.18em] text-ic-accent">
+        <h2 className="font-display text-sm font-semibold tracking-tight text-ic-accent-text">
           Layers
         </h2>
       </div>
@@ -61,15 +61,15 @@ export const LayerList = () => {
         {layers.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 mb-4 rounded-2xl bg-ic-elevated flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-ic-muted">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-ic-text-muted">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                 <circle cx="8.5" cy="8.5" r="1.5"/>
                 <polyline points="21 15 16 10 5 21"/>
               </svg>
             </div>
-            <p className="text-xs text-ic-muted mb-1">No layers yet</p>
-            <p className="text-xs text-ic-muted/60">Add a shape or upload an image</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-[10px] text-ic-muted/40">
+            <p className="text-xs text-ic-text-muted mb-1">No layers yet</p>
+            <p className="text-xs text-ic-text-muted/60">Add a shape or upload an image</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-[10px] text-ic-text-muted/40">
               <span className="kbd">L</span> add layer
             </span>
           </div>
@@ -110,7 +110,7 @@ export const LayerList = () => {
             }`}
             style={{ animationDelay: `${idx * 30}ms` }}
           >
-            <div className="w-8 h-8 rounded bg-ic-elevated flex items-center justify-center overflow-hidden text-xs">
+            <div aria-hidden="true" className="w-8 h-8 rounded bg-ic-elevated flex items-center justify-center overflow-hidden text-xs">
               {previewUrl ? (
                 <img src={previewUrl} alt="" className="h-full w-full object-contain" />
               ) : (
@@ -132,16 +132,38 @@ export const LayerList = () => {
                 className="flex-1 min-w-0 text-xs px-1 py-0.5 rounded bg-ic-elevated border border-ic-accent focus:outline-none"
               />
             ) : (
-              <span
-                className="flex-1 text-xs truncate"
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: layer.id } });
+              // Keyboard selection lives here: the button is focusable and its
+              // Enter/Space click bubbles to the row, so pointer and keyboard
+              // share one selection path. F2 renames; Shift+F10/ContextMenu
+              // opens the layer menu (both were pointer-only before).
+              <button
+                type="button"
+                aria-current={state.activeLayerId === layer.id ? 'true' : undefined}
+                onKeyDown={(event) => {
+                  if (event.key === 'F2') {
+                    event.preventDefault();
+                    dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
+                    dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: layer.id } });
+                  } else if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                    event.preventDefault();
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
+                    setMenu({ x: rect.right, y: rect.bottom, layerId: layer.id });
+                  }
                 }}
-                title="Double-click to rename"
+                className="flex min-w-0 flex-1 items-center rounded-md text-left"
               >
-                {layer.name}
-              </span>
+                <span
+                  className="flex-1 text-xs truncate"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: layer.id } });
+                  }}
+                  title="Double-click to rename"
+                >
+                  {layer.name}
+                </span>
+              </button>
             )}
             <button
               type="button"
@@ -149,7 +171,9 @@ export const LayerList = () => {
                 e.stopPropagation();
                 dispatch({ type: 'TOGGLE_LAYER_VISIBILITY', payload: { id: layer.id } });
               }}
-              className="p-1 text-ic-muted hover:text-ic-text"
+              aria-label={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
+              title={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
+              className="p-1 text-ic-text-muted hover:text-ic-text"
             >
               {layer.visible ? <Eye size={12} /> : <EyeOff size={12} />}
             </button>
@@ -159,7 +183,9 @@ export const LayerList = () => {
                 e.stopPropagation();
                 dispatch({ type: 'TOGGLE_LAYER_LOCK', payload: { id: layer.id } });
               }}
-              className="p-1 text-ic-muted hover:text-ic-text"
+              aria-label={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
+              title={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
+              className="p-1 text-ic-text-muted hover:text-ic-text"
             >
               {layer.locked ? <Lock size={12} /> : <Unlock size={12} />}
             </button>

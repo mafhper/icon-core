@@ -26,7 +26,7 @@ const variantClasses: Record<IconButtonVariant, string> = {
   default:
     'h-[var(--ic-control-md)] w-[var(--ic-control-md)] rounded-ic-md text-ic-text ' +
     'not-data-[selected=true]:hover:not-disabled:bg-ic-elevated ' +
-    'data-[selected=true]:bg-ic-accent-soft data-[selected=true]:text-ic-accent',
+    'data-[selected=true]:bg-ic-accent-soft data-[selected=true]:text-ic-accent-text',
   // Vertical rail tool: muted by default, goes full text on hover and inverts
   // to the solid accent when active.
   rail:

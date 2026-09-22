@@ -194,7 +194,7 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
               <div className="min-w-[9rem] flex-1">
                 <ColorField
                   variant="inline"
-                  label={`Stop ${index + 1} colour`}
+                  label={`Stop ${index + 1} color`}
                   value={toColorValue(stop)}
                   onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
                   onCommit={onCommit}

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowRight, Layers2, MonitorDown, PenTool, CloudUpload, X } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { fileToLayerAsset, isSupportedLayerFile } from '../utils/fileLayers';
 import { createProjectFromAsset } from '../utils/projectFactory';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 import { Button, TextField, withIconStroke } from '@iconcore/ui';
 
@@ -19,6 +21,7 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
   const [isImporting, setIsImporting] = useState(false);
   const uploadMode = useRef<UploadMode>('edit');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const close = () => {
     if (dismissible) navigate('edit-space');
@@ -32,6 +35,8 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [dismissible, navigate]);
+
+  useFocusTrap(dialogRef, true);
 
   const createProject = () => {
     dispatch({ type: 'NEW_PROJECT', payload: { name: projectName.trim() || 'My Icon', size: 512, view: 'edit-space' } });
@@ -58,9 +63,9 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
     }
   };
 
-  return (
+  return createPortal(
     <div className="ic-modal-overlay" onClick={close}>
-      <div className="ic-welcome-modal" role="dialog" aria-modal="true" aria-label="Start a new icon" onClick={(event) => event.stopPropagation()}>
+      <div ref={dialogRef} tabIndex={-1} className="ic-welcome-modal" role="dialog" aria-modal="true" aria-label="Start a new icon" onClick={(event) => event.stopPropagation()}>
         {dismissible && (
           <button type="button" className="ic-modal-close" onClick={close} aria-label="Close">
             <X size={18} />
@@ -131,6 +136,7 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
           </a>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
