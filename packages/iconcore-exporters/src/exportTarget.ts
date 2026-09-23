@@ -27,6 +27,13 @@ export const getAllTargets = (): TargetDefinition[] => {
   return Object.values(TARGET_REGISTRY);
 };
 
+/**
+ * @deprecated will be removed at EX5/EX7. The source of truth for target
+ * artifact sets is now the preset registry (`src/presets`) + `planFromTarget`;
+ * execution moves to the EX4 pipeline (encodeArtifact). This legacy path
+ * renders the old `RasterTask[]` list and stays only for the current web UI
+ * and CLI until they switch to plans.
+ */
 export const exportTarget = async (
   project: IconCoreProject,
   target: IconTarget,

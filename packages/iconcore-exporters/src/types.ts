@@ -13,6 +13,11 @@ export interface ExportResult {
   warnings: string[];
 }
 
+/**
+ * @deprecated superseded by `ExportPlan`/`ExportArtifact` + the encoders
+ * (EX3–EX7). Kept only for the legacy `exportTarget` path used by the web app
+ * until EX5 rewires it to the plan.
+ */
 export interface RasterTask {
   path: string;
   width: number;
@@ -25,6 +30,10 @@ export interface RasterTask {
   transparent: boolean;
 }
 
+/**
+ * @deprecated superseded by `ExportPreset` + `buildPlan`/`planFromTarget`
+ * (EX3). The corrected artifact sets live in `src/presets`.
+ */
 export interface TargetDefinition {
   id: IconTarget;
   name: string;
