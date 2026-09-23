@@ -18,3 +18,4 @@ export type {
 } from './encoders';
 export type { ExportResult, ExportFile, RasterTask, TargetDefinition } from './types';
 export type { ExportReport } from './report';
+export * from './pipeline';
