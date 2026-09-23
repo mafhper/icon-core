@@ -12,7 +12,8 @@ export {
   cssAngleVector,
   conicStartRadians
 } from './gradient';
-export { renderToSvg } from './renderToSvg';
+export { renderToSvg, renderToSvgWithOptions } from './renderToSvg';
+export type { RenderSvgOptions, RenderSvgResult } from './renderToSvg';
 export { sanitizeSvg } from './sanitizeSvg';
 export { createCanvasBackend } from './backends/canvas';
 export { createNodeBackend } from './backends/node';

@@ -47,7 +47,8 @@ export interface ResolvedLayer extends Omit<IconLayer, 'variantOverrides'> {
 
 export { composeLayers } from './composeLayers';
 export { renderProject } from './renderProject';
-export { renderToSvg } from './renderToSvg';
+export { renderToSvg, renderToSvgWithOptions } from './renderToSvg';
+export type { RenderSvgOptions, RenderSvgResult } from './renderToSvg';
 export { sanitizeSvg } from './sanitizeSvg';
 export { createCanvasBackend } from './backends/canvas';
 export { applyMask } from './masks/applyMask';
