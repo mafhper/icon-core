@@ -142,10 +142,40 @@ const approximationMarkup = (fill: GradientFill, shape: ShapeDefinition, steps =
   return out;
 };
 
-export const renderToSvg = (
+export interface RenderSvgOptions {
+  /**
+   * Natural dimensions per layer id for raster (non-SVG) image layers, so they
+   * can be embedded as `data:` URIs (ADR-014 §7). Without an entry the image
+   * layer is omitted from the SVG — and a warning is reported unless
+   * `skipImages` is set (opt-out per artifact).
+   */
+  imageSizes?: ReadonlyMap<string, { width: number; height: number }>;
+  /** Omit unsized image layers silently (legacy/opt-out behaviour). Default: warn. */
+  skipImages?: boolean;
+  /** Alert when an embedded base64 image exceeds this byte threshold. */
+  maxEmbeddedImageBytes?: number;
+}
+
+export interface RenderSvgResult {
+  svg: string;
+  warnings: string[];
+}
+
+/**
+ * Legacy synchronous export. Raster image layers are omitted (the pre-embed
+ * behaviour, unchanged); use `renderToSvgWithOptions` to embed them.
+ */
+export const renderToSvg = (project: IconCoreProject, variant: IconVariant): string =>
+  renderToSvgWithOptions(project, variant, { skipImages: true }).svg;
+
+export const renderToSvgWithOptions = (
   project: IconCoreProject,
-  variant: IconVariant
-): string => {
+  variant: IconVariant,
+  options: RenderSvgOptions = {}
+): RenderSvgResult => {
+  const warnings: string[] = [];
+  const { imageSizes, skipImages = false, maxEmbeddedImageBytes } = options;
+
   const size = project.canvas.size;
   const bg = project.variants[variant]?.canvas?.background ?? project.canvas.background;
 
@@ -231,6 +261,37 @@ export const renderToSvg = (
       continue;
     }
 
+    // Raster image layer (inline base64, non-SVG): embed as a data: URI when the
+    // caller resolved its natural size (ADR-014 §7). Without a size it is omitted
+    // and a warning is reported unless the artifact opted out via `skipImages`.
+    if (layer.source.data && layer.source.mimeType && layer.source.mimeType !== 'image/svg+xml') {
+      const natural = imageSizes?.get(layer.id);
+      if (natural && !skipImages) {
+        const layerRect = layerBaseRect({ source: layer.source }, size, natural);
+        const placement =
+          `translate(${layerRect.cx - layerRect.w / 2},${layerRect.cy - layerRect.h / 2}) ` +
+          `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
+        const dataUri = `data:${layer.source.mimeType};base64,${layer.source.data}`;
+        svgLayers +=
+          `<g opacity="${opacity}" transform="${transformAttr}">` +
+          `<image x="0" y="0" width="${natural.width}" height="${natural.height}" href="${dataUri}" transform="${placement}"/>` +
+          `</g>\n`;
+        if (maxEmbeddedImageBytes !== undefined) {
+          const approxBytes = Math.ceil(layer.source.data.length * 0.75);
+          if (approxBytes > maxEmbeddedImageBytes) {
+            warnings.push(
+              `Image layer "${layer.name}" embeds ~${approxBytes} bytes as base64 in the SVG (limit: ${maxEmbeddedImageBytes}).`
+            );
+          }
+        }
+      } else if (!skipImages) {
+        warnings.push(
+          `Image layer "${layer.name}" could not be embedded in the SVG (no resolvable size) and was omitted.`
+        );
+      }
+      continue;
+    }
+
     const shape = layer.source.shape;
     if (!shape) continue;
 
@@ -253,8 +314,10 @@ export const renderToSvg = (
 
   const defsBlock = defs.length > 0 ? `  <defs>\n    ${defs.join('\n    ')}\n  </defs>\n` : '';
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
 ${defsBlock}${bgMarkup}${svgLayers}
 </svg>`;
+
+  return { svg, warnings };
 };
