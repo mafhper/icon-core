@@ -236,7 +236,141 @@ export interface ExportProfile {
   compressionLevel?: number;
   /** Include a standalone preview.html contact sheet. Defaults to true. */
   includePreview?: boolean;
+  /**
+   * Artifact-model fields (ADR-014, additive). When `artifacts` is present it is
+   * the persisted snapshot of the plan; otherwise the plan is derived from the
+   * preset (new/legacy projects). The legacy `format`/`quality`/`structure`/`zip`
+   * fields above are kept as a fallback and are never deleted.
+   */
+  presetId?: string;
+  artifacts?: ExportArtifact[];
+  /** Transport destination (zip/folder/files) — not part of the plan. */
+  destination?: ExportDestination;
 }
+
+// --- export artifact model (ADR-014) ---
+
+/** Encoding of an exported file: raster, vector or container. */
+export type ExportFormat = 'svg' | 'png' | 'webp' | 'jpeg' | 'ico' | 'icns';
+
+/** Nature of an artifact — derived from its format (never serialized). */
+export type ExportArtifactKind = 'raster' | 'vector' | 'container';
+
+/** Where an exported pack is written. Transport only — not part of the plan. */
+export type ExportDestination = 'zip' | 'folder' | 'files';
+
+/** Opacity requirement of a raster artifact (e.g. PWA maskable requires `opaque`). */
+export type ExportBackground = 'transparent' | 'opaque';
+
+/** Platform a preset targets. */
+export type ExportPlatform = 'windows' | 'macos' | 'linux' | 'web';
+
+export interface ExportArtifactSpec {
+  id: string;
+  format: ExportFormat;
+  /** Output path, with optional tokens: `{name} {variant} {format} {size} {target}`. */
+  path: string;
+  enabled: boolean;
+  variant?: IconVariant;
+  /** Raster side length (icons are square); for `svg`, the canvas/viewBox. */
+  size?: number;
+  /** 0..1, applied to lossy formats (webp/jpeg) only. */
+  quality?: number;
+  background?: ExportBackground;
+  /** Origin target, for traceability. */
+  target?: IconTarget;
+  options?: Record<string, unknown>;
+}
+
+/**
+ * ICO/ICNS: a container of embedded raster representations. `entries` are
+ * **physical** pixel sizes (the size of the embedded PNG), and are mandatory.
+ */
+export interface ExportContainerSpec extends Omit<ExportArtifactSpec, 'format'> {
+  format: 'ico' | 'icns';
+  entries: number[];
+}
+
+export type ExportArtifact = ExportArtifactSpec | ExportContainerSpec;
+
+/** Non-icon file produced by a plan (manifest, report, preview…). */
+export type ExportAttachmentGenerator = 'manifest' | 'browserconfig' | 'report' | 'preview' | 'readme';
+
+export interface ExportAttachment {
+  path: string;
+  generator: ExportAttachmentGenerator;
+}
+
+/** The output plan: an editable list of artifacts plus non-icon attachments. */
+export interface ExportPlan {
+  presetId?: string;
+  artifacts: ExportArtifact[];
+  attachments: ExportAttachment[];
+}
+
+export interface ExportContext {
+  project: IconCoreProject;
+  variants: IconVariant[];
+}
+
+/** A preset is a convenience generator of an initial plan (ADR-014 §2.6). */
+export interface ExportPreset {
+  id: string;
+  label: string;
+  description: string;
+  platforms: ExportPlatform[];
+  createArtifacts(context: ExportContext): ExportArtifactSpec[];
+  recommended?: boolean;
+  documentation?: string;
+}
+
+export const EXPORT_FORMAT_KIND: Record<ExportFormat, ExportArtifactKind> = {
+  svg: 'vector',
+  png: 'raster',
+  webp: 'raster',
+  jpeg: 'raster',
+  ico: 'container',
+  icns: 'container'
+};
+
+/** File extension per format (`jpeg` uses `jpg`). */
+export const EXPORT_FORMAT_EXTENSION: Record<ExportFormat, string> = {
+  svg: 'svg',
+  png: 'png',
+  webp: 'webp',
+  jpeg: 'jpg',
+  ico: 'ico',
+  icns: 'icns'
+};
+
+export const EXPORT_FORMAT_MIME: Record<ExportFormat, string> = {
+  svg: 'image/svg+xml',
+  png: 'image/png',
+  webp: 'image/webp',
+  jpeg: 'image/jpeg',
+  ico: 'image/x-icon',
+  icns: 'image/icns'
+};
+
+/** Derive an artifact's nature from its format (ADR-014 §1.2). */
+export const kindOf = (format: ExportFormat): ExportArtifactKind => EXPORT_FORMAT_KIND[format];
+
+/** Container formats (`ico`/`icns`) carry embedded representations. */
+export const isContainerFormat = (format: ExportFormat): format is 'ico' | 'icns' =>
+  EXPORT_FORMAT_KIND[format] === 'container';
+
+/** Only `jpeg` lacks an alpha channel. */
+export const supportsAlpha = (format: ExportFormat): boolean => format !== 'jpeg';
+
+/** Lossy formats accept an encode `quality`. */
+export const isLossyFormat = (format: ExportFormat): boolean => format === 'webp' || format === 'jpeg';
+
+/** File extension for a format (`jpeg` → `jpg`). */
+export const extensionForFormat = (format: ExportFormat): string => EXPORT_FORMAT_EXTENSION[format];
+
+/** Narrow an artifact to its container spec. */
+export const isContainerSpec = (artifact: ExportArtifact): artifact is ExportContainerSpec =>
+  isContainerFormat(artifact.format);
 
 export interface IconCoreProject {
   schemaVersion: 3;
