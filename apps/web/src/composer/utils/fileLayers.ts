@@ -99,6 +99,67 @@ const measureAssetSize = async (file: File, dataUrl: string): Promise<{ width: n
   }
 };
 
+/**
+ * Intrinsic (untransformed) pixel size of a stored layer payload.
+ *
+ * Single source of truth shared by the importer and by the "Reset aspect"
+ * action (IC3 §4.2, option C). If these two ever measure differently the
+ * squish bug comes back, so both must go through this.
+ *
+ * - SVG: parsed synchronously via the shared `parseSvgIntrinsicSize` — the
+ *   same helper the SVG exporter uses, so no timing dependency.
+ * - Raster: decoded with `createImageBitmap` (asynchronous, fine for an
+ *   explicit user action).
+ * - Nothing measurable → `null`, so callers decide. The importer falls back
+ *   to {@link FALLBACK_SIZE}; the action reports "cannot measure".
+ */
+export const measureIntrinsicSize = async (
+  mimeType: string | undefined,
+  data: string
+): Promise<{ width: number; height: number } | null> => {
+  if (mimeType === 'image/svg+xml') {
+    const parsed = parseSvgIntrinsicSize(decodeStoredPayload(data));
+    if (parsed) return parsed;
+  }
+
+  if (!mimeType || !data) return null;
+
+  try {
+    const bitmap = await createImageBitmap(payloadToFile(mimeType, data));
+    return { width: bitmap.width, height: bitmap.height };
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Decode a stored payload (`source.data`) back to text/bytes. `readAsDataURL`
+ * produces base64; some producers emit the percent-encoded form instead.
+ */
+const decodeStoredPayload = (data: string): string => {
+  if (/%[0-9a-f]{2}/i.test(data)) {
+    try {
+      return decodeURIComponent(data);
+    } catch {
+      return data;
+    }
+  }
+  return atobSafe(data);
+};
+
+const atobSafe = (value: string): string => {
+  try {
+    return atob(value);
+  } catch {
+    return '';
+  }
+};
+
+const payloadToFile = (mimeType: string, data: string): File => {
+  const bytes = Uint8Array.from(atobSafe(data), (char) => char.charCodeAt(0));
+  return new File([bytes], 'layer', { type: mimeType });
+};
+
 export const fileToLayerAsset = async (file: File): Promise<FileLayerAsset> => {
   if (!isSupportedLayerFile(file)) {
     throw new Error(`Unsupported file type: ${file.name}`);

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Eraser } from 'lucide-react';
+import { Eraser, Ratio } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
 import { Button, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
 import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
+import { useResetLayerAspect } from '../hooks/useResetLayerAspect';
 import { FillEditor } from './FillEditor';
 import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
@@ -47,6 +48,7 @@ const BackgroundFillSection = ({
 export const LayerInspector = () => {
   const { state, dispatch } = useComposer();
   const [showBgRemoval, setShowBgRemoval] = useState(false);
+  const resetAspect = useResetLayerAspect();
 
   const baseLayer = state.project?.layers.find((layer) => layer.id === state.activeLayerId);
   const activeVariant = state.activeVariant;
@@ -371,6 +373,17 @@ export const LayerInspector = () => {
               onChange={(event) => updateImageFilter({ contrast: Number(event.target.value) }, true)}
               onCommit={commit}
             />
+            {baseLayer.source.type === 'inline' && (
+              <Button
+                variant="secondary"
+                iconLeft={<Ratio size={14} />}
+                onClick={() => void resetAspect.reset()}
+                disabled={resetAspect.busy}
+                title="Restore this layer's width-to-height ratio from the asset, keeping its current size."
+              >
+                {resetAspect.busy ? 'Measuring…' : 'Reset aspect'}
+              </Button>
+            )}
             {baseLayer.source.type === 'inline' && baseLayer.source.mimeType !== 'image/svg+xml' && (
               <Button
                 variant="secondary"

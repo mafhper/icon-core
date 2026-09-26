@@ -1,5 +1,6 @@
 import type { IconCoreProject, IconLayer, IconTarget } from '@iconcore/shared';
 import type { FileLayerAsset } from './fileLayers';
+import { measureIntrinsicSize } from './fileLayers';
 import { brandGradientFill } from '../constants';
 
 const slugify = (value: string) =>
@@ -91,6 +92,72 @@ export const createLayerFromAsset = (
     },
     transform: { x: 0, y: 0, scale: 1, rotation: 0 },
     opacity: 1
+  };
+};
+
+/**
+ * `shape` dimensions for an asset whose intrinsic size is `intrinsic`, placed at
+ * the same footprint the layer currently occupies.
+ *
+ * The current **long** side is kept and the other axis is derived from the
+ * intrinsic ratio, so a squashed layer straightens without growing or shrinking
+ * — the icon keeps its place in the composition.
+ */
+const shapeAtIntrinsicAspect = (
+  current: { width: number; height: number },
+  intrinsic: { width: number; height: number }
+): { width: number; height: number } => {
+  const ratio = intrinsic.width / intrinsic.height;
+  if (!Number.isFinite(ratio) || ratio <= 0) return current;
+
+  const long = Math.max(current.width, current.height);
+  const round = (value: number): number => Math.max(1, Number(value.toFixed(2)));
+  // A landscape asset keeps the long side horizontal; a portrait one vertical.
+  return ratio >= 1
+    ? { width: round(long), height: round(long / ratio) }
+    : { width: round(long * ratio), height: round(long) };
+};
+
+/** Outcome of {@link resetLayerAspect}, so the UI can explain a no-op. */
+export type ResetAspectResult =
+  | { status: 'reset'; layer: IconLayer; from: { width: number; height: number } }
+  | { status: 'unchanged' }
+  | { status: 'not-applicable' }
+  | { status: 'unmeasurable' };
+
+/**
+ * IC3 §4.2 (option C) — "Reset aspect ratio": rewrite a squashed image/SVG
+ * layer's `source.shape` to the asset's intrinsic ratio, leaving `transform`
+ * untouched. The Canvas2D/SVG backends stretch the source into exactly this
+ * rectangle (`layerBaseRect`), so the shape *is* the layer's proportion and
+ * fixing it needs no schema change.
+ */
+export const resetLayerAspect = async (layer: IconLayer): Promise<ResetAspectResult> => {
+  if (layer.kind !== 'image' && layer.kind !== 'svg') return { status: 'not-applicable' };
+  if (layer.source.type !== 'inline' || !layer.source.data) return { status: 'not-applicable' };
+
+  const shape = layer.source.shape;
+  if (!shape) return { status: 'not-applicable' };
+
+  const intrinsic = await measureIntrinsicSize(layer.source.mimeType, layer.source.data);
+  if (!intrinsic) return { status: 'unmeasurable' };
+
+  const width = shape.width;
+  const height = shape.height;
+  const next = shapeAtIntrinsicAspect({ width, height }, intrinsic);
+
+  // Already at the intrinsic ratio (within a 0.5px rounding step) — nothing to do.
+  if (Math.abs(next.width - width) < 0.5 && Math.abs(next.height - height) < 0.5) {
+    return { status: 'unchanged' };
+  }
+
+  return {
+    status: 'reset',
+    from: { width, height },
+    layer: {
+      ...layer,
+      source: { ...layer.source, shape: { ...shape, width: next.width, height: next.height } }
+    }
   };
 };
 

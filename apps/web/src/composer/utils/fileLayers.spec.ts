@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileToLayerAsset } from './fileLayers';
+import { fileToLayerAsset, measureIntrinsicSize } from './fileLayers';
 
 const svgFile = (svg: string, name = 'logo.svg') => new File([svg], name, { type: 'image/svg+xml' });
 
@@ -34,5 +34,44 @@ describe('fileToLayerAsset', () => {
 
     expect(asset.width).toBe(512);
     expect(asset.height).toBe(512);
+  });
+});
+
+/**
+ * IC3 §4.2 (option C) — the "Reset aspect" action measures the stored payload
+ * with the same helper the importer uses. If these two diverged, a straightened
+ * layer could be squashed again on the next import.
+ */
+describe('measureIntrinsicSize', () => {
+  it('measures a stored SVG payload from its own document', async () => {
+    const size = await measureIntrinsicSize('image/svg+xml', btoa('<svg viewBox="0 0 48 24"></svg>'));
+
+    expect(size).toEqual({ width: 48, height: 24 });
+  });
+
+  it('measures from width/height with units', async () => {
+    const size = await measureIntrinsicSize('image/svg+xml', btoa('<svg width="64" height="32"></svg>'));
+
+    expect(size).toEqual({ width: 64, height: 32 });
+  });
+
+  it('accepts a percent-encoded payload', async () => {
+    const size = await measureIntrinsicSize(
+      'image/svg+xml',
+      encodeURIComponent('<svg viewBox="0 0 48 24"></svg>')
+    );
+
+    expect(size).toEqual({ width: 48, height: 24 });
+  });
+
+  it('returns null for an SVG with no intrinsic size instead of guessing', async () => {
+    const size = await measureIntrinsicSize('image/svg+xml', btoa('<svg width="100%" height="100%"></svg>'));
+
+    expect(size).toBeNull();
+  });
+
+  it('returns null for a missing payload or mime type', async () => {
+    expect(await measureIntrinsicSize(undefined, '')).toBeNull();
+    expect(await measureIntrinsicSize('image/png', '')).toBeNull();
   });
 });
