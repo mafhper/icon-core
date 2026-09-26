@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Copy, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, Copy, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { ExportArtifact, ExportContainerSpec, IconVariant } from '@iconcore/shared';
 import { isContainerSpec, kindOf } from '@iconcore/shared';
 import { Button, NumberField, Select, Slider } from '@iconcore/ui';
@@ -180,7 +180,7 @@ export const AddArtifactRow = ({ onAdd }: AddArtifactRowProps) => {
 
   if (!open) {
     return (
-      <Button variant="secondary" className="w-full" iconLeft={<MoreVertical size={14} />} onClick={() => setOpen(true)}>
+      <Button variant="secondary" className="w-full" iconLeft={<Plus size={14} />} onClick={() => setOpen(true)}>
         Add artifact
       </Button>
     );
