@@ -10,7 +10,7 @@ Todo se ejecuta localmente en el navegador o en la app desktop. No requiere cuen
 
 | Empezar un nuevo icono | Export Utilities |
 | --- | --- |
-| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.png) |
+| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.webp) |
 
 ## Probar
 

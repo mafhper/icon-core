@@ -80,7 +80,15 @@ await shoot(editor, APP + '#/edit-space', `${OUT}/app-editor.png`, {
     try { await page.click('.ic-layer-row', { timeout: 3000 }); await page.waitForTimeout(700); } catch { /* no row */ }
   }
 });
-await shoot(editor, APP + '#/export-utilities', `${OUT}/app-export.png`);
+// The export shot is captured as PNG because Playwright only encodes PNG/JPEG.
+// The committed asset the READMEs reference is `docs/assets/app-export.webp`
+// (a ~93% smaller conversion of this capture), so the raw PNG is written to a
+// scratch directory instead — otherwise every run would drop a stale
+// `app-export.png` next to it and quietly diverge from the docs.
+const RAW_OUT = '.dev/shots';
+mkdirSync(RAW_OUT, { recursive: true });
+
+await shoot(editor, APP + '#/export-utilities', `${RAW_OUT}/app-export.png`);
 await editor.close();
 
 // Welcome modal (no project)

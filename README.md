@@ -26,7 +26,7 @@ Open your file in Edit Space first, adjust positioning and variants, then export
 
 ## Export once, ship everywhere
 
-![Export Utilities with targets, format and output options](docs/assets/app-export.png)
+![Export Utilities with targets, format and output options](docs/assets/app-export.webp)
 
 Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP, JPEG), take a ZIP or separate files. The preview uses the same engine as export, so the files match what you saw.
 

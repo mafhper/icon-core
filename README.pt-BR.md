@@ -10,7 +10,7 @@ Tudo roda localmente no navegador ou no app desktop. Não exige conta, serviço 
 
 | Começar um novo ícone | Export Utilities |
 | --- | --- |
-| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.png) |
+| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.webp) |
 
 ## Teste
 
