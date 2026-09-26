@@ -1,4 +1,4 @@
-import type { ExportArtifact, ExportContext, ExportPlan } from '@iconcore/shared';
+import type { ExportArtifact, ExportContext, ExportPlan, IconVariant } from '@iconcore/shared';
 import { isContainerSpec } from '@iconcore/shared';
 import { resolveCanvasBackground } from '@iconcore/renderer';
 import { planProblems } from '../planner';
@@ -13,28 +13,42 @@ export interface PlanValidation {
 }
 
 /**
- * A "ready" project never warns about opacity (alpha is meaningful everywhere).
- * With a transparent/none background every opacity-sensitive check applies.
+ * Which of the variants a plan expands have a transparent (`none`) background.
+ *
+ * A plan can be expanded across several variants, and transparency is a
+ * per-variant property of the document — checking only `default` would silence
+ * the warning for a `dark` variant that is transparent on an otherwise opaque
+ * project. The legacy per-target path passed the variant explicitly; the plan
+ * level has to consider all of them.
  */
-const isProjectTransparent = (context: ExportContext): boolean => {
-  const background = resolveCanvasBackground(context.project, 'default');
-  return background.kind === 'none';
-};
+const transparentVariants = (context: ExportContext, variants: IconVariant[]): IconVariant[] =>
+  variants.filter((variant) => resolveCanvasBackground(context.project, variant).kind === 'none');
+
+const labelVariants = (variants: IconVariant[]): string =>
+  variants.length === 1 ? variants[0] : variants.join(', ');
 
 /** Per-artifact nature warnings (spec §6): JPEG alpha, opaque-on-transparent, containers. */
-export const artifactNatureWarnings = (artifact: ExportArtifact, context: ExportContext): string[] => {
+export const artifactNatureWarnings = (
+  artifact: ExportArtifact,
+  context: ExportContext,
+  options: { variants?: IconVariant[] } = {}
+): string[] => {
   const warnings: string[] = [];
-  const transparentProject = isProjectTransparent(context);
+  const variants = options.variants ?? ['default'];
+  const transparent = transparentVariants(context, variants);
   const label = `"${artifact.path}"`;
+  const where = labelVariants(variants);
 
   // JPEG has no alpha channel — transparent layers would be flattened.
-  if (artifact.format === 'jpeg' && resolveCanvasBackground(context.project, 'default').kind === 'none') {
-    warnings.push(`${label}: JPEG has no alpha channel — transparent/half-transparent layers render against a flattened background.`);
+  if (artifact.format === 'jpeg' && transparent.length > 0) {
+    warnings.push(`${label}: JPEG has no alpha channel — transparent/half-transparent layers render against a flattened background (${where}).`);
   }
 
   // Opaque requirement (e.g. PWA maskable) on a transparent project.
-  if (artifact.format !== 'jpeg' && artifact.background === 'opaque' && transparentProject) {
-    warnings.push(`${label}: requests an opaque background but the canvas is transparent — background is resolved at render time.`);
+  if (artifact.format !== 'jpeg' && artifact.background === 'opaque' && transparent.length > 0) {
+    warnings.push(
+      `${label}: requests an opaque background but the canvas is transparent in ${labelVariants(transparent)} — background is resolved at render time.`
+    );
   }
 
   if (isContainerSpec(artifact)) {
@@ -66,11 +80,19 @@ export const artifactNatureWarnings = (artifact: ExportArtifact, context: Export
  * - structural problems come from {@link planProblems} (extension/size/entries/ids);
  * - nature warnings come from {@link artifactNatureWarnings} (alpha/opaqueness,
  *   container sets, lossy quality). Warnings never block execution.
+ *
+ * `variants` must be the set the plan will expand, so per-variant transparency
+ * is judged on every variant that will actually be rendered.
  */
-export const validatePlan = (plan: ExportPlan, context: ExportContext): PlanValidation => {
+export const validatePlan = (
+  plan: ExportPlan,
+  context: ExportContext,
+  options: { variants?: IconVariant[] } = {}
+): PlanValidation => {
+  const variants = options.variants ?? ['default'];
   const problems = planProblems(plan);
   const warnings = plan.artifacts
     .filter((artifact) => artifact.enabled)
-    .flatMap((artifact) => artifactNatureWarnings(artifact, context));
+    .flatMap((artifact) => artifactNatureWarnings(artifact, context, { variants }));
   return { ready: problems.length === 0, problems, warnings };
 };

@@ -1,4 +1,4 @@
-export { exportTarget, exportAllTargets, getTargetDefinition, getAllTargets } from './exportTarget';
+export { exportTarget, exportAllTargets } from './exportTarget';
 export { buildPlan, planFromTarget, planProblems } from './planner';
 export { getAllPresets, getPreset, getPresetForTarget, targetForPreset, PRESET_ID_BY_TARGET } from './presets';
 export { generateReport } from './report';
@@ -16,6 +16,6 @@ export type {
   RasterFormat,
   SvgEncodeOptions
 } from './encoders';
-export type { ExportResult, ExportFile, RasterTask, TargetDefinition } from './types';
+export type { ExportResult, ExportFile } from './types';
 export type { ExportReport } from './report';
 export * from './pipeline';

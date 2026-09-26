@@ -42,7 +42,9 @@ export const executePlan = async (
   const variants = options.variants ?? ['default'];
 
   // 1. Validate (throws on structural problems; warnings are collected).
-  const validation = validatePlan(plan, context);
+  //    Judged over every variant the plan expands, so a transparent variant on
+  //    an otherwise opaque project still warns.
+  const validation = validatePlan(plan, context, { variants });
   if (!validation.ready) {
     throw new PlanValidationError(validation.problems);
   }

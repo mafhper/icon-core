@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { IconCoreProject } from '@iconcore/shared';
+import type { ExportContext, ExportPlan, IconCoreProject } from '@iconcore/shared';
 import type { RenderBackend, RenderContext, ImageHandle } from '@iconcore/renderer';
 import { exportTarget } from '../src/exportTarget';
+import { buildPlan } from '../src/planner';
+import { validatePlan } from '../src/pipeline';
 
 function createMockBackend(): RenderBackend {
   const mockCtx = {
@@ -58,16 +60,18 @@ const createProject = (overrides?: Partial<IconCoreProject>): IconCoreProject =>
   ...overrides
 });
 
+const ctx = (project?: IconCoreProject): ExportContext => ({ project: project ?? createProject(), variants: ['default'] });
+
 describe('exportTarget transparency requirements', () => {
-  it('warns for tasks that require an opaque background when the project is transparent', async () => {
+  it('warns for artifacts that require an opaque background when the project is transparent', async () => {
     const backend = createMockBackend();
     const project = createProject({ canvas: { size: 512, background: { kind: 'none' } } });
     const result = await exportTarget(project, 'pwa', 'default', backend);
     const warnings = result.warnings.join('\n');
-    expect(warnings).toContain('icons/icon-maskable-192x192.png');
-    expect(warnings).toContain('icons/icon-maskable-512x512.png');
+    expect(warnings).toContain('icon-maskable-512x512.png');
     // Non-maskable PWA icons accept alpha and must not be flagged.
-    expect(warnings).not.toContain('"icons/icon-192x192.png"');
+    expect(warnings).not.toContain('"icon-192x192.png"');
+    expect(warnings).not.toContain('"icon-512x512.png"');
     backend.destroy();
   });
 
@@ -88,5 +92,34 @@ describe('exportTarget transparency requirements', () => {
     expect(opaque.warnings.some((w) => w.includes('opaque background'))).toBe(false);
     expect(transparent.warnings.some((w) => w.includes('opaque background'))).toBe(true);
     backend.destroy();
+  });
+});
+
+describe('validatePlan transparency across the expanded variants', () => {
+  const pwaPlan = (): ExportPlan => buildPlan(ctx(), 'pwa');
+
+  it('warns when a non-default variant is transparent, even if default is opaque', () => {
+    // The legacy per-target path received the variant explicitly; plan-level
+    // validation must not lose that, or a transparent `dark` variant would
+    // silently flatten the maskable icon.
+    const project = createProject({
+      variants: { default: {}, dark: { canvas: { background: { kind: 'none' } } } }
+    });
+
+    const onlyDefault = validatePlan(pwaPlan(), ctx(project), { variants: ['default'] });
+    expect(onlyDefault.warnings.some((w) => w.includes('opaque background'))).toBe(false);
+
+    const withDark = validatePlan(pwaPlan(), ctx(project), { variants: ['default', 'dark'] });
+    const warning = withDark.warnings.find((w) => w.includes('opaque background'));
+    expect(warning).toBeDefined();
+    expect(warning).toContain('dark');
+  });
+
+  it('names the transparent variant in the warning', () => {
+    const project = createProject({
+      variants: { default: {}, dark: { canvas: { background: { kind: 'none' } } } }
+    });
+    const { warnings } = validatePlan(pwaPlan(), ctx(project), { variants: ['default', 'dark'] });
+    expect(warnings.join('\n')).toContain('transparent in dark');
   });
 });

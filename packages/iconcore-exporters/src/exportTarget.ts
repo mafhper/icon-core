@@ -1,38 +1,22 @@
-import type { IconTarget, IconVariant, IconCoreProject } from '@iconcore/shared';
+import type { IconCoreProject, IconTarget, IconVariant } from '@iconcore/shared';
 import type { RenderBackend, RenderOptions } from '@iconcore/renderer';
-import { renderProject, resolveCanvasBackground } from '@iconcore/renderer';
 import { auditProject } from '@iconcore/validator';
-import type { ExportResult, ExportFile, TargetDefinition } from './types';
-import { webFavicon } from './targets/web-favicon';
-import { pwa } from './targets/pwa';
-import { tauri } from './targets/tauri';
-import { electron } from './targets/electron';
-import { desktopGeneric } from './targets/desktop-generic';
-import { marketing } from './targets/marketing';
-
-const TARGET_REGISTRY: Record<string, TargetDefinition> = {
-  'web-favicon': webFavicon,
-  'pwa': pwa,
-  'tauri': tauri,
-  'electron': electron,
-  'desktop-generic': desktopGeneric,
-  'marketing': marketing
-};
-
-export const getTargetDefinition = (target: IconTarget): TargetDefinition | undefined => {
-  return TARGET_REGISTRY[target];
-};
-
-export const getAllTargets = (): TargetDefinition[] => {
-  return Object.values(TARGET_REGISTRY);
-};
+import type { ExportResult, ExportFile } from './types';
+import { planFromTarget } from './planner';
+import { executePlan } from './pipeline';
 
 /**
- * @deprecated will be removed at EX5/EX7. The source of truth for target
- * artifact sets is now the preset registry (`src/presets`) + `planFromTarget`;
- * execution moves to the EX4 pipeline (encodeArtifact). This legacy path
- * renders the old `RasterTask[]` list and stays only for the current web UI
- * and CLI until they switch to plans.
+ * Compatibility adapter: run a legacy `IconTarget` through the **plan**
+ * pipeline, so the CLI keeps its `ExportResult` contract while the source of
+ * truth for what a target produces is the preset registry (`src/presets`).
+ *
+ * The old `Target → RasterTask[]` machinery is gone (spec §1.1: no third
+ * compatibility layer). This function is the only bridge left, and it delegates
+ * entirely to `executePlan` — there is no second rendering path.
+ *
+ * Attachments are produced too, then split out: the manifest is returned in the
+ * legacy `manifest` field (the CLI writes it itself) and the rest are dropped,
+ * because the CLI composes its own report and file list.
  */
 export const exportTarget = async (
   project: IconCoreProject,
@@ -41,48 +25,38 @@ export const exportTarget = async (
   backend: RenderBackend,
   options?: RenderOptions
 ): Promise<ExportResult> => {
-  const definition = TARGET_REGISTRY[target];
-  if (!definition) {
-    return {
-      target,
-      files: [],
-      manifest: null,
-      warnings: [`Unknown target: ${target}`]
-    };
+  const context = { project, variants: [variant] };
+
+  let plan;
+  try {
+    plan = planFromTarget(context, target);
+  } catch {
+    return { target, files: [], manifest: null, warnings: [`Unknown target: ${target}`] };
   }
 
-  const files: ExportFile[] = [];
-  const warnings: string[] = [];
+  const quality = options?.quality;
+  const withQuality = quality === undefined
+    ? plan
+    : {
+        ...plan,
+        artifacts: plan.artifacts.map((artifact) =>
+          artifact.format === 'png' ? artifact : { ...artifact, quality }
+        )
+      };
 
-  // Transparency is a property of the document (`canvas.background`); a task's
-  // `transparent` flag is only a capability: when it is `false` the target
-  // requires an opaque background, so a transparent project is flagged (we never
-  // invent a background).
-  if (resolveCanvasBackground(project, variant).kind === 'none') {
-    for (const task of definition.tasks) {
-      if (!task.transparent) {
-        warnings.push(`"${task.path}" requires an opaque background, but the project is transparent.`);
-      }
-    }
-  }
+  const result = await executePlan(withQuality, context, backend, { variants: [variant] });
 
-  for (const task of definition.tasks) {
-    try {
-      const blob = await renderProject(project, variant, task.width, backend, options);
-      files.push({
-        path: task.path,
-        blob,
-        size: blob.size
-      });
-    } catch (err) {
-      warnings.push(`Failed to render ${task.path}: ${(err as Error).message}`);
-    }
-  }
+  const files: ExportFile[] = result.files
+    .filter((file) => file.kind === 'artifact')
+    .map((file) => ({ path: file.path, blob: file.blob, size: file.size }));
 
-  const manifest = definition.manifest ? definition.manifest(project) : null;
+  // The pipeline emits the manifest as an attachment; hand it back in the shape
+  // the legacy contract expects.
+  const manifestFile = result.files.find((file) => file.generator === 'manifest');
+  const manifest = manifestFile ? JSON.parse(await manifestFile.blob.text()) : null;
 
-  const audit = auditProject(project);
-  for (const issue of audit.issues) {
+  const warnings = [...result.warnings];
+  for (const issue of auditProject(project).issues) {
     if (issue.severity === 'warning' || issue.severity === 'error') {
       warnings.push(issue.message);
     }
@@ -100,8 +74,7 @@ export const exportAllTargets = async (
 ): Promise<ExportResult[]> => {
   const results: ExportResult[] = [];
   for (const target of targets) {
-    const result = await exportTarget(project, target, variant, backend, options);
-    results.push(result);
+    results.push(await exportTarget(project, target, variant, backend, options));
   }
   return results;
 };
