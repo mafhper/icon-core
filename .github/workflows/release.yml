@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   release:
-    uses: mafhper/release-core/.github/workflows/release.yml@v1.1.5
+    uses: mafhper/release-core/.github/workflows/release.yml@v1.2.2
     with:
       tag: ${{ github.event.inputs.tag || github.ref_name }}
       matrix: |-
