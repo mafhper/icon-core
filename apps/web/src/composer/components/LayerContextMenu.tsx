@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { ComposerAction } from '../composerReducer';
 import { useComposer } from '../ComposerContext';
+import { useResetLayerAspect } from '../hooks/useResetLayerAspect';
 
 interface LayerContextMenuProps {
   x: number;
@@ -24,6 +25,7 @@ const MENU_KEYS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
  */
 export const LayerContextMenu = ({ x, y, layerId, onClose }: LayerContextMenuProps) => {
   const { state, dispatch } = useComposer();
+  const resetAspect = useResetLayerAspect(layerId);
   const layer = state.project?.layers.find((item) => item.id === layerId);
   const menuRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
@@ -120,6 +122,20 @@ export const LayerContextMenu = ({ x, y, layerId, onClose }: LayerContextMenuPro
       <button role="menuitem" type="button" tabIndex={-1} onClick={() => run({ type: 'TOGGLE_LAYER_LOCK', payload: { id: layer.id } })}>{layer.locked ? 'Unlock' : 'Lock'}</button>
       <button role="menuitem" type="button" tabIndex={-1} onClick={() => run({ type: 'TOGGLE_LAYER_VISIBILITY', payload: { id: layer.id } })}>{layer.visible ? 'Hide' : 'Show'}</button>
       <button role="menuitem" type="button" tabIndex={-1} onClick={() => run({ type: 'RESET_LAYER_TRANSFORM', payload: { id: layer.id } })}>Reset Transform</button>
+      {layer && resetAspect.appliesTo(layer) && (
+        <button
+          role="menuitem"
+          type="button"
+          tabIndex={-1}
+          disabled={resetAspect.busy}
+          onClick={() => {
+            void resetAspect.reset();
+            onClose();
+          }}
+        >
+          {resetAspect.busy ? 'Measuring…' : 'Reset Aspect Ratio'}
+        </button>
+      )}
       <button role="menuitem" type="button" tabIndex={-1} className="is-danger" onClick={() => run({ type: 'REMOVE_LAYER', payload: { id: layer.id } })}>Delete</button>
     </div>
   );
