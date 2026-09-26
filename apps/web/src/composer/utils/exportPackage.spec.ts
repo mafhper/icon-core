@@ -1,40 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import {
-  EXPORT_TARGETS,
-  countExportFiles,
-  countExportTasks,
-  generateReadme,
-  getManifestFileName,
-  getTargetSizes
-} from './exportPackage';
+import JSZip from 'jszip';
+import { zipFiles } from './exportPackage';
 
-describe('export packaging helpers', () => {
-  it('maps targets to their conventional manifest filename', () => {
-    expect(getManifestFileName('web-favicon')).toBe('site.webmanifest');
-    expect(getManifestFileName('pwa')).toBe('manifest.webmanifest');
-    expect(getManifestFileName('tauri')).toBe('manifest.json');
+/**
+ * Transport only (spec §2.5): the plan decides *what* is produced, this module
+ * only decides how it is delivered. The README/report/manifest generators moved
+ * to `@iconcore/exporters` (pipeline attachments) in EX4.
+ */
+describe('zipFiles', () => {
+  it('writes each file at its planned path', async () => {
+    const blob = await zipFiles([
+      { path: 'icon.svg', blob: new Blob(['<svg/>'], { type: 'image/svg+xml' }) },
+      { path: 'icons/32x32.png', blob: new Blob(['png'], { type: 'image/png' }) }
+    ]);
+
+    const zip = await JSZip.loadAsync(blob);
+    // JSZip materialises implicit folder entries; only count real files.
+    const paths = Object.keys(zip.files).filter((name) => !zip.files[name].dir);
+    expect(paths.sort()).toEqual(['icon.svg', 'icons/32x32.png']);
+    expect(await zip.file('icon.svg')!.async('string')).toBe('<svg/>');
   });
 
-  it('returns distinct ascending sizes for a target', () => {
-    const target = EXPORT_TARGETS[0];
-    const sizes = getTargetSizes(target);
-    expect(sizes).toEqual([...sizes].sort((a, b) => a - b));
-    expect(new Set(sizes).size).toBe(sizes.length);
-  });
+  it('honours the store (no compression) option', async () => {
+    const payload = new Blob(['x'.repeat(512)], { type: 'text/plain' });
 
-  it('scales task and file counts by the number of variants', () => {
-    const targets = ['web-favicon'] as const;
-    const oneVariant = countExportTasks([...targets], ['default']);
-    const twoVariants = countExportTasks([...targets], ['default', 'dark']);
-    expect(twoVariants).toBe(oneVariant * 2);
-    // file count includes the per-target report (+1) so it exceeds the task count
-    expect(countExportFiles([...targets], ['default'])).toBeGreaterThan(oneVariant);
-  });
+    const deflated = await zipFiles([{ path: 'a.txt', blob: payload }], { compression: 'deflate', level: 9 });
+    const stored = await zipFiles([{ path: 'a.txt', blob: payload }], { compression: 'store' });
 
-  it('lists only the selected targets in the generated README', () => {
-    const readme = generateReadme('My App', new Set(['web-favicon']));
-    expect(readme).toContain('# My App - Icon Pack');
-    const favicon = EXPORT_TARGETS.find((t) => t.id === 'web-favicon')!;
-    expect(readme).toContain(favicon.name);
+    // STORE keeps the bytes verbatim, so the archive is measurably larger.
+    expect(stored.size).toBeGreaterThan(deflated.size);
   });
 });

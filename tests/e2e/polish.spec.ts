@@ -478,9 +478,9 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
   await expect(page.locator('.ic-variant-panel')).toBeVisible();
   await audit('.ic-variant-panel', 'variant panel');
 
-  // Export Utilities.
+  // Export Utilities (the plan editor).
   await page.getByRole('button', { name: /export icon pack/i }).click();
-  await expect(page.getByRole('heading', { name: 'Export Utilities' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Export', exact: true })).toBeVisible();
   await audit('body', 'export');
 
   // About modal (portalled to <body>; audited last, so it need not be dismissed).

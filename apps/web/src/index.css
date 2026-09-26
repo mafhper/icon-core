@@ -885,6 +885,28 @@ input[type='range'] {
   color: var(--ic-danger);
 }
 
+/* --- Export plan editor (EX5) --------------------------------------------
+   Only what Tailwind utilities cannot express here: data-attribute states and
+   the two-column shell. A disabled artifact stays visible but recedes, so a
+   preset can be trimmed without rows disappearing. */
+
+.ic-export-view {
+  --ic-export-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .ic-export-view {
+    --ic-export-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+}
+
+.ic-plan-badge[data-kind='container'] {
+  color: var(--ic-accent-text);
+}
+
+.ic-plan-badge[data-kind='vector'] {
+  color: var(--ic-success);
+}
 .ic-inspector {
   /* Fill the .ic-app-panel column so its surface and scroll area span the
      full height instead of collapsing to the content height. */

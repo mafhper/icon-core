@@ -8,6 +8,7 @@ import type {
 import type { RenderBackend, RenderContext, ImageHandle } from '@iconcore/renderer';
 import { buildPlan, planFromTarget } from '../src/planner';
 import { executePlan, planArtifacts, validatePlan, PlanValidationError, resolveArtifactPath } from '../src/pipeline';
+import type { PlanProgress } from '../src/pipeline';
 import { generatePreviewHtml } from '../src/pipeline';
 
 function createMockBackend(): RenderBackend {
@@ -311,6 +312,61 @@ describe('executePlan — gate EX4 (no UI)', () => {
     };
     const result = await executePlan(plan, ctx(), backend, { variants, includeAttachments: false });
     expect(result.files.map((file) => file.path)).toEqual(['default/icon.png', 'dark/icon.png']);
+    backend.destroy();
+  });
+});
+
+describe('executePlan — onProgress (EX5)', () => {
+  it('reports planning, one tick per artifact, and finishes done', async () => {
+    const backend = createMockBackend();
+    const plan: ExportPlan = {
+      presetId: 'custom',
+      artifacts: [
+        { id: 'svg', format: 'svg', path: 'icon.svg', enabled: true, size: 64 },
+        { id: 'png', format: 'png', path: 'icon-64.png', enabled: true, size: 64 }
+      ],
+      attachments: []
+    };
+    const seen: PlanProgress[] = [];
+    await executePlan(plan, ctx(), backend, {
+      includeAttachments: false,
+      onProgress: (progress) => seen.push(progress)
+    });
+
+    expect(seen[0]).toMatchObject({ phase: 'planning', completed: 0, total: 2, done: false });
+    // One "before" + one "after" tick per artifact. Per-artifact ticks are
+    // never `done`; only the final tick is (so a UI can treat `done` as
+    // "execution finished").
+    const perArtifact = seen.filter((progress) => !progress.done);
+    expect(perArtifact.filter((p) => p.phase === 'encoding').map((p) => p.completed)).toEqual([0, 1, 1, 2]);
+    expect(seen.filter((p) => p.done)).toHaveLength(1);
+    expect(seen.at(-1)).toMatchObject({ done: true, total: 2, completed: 2 });
+    // The current path is always a real planned artifact.
+    const withPath = perArtifact.filter((p) => p.currentPath);
+    expect(withPath.length).toBeGreaterThan(0);
+    expect(withPath.every((p) => ['icon.svg', 'icon-64.png'].includes(p.currentPath!))).toBe(true);
+    backend.destroy();
+  });
+
+  it('reports the attaching phase only when attachments are produced', async () => {
+    const backend = createMockBackend();
+    const plan = buildPlan(ctx(), 'pwa');
+
+    const withAttachments: PlanProgress[] = [];
+    await executePlan(plan, ctx(), backend, { onProgress: (p) => withAttachments.push(p) });
+    expect(withAttachments.some((p) => p.phase === 'attaching')).toBe(true);
+
+    const without: PlanProgress[] = [];
+    await executePlan(plan, ctx(), backend, { includeAttachments: false, onProgress: (p) => without.push(p) });
+    expect(without.some((p) => p.phase === 'attaching')).toBe(false);
+    expect(without.at(-1)?.done).toBe(true);
+    backend.destroy();
+  });
+
+  it('never throws when no callback is supplied', async () => {
+    const backend = createMockBackend();
+    const plan = buildPlan(ctx(), 'windows');
+    await expect(executePlan(plan, ctx(), backend, { includeAttachments: false })).resolves.toBeDefined();
     backend.destroy();
   });
 });
