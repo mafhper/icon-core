@@ -30,10 +30,9 @@ export const ExportView = () => {
   const { state, navigate } = useComposer();
   const toast = useToast();
   const desktop = isDesktopRuntime();
-  const { plan, actions, validation, presets, variants, setVariants } = useExportPlan();
+  const { plan, actions, validation, presets, variants, setVariants, destination, setDestination, persist } = useExportPlan();
 
   const profile = state.project?.exportProfile;
-  const [destination, setDestination] = useState<ExportDestination>(profile?.destination ?? (profile?.zip === false ? 'files' : 'zip'));
   const [compression, setCompression] = useState<ZipCompression>(profile?.compression ?? 'deflate');
   const [compressionLevel, setCompressionLevel] = useState<number>(profile?.compressionLevel ?? 6);
   const [includePreview, setIncludePreview] = useState<boolean>(profile?.includePreview ?? true);
@@ -80,6 +79,9 @@ export const ExportView = () => {
   const handleExport = async () => {
     if (!state.project || !validation.ready) return;
 
+    // EX6: the plan being executed is the one persisted, so reopening the view
+    // shows exactly what was exported.
+    persist();
     setError(null);
     setPhase('exporting');
     setElapsed(0);
@@ -143,7 +145,10 @@ export const ExportView = () => {
       <div className="mx-auto space-y-6" style={{ maxWidth: '68rem' }}>
         <button
           type="button"
-          onClick={() => navigate('edit-space')}
+          onClick={() => {
+            persist();
+            navigate('edit-space');
+          }}
           className="inline-flex items-center gap-2 text-sm text-ic-text-muted hover:text-ic-text transition"
         >
           {withIconStroke(<ArrowLeft size={16} />)}

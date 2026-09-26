@@ -186,6 +186,59 @@ describe('formatLabel', () => {
   });
 });
 
+describe('EX6 — persistence round-trip (spec §8)', () => {
+  it('reopening a project restores the exact plan that was edited', () => {
+    // A user edits the Tauri plan down to two artifacts and saves it.
+    let plan = initialPlan(ctx(withTargets('tauri')));
+    plan = planAction(plan, ctx(), { type: 'removeArtifact', id: plan.artifacts[0].id });
+    plan = planAction(plan, ctx(), { type: 'removeArtifact', id: plan.artifacts[0].id });
+    plan = planAction(plan, ctx(), { type: 'setPreset', presetId: 'tauri' });
+    plan = planAction(plan, ctx(), { type: 'customize' });
+
+    // Reopen: the snapshot is what the profile now holds.
+    const reopened = initialPlan(ctx(withTargets('pwa')), { presetId: plan.presetId, artifacts: plan.artifacts });
+
+    expect(reopened.presetId).toBeUndefined();
+    expect(reopened.artifacts).toEqual(plan.artifacts);
+    expect(planProblems(reopened)).toEqual([]);
+  });
+
+  it('an empty snapshot falls through to the legacy bridge (never a blank plan)', () => {
+    // A profile can carry `artifacts: []` from an early save; it must not strand
+    // the user on an empty plan.
+    const reopened = initialPlan(ctx(withTargets('tauri')), { presetId: 'custom', artifacts: [] });
+
+    expect(reopened.artifacts.length).toBeGreaterThan(0);
+    expect(reopened.artifacts.some((a) => a.format === 'ico')).toBe(true);
+  });
+
+  it('a legacy v3 project (format/quality/zip only) opens and exports', () => {
+    const legacy = project({
+      targets: [{ target: 'web-favicon', enabled: true }],
+      exportProfile: {
+        outputBaseName: 'legacy',
+        quality: 0.7,
+        generateReport: true,
+        format: 'jpeg',
+        structure: 'nested',
+        zip: true,
+        compression: 'deflate',
+        compressionLevel: 6
+      }
+    });
+
+    const plan = initialPlan(ctx(legacy));
+
+    expect(planProblems(plan)).toEqual([]);
+    expect(plan.artifacts.some((a) => a.format === 'jpeg')).toBe(true);
+    // The SVG favicon is vector and must not be coerced to a lossy raster.
+    expect(plan.artifacts.some((a) => a.format === 'svg')).toBe(true);
+    // The legacy fields are untouched — they remain the fallback.
+    expect(legacy.exportProfile.structure).toBe('nested');
+    expect(legacy.exportProfile.zip).toBe(true);
+  });
+});
+
 describe('suffixPath', () => {
   it('produces a unique path without touching the extension', () => {
     expect(suffixPath('icon.png', ['icon.png'])).toBe('icon-2.png');
