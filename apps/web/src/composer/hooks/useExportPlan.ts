@@ -86,8 +86,11 @@ export const useExportPlan = (): ExportPlanController => {
   );
 
   const validation = useMemo(
-    () => (context && current ? validatePlan(current, context) : { ready: false, problems: [], warnings: [] }),
-    [context, current]
+    () =>
+      context && current
+        ? validatePlan(current, context, { variants })
+        : { ready: false, problems: [], warnings: [] },
+    [context, current, variants]
   );
 
   /**

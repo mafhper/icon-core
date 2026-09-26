@@ -1,7 +1,52 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ExportContext, ExportPlan, IconCoreProject, IconTarget } from '@iconcore/shared';
-import { planProblems } from '@iconcore/exporters';
+import type { ImageHandle, RenderBackend, RenderContext } from '@iconcore/renderer';
+import { executePlan, planProblems, validatePlan } from '@iconcore/exporters';
 import { initialPlan, planAction, planSummary, formatLabel, suffixPath } from './exportPlanState';
+
+/** Minimal backend: the pipeline only needs `toBlob`/`resize` to return blobs. */
+const createMockBackend = (): RenderBackend => {
+  const mockCtx = {
+    fillRect: vi.fn(),
+    fillStyle: '',
+    createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+    createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+    globalAlpha: 1,
+    globalCompositeOperation: 'source-over',
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    scale: vi.fn(),
+    drawImage: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    closePath: vi.fn(),
+    rect: vi.fn(),
+    arc: vi.fn(),
+    roundRect: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    bezierCurveTo: vi.fn(),
+    clip: vi.fn(),
+    stroke: vi.fn(),
+    strokeStyle: '',
+    lineWidth: 1,
+    canvas: { toBlob: vi.fn((cb: (b: Blob | null) => void) => cb(new Blob(['png'], { type: 'image/png' }))) }
+  };
+  return {
+    loadImage: vi.fn(async (): Promise<ImageHandle> => ({ width: 128, height: 128, native: {} })),
+    createCanvas: vi.fn((width: number, height: number): RenderContext => ({ width, height, native: mockCtx })),
+    drawImage: vi.fn(),
+    applyTransform: vi.fn(),
+    applyMask: vi.fn(),
+    applyFill: vi.fn(),
+    applyOpacity: vi.fn(),
+    applyBlendMode: vi.fn(),
+    toBlob: vi.fn(async () => new Blob(['png'], { type: 'image/png' })),
+    resize: vi.fn(async () => new Blob(['png'], { type: 'image/png' })),
+    destroy: vi.fn()
+  };
+};
 
 const project = (overrides?: Partial<IconCoreProject>): IconCoreProject => ({
   schemaVersion: 3,
@@ -186,8 +231,7 @@ describe('formatLabel', () => {
   });
 });
 
-describe('EX6 — persistence round-trip (spec §8)', () => {
-  it('reopening a project restores the exact plan that was edited', () => {
+describe('EX6 — persistence round-trip (spec §8)', () => {  it('reopening a project restores the exact plan that was edited', () => {
     // A user edits the Tauri plan down to two artifacts and saves it.
     let plan = initialPlan(ctx(withTargets('tauri')));
     plan = planAction(plan, ctx(), { type: 'removeArtifact', id: plan.artifacts[0].id });
@@ -244,5 +288,51 @@ describe('suffixPath', () => {
     expect(suffixPath('icon.png', ['icon.png'])).toBe('icon-2.png');
     expect(suffixPath('icon.png', ['icon.png', 'icon-2.png'])).toBe('icon-3.png');
     expect(suffixPath('icons/32x32.png', ['icons/32x32.png'])).toBe('icons/32x32-2.png');
+  });
+});
+describe('EX7 � acceptance gate through the web path (spec �9)', () => {
+  it('seeds a plan from the UI, edits it to svg+png+webp+ico, and executes all four', async () => {
+    // This is the path the Export view actually takes: seed -> edit -> execute.
+    const project = withTargets('web-favicon');
+    const context = ctx(project);
+    let plan = initialPlan(context);
+
+    // Trim the seeded set and add exactly the four acceptance formats.
+    for (const artifact of [...plan.artifacts]) {
+      plan = planAction(plan, context, { type: 'removeArtifact', id: artifact.id });
+    }
+    for (const format of ['svg', 'png', 'webp', 'ico'] as const) {
+      plan = planAction(plan, context, { type: 'addArtifact', format });
+    }
+    // The ICO must carry the Windows ladder the acceptance criterion names.
+    const ico = plan.artifacts.find((artifact) => artifact.format === 'ico')!;
+    plan = planAction(plan, context, { type: 'setEntries', id: ico.id, entries: [16, 24, 32, 48, 64, 256] });
+
+    expect(planProblems(plan)).toEqual([]);
+    expect(validatePlan(plan, context).ready).toBe(true);
+
+    const backend = createMockBackend();
+    const result = await executePlan(plan, context, backend, { includeAttachments: false });
+
+    const formats = result.files.filter((file) => file.kind === 'artifact').map((file) => file.path);
+    expect(formats.some((path) => path.endsWith('.svg'))).toBe(true);
+    expect(formats.some((path) => path.endsWith('.png'))).toBe(true);
+    expect(formats.some((path) => path.endsWith('.webp'))).toBe(true);
+    expect(formats.some((path) => path.endsWith('.ico'))).toBe(true);
+    expect(result.warnings).toEqual([]);
+    backend.destroy();
+  });
+
+  it('keeps the Tauri regression through the web path (ico + icns, never PNG-only)', async () => {
+    const context = ctx(withTargets('tauri'));
+    const plan = initialPlan(context);
+
+    const backend = createMockBackend();
+    const result = await executePlan(plan, context, backend, { includeAttachments: false });
+    const paths = result.files.map((file) => file.path);
+
+    expect(paths).toContain('icon.ico');
+    expect(paths).toContain('icon.icns');
+    backend.destroy();
   });
 });

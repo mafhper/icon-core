@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { IconCoreProject } from '@iconcore/shared';
 import type { RenderBackend, RenderContext, ImageHandle } from '@iconcore/renderer';
-import { exportTarget, getAllTargets, getTargetDefinition } from '../src/exportTarget';
+import { exportTarget, exportAllTargets } from '../src/exportTarget';
+import { getAllPresets } from '../src/presets';
 import { generateReport } from '../src/report';
 
 function createMockBackend(): RenderBackend {
@@ -59,83 +60,99 @@ const createProject = (overrides?: Partial<IconCoreProject>): IconCoreProject =>
   ...overrides
 });
 
-describe('getAllTargets', () => {
-  it('returns all 6 targets', () => {
-    const targets = getAllTargets();
-    expect(targets.length).toBe(6);
-  });
-
-  it('includes web-favicon target', () => {
-    const targets = getAllTargets();
-    expect(targets.some(t => t.id === 'web-favicon')).toBe(true);
-  });
-});
-
-describe('getTargetDefinition', () => {
-  it('returns definition for valid target', () => {
-    const def = getTargetDefinition('web-favicon');
-    expect(def).toBeDefined();
-    expect(def!.id).toBe('web-favicon');
-  });
-
-  it('returns undefined for unknown target', () => {
-    const def = getTargetDefinition('unknown' as any);
-    expect(def).toBeUndefined();
-  });
-});
-
-describe('exportTarget', () => {
-  it('exports web-favicon target with correct files', async () => {
+/**
+ * `exportTarget` is now a thin adapter over the plan pipeline — it exists only
+ * so the CLI keeps its `ExportResult` contract. The source of truth for what a
+ * target produces is the preset registry, so these tests assert the *corrected*
+ * sets (the old `RasterTask` lists were PNG-only, which is what IC15 fixed).
+ */
+describe('exportTarget (plan adapter)', () => {
+  it('exports web-favicon as the corrected favicon set (incl. ico + svg)', async () => {
     const backend = createMockBackend();
-    const project = createProject();
-    const result = await exportTarget(project, 'web-favicon', 'default', backend);
+    const result = await exportTarget(createProject(), 'web-favicon', 'default', backend);
 
     expect(result.target).toBe('web-favicon');
-    expect(result.files.length).toBeGreaterThan(0);
-    expect(result.files.some(f => f.path === 'favicon-16x16.png')).toBe(true);
-    expect(result.files.some(f => f.path === 'favicon-32x32.png')).toBe(true);
+    const paths = result.files.map((file) => file.path);
+    expect(paths).toContain('favicon-16x16.png');
+    expect(paths).toContain('favicon-32x32.png');
+    // The regression this whole task existed for: containers and vectors too.
+    expect(paths).toContain('favicon.ico');
+    expect(paths).toContain('favicon.svg');
     backend.destroy();
   });
 
-  it('exports pwa target with correct files', async () => {
+  it('exports pwa with the 192/512 pair plus the maskable variant', async () => {
     const backend = createMockBackend();
-    const project = createProject();
-    const result = await exportTarget(project, 'pwa', 'default', backend);
+    const result = await exportTarget(createProject(), 'pwa', 'default', backend);
 
     expect(result.target).toBe('pwa');
-    expect(result.files.length).toBe(4);
-    expect(result.files.some(f => f.path === 'icons/icon-192x192.png')).toBe(true);
+    const paths = result.files.map((file) => file.path);
+    expect(paths).toContain('icon-192x192.png');
+    expect(paths).toContain('icon-512x512.png');
+    expect(paths).toContain('icon-maskable-512x512.png');
     backend.destroy();
   });
 
-  it('exports tauri target', async () => {
+  it('exports tauri with icon.ico AND icon.icns (regression: never PNG-only)', async () => {
     const backend = createMockBackend();
-    const project = createProject();
-    const result = await exportTarget(project, 'tauri', 'default', backend);
+    const result = await exportTarget(createProject(), 'tauri', 'default', backend);
 
     expect(result.target).toBe('tauri');
-    expect(result.files.length).toBe(4);
+    const paths = result.files.map((file) => file.path);
+    expect(paths).toContain('icon.ico');
+    expect(paths).toContain('icon.icns');
+    expect(result.files.find((file) => file.path === 'icon.ico')?.blob.type).toBe('image/x-icon');
+    expect(result.files.find((file) => file.path === 'icon.icns')?.blob.type).toBe('image/icns');
     backend.destroy();
   });
 
-  it('returns warning for unknown target', async () => {
+  it('returns a warning and no files for an unknown target', async () => {
     const backend = createMockBackend();
-    const project = createProject();
-    const result = await exportTarget(project, 'unknown' as any, 'default', backend);
+    const result = await exportTarget(createProject(), 'unknown' as never, 'default', backend);
 
     expect(result.warnings.length).toBeGreaterThan(0);
     expect(result.files.length).toBe(0);
     backend.destroy();
   });
 
-  it('generates manifest for web-favicon', async () => {
+  it('hands the manifest back in the legacy field (the CLI writes it itself)', async () => {
     const backend = createMockBackend();
-    const project = createProject();
-    const result = await exportTarget(project, 'web-favicon', 'default', backend);
+    const result = await exportTarget(createProject(), 'web-favicon', 'default', backend);
 
     expect(result.manifest).toBeDefined();
-    expect((result.manifest as any).name).toBe('Test');
+    expect((result.manifest as { name: string }).name).toBe('Test');
+    // Attachments other than the manifest are not leaked into the file list.
+    expect(result.files.some((file) => file.path.endsWith('.webmanifest'))).toBe(false);
     backend.destroy();
+  });
+
+  it('returns only artifacts (never attachments) in the file list', async () => {
+    const backend = createMockBackend();
+    const result = await exportTarget(createProject(), 'pwa', 'default', backend);
+
+    expect(result.files.some((file) => file.path === 'README.md')).toBe(false);
+    expect(result.files.some((file) => file.path === 'preview.html')).toBe(false);
+    backend.destroy();
+  });
+});
+
+describe('exportAllTargets', () => {
+  it('runs several targets in order', async () => {
+    const backend = createMockBackend();
+    const results = await exportAllTargets(createProject(), 'default', ['web-favicon', 'tauri'], backend);
+
+    expect(results.map((result) => result.target)).toEqual(['web-favicon', 'tauri']);
+    expect(results.every((result) => result.files.length > 0)).toBe(true);
+    backend.destroy();
+  });
+});
+
+describe('preset registry supersedes the target registry', () => {
+  it('exposes the 9 presets that replaced the 6 raster targets', () => {
+    const ids = getAllPresets().map((preset) => preset.id);
+    expect(ids).toEqual(
+      expect.arrayContaining(['tauri', 'electron', 'web', 'pwa', 'windows', 'macos', 'desktop-generic', 'marketing', 'custom'])
+    );
   });
 });
 
