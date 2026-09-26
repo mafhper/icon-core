@@ -79,6 +79,7 @@ export const useExportPlan = (): ExportPlanController => {
       addArtifact: (format) => applyAction({ type: 'addArtifact', format }),
       setEntries: (id, entries) => applyAction({ type: 'setEntries', id, entries }),
       toggleEntry: (id, entry) => applyAction({ type: 'toggleEntry', id, entry }),
+      toggleAttachment: (path) => applyAction({ type: 'toggleAttachment', path }),
       setVariants,
       reset: () => setPlan(null)
     }),

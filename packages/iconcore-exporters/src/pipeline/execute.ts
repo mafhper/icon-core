@@ -82,10 +82,19 @@ export const executePlan = async (
     onProgress?.({ phase: 'encoding', completed, total: planned.length, currentPath: item.path, done: false });
   }
 
-  // 4. Attachments declared by the plan (mirrors web buildIconPackage).
+  // 4. Attachments **declared on the plan** — and nothing else (ADR-014
+  //    invariant). README/report/preview used to be appended implicitly here,
+  //    which meant a plan that asked for "just the .ico" still shipped an HTML
+  //    sheet and two JSON files the user had no way to switch off. They are now
+  //    declared by the planner, shown in the editor and toggleable.
   if (options.includeAttachments !== false) {
     onProgress?.({ phase: 'attaching', completed: planned.length, total: planned.length, done: false });
+
+    const existing = new Set(files.map((file) => file.path));
+
     for (const attachment of plan.attachments) {
+      if (attachment.enabled === false) continue;
+      if (existing.has(attachment.path)) continue;
       const output = generateAttachment(attachment.generator, {
         context,
         plan,
@@ -103,28 +112,7 @@ export const executePlan = async (
         kind: 'attachment',
         generator: attachment.generator
       });
-    }
-
-    // Parity with the web export (buildIconPackage): README, report and preview
-    // are default companions. Dedupe by path for plans that already declare them.
-    const existing = new Set(files.map((file) => file.path));
-
-    const readme = generateAttachment('readme', { context, plan, planned, files, variant: variants[0] ?? 'default', warnings });
-    if (readme && !existing.has('README.md')) {
-      files.push({ path: 'README.md', blob: blobFor(readme.content, readme.mime), size: readme.content.length, mime: readme.mime, kind: 'attachment', generator: 'readme' });
-      existing.add('README.md');
-    }
-
-    const report = generateAttachment('report', { context, plan, planned, files, variant: variants[0] ?? 'default', warnings });
-    if (report && !existing.has('iconcore-report.json')) {
-      files.push({ path: 'iconcore-report.json', blob: blobFor(report.content, report.mime), size: report.content.length, mime: report.mime, kind: 'attachment', generator: 'report' });
-      existing.add('iconcore-report.json');
-    }
-
-    const preview = generateAttachment('preview', { context, plan, planned, files, variant: variants[0] ?? 'default', warnings });
-    if (preview && !existing.has('preview.html')) {
-      files.push({ path: 'preview.html', blob: blobFor(preview.content, preview.mime), size: preview.content.length, mime: preview.mime, kind: 'attachment', generator: 'preview' });
-      existing.add('preview.html');
+      existing.add(attachment.path);
     }
   }
 

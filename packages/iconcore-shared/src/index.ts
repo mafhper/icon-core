@@ -299,6 +299,16 @@ export type ExportAttachmentGenerator = 'manifest' | 'browserconfig' | 'report' 
 export interface ExportAttachment {
   path: string;
   generator: ExportAttachmentGenerator;
+  /**
+   * Whether the user still wants this file. Defaults to `true`.
+   *
+   * Attachments are **declared, never implicit** (ADR-014 invariant: every
+   * produced file derives from an enabled artifact or an enabled declared
+   * attachment). A companion the user cannot see is a companion they cannot
+   * turn off — which is how `preview.html` and `iconcore-report.json` ended up
+   * in packs that were supposed to contain nothing but an `.ico`.
+   */
+  enabled?: boolean;
 }
 
 /** The output plan: an editable list of artifacts plus non-icon attachments. */

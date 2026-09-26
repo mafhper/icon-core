@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ExportContext, ExportPlan, IconCoreProject, IconTarget } from '@iconcore/shared';
 import type { ImageHandle, RenderBackend, RenderContext } from '@iconcore/renderer';
 import { executePlan, planProblems, validatePlan } from '@iconcore/exporters';
-import { initialPlan, planAction, planSummary, formatLabel, suffixPath } from './exportPlanState';
+import { initialPlan, planAction, planSummary, formatLabel, suffixPath, plannedOutputPaths } from './exportPlanState';
 
 /** Minimal backend: the pipeline only needs `toBlob`/`resize` to return blobs. */
 const createMockBackend = (): RenderBackend => {
@@ -334,5 +334,84 @@ describe('EX7 � acceptance gate through the web path (spec �9)', () => {
     expect(paths).toContain('icon.ico');
     expect(paths).toContain('icon.icns');
     backend.destroy();
+  });
+});
+describe('Nothing is exported that the user did not ask for', () => {
+  /**
+   * Regression: the user unchecked everything except the `.ico` and still got
+   * `preview.html` and `iconcore-report.json`. Those companions were appended
+   * by `executePlan` with no way to see or disable them, and the two UI switches
+   * that claimed to control them were wired to nothing.
+   */
+  it('"just the ico" produces exactly the ico', async () => {
+    const context = ctx(withTargets('tauri'));
+    let plan = initialPlan(context);
+
+    // Keep only the ICO.
+    plan = { ...plan, artifacts: plan.artifacts.filter((artifact) => artifact.format === 'ico') };
+    // And switch off every optional companion.
+    for (const attachment of plan.attachments) {
+      plan = planAction(plan, context, { type: 'toggleAttachment', path: attachment.path });
+    }
+
+    expect(plannedOutputPaths(plan, context, ['default'])).toEqual(['icon.ico']);
+
+    const backend = createMockBackend();
+    const result = await executePlan(plan, context, backend);
+    expect(result.files.map((file) => file.path)).toEqual(['icon.ico']);
+    backend.destroy();
+  });
+
+  it('never produces preview.html or the report unless they are enabled', async () => {
+    const context = ctx(withTargets('tauri'));
+    let plan = initialPlan(context);
+    for (const path of ['preview.html', 'iconcore-report.json', 'README.md']) {
+      plan = planAction(plan, context, { type: 'toggleAttachment', path });
+    }
+
+    const backend = createMockBackend();
+    const result = await executePlan(plan, context, backend);
+    const paths = result.files.map((file) => file.path);
+    expect(paths).not.toContain('preview.html');
+    expect(paths).not.toContain('iconcore-report.json');
+    expect(paths).not.toContain('README.md');
+    // �while the icons still come out.
+    expect(paths).toContain('icon.ico');
+    backend.destroy();
+  });
+
+  it('lists every output file before exporting, companions included', () => {
+    const context = ctx(withTargets('web-favicon'));
+    const plan = initialPlan(context);
+
+    const listed = plannedOutputPaths(plan, context, ['default']);
+    // Artifacts and attachments, exactly as execution will write them.
+    expect(listed).toContain('favicon.ico');
+    expect(listed).toContain('site.webmanifest');
+    expect(listed).toContain('preview.html');
+    // The count the button shows matches the list.
+    expect(planSummary(plan).files).toBe(listed.length);
+  });
+
+  it('counts files, not just artifacts, in the summary', () => {
+    const context = ctx(withTargets('tauri'));
+    const plan = initialPlan(context);
+    const icoOnly = { ...plan, artifacts: plan.artifacts.filter((artifact) => artifact.format === 'ico') };
+    const summary = planSummary(icoOnly);
+
+    expect(summary.enabled).toBe(1); // one ICO artifact
+    expect(summary.files).toBe(4); // …plus report + preview + README
+  });
+
+  it('toggling an attachment does not touch the artifacts', () => {
+    const context = ctx(withTargets('tauri'));
+    const plan = initialPlan(context);
+    const after = planAction(plan, context, { type: 'toggleAttachment', path: 'preview.html' });
+
+    expect(after.artifacts).toEqual(plan.artifacts);
+    expect(after.attachments.find((a) => a.path === 'preview.html')?.enabled).toBe(false);
+    // Idempotent: toggling again brings it back.
+    const back = planAction(after, context, { type: 'toggleAttachment', path: 'preview.html' });
+    expect(back.attachments.find((a) => a.path === 'preview.html')?.enabled).toBe(true);
   });
 });
