@@ -1,5 +1,11 @@
 export { executePlan, PlanValidationError, planForExecution } from './execute';
-export type { GeneratedFile, PlanExecutionOptions, PlanExecutionResult, PlannedArtifact } from './types';
+export type {
+  GeneratedFile,
+  PlanExecutionOptions,
+  PlanExecutionResult,
+  PlanProgress,
+  PlannedArtifact
+} from './types';
 export { planArtifacts, resolveArtifactPath } from './plan';
 export { validatePlan, artifactNatureWarnings } from './validate';
 export type { PlanValidation } from './validate';

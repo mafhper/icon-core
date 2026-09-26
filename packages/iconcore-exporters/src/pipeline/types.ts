@@ -52,6 +52,23 @@ export interface GeneratedFile {
   generator?: ExportAttachmentGenerator;
 }
 
+/**
+ * Progress reported while {@link executePlan} runs. `phase` moves from
+ * `planning` to `encoding` to `attaching`; `completed`/`total` count *planned
+ * artifacts* (attachments are reported separately and are not counted).
+ */
+export interface PlanProgress {
+  phase: 'planning' | 'encoding' | 'attaching';
+  /** Artifacts finished so far. */
+  completed: number;
+  /** Total planned artifacts. */
+  total: number;
+  /** Path of the artifact currently being encoded (encoding phase only). */
+  currentPath?: string;
+  /** True once every planned artifact has been encoded. */
+  done: boolean;
+}
+
 /** Options accepted by {@link executePlan}. */
 export interface PlanExecutionOptions {
   /**
@@ -63,6 +80,12 @@ export interface PlanExecutionOptions {
   svg?: { embedImages?: boolean; maxEmbeddedImageBytes?: number };
   /** Generate the plan attachments declared on the plan. Default: true. */
   includeAttachments?: boolean;
+  /**
+   * Called as the plan advances so a UI can show progress. Purely observational:
+   * never affects the produced files. Added in EX5 — the previous view showed a
+   * per-task progress bar that the artifact pipeline had no equivalent for.
+   */
+  onProgress?: (progress: PlanProgress) => void;
 }
 
 /** Result of executing a plan (files + diagnostics). */

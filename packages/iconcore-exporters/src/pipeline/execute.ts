@@ -49,11 +49,15 @@ export const executePlan = async (
 
   // 2. Plan — resolve paths/variants for every enabled artifact.
   const planned = planArtifacts(plan, context, { variants });
+  const onProgress = options.onProgress;
+  onProgress?.({ phase: 'planning', completed: 0, total: planned.length, done: false });
 
   // 3. Execute — one encode call per artifact.
   const files: GeneratedFile[] = [];
   const warnings = [...validation.warnings];
+  let completed = 0;
   for (const item of planned) {
+    onProgress?.({ phase: 'encoding', completed, total: planned.length, currentPath: item.path, done: false });
     const { blob, warnings: encodeWarnings } = await encodeArtifact(
       item.artifact,
       context.project,
@@ -72,10 +76,13 @@ export const executePlan = async (
     for (const warning of encodeWarnings) {
       warnings.push(`"${item.path}": ${warning}`);
     }
+    completed += 1;
+    onProgress?.({ phase: 'encoding', completed, total: planned.length, currentPath: item.path, done: false });
   }
 
   // 4. Attachments declared by the plan (mirrors web buildIconPackage).
   if (options.includeAttachments !== false) {
+    onProgress?.({ phase: 'attaching', completed: planned.length, total: planned.length, done: false });
     for (const attachment of plan.attachments) {
       const output = generateAttachment(attachment.generator, {
         context,
@@ -131,6 +138,16 @@ export const executePlan = async (
       generator: 'report'
     });
   }
+
+  // Final tick. The phase stays 'encoding' when attachments were skipped — there
+  // is no attaching work to report, and a UI would otherwise show a phase that
+  // never happened.
+  onProgress?.({
+    phase: options.includeAttachments === false ? 'encoding' : 'attaching',
+    completed: planned.length,
+    total: planned.length,
+    done: true
+  });
 
   return { files, warnings, planned };
 };
