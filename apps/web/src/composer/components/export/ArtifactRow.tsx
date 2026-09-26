@@ -70,6 +70,9 @@ export const ArtifactRow = ({
         </button>
 
         <div className="flex items-center gap-0.5">
+          {/* Editing a disabled artifact is legitimate (you may re-enable it
+              after changing it), so the actions stay live — the row's own
+              reduced opacity already signals that it is excluded. */}
           <Button
             variant="ghost"
             iconLeft={editing ? <X size={14} /> : <Pencil size={14} />}

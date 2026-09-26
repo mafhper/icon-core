@@ -1,12 +1,13 @@
 import type {
   ExportArtifact,
+  ExportAttachment,
   ExportContext,
   ExportPlan,
   IconTarget,
   IconVariant
 } from '@iconcore/shared';
 import { isContainerSpec, kindOf, extensionForFormat } from '@iconcore/shared';
-import { buildPlan, getAllPresets, PRESET_ID_BY_TARGET } from '@iconcore/exporters';
+import { buildPlan, getAllPresets, PRESET_ID_BY_TARGET, resolveArtifactPath } from '@iconcore/exporters';
 
 /**
  * EX5 — the editable export plan.
@@ -155,9 +156,20 @@ export interface PlanActions {
   addArtifact: (format: ExportArtifact['format']) => void;
   setEntries: (id: string, entries: number[]) => void;
   toggleEntry: (id: string, entry: number) => void;
+  /** Show/hide a declared companion file (manifest, report, preview, readme). */
+  toggleAttachment: (path: string) => void;
   setVariants: (variants: IconVariant[]) => void;
   reset: () => void;
 }
+
+const replaceAttachment = (
+  plan: ExportPlan,
+  path: string,
+  update: (attachment: ExportPlan['attachments'][number]) => ExportPlan['attachments'][number]
+): ExportPlan => ({
+  ...plan,
+  attachments: plan.attachments.map((attachment) => (attachment.path === path ? update(attachment) : attachment))
+});
 
 /** Reducer-style update of a plan. Pure — every action returns a new plan. */
 export const planAction = (
@@ -173,6 +185,7 @@ export const planAction = (
     | { type: 'addArtifact'; format: ExportArtifact['format'] }
     | { type: 'setEntries'; id: string; entries: number[] }
     | { type: 'toggleEntry'; id: string; entry: number }
+    | { type: 'toggleAttachment'; path: string }
 ): ExportPlan => {
   switch (action.type) {
     case 'setPreset':
@@ -234,6 +247,11 @@ export const planAction = (
         if (entries.length === 0) return artifact;
         return { ...artifact, entries: entries.sort((a, b) => a - b) };
       });
+    case 'toggleAttachment':
+      return replaceAttachment(plan, action.path, (attachment) => ({
+        ...attachment,
+        enabled: attachment.enabled === false
+      }));
   }
 };
 
@@ -252,16 +270,71 @@ export const suffixPath = (path: string, taken: string[]): string => {
   return candidate;
 };
 
-/** Label for a format badge in the plan list. */
+/**
+ * Every path an execution of this plan will write, in order.
+ *
+ * This is the answer to "what exactly am I about to get?" — the user reported
+ * unchecking things and still receiving an HTML sheet and JSON files, so the
+ * final list is shown *before* exporting rather than discovered afterwards.
+ * Mirrors `planArtifacts` path resolution, without rendering anything.
+ */
+export const plannedOutputPaths = (plan: ExportPlan, context: ExportContext, variants: IconVariant[]): string[] => {
+  const artifacts = plan.artifacts
+    .filter((artifact) => artifact.enabled)
+    .flatMap((artifact) =>
+      (artifact.variant ? [artifact.variant] : variants).map((variant) =>
+        resolveArtifactPath(artifact, context, variant, plan.presetId)
+      )
+    );
+  const attachments = plan.attachments
+    .filter((attachment) => attachment.enabled !== false)
+    .map((attachment) => attachment.path);
+  return [...artifacts, ...attachments];
+};
+
+/** Format label for a format badge in the plan list. */
 export const formatLabel = (format: ExportArtifact['format']): string =>
   format === 'jpeg' ? 'JPEG' : format.toUpperCase();
 
-/** Summary line for the plan (counts by nature, spec §7 "real counts"). */
-export const planSummary = (plan: ExportPlan): { total: number; enabled: number; containers: number; formats: number } => {
+/** Attachments that are part of the integration and should read as locked. */
+const INTEGRATION_ATTACHMENTS = new Set(['manifest', 'browserconfig']);
+
+/** Human label for a companion generator, for the editor list. */
+export const attachmentLabel = (generator: ExportAttachment['generator']): string => {
+  switch (generator) {
+    case 'manifest':
+      return 'Web app manifest';
+    case 'browserconfig':
+      return 'Browser config';
+    case 'report':
+      return 'Export report';
+    case 'preview':
+      return 'Preview sheet';
+    case 'readme':
+      return 'README';
+  }
+};
+
+/** Whether a companion may be turned off (integration files may not). */
+export const canDisableAttachment = (generator: ExportAttachment['generator']): boolean =>
+  !INTEGRATION_ATTACHMENTS.has(generator);
+
+/**
+ * Summary of what an export will actually produce.
+ *
+ * `files` counts enabled artifacts **plus** enabled attachments, because that is
+ * the number the user sees in the archive — and the number they were surprised
+ * by when invisible companions were appended.
+ */
+export const planSummary = (
+  plan: ExportPlan
+): { total: number; enabled: number; files: number; containers: number; formats: number } => {
   const enabled = plan.artifacts.filter((artifact) => artifact.enabled);
+  const attachments = plan.attachments.filter((attachment) => attachment.enabled !== false);
   return {
     total: plan.artifacts.length,
     enabled: enabled.length,
+    files: enabled.length + attachments.length,
     containers: enabled.filter((artifact) => kindOf(artifact.format) === 'container').length,
     formats: new Set(enabled.map((artifact) => artifact.format)).size
   };

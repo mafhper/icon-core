@@ -100,8 +100,22 @@ describe('planning per target (spec §9: Domínio)', () => {
     expect(paths(plan)).toContain('favicon-16x16.png');
     expect(paths(plan)).toContain('apple-touch-icon-180x180.png');
     expect(paths(plan)).toContain('favicon.svg');
-    expect(plan.attachments.map((attachment) => attachment.generator)).toEqual(['manifest', 'browserconfig']);
-    expect(plan.attachments.map((attachment) => attachment.path)).toEqual(['site.webmanifest', 'browserconfig.xml']);
+    // Integration files come first, then the documentation companions. Every
+    // produced file is declared, so the editor can show and disable it.
+    expect(plan.attachments.map((attachment) => attachment.generator)).toEqual([
+      'manifest',
+      'browserconfig',
+      'report',
+      'preview',
+      'readme'
+    ]);
+    expect(plan.attachments.map((attachment) => attachment.path)).toEqual([
+      'site.webmanifest',
+      'browserconfig.xml',
+      'iconcore-report.json',
+      'preview.html',
+      'README.md'
+    ]);
   });
 
   it('PWA: 192 + 512 + opaque maskable + manifest attachment', () => {
@@ -110,7 +124,12 @@ describe('planning per target (spec §9: Domínio)', () => {
     expect(paths(plan)).toEqual(['icon-192x192.png', 'icon-512x512.png', 'icon-maskable-512x512.png']);
     const maskable = enabledArtifacts(plan).find((artifact) => artifact.id === 'pwa-maskable-512');
     expect(maskable?.background).toBe('opaque');
-    expect(plan.attachments.map((attachment) => attachment.path)).toEqual(['manifest.webmanifest']);
+    expect(plan.attachments.map((attachment) => attachment.path)).toEqual([
+      'manifest.webmanifest',
+      'iconcore-report.json',
+      'preview.html',
+      'README.md'
+    ]);
   });
 
   it('Marketing: includes a 1024px PNG; Linux set is all PNGs', () => {
@@ -150,10 +169,16 @@ describe('buildPlan', () => {
     expect(() => buildPlan(ctx, 'does-not-exist')).toThrow(/Unknown export preset/);
   });
 
-  it('custom preset produces an empty plan scaffold', () => {
+  it('custom preset produces an empty artifact scaffold with the standard companions', () => {
     const plan = buildPlan(ctx, 'custom');
     expect(plan.artifacts).toEqual([]);
-    expect(plan.attachments).toEqual([]);
+    // A blank artifact list, but the documentation companions are still declared
+    // (and can be switched off like any other attachment).
+    expect(plan.attachments.map((attachment) => attachment.path)).toEqual([
+      'iconcore-report.json',
+      'preview.html',
+      'README.md'
+    ]);
     expect(plan.presetId).toBe('custom');
   });
 });

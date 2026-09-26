@@ -9,15 +9,32 @@ import { extensionForFormat, isContainerSpec } from '@iconcore/shared';
 import { getPreset, getPresetForTarget, targetForPreset } from './presets';
 
 /**
+ * Documentation companions, shared by every preset that ships files. Declared
+ * **before** the preset table so the initialisers can reference them.
+ */
+const COMPANION_ATTACHMENTS: ExportAttachment[] = [
+  { path: 'iconcore-report.json', generator: 'report' },
+  { path: 'preview.html', generator: 'preview' },
+  { path: 'README.md', generator: 'readme' }
+];
+
+/**
  * Non-icon files a preset plan ships besides the rendered icons (ADR-014 §1.3).
  * The generators themselves run in EX4 (plan execution); EX3 defines the plan.
+ *
+ * Every companion is **declared** so the editor can show it and the user can
+ * turn it off. `manifest`/`browserconfig` are part of the integration (dropping
+ * them breaks the target), so they start enabled; `report`/`preview`/`readme`
+ * are documentation and also start enabled — but the user asked for exactly
+ * this: nothing produced that they did not ask for and cannot switch off.
  */
 const ATTACHMENTS_BY_PRESET: Record<string, ExportAttachment[]> = {
   web: [
     { path: 'site.webmanifest', generator: 'manifest' },
-    { path: 'browserconfig.xml', generator: 'browserconfig' }
+    { path: 'browserconfig.xml', generator: 'browserconfig' },
+    ...COMPANION_ATTACHMENTS
   ],
-  pwa: [{ path: 'manifest.webmanifest', generator: 'manifest' }]
+  pwa: [{ path: 'manifest.webmanifest', generator: 'manifest' }, ...COMPANION_ATTACHMENTS]
 };
 
 /**
@@ -37,7 +54,7 @@ export const buildPlan = (context: ExportContext, presetId: string): ExportPlan 
   return {
     presetId,
     artifacts,
-    attachments: ATTACHMENTS_BY_PRESET[presetId] ?? []
+    attachments: ATTACHMENTS_BY_PRESET[presetId] ?? COMPANION_ATTACHMENTS
   };
 };
 
