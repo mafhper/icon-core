@@ -1,4 +1,4 @@
-import type { Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition } from '@iconcore/shared';
+import type { Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
 import { toRgba } from './color';
 import { layerBaseRect } from './geometry';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
@@ -63,15 +63,54 @@ const paintFor = (fill: Fill, id: string): { defs: string; paint: string } | nul
   return null;
 };
 
-/** One shape element, filled with `paint`, carrying opacity/transform. */
+/**
+ * Build an SVG `<filter>` element from an ImageFilter. Returns empty string
+ * when no effective adjustment is present. Uses feColorMatrix for hue/saturation
+ * and feComponentTransfer for brightness/contrast.
+ */
+const imageFilterToSvgFilter = (filter: ImageFilter | undefined, id: string): string => {
+  if (!filter) return '';
+  const parts: string[] = [];
+
+  if (filter.hue) {
+    parts.push(`<feColorMatrix type="hueRotate" values="${filter.hue}"/>`);
+  }
+
+  if (filter.saturation !== undefined && filter.saturation !== 100) {
+    const s = filter.saturation / 100;
+    parts.push(`<feColorMatrix type="saturate" values="${s}"/>`);
+  }
+
+  if (filter.brightness !== undefined && filter.brightness !== 100) {
+    const b = filter.brightness / 100;
+    parts.push(
+      `<feComponentTransfer><feFuncR type="linear" slope="${b}"/><feFuncG type="linear" slope="${b}"/><feFuncB type="linear" slope="${b}"/></feComponentTransfer>`
+    );
+  }
+
+  if (filter.contrast !== undefined && filter.contrast !== 100) {
+    const c = filter.contrast / 100;
+    const intercept = ((1 - c) / 2).toFixed(4);
+    parts.push(
+      `<feComponentTransfer><feFuncR type="linear" slope="${c}" intercept="${intercept}"/><feFuncG type="linear" slope="${c}" intercept="${intercept}"/><feFuncB type="linear" slope="${c}" intercept="${intercept}"/></feComponentTransfer>`
+    );
+  }
+
+  if (parts.length === 0) return '';
+  return `<filter id="${id}">${parts.join('')}</filter>`;
+};
+
+/** One shape element, filled with `paint`, carrying opacity/transform/filter. */
 const shapeMarkup = (
   shape: ShapeDefinition,
   paint: string,
   opacity: number,
-  transform: string
+  transform: string,
+  filterAttr: string = ''
 ): string => {
   const t = transform ? ` transform="${transform}"` : '';
-  const common = `fill="${paint}" opacity="${opacity}"${t}`;
+  const f = filterAttr ? ` ${filterAttr}` : '';
+  const common = `fill="${paint}" opacity="${opacity}"${t}${f}`;
 
   if (shape.kind === 'circle') {
     const r = Math.min(shape.width, shape.height) / 2;
@@ -218,6 +257,12 @@ export const renderToSvgWithOptions = (
     const s = transform?.scale ?? 1;
     const transformAttr = `translate(${tx},${ty}) scale(${s})`;
 
+    // Build SVG filter for this layer if it has an imageFilter
+    const filterId = nextId(`filter-${layer.id}`);
+    const filterMarkup = imageFilterToSvgFilter(layer.imageFilter, filterId);
+    if (filterMarkup) defs.push(filterMarkup);
+    const filterAttr = filterMarkup ? ` filter="url(#${filterId})"` : '';
+
     if (layer.kind === 'text' && layer.text) {
       const fill = layer.fill;
       if (!fill || fill.kind === 'none') continue;
@@ -230,7 +275,7 @@ export const renderToSvgWithOptions = (
         if (resolved.defs) defs.push(resolved.defs);
         paint = resolved.paint;
       }
-      svgLayers += `<text x="${size / 2 + tx}" y="${size / 2 + ty}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="rotate(${transform.rotation},${size / 2 + tx},${size / 2 + ty}) scale(${s})">${layer.text.content}</text>\n`;
+      svgLayers += `<text x="${size / 2 + tx}" y="${size / 2 + ty}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="rotate(${transform.rotation},${size / 2 + tx},${size / 2 + ty}) scale(${s})"${filterAttr}>${layer.text.content}</text>\n`;
       continue;
     }
 
@@ -240,7 +285,7 @@ export const renderToSvgWithOptions = (
         const natural = parseSvgIntrinsicSize(svgContent);
         if (!natural) {
           // No intrinsic size to align with: embed as-is (previous behaviour).
-          svgLayers += `<g opacity="${opacity}" transform="${transformAttr}">${svgContent}</g>\n`;
+          svgLayers += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${svgContent}</g>\n`;
           continue;
         }
         // The Canvas2D backend draws the asset into the layer rectangle, so the
@@ -252,7 +297,7 @@ export const renderToSvgWithOptions = (
           `translate(${layerRect.cx - layerRect.w / 2},${layerRect.cy - layerRect.h / 2}) ` +
           `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
         svgLayers +=
-          `<g opacity="${opacity}" transform="${transformAttr}">` +
+          `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>` +
           `<g transform="${placement}">${setSvgViewport(svgContent, natural.width, natural.height)}</g>` +
           `</g>\n`;
       } catch {
@@ -273,7 +318,7 @@ export const renderToSvgWithOptions = (
           `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
         const dataUri = `data:${layer.source.mimeType};base64,${layer.source.data}`;
         svgLayers +=
-          `<g opacity="${opacity}" transform="${transformAttr}">` +
+          `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>` +
           `<image x="0" y="0" width="${natural.width}" height="${natural.height}" href="${dataUri}" transform="${placement}"/>` +
           `</g>\n`;
         if (maxEmbeddedImageBytes !== undefined) {
@@ -302,14 +347,14 @@ export const renderToSvgWithOptions = (
     if (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient') {
       const clipId = nextId(`clip-${layer.id}`);
       defs.push(`<clipPath id="${clipId}">${shapeMarkup(shape, '#000000', 1, '')}</clipPath>`);
-      svgLayers += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})">${approximationMarkup(fill, shape)}</g>\n`;
+      svgLayers += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})"${filterAttr}>${approximationMarkup(fill, shape)}</g>\n`;
       continue;
     }
 
     const resolved = paintFor(fill, nextId(`fill-${layer.id}`));
     if (!resolved) continue;
     if (resolved.defs) defs.push(resolved.defs);
-    svgLayers += shapeMarkup(shape, resolved.paint, opacity, transformAttr);
+    svgLayers += shapeMarkup(shape, resolved.paint, opacity, transformAttr, filterAttr);
   }
 
   const defsBlock = defs.length > 0 ? `  <defs>\n    ${defs.join('\n    ')}\n  </defs>\n` : '';
