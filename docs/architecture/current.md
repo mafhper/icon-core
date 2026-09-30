@@ -1,7 +1,41 @@
 # IconCore Architecture — Current State
 
-**Version:** v1.0.0
-**Last updated:** 2026-06-12
+> ## ⚠️ SUPERSEDED — do not use this document
+>
+> This file describes **v1.0.0 (2026-06-12)** and the app has moved well past it.
+> It is kept only as a historical record.
+>
+> **Verified wrong on 2026-09-30** — the code and the tests are the source of truth:
+>
+> | This document says | Reality |
+> |---|---|
+> | Runtime: Bun 1.3.5 | npm (`packageManager: npm@10.9.2`), Node 22 |
+> | Vite 7.3 | Vite 8.2.2 (pinned by root `overrides`) |
+> | TypeScript 5.9.2 | `^5.9.3` |
+> | Tailwind CSS 3.4 | Tailwind CSS 4.3.3 |
+> | Vitest 3.2 — 13 tests | 85 tests in `@iconcore/renderer` alone; 39 spec files repo-wide |
+> | Playwright 1.55 — 1 test | 4 e2e spec files |
+> | No layer composition | full layer system (shape / text / image / SVG) |
+> | Fixed targets: web/PWA only | 9 export presets incl. Tauri, Electron, desktop |
+> | Limited variants: default/light/dark | `mono` exists too |
+> | No project persistence | `.iconcore.json`, `schemaVersion: 3` |
+> | No CLI, no CI/CD | `@iconcore/cli` + full CI workflow set |
+> | No router | hash routing (`#/export-utilities`, `#/ui`, `#/workspaces`) |
+> | ZIP-only export | destination is `zip` / `folder` / `files` |
+>
+> It also points at three files that **no longer exist**: `App.tsx`,
+> `useGeneration.ts`, `imageProcessor.ts` — and all four "Technical Debt" entries
+> describe those dead files.
+>
+> **To learn the architecture, read the code and the tests.** Start at
+> `packages/iconcore-shared/src/index.ts` (the domain types), then
+> `packages/iconcore-renderer/src/composeLayers.ts` (the Canvas2D pipeline) and
+> `packages/iconcore-renderer/src/renderToSvg.ts` (the SVG pipeline). Both
+> pipelines are held to the same geometry by
+> `packages/iconcore-renderer/tests/renderToSvgTransform.spec.ts`.
+
+**Version:** v1.0.0 — *superseded, see the banner above*
+**Last updated:** 2026-06-12 — *banner added 2026-09-30*
 
 ---
 

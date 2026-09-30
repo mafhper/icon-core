@@ -441,8 +441,7 @@ export const detectLocale = (input?: string): Locale => {
   return 'en-US';
 };
 
-// --- UI/UX 2026 engineering contracts (PR-04) ---
-// Fixed by the redesign sprint master plan (.dev/docs/redesign-uiux-2026-plan.md, §6).
+// --- UI/UX 2026 engineering contracts ---
 // These types are the compilation-time surface of the editor + library contracts;
 // implementations land incrementally (path parser/editor, iconcore-library, reducer
 // integration) without changing existing behavior.
