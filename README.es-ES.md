@@ -32,11 +32,12 @@ Todo se ejecuta localmente en el navegador o en la app desktop. No requiere cuen
 ## Funcionalidades
 
 - **Lienzo WYSIWYG** — la vista previa en vivo usa el mismo motor que la exportación, así que lo que ves es lo que exportas
-- Edición por capas para imágenes, SVG, formas y texto, con controles de posición, escala, rotación, opacidad, color, gradiente, blend mode y sombra
+- Edición por capas para imágenes, SVG, formas y texto, con controles de posición, escala, rotación, opacidad, color, gradiente, blend mode y sombra — más hue, saturation, brightness y contrast en capas de imagen y SVG
 - Vistas previas de apariencia y plataforma (default / light / dark / mono · cuadrado / redondeado / círculo) y ajustes por variante
 - Safe area solo como guía — los iconos quedan full-bleed y cada plataforma aplica su propia máscara
 - Exportación para favicon, PWA, Tauri, Electron y desktop genérico
-- Salida flexible: PNG / WebP / JPEG, calidad, estructura anidada o plana, ZIP o carpeta elegida (desktop), compresión, hoja de prueba HTML y reportes por target
+- Salida flexible: PNG / WebP / JPEG / SVG / ICO / ICNS, calidad, estructura anidada o plana, ZIP o carpeta elegida (desktop), compresión, hoja de prueba HTML y reportes por target
+- Cada ajuste de capa sobrevive a la exportación en SVG, no solo al PNG
 - Apps web y desktop basadas en el mismo modelo de proyecto
 
 ## Desarrollo
