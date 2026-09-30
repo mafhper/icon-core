@@ -42,8 +42,8 @@ Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP,
 ## What it does
 
 - Layers for shapes, text, images and SVG, with position, size, rotation, opacity, color, gradients, blend and shadow — plus hue, saturation, brightness and contrast on image and SVG layers
-- Light, dark and mono previews, plus square, rounded and circle masks
-- Safe area guides that never crop your artwork
+- Light, dark and mono previews, with square, rounded and circle safe areas drawn as guides
+- Icons export full bleed: the safe area never crops your artwork, each platform applies its own mask
 - One click export to favicon, PWA, Tauri, Electron and desktop sets
 - Every layer adjustment survives the SVG export, not just the PNG
 - HTML preview sheet and per target report included
@@ -65,9 +65,17 @@ npm run build       # everything for GitHub Pages
 ```bash
 npm audit --audit-level=high
 npm run lint
+node scripts/check-third-party-assets.mjs
+node scripts/check-ui-boundary.mjs
+node scripts/check-ui-budget.mjs
+node scripts/check-ui-contrast.mjs
 npm run typecheck
 npm run test
 ```
+
+CI also runs `npm run build`, the Playwright e2e suite against the landing page
+(`npm run test:e2e`) and the visual contract capture (`npm run ui:shots`). The
+four `scripts/check-*.mjs` guards are cheap and catch what lint cannot.
 
 ## Repository
 
