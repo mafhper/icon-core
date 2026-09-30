@@ -23,6 +23,28 @@ const gradStopsMarkup = (fill: GradientFill): string =>
     .join('');
 
 /**
+ * Layer transform, mirroring the Canvas2D backend's `applyTransform`
+ * (`backends/canvas.ts`): scale and rotate happen **around the canvas centre**
+ * and `x`/`y` are offsets **from** that centre.
+ *
+ * The previous form — `translate(x,y) scale(s)` — is a transform around the
+ * *origin*: it scaled the already-centred artwork away from the canvas, so any
+ * project with `scale ≠ 1` exported an SVG whose content fell outside the
+ * viewBox and was visibly cropped (IC51). Keep this in lockstep with
+ * `applyTransform`; changing one without the other reintroduces the drift.
+ */
+const layerTransformAttr = (size: number, transform: IconLayer['transform']): string => {
+  const half = size / 2;
+  const { x = 0, y = 0, scale = 1, rotation = 0 } = transform ?? {};
+  return (
+    `translate(${half + x},${half + y}) ` +
+    `rotate(${rotation}) ` +
+    `scale(${scale}) ` +
+    `translate(${-half},${-half})`
+  );
+};
+
+/**
  * SVG paint for fills that map to a native gradient/colour. Returns `null` for
  * `'none'`; angular/diamond are approximated separately (SVG has no conic
  * gradient) — see `approximationMarkup`.
@@ -100,32 +122,43 @@ const imageFilterToSvgFilter = (filter: ImageFilter | undefined, id: string): st
   return `<filter id="${id}">${parts.join('')}</filter>`;
 };
 
-/** One shape element, filled with `paint`, carrying opacity/transform/filter. */
+/**
+ * One shape element, filled with `paint`, carrying opacity/transform/filter.
+ *
+ * `offsetX/offsetY` place the shape's top-left corner. The Canvas2D compositor
+ * centres a shape at `((S - w) / 2, (S - h) / 2)` (`composeLayers`), so layer
+ * markup must pass that; the `clipPath` reuse must pass `0, 0` because it
+ * shares a coordinate space with `approximationMarkup`.
+ */
 const shapeMarkup = (
   shape: ShapeDefinition,
   paint: string,
   opacity: number,
   transform: string,
-  filterAttr: string = ''
+  filterAttr: string = '',
+  offsetX = 0,
+  offsetY = 0
 ): string => {
   const t = transform ? ` transform="${transform}"` : '';
   const f = filterAttr ? ` ${filterAttr}` : '';
   const common = `fill="${paint}" opacity="${opacity}"${t}${f}`;
+  const ox = offsetX;
+  const oy = offsetY;
 
   if (shape.kind === 'circle') {
     const r = Math.min(shape.width, shape.height) / 2;
-    return `<circle cx="${shape.width / 2}" cy="${shape.height / 2}" r="${r}" ${common}/>\n`;
+    return `<circle cx="${ox + shape.width / 2}" cy="${oy + shape.height / 2}" r="${r}" ${common}/>\n`;
   }
   if (shape.kind === 'triangle') {
-    return `<polygon points="${shape.width / 2},0 ${shape.width},${shape.height} 0,${shape.height}" ${common}/>\n`;
+    return `<polygon points="${ox + shape.width / 2},${oy} ${ox + shape.width},${oy + shape.height} ${ox},${oy + shape.height}" ${common}/>\n`;
   }
   if (shape.kind === 'line') {
     const rx = Math.min(shape.width, shape.height) / 2;
-    return `<rect x="0" y="0" width="${shape.width}" height="${shape.height}" rx="${rx}" ${common}/>\n`;
+    return `<rect x="${ox}" y="${oy}" width="${shape.width}" height="${shape.height}" rx="${rx}" ${common}/>\n`;
   }
   if (shape.kind === 'star') {
-    const cx = shape.width / 2;
-    const cy = shape.height / 2;
+    const cx = ox + shape.width / 2;
+    const cy = oy + shape.height / 2;
     const outer = Math.min(shape.width, shape.height) / 2;
     const inner = outer * (shape.innerRatio ?? 0.5);
     const count = shape.pointCount ?? 5;
@@ -139,7 +172,7 @@ const shapeMarkup = (
   }
 
   const rx = shape.kind === 'squircle' ? shape.width * 0.25 : shape.cornerRadius ?? 0;
-  return `<rect x="0" y="0" width="${shape.width}" height="${shape.height}" rx="${rx}" ${common}/>\n`;
+  return `<rect x="${ox}" y="${oy}" width="${shape.width}" height="${shape.height}" rx="${rx}" ${common}/>\n`;
 };
 
 /**
@@ -251,11 +284,7 @@ export const renderToSvgWithOptions = (
 
   for (const layer of visible) {
     const opacity = layer.opacity;
-    const transform = layer.transform;
-    const tx = transform?.x ?? 0;
-    const ty = transform?.y ?? 0;
-    const s = transform?.scale ?? 1;
-    const transformAttr = `translate(${tx},${ty}) scale(${s})`;
+    const transformAttr = layerTransformAttr(size, layer.transform);
 
     // Build SVG filter for this layer if it has an imageFilter
     const filterId = nextId(`filter-${layer.id}`);
@@ -275,7 +304,9 @@ export const renderToSvgWithOptions = (
         if (resolved.defs) defs.push(resolved.defs);
         paint = resolved.paint;
       }
-      svgLayers += `<text x="${size / 2 + tx}" y="${size / 2 + ty}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="rotate(${transform.rotation},${size / 2 + tx},${size / 2 + ty}) scale(${s})"${filterAttr}>${layer.text.content}</text>\n`;
+      // Canvas draws text at the canvas centre (`fillText(content, S/2, S/2)`)
+      // with the layer transform already applied around that same centre.
+      svgLayers += `<text x="${size / 2}" y="${size / 2}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${layer.text.content}</text>\n`;
       continue;
     }
 
@@ -354,7 +385,16 @@ export const renderToSvgWithOptions = (
     const resolved = paintFor(fill, nextId(`fill-${layer.id}`));
     if (!resolved) continue;
     if (resolved.defs) defs.push(resolved.defs);
-    svgLayers += shapeMarkup(shape, resolved.paint, opacity, transformAttr, filterAttr);
+    // Centred like the Canvas2D compositor: `((S - w) / 2, (S - h) / 2)`.
+    svgLayers += shapeMarkup(
+      shape,
+      resolved.paint,
+      opacity,
+      transformAttr,
+      filterAttr,
+      (size - shape.width) / 2,
+      (size - shape.height) / 2
+    );
   }
 
   const defsBlock = defs.length > 0 ? `  <defs>\n    ${defs.join('\n    ')}\n  </defs>\n` : '';
