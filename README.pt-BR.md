@@ -32,11 +32,12 @@ Tudo roda localmente no navegador ou no app desktop. Não exige conta, serviço 
 ## Funcionalidades
 
 - **Canvas WYSIWYG** — o preview ao vivo usa o mesmo motor da exportação, então o que você vê é o que você exporta
-- Edição em camadas para imagens, SVG, formas e texto, com controles de posição, escala, rotação, opacidade, cor, gradiente, blend mode e sombra
+- Edição em camadas para imagens, SVG, formas e texto, com controles de posição, escala, rotação, opacidade, cor, gradiente, blend mode e sombra — mais hue, saturation, brightness e contrast em camadas de imagem e SVG
 - Pré-visualização de aparência e plataforma (default / light / dark / mono · quadrado / arredondado / círculo) e ajustes por variante
 - Safe area apenas como guia — os ícones ficam full-bleed e cada plataforma aplica a própria máscara
 - Exportação para favicon, PWA, Tauri, Electron e desktop genérico
-- Saída flexível: PNG / WebP / JPEG, qualidade, estrutura aninhada ou plana, ZIP ou pasta escolhida (desktop), compressão, página de teste HTML e relatórios por target
+- Saída flexível: PNG / WebP / JPEG / SVG / ICO / ICNS, qualidade, estrutura aninhada ou plana, ZIP ou pasta escolhida (desktop), compressão, página de teste HTML e relatórios por target
+- Cada ajuste de camada sobrevive à exportação em SVG, não só ao PNG
 - Apps web e desktop usando o mesmo modelo de projeto
 
 ## Desenvolvimento

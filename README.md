@@ -28,7 +28,7 @@ Open your file in Edit Space first, adjust positioning and variants, then export
 
 ![Export Utilities with targets, format and output options](docs/assets/app-export.webp)
 
-Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP, JPEG), take a ZIP or separate files. The preview uses the same engine as export, so the files match what you saw.
+Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP, JPEG, SVG, ICO, ICNS), take a ZIP or separate files. The preview uses the same engine as export, so the files match what you saw.
 
 ## Try it
 
@@ -41,10 +41,11 @@ Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP,
 
 ## What it does
 
-- Layers for shapes, text, images and SVG, with position, size, rotation, opacity, color, gradients, blend and shadow
+- Layers for shapes, text, images and SVG, with position, size, rotation, opacity, color, gradients, blend and shadow — plus hue, saturation, brightness and contrast on image and SVG layers
 - Light, dark and mono previews, plus square, rounded and circle masks
 - Safe area guides that never crop your artwork
 - One click export to favicon, PWA, Tauri, Electron and desktop sets
+- Every layer adjustment survives the SVG export, not just the PNG
 - HTML preview sheet and per target report included
 
 ## Development
