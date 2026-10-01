@@ -2,7 +2,7 @@ import type { Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, Shape
 import { toRgba } from './color';
 import { layerBaseRect } from './geometry';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
-import { parseSvgIntrinsicSize, setSvgViewport } from './svgSize';
+import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
 
 const resolveLayer = (layer: IconLayer, variant: IconVariant): IconLayer => {
   const override = layer.variantOverrides?.[variant];
@@ -234,6 +234,13 @@ export interface RenderSvgOptions {
   skipImages?: boolean;
   /** Alert when an embedded base64 image exceeds this byte threshold. */
   maxEmbeddedImageBytes?: number;
+  /**
+   * Requested pixel size of the artifact (e.g. a `web-svg` preset asks for
+   * 1024). Only the root `width`/`height` change — the `viewBox` stays in canvas
+   * units, which is what keeps the geometry identical while the document scales.
+   * Omitted, the document renders at the canvas size.
+   */
+  size?: number;
 }
 
 export interface RenderSvgResult {
@@ -321,10 +328,14 @@ export const renderToSvgWithOptions = (
     if (layer.source.type === 'inline' && layer.source.data && layer.source.mimeType === 'image/svg+xml') {
       try {
         const svgContent = atob(layer.source.data);
-        const natural = parseSvgIntrinsicSize(svgContent);
+        // Namespace before anything else: an imported document carries its own
+        // short ids, and two layers defining the same one would make every
+        // `url(#…)` resolve to whichever definition came first.
+        const scoped = namespaceSvgIds(svgContent, `l${layer.id}`);
+        const natural = parseSvgIntrinsicSize(scoped);
         if (!natural) {
           // No intrinsic size to align with: embed as-is (previous behaviour).
-          svgLayers += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${svgContent}</g>\n`;
+          svgLayers += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${scoped}</g>\n`;
           continue;
         }
         // The Canvas2D backend draws the asset into the layer rectangle, so the
@@ -337,7 +348,7 @@ export const renderToSvgWithOptions = (
           `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
         svgLayers +=
           `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>` +
-          `<g transform="${placement}">${setSvgViewport(svgContent, natural.width, natural.height)}</g>` +
+          `<g transform="${placement}">${setSvgViewport(scoped, natural.width, natural.height)}</g>` +
           `</g>\n`;
       } catch {
         // Skip layers with invalid base64
@@ -407,8 +418,12 @@ export const renderToSvgWithOptions = (
 
   const defsBlock = defs.length > 0 ? `  <defs>\n    ${defs.join('\n    ')}\n  </defs>\n` : '';
 
+  // `size` scales the document without moving anything: the viewBox keeps
+  // describing the canvas in canvas units, so the geometry a reader measures is
+  // the same one the compositor produced.
+  const outputSize = options.size && options.size > 0 ? options.size : size;
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${outputSize}" height="${outputSize}" viewBox="0 0 ${size} ${size}">
 ${defsBlock}${bgMarkup}${svgLayers}
 </svg>`;
 

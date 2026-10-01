@@ -50,7 +50,11 @@ export const encodeArtifact = async (
         backend
       );
     case 'vector':
-      return encodeSvg(project, variant, backend, options.svg);
+      return encodeSvg(project, variant, backend, {
+        ...options.svg,
+        // The artifact spec owns the size; the encoder used to drop it.
+        size: artifact.size ?? options.svg?.size
+      });
     case 'container':
       return encodeContainer(artifact as ExportContainerSpec, project, variant, backend);
     default:
