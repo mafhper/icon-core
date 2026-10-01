@@ -1691,3 +1691,71 @@ textarea:focus-visible,
   color: var(--ic-accent-text);
   width: fit-content;
 }
+
+/* --- export preview (pre-write render of what the export will produce) --- */
+.ic-export-preview {
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+.ic-export-preview-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ic-text);
+}
+.ic-export-preview-head p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ic-text-muted);
+}
+.ic-export-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.ic-export-preview-cell {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+.ic-export-preview-frame {
+  width: 100%;
+  border: 1px solid var(--ic-border-soft);
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid;
+}
+/* Two backgrounds per size: the same file is judged on both, which is where a
+   transparent or low-contrast icon gives itself away. */
+.ic-export-preview-bg {
+  display: grid;
+  place-items: center;
+  padding: 10px 6px;
+  min-height: 72px;
+}
+.ic-export-preview-bg.is-light { background: #ffffff; }
+.ic-export-preview-bg.is-dark { background: #101114; }
+.ic-export-preview-bg img {
+  display: block;
+  image-rendering: auto;
+}
+.ic-export-preview-cell figcaption {
+  font-size: 11px;
+  color: var(--ic-text-faint);
+}
+.ic-export-preview-pending,
+.ic-export-preview-empty {
+  font-size: 12px;
+  color: var(--ic-text-faint);
+}
+.ic-export-preview-warn {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ic-text-muted);
+  border-left: 2px solid var(--ic-warning);
+  padding: 6px 0 6px 10px;
+}
+.ic-export-preview-warn strong { color: var(--ic-text); }
