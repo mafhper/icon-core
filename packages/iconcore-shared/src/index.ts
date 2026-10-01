@@ -272,7 +272,12 @@ export interface ExportArtifactSpec {
   path: string;
   enabled: boolean;
   variant?: IconVariant;
-  /** Raster side length (icons are square); for `svg`, the canvas/viewBox. */
+  /**
+   * Output side length (icons are square). Raster artifacts compose at the
+   * canvas size and then resample to this. For `svg` only the root
+   * `width`/`height` change — the viewBox stays in canvas units, so the
+   * geometry matches the raster pipeline instead of scaling the artwork.
+   */
   size?: number;
   /** 0..1, applied to lossy formats (webp/jpeg) only. */
   quality?: number;

@@ -11,6 +11,12 @@ export interface SvgEncodeOptions {
   embedImages?: boolean;
   /** Alert when an embedded base64 image exceeds this byte threshold. */
   maxEmbeddedImageBytes?: number;
+  /**
+   * Requested pixel size from the artifact spec (the `web` and `electron`
+   * presets both ask for 1024). Previously ignored, so those artifacts shipped
+   * at the canvas size instead of the size the preset declared.
+   */
+  size?: number;
 }
 
 export const encodeSvg = async (
@@ -39,7 +45,8 @@ export const encodeSvg = async (
   const { svg, warnings } = renderToSvgWithOptions(project, variant, {
     imageSizes,
     skipImages: options.embedImages === false,
-    maxEmbeddedImageBytes: options.maxEmbeddedImageBytes
+    maxEmbeddedImageBytes: options.maxEmbeddedImageBytes,
+    size: options.size
   });
 
   return { blob: new Blob([svg], { type: 'image/svg+xml' }), warnings };

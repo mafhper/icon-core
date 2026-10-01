@@ -123,3 +123,30 @@ export const setSvgViewport = (svgText: string, width: number, height: number): 
 
   return svgText.slice(0, match.index) + pinned + svgText.slice(match.index + tag.length);
 };
+
+/**
+ * Namespace every `id` in an SVG document and rewrite the references to them.
+ *
+ * An imported SVG is embedded verbatim, carrying its own short ids (`a`, `b`,
+ * `gradient`…). Two such layers — or one layer and the exporter's own `fill-*` /
+ * `clip-*` / `filter-*` defs — can define the same id, and then every
+ * `url(#a)` in the document resolves to whichever definition came first. The
+ * artwork silently takes the wrong colour or the wrong shape.
+ *
+ * Rewrites `id="x"`, `url(#x)`, `href="#x"` and `xlink:href="#x"`. Selectors
+ * inside a `<style>` block are deliberately left alone: they cannot be
+ * distinguished from colour literals without parsing CSS, and a wrong guess
+ * there is worse than the collision it would fix.
+ */
+export const namespaceSvgIds = (svgText: string, prefix: string): string => {
+  if (!prefix) return svgText;
+  const escape = prefix.replace(/[^A-Za-z0-9_-]/g, '');
+  if (!escape) return svgText;
+
+  return svgText
+    .replace(/\bid\s*=\s*"([^"]*)"/g, (_m, id: string) => `id="${escape}-${id}"`)
+    .replace(/\bid\s*=\s*'([^']*)'/g, (_m, id: string) => `id="${escape}-${id}"`)
+    .replace(/url\(\s*#([^)\s]+)\s*\)/g, (_m, id: string) => `url(#${escape}-${id})`)
+    .replace(/\b(xlink:href|href)\s*=\s*"#([^"]*)"/g, (_m, attr, id: string) => `${attr}="#${escape}-${id}"`)
+    .replace(/\b(xlink:href|href)\s*=\s*'#([^']*)'/g, (_m, attr, id: string) => `${attr}='#${escape}-${id}'`);
+};
