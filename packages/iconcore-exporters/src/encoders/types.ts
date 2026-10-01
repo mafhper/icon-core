@@ -3,7 +3,7 @@ import type { RenderBackend } from '@iconcore/renderer';
 
 export type { ExportArtifact } from '@iconcore/shared';
 
-/** Inputs shared by every encoder (EX2 / IC15B). */
+/** Inputs shared by every encoder. */
 export interface EncoderInput {
   artifact: ExportArtifact;
   project: IconCoreProject;

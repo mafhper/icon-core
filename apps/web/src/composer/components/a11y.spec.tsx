@@ -34,7 +34,7 @@ describe('CommandPalette (accessible name + modal focus)', () => {
 
 describe('ExportView (accessible names)', () => {
   /**
-   * EX5 replaced the target checkbox list + global format with an editable plan.
+   *  replaced the target checkbox list + global format with an editable plan.
    * The names the old test guarded (a "quick select" combobox) no longer exist —
    * these cover what replaced them. A project must be open for the plan to seed.
    */
@@ -62,7 +62,7 @@ describe('ExportView (accessible names)', () => {
     renderExport();
 
     expect(screen.getByRole('group', { name: 'Export presets' })).toBeInTheDocument();
-    // The Tauri target seeds real containers — the regression IC15 exists for.
+    // The Tauri target seeds real containers — the regression  exists for.
     const toggles = screen.getAllByRole('checkbox', { name: /^Include / });
     expect(toggles.length).toBeGreaterThan(0);
     toggles.forEach((toggle) => {

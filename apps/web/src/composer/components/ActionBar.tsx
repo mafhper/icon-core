@@ -35,7 +35,7 @@ interface ActionBarProps {
  * Panel toggles swap between open/close glyphs so their state reads without
  * relying on color alone (selected tint alone was ambiguous).
  * Undo/Redo keep a native `title` because they can be disabled, and Radix
- * Tooltip does not open over a disabled trigger (004 §9).
+ * Tooltip does not open over a disabled trigger.
  */
 export const ActionBar = ({
   onToggleLeft,

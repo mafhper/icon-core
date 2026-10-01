@@ -2,7 +2,7 @@
  * ICO writer — bundles PNGs (RGBA) into a Windows `.ico`.
  *
  * Recovered from the legacy editor (`apps/web/src/lib/icoGenerator.ts`, commit
- * 038e09e~1) and normalised to the EX2 encoder contract: entries are squares
+ * 038e09e~1) and normalised to the  encoder contract: entries are squares
  * described by their physical size, directories carry PNG blobs, and sizes
  * >= 256 are encoded with the 0-byte convention Windows uses for "larger than
  * 255px".

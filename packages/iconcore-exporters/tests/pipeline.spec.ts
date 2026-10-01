@@ -74,7 +74,7 @@ const ctx = (project?: IconCoreProject): ExportContext => ({
   variants: ['default']
 });
 
-describe('resolveArtifactPath (path tokens, spec §4)', () => {
+describe('resolveArtifactPath (path tokens)', () => {
   it('substitutes {name}, {format}, {size}, {variant}, {target}', () => {
     const context = ctx(createProject({ exportProfile: { outputBaseName: 'my-icon', quality: 0.9, generateReport: false } }));
     const path = resolveArtifactPath(
@@ -150,7 +150,7 @@ describe('planArtifacts', () => {
   });
 });
 
-describe('validatePlan (spec §6)', () => {
+describe('validatePlan', () => {
   it('reports structural problems (extension mismatch)', () => {
     const plan: ExportPlan = {
       presetId: 'custom',
@@ -200,7 +200,7 @@ describe('validatePlan (spec §6)', () => {
   });
 });
 
-describe('executePlan — gate EX4 (no UI)', () => {
+describe('executePlan — gate (no UI)', () => {
   it('executes a mixed svg+png+webp+ico plan into GeneratedFile[]', async () => {
     const project = createProject();
     const plan: ExportPlan = {
@@ -316,7 +316,7 @@ describe('executePlan — gate EX4 (no UI)', () => {
   });
 });
 
-describe('executePlan — onProgress (EX5)', () => {
+describe('executePlan — onProgress', () => {
   it('reports planning, one tick per artifact, and finishes done', async () => {
     const backend = createMockBackend();
     const plan: ExportPlan = {

@@ -16,7 +16,7 @@ import { brandGradientFill } from '../constants';
 import { FillEditor } from '../components/FillEditor';
 
 /**
- * UI Lab fixtures (ADR-012 §12).
+ * UI Lab fixtures.
  *
  * This is a **fixture laboratory**, not a second Composer: every fixture is
  * project-independent, holds its own local state, renders inside a 240px column
@@ -29,7 +29,7 @@ import { FillEditor } from '../components/FillEditor';
  * - `aguarda spec` — listed so the question is not lost, to be filled by the
  *   interaction spec (Fases 2–6 of the ADR) instead of guessed here.
  *
- * The keys keep the vocabulary ADR-012 documents; the badge shows the English
+ * The keys keep the vocabulary  documents; the badge shows the English
  * label, since the shipped UI is English-only.
  */
 

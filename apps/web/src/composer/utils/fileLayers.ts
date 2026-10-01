@@ -103,7 +103,7 @@ const measureAssetSize = async (file: File, dataUrl: string): Promise<{ width: n
  * Intrinsic (untransformed) pixel size of a stored layer payload.
  *
  * Single source of truth shared by the importer and by the "Reset aspect"
- * action (IC3 §4.2, option C). If these two ever measure differently the
+ * action. If these two ever measure differently the
  * squish bug comes back, so both must go through this.
  *
  * - SVG: parsed synchronously via the shared `parseSvgIntrinsicSize` — the

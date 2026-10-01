@@ -15,9 +15,9 @@ export interface ArtifactRowProps {
 }
 
 /**
- * One artifact in the export plan (spec §7).
+ * One artifact in the export plan.
  *
- * Editing is **contextual by nature** (spec §2.2): a container edits its entry
+ * Editing is **contextual by nature**: a container edits its entry
  * ladder, a raster its size/quality, a vector its canvas size. A container never
  * shows an isolated width/height, because it has no single size.
  */
@@ -40,7 +40,7 @@ export const ArtifactRow = ({
       data-enabled={artifact.enabled}
     >
       {/* minmax(0,1fr) so a long path truncates instead of stretching the row
-          (the IC4 lesson: grids sized by min-content overflow their panel). */}
+          (grids sized by min-content overflow their panel). */}
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 px-2.5 py-2">
         <label className="flex items-center">
           <input
