@@ -47,7 +47,7 @@ const container = (
 });
 
 /**
- * Default artifact sets per target (spec §3). These presets are the source of
+ * Default artifact sets per target. These presets are the source of
  * truth for what each integration produces — notably Tauri/Electron now ship
  * real `icon.ico` + `icon.icns` containers instead of PNG-only output.
  */

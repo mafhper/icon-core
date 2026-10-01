@@ -10,7 +10,7 @@ import { executePlan } from './pipeline';
  * pipeline, so the CLI keeps its `ExportResult` contract while the source of
  * truth for what a target produces is the preset registry (`src/presets`).
  *
- * The old `Target → RasterTask[]` machinery is gone (spec §1.1: no third
+ * The old `Target → RasterTask[]` machinery is gone (no third
  * compatibility layer). This function is the only bridge left, and it delegates
  * entirely to `executePlan` — there is no second rendering path.
  *

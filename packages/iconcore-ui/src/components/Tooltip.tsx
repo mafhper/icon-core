@@ -18,7 +18,7 @@ export interface TooltipProps {
  * Delay is owned by the app-level `TooltipProvider` (mounted in ComposerApp)
  * unless `delayDuration` is passed here to override it.
  *
- * Note (004 §9): Radix Tooltip does not open when the trigger is a disabled
+ * Note: Radix Tooltip does not open when the trigger is a disabled
  * `<button>`. Disabled affordances keep a native `title` instead.
  */
 export const Tooltip = ({ content, side = 'top', delayDuration, children }: TooltipProps) => {

@@ -16,7 +16,7 @@ const ICON_FOR = {
 } as const;
 
 /**
- * The non-icon files the plan declares (ADR-014 invariant: every produced file
+ * The non-icon files the plan declares (every produced file
  * is an enabled artifact **or an enabled declared attachment**).
  *
  * They are listed here — not appended silently at execution time — so a plan

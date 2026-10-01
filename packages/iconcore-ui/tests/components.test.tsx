@@ -10,7 +10,7 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Action' })).toHaveAttribute('type', 'button');
   });
 
-  it('spread props cannot clobber the safe type (004 §9 fix)', () => {
+  it('spread props cannot clobber the safe type', () => {
     // `type`/`disabled` are destructured out of props, so the spread can never
     // clobber them; an explicit `type` still wins over the "button" default.
     render(<Button type="submit">Submit</Button>);
@@ -208,7 +208,7 @@ describe('Switch', () => {
     const onChange = vi.fn();
     render(<Switch label="Depth shadow" onChange={onChange} />);
 
-    // A switch, not a checkbox: it reports a setting's state (critique §11).
+    // A switch, not a checkbox: it reports a setting's state.
     const control = screen.getByRole('switch', { name: 'Depth shadow' });
     expect(control).not.toBeChecked();
 

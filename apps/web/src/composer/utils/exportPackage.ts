@@ -10,7 +10,7 @@ export interface PackagedFile {
 /**
  * Bundle a file list into a single ZIP blob.
  *
- * Transport only (spec §2.5): the archive is a delivery choice, never part of
+ * Transport only: the archive is a delivery choice, never part of
  * the export plan. The same `GeneratedFile[]` that the pipeline produced can be
  * zipped here, written to a folder by the desktop shell, or downloaded one by
  * one — the plan does not change between them.

@@ -4,7 +4,7 @@ import { resolveCanvasBackground } from '@iconcore/renderer';
 import { planProblems } from '../planner';
 
 export interface PlanValidation {
-  /** True when there are no structural problems (spec §0.5). */
+  /** True when there are no structural problems. */
   ready: boolean;
   /** Structural problems that block execution. */
   problems: string[];
@@ -27,7 +27,7 @@ const transparentVariants = (context: ExportContext, variants: IconVariant[]): I
 const labelVariants = (variants: IconVariant[]): string =>
   variants.length === 1 ? variants[0] : variants.join(', ');
 
-/** Per-artifact nature warnings (spec §6): JPEG alpha, opaque-on-transparent, containers. */
+/** Per-artifact nature warnings: JPEG alpha, opaque-on-transparent, containers. */
 export const artifactNatureWarnings = (
   artifact: ExportArtifact,
   context: ExportContext,
@@ -53,12 +53,12 @@ export const artifactNatureWarnings = (
 
   if (isContainerSpec(artifact)) {
     if (artifact.format === 'ico') {
-      // Windows recommends a 256px entry (spec §6, ICO row).
+      // Windows recommends a 256px entry (ICO row).
       if (!artifact.entries.includes(256)) {
         warnings.push(`${label}: ICO pack lacks the recommended 256px entry (present: ${artifact.entries.join(', ')}).`);
       }
     } else {
-      // macOS prefers the classic set ic04..ic10 (spec §6, ICNS row).
+      // macOS prefers the classic set ic04..ic10 (ICNS row).
       const minimal = [16, 32, 128, 256, 512];
       const missing = minimal.filter((size) => !artifact.entries.includes(size));
       if (missing.length > 0) {
@@ -76,7 +76,7 @@ export const artifactNatureWarnings = (
 };
 
 /**
- * Validate a plan before execution (spec §0.5 + §6):
+ * Validate a plan before execution:
  * - structural problems come from {@link planProblems} (extension/size/entries/ids);
  * - nature warnings come from {@link artifactNatureWarnings} (alpha/opaqueness,
  *   container sets, lossy quality). Warnings never block execution.
