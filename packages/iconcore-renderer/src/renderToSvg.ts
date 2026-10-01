@@ -30,7 +30,7 @@ const gradStopsMarkup = (fill: GradientFill): string =>
  * The previous form — `translate(x,y) scale(s)` — is a transform around the
  * *origin*: it scaled the already-centred artwork away from the canvas, so any
  * project with `scale ≠ 1` exported an SVG whose content fell outside the
- * viewBox and was visibly cropped (IC51). Keep this in lockstep with
+ * viewBox and was visibly cropped. Keep this in lockstep with
  * `applyTransform`; changing one without the other reintroduces the drift.
  */
 const layerTransformAttr = (size: number, transform: IconLayer['transform']): string => {
@@ -170,6 +170,14 @@ const shapeMarkup = (
     }
     return `<polygon points="${pts.join(' ')}" ${common}/>\n`;
   }
+  // A polygon carries its own points, offset by the same origin the Canvas2D
+  // `traceShapePath` adds (`x + point.x`). Without this branch it fell through
+  // to the rectangle below and the SVG export drew a box where the editor drew
+  // the polygon.
+  if (shape.kind === 'polygon' && shape.points?.length) {
+    const pts = shape.points.map((p) => `${ox + p.x},${oy + p.y}`).join(' ');
+    return `<polygon points="${pts}" ${common}/>\n`;
+  }
 
   const rx = shape.kind === 'squircle' ? shape.width * 0.25 : shape.cornerRadius ?? 0;
   return `<rect x="${ox}" y="${oy}" width="${shape.width}" height="${shape.height}" rx="${rx}" ${common}/>\n`;
@@ -217,7 +225,7 @@ const approximationMarkup = (fill: GradientFill, shape: ShapeDefinition, steps =
 export interface RenderSvgOptions {
   /**
    * Natural dimensions per layer id for raster (non-SVG) image layers, so they
-   * can be embedded as `data:` URIs (ADR-014 §7). Without an entry the image
+   * can be embedded as `data:` URIs. Without an entry the image
    * layer is omitted from the SVG — and a warning is reported unless
    * `skipImages` is set (opt-out per artifact).
    */
@@ -338,7 +346,7 @@ export const renderToSvgWithOptions = (
     }
 
     // Raster image layer (inline base64, non-SVG): embed as a data: URI when the
-    // caller resolved its natural size (ADR-014 §7). Without a size it is omitted
+    // caller resolved its natural size. Without a size it is omitted
     // and a warning is reported unless the artifact opted out via `skipImages`.
     if (layer.source.data && layer.source.mimeType && layer.source.mimeType !== 'image/svg+xml') {
       const natural = imageSizes?.get(layer.id);

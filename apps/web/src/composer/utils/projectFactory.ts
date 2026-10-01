@@ -126,7 +126,7 @@ export type ResetAspectResult =
   | { status: 'unmeasurable' };
 
 /**
- * IC3 §4.2 (option C) — "Reset aspect ratio": rewrite a squashed image/SVG
+ * "Reset aspect ratio": rewrite a squashed image/SVG
  * layer's `source.shape` to the asset's intrinsic ratio, leaving `transform`
  * untouched. The Canvas2D/SVG backends stretch the source into exactly this
  * rectangle (`layerBaseRect`), so the shape *is* the layer's proportion and

@@ -3,7 +3,7 @@ import type { IconCoreProject, Fill, IconLayer } from '@iconcore/shared';
 import { renderToSvgWithOptions } from '../src/renderToSvg';
 
 /**
- * IC51 — the SVG export used to place layers with a transform around the
+ *  — the SVG export used to place layers with a transform around the
  * *origin* (`translate(x,y) scale(s)`) while the Canvas2D compositor pivots
  * around the *canvas centre*. Any project with `scale ≠ 1` therefore exported
  * artwork outside the viewBox, visibly cropped.
@@ -123,7 +123,7 @@ const canvasRect = (
   };
 };
 
-describe('IC51 — SVG export transform matches the Canvas2D compositor', () => {
+describe('SVG export transform matches the Canvas2D compositor', () => {
   it('reproduces the bug report: scale 2.43 lands where the PNG actually rendered', () => {
     // From Downloads\logo-icons: canvas 512, layer rect 199.68 (square),
     // transform { x: 0, y: 0, scale: 2.43 }. The exported PNG's measured

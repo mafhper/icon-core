@@ -7,7 +7,7 @@ import { initialPlan, planAction, type PlanActions } from '../utils/exportPlanSt
 export interface ExportPlanController {
   plan: ExportPlan;
   actions: PlanActions;
-  /** Structural + nature validation (spec §6), recomputed on every edit. */
+  /** Structural + nature validation, recomputed on every edit. */
   validation: ReturnType<typeof validatePlan>;
   /** Presets available in the picker, in registry order. */
   presets: ReturnType<typeof getAllPresets>;
@@ -23,8 +23,8 @@ export interface ExportPlanController {
 }
 
 /**
- * EX5 + EX6 — owns the editable export plan for the Export view and mirrors it
- * into `project.exportProfile` so reopening restores it (spec §8).
+ *  + owns the editable export plan for the Export view and mirrors it
+ * into `project.exportProfile` so reopening restores it.
  *
  * The plan lives in local state while the user edits it; persistence is
  * debounced so a slider or a rename does not write the project on every
@@ -95,7 +95,7 @@ export const useExportPlan = (): ExportPlanController => {
   );
 
   /**
-   * EX6 persistence: mirror the edited plan into the project. Debounced so
+   *  persistence: mirror the edited plan into the project. Debounced so
    * typing a path or dragging the compression slider does not write the project
    * (and mark it dirty) on every change; a flush is forced on unmount.
    */

@@ -1,5 +1,5 @@
 /**
- * Moved from `apps/web/src/composer/utils/exportPreview.ts` (EX4): the pipeline
+ * Moved from `apps/web/src/composer/utils/exportPreview.ts`: the pipeline
  * needs the preview generator without pulling in the web app. The web module now
  * re-exports this function.
  */
