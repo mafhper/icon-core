@@ -10,7 +10,7 @@ afterEach(cleanup);
 const renderLab = () => render(<TooltipProvider><UiGallery /></TooltipProvider>);
 
 /**
- * The Lab is a **fixture laboratory** (ADR-012 §12): project-independent, with one
+ * The Lab is a **fixture laboratory**: project-independent, with one
  * design question per fixture. These guards keep it from silently becoming a
  * second Composer or losing the fixture structure.
  */

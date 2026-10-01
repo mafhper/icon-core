@@ -29,8 +29,8 @@ export interface EncodeOptions {
 }
 
 /**
- * EX2 encoder facade — renders a single artifact to a `Blob`, dispatching by
- * format nature (raster / vector / container, ADR-014 §1.2).
+ *  encoder facade — renders a single artifact to a `Blob`, dispatching by
+ * format nature (raster/ vector/ container).
  *
  * Usage: `const { blob, warnings } = await encodeArtifact(artifact, project, variant, backend);`
  */

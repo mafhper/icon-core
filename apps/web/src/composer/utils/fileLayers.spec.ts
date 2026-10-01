@@ -38,7 +38,7 @@ describe('fileToLayerAsset', () => {
 });
 
 /**
- * IC3 §4.2 (option C) — the "Reset aspect" action measures the stored payload
+ * the "Reset aspect" action measures the stored payload
  * with the same helper the importer uses. If these two diverged, a straightened
  * layer could be squashed again on the next import.
  */

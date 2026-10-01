@@ -76,9 +76,17 @@ Rode a validação:
 ```bash
 npm audit --audit-level=high
 npm run lint
+node scripts/check-third-party-assets.mjs
+node scripts/check-ui-boundary.mjs
+node scripts/check-ui-budget.mjs
+node scripts/check-ui-contrast.mjs
 npm run typecheck
 npm run test
 ```
+
+O CI também roda `npm run build`, a suíte e2e do Playwright contra a landing page
+(`npm run test:e2e`) e a captura do contrato visual (`npm run ui:shots`). Os quatro
+`scripts/check-*.mjs` são baratos e pegam o que o lint não pega.
 
 Gere os bundles desktop:
 

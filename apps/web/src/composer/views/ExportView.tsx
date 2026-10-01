@@ -24,7 +24,7 @@ const VARIANT_SET: IconVariant[] = ['default', 'light', 'dark', 'mono'];
 const fileNoun = (count: number): string => `${count} ${count === 1 ? 'file' : 'files'}`;
 
 /**
- * EX5 — the export plan editor.
+ * the export plan editor.
  *
  * Reads top to bottom as the three questions the user actually has:
  * **where** is this going → **which** files → **how** do I get them.
@@ -71,7 +71,7 @@ export const ExportView = () => {
   const handleExport = async () => {
     if (!state.project || !canExport) return;
 
-    // EX6: the plan being executed is the one persisted, so reopening the view
+    //: the plan being executed is the one persisted, so reopening the view
     // shows exactly what was exported.
     persist();
     setError(null);

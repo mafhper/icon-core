@@ -10,7 +10,7 @@ export type { ExportAttachmentGenerator };
 
 /**
  * The artifact, bound to execution: resolved output path, resolved variant and
- * the format metadata a preview/catalog/report needs (ADR-014 §2.9). This is
+ * the format metadata a preview/catalog/report needs. This is
  * the "what will be generated" layer, distinct from {@link GeneratedFile}.
  */
 export interface PlannedArtifact {
@@ -38,7 +38,7 @@ export interface PlannedArtifact {
 /** Whether a produced file is a planned artifact or a plan attachment. */
 export type GeneratedFileKind = 'artifact' | 'attachment';
 
-/** A produced file with transport metadata (ADR-014 §2.9). */
+/** A produced file with transport metadata. */
 export interface GeneratedFile {
   path: string;
   blob: Blob;
@@ -82,7 +82,7 @@ export interface PlanExecutionOptions {
   includeAttachments?: boolean;
   /**
    * Called as the plan advances so a UI can show progress. Purely observational:
-   * never affects the produced files. Added in EX5 — the previous view showed a
+   * never affects the produced files. Added because the previous view showed a
    * per-task progress bar that the artifact pipeline had no equivalent for.
    */
   onProgress?: (progress: PlanProgress) => void;

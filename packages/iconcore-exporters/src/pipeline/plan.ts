@@ -28,9 +28,9 @@ const extensionFor = (artifact: ExportArtifact): string => extensionForFormat(ar
 
 /**
  * Resolve an artifact path: substitute the documented tokens
- * `{name} {variant} {format} {size} {target}` (ADR-014 §4) and guarantee the
+ * `{name} {variant} {format} {size} {target}`  and guarantee the
  * extension matches the format. `{name}` comes from `exportProfile.outputBaseName`
- * (the single source for the base name, spec §8); `{target}` falls back to the
+ * (the single source for the base name); `{target}` falls back to the
  * legacy `IconTarget` the plan's preset supersedes.
  */
 export const resolveArtifactPath = (
@@ -61,7 +61,7 @@ export const resolveArtifactPath = (
 };
 
 /**
- * Plan the artifacts of an `ExportPlan` (ADR-014 §2.9): expand every *enabled*
+ * Plan the artifacts of an `ExportPlan`: expand every *enabled*
  * spec, resolve its variant set and its output path. Containers keep their
  * physical `entries` for execution. This is a pure/structural step — nothing is
  * rendered here.

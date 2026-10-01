@@ -312,7 +312,7 @@ export const UiGallery = () => {
 
         <Section
           title="Fixtures — interaction grammar"
-          hint="Each fixture answers one design question (ADR-012 §12). `Shipped` uses the delivered component, `Proposed` is a proposal built on existing tokens, `Awaiting spec` records the question for Phases 2–6. The Lab is a fixture laboratory: nothing here instantiates the Composer."
+          hint="Each fixture answers one design question. `Shipped` uses the delivered component, `Proposed` is a proposal built on existing tokens, `Awaiting spec` records the question for Phases 2–6. The Lab is a fixture laboratory: nothing here instantiates the Composer."
         >
           <RowGrammarFixtures />
         </Section>

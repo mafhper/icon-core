@@ -18,7 +18,7 @@ import {
 
 const FORMATS: ExportFormat[] = ['svg', 'png', 'webp', 'jpeg', 'ico', 'icns'];
 
-describe('export artifact model (ADR-014)', () => {
+describe('export artifact model', () => {
   it('classifies every format into exactly one kind', () => {
     for (const format of FORMATS) {
       expect(EXPORT_FORMAT_KIND[format]).toBeDefined();
