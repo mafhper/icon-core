@@ -45,8 +45,13 @@ export const createBlankProject = (name: string, size = 512): IconCoreProject =>
   }
 });
 
-/** Largest fraction of the canvas a freshly imported layer may occupy. */
-const IMPORT_FILL = 0.78;
+/**
+ * Default margin left around a freshly imported asset, as a fraction of the
+ * canvas. Zero means the artwork fills the canvas — which is what someone
+ * importing a borderless icon expects.
+ */
+export const DEFAULT_IMPORT_MARGIN = 0;
+
 /** Shortest acceptable *long* side, in canvas px, so tiny assets stay grabbable. */
 const MIN_LONG_SIDE = 32;
 
@@ -57,16 +62,25 @@ const MIN_LONG_SIDE = 32;
  * independently is what used to squish thin assets — a 48×24 asset became
  * 37×32 (ratio 1.16 instead of 2), and the Canvas2D backend stretches the
  * source into exactly this rectangle.
+ *
+ * The asset **fills the canvas by default** (`margin` 0). A previous version
+ * capped the layer at `0.78` of the *source* size rather than the canvas,
+ * which meant a 256px icon dropped into a 512px canvas landed at 200px — a
+ * 30% band of background on all four sides that nobody asked for, and it scaled
+ * with the source rather than being a real margin. The margin is now a
+ * deliberate, explicit setting (`canvas.importMargin`), applied to the canvas.
  */
 export const fitAssetSize = (
   width: number,
   height: number,
-  canvasSize: number
+  canvasSize: number,
+  margin: number = DEFAULT_IMPORT_MARGIN
 ): { width: number; height: number } => {
   const naturalWidth = Math.max(1, width);
   const naturalHeight = Math.max(1, height);
   const longest = Math.max(naturalWidth, naturalHeight);
-  const scale = Math.max(Math.min(IMPORT_FILL, canvasSize / longest), MIN_LONG_SIDE / longest);
+  const usable = canvasSize * Math.max(0, 1 - margin);
+  const scale = Math.max(Math.min(usable / longest, Infinity), MIN_LONG_SIDE / longest);
   const round = (value: number): number => Math.max(1, Number(value.toFixed(2)));
   return { width: round(naturalWidth * scale), height: round(naturalHeight * scale) };
 };
@@ -74,9 +88,10 @@ export const fitAssetSize = (
 export const createLayerFromAsset = (
   asset: FileLayerAsset,
   canvasSize: number,
-  zIndex: number
+  zIndex: number,
+  margin: number = DEFAULT_IMPORT_MARGIN
 ): IconLayer => {
-  const { width, height } = fitAssetSize(asset.width, asset.height, canvasSize);
+  const { width, height } = fitAssetSize(asset.width, asset.height, canvasSize, margin);
 
   return {
     id: `layer-${crypto.randomUUID()}`,

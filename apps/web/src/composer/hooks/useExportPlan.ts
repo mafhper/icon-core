@@ -3,6 +3,7 @@ import type { ExportArtifact, ExportContext, ExportDestination, ExportPlan, Icon
 import { useComposer } from '../ComposerContext';
 import { getAllPresets, validatePlan } from '@iconcore/exporters';
 import { initialPlan, planAction, type PlanActions } from '../utils/exportPlanState';
+import { projectVariants } from '../utils/variantPresets';
 
 export interface ExportPlanController {
   plan: ExportPlan;
@@ -36,7 +37,7 @@ export const useExportPlan = (): ExportPlanController => {
   const project = state.project;
 
   const context = useMemo<ExportContext | null>(
-    () => (project ? { project, variants: Object.keys(project.variants) as IconVariant[] } : null),
+    () => (project ? { project, variants: projectVariants(project) } : null),
     [project]
   );
 

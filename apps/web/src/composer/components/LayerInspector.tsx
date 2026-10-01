@@ -114,6 +114,27 @@ export const LayerInspector = () => {
               onChange={(backdrop) => dispatch({ type: 'SET_EDITOR_BACKDROP', payload: backdrop })}
             />
           </Section>
+
+          <Section
+            title="Import margin"
+            hint="Breathing room left around a freshly imported asset, as a share of the canvas. Zero lets the artwork fill it; the margin applies to the next import, not to layers you already have."
+          >
+            <Slider
+              variant="inline"
+              label="Margin"
+              unit="%"
+              min="0"
+              max="45"
+              value={Math.round((state.project.canvas.importMargin ?? 0) * 100)}
+              onChange={(event) =>
+                dispatch({
+                  type: 'SET_CANVAS_IMPORT_MARGIN',
+                  payload: { margin: Number(event.target.value) / 100, transient: true }
+                })
+              }
+              onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
+            />
+          </Section>
         </div>
       </aside>
     );
