@@ -14,6 +14,7 @@ import { PresetPicker } from '../components/export/PresetPicker';
 import { AddArtifactRow, ArtifactRow } from '../components/export/ArtifactRow';
 import { CompanionFiles } from '../components/export/CompanionFiles';
 import { OutputManifest } from '../components/export/OutputManifest';
+import { ExportPreview } from '../components/export/ExportPreview';
 import { plannedOutputPaths, planSummary } from '../utils/exportPlanState';
 
 type ExportPhase = 'idle' | 'exporting' | 'archiving' | 'complete' | 'error';
@@ -284,6 +285,14 @@ export const ExportView = () => {
 
               <OutputManifest paths={outputPaths} total={summary.files} disabled={!validation.ready} />
             </div>
+
+            {state.project && (
+              <ExportPreview
+                project={state.project}
+                variant={state.activeVariant}
+                enabled={phase !== 'exporting'}
+              />
+            )}
 
             <div className="card-surface rounded-2xl border border-ic-border bg-ic-surface p-5 space-y-4">
               <FieldGroup label="Destination">
