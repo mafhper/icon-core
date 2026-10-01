@@ -4,7 +4,7 @@ import { renderToSvgWithOptions } from '@iconcore/renderer';
 
 export interface SvgEncodeOptions {
   /**
-   * Embed raster image layers as `data:` URIs (ADR-014 §7). Default: true —
+   * Embed raster image layers as `data:` URIs. Default: true —
    * natural sizes come from the backend so the placement matches the Canvas2D
    * render (contain-fit inside the canvas).
    */

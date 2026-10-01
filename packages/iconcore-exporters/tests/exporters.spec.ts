@@ -64,7 +64,7 @@ const createProject = (overrides?: Partial<IconCoreProject>): IconCoreProject =>
  * `exportTarget` is now a thin adapter over the plan pipeline — it exists only
  * so the CLI keeps its `ExportResult` contract. The source of truth for what a
  * target produces is the preset registry, so these tests assert the *corrected*
- * sets (the old `RasterTask` lists were PNG-only, which is what IC15 fixed).
+ * sets (the old `RasterTask` lists were PNG-only, which is what  fixed).
  */
 describe('exportTarget (plan adapter)', () => {
   it('exports web-favicon as the corrected favicon set (incl. ico + svg)', async () => {

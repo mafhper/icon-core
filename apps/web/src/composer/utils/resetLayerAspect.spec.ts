@@ -25,7 +25,7 @@ const svgLayer = (
 });
 
 /**
- * IC3 §4.2 (option C) — a squashed image layer can be straightened back to the
+ * a squashed image layer can be straightened back to the
  * asset's intrinsic ratio, with no schema change: the backends stretch the
  * source into exactly `source.shape` (`layerBaseRect`), so the shape *is* the
  * layer's proportion.
@@ -97,7 +97,7 @@ describe('resetLayerAspect', () => {
 
   it('reports unmeasurable when the SVG declares no intrinsic size', async () => {
     // No width/height/viewBox: there is no ratio to restore, and guessing a
-    // square is exactly the defect §7.1 removed.
+    // square is exactly the defect this action exists to remove.
     const result = await resetLayerAspect(svgLayer('<svg width="100%" height="100%"></svg>', 128, 64));
 
     expect(result.status).toBe('unmeasurable');

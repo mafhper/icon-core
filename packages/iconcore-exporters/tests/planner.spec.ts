@@ -30,7 +30,7 @@ const container = (plan: ExportPlan, format: 'ico' | 'icns'): ExportContainerSpe
 
 const paths = (plan: ExportPlan) => enabledArtifacts(plan).map((artifact) => artifact.path);
 
-describe('presets (spec §3)', () => {
+describe('presets', () => {
   it('registers the expected presets with unique ids', () => {
     const presets = getAllPresets();
     expect(presets.map((preset) => preset.id)).toEqual([
@@ -61,7 +61,7 @@ describe('presets (spec §3)', () => {
   });
 });
 
-describe('planning per target (spec §9: Domínio)', () => {
+describe('planning per target', () => {
   it('Tauri: ico + icns + PNG set — NOT only PNGs (regression)', () => {
     const plan = planFromTarget(ctx, 'tauri');
 
@@ -183,7 +183,7 @@ describe('buildPlan', () => {
   });
 });
 
-describe('planProblems (invariants §0.5)', () => {
+describe('planProblems (invariants)', () => {
   const expectValid = (plan: ExportPlan) => expect(planProblems(plan)).toEqual([]);
 
   it('every preset plan is structurally valid', () => {
