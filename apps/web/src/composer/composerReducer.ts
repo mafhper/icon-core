@@ -67,6 +67,7 @@ export type ComposerAction =
   | { type: 'TOGGLE_COMPARE_DEFAULT' }
   | { type: 'SET_ACTIVE_TARGET'; payload: { target: IconTarget; enabled: boolean } }
   | { type: 'SET_CANVAS_BACKGROUND'; payload: { background: Fill; transient?: boolean } }
+  | { type: 'SET_CANVAS_IMPORT_MARGIN'; payload: { margin: number; transient?: boolean } }
   | { type: 'UPDATE_EXPORT_PROFILE'; payload: Partial<ExportProfile> }
   | { type: 'NAVIGATE'; payload: ComposerView }
   | { type: 'UNDO' }
@@ -209,7 +210,12 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
       const zIndex = state.project.layers.length;
       const layer = action.payload.asset
-        ? createLayerFromAsset(action.payload.asset, state.project.canvas.size, zIndex)
+        ? createLayerFromAsset(
+            action.payload.asset,
+            state.project.canvas.size,
+            zIndex,
+            state.project.canvas.importMargin
+          )
         : action.payload.text
           ? createTextLayer(state.project.canvas.size, zIndex)
           : action.payload.shape
@@ -432,6 +438,17 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
         activeTarget: action.payload.target,
         isDirty: Boolean(project)
       };
+    }
+
+    case 'SET_CANVAS_IMPORT_MARGIN': {
+      if (!state.project) return state;
+      const project = {
+        ...state.project,
+        canvas: { ...state.project.canvas, importMargin: Math.max(0, Math.min(0.45, action.payload.margin)) }
+      };
+      return action.payload.transient
+        ? { ...state, project, isDirty: true }
+        : commitProject(state, project);
     }
 
     case 'SET_CANVAS_BACKGROUND': {

@@ -399,6 +399,13 @@ export interface IconCoreProject {
     size: number;
     background: Fill;
     safeArea?: SafeArea;
+    /**
+     * Margin left around a freshly imported asset, as a fraction of the canvas
+     * (0 = the artwork fills the canvas). Optional; absent means 0, so no
+     * migration is needed. Distinct from `safeArea`, which is a preview guide
+     * and never clips the export.
+     */
+    importMargin?: number;
   };
   layers: IconLayer[];
   variants: Partial<Record<IconVariant, VariantOverrides>>;

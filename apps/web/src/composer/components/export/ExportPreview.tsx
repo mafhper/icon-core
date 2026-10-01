@@ -203,9 +203,14 @@ export const ExportPreview = ({ project, variant, enabled = true }: ExportPrevie
           {inset && (
             <p className="ic-export-preview-warn" role="status">
               The artwork stops about <strong>{marginPct}%</strong> short of the canvas edge at
-              {' '}{smallest}px — a band of background sits around it. That is normal for a fresh
-              import, which is placed at 78% of the canvas. If the margin is larger than you want,
-              go back to Edit Space and scale the layer, or reset the layer proportion.
+              {' '}{smallest}px — a band of background sits around it. That is the
+              {' '}<strong>import margin</strong> you set in Edit Space; set it to 0 if you want the
+              artwork to fill the canvas. Scaling the layer up also works.
+            </p>
+          )}
+          {!inset && (
+            <p className="ic-export-preview-note">
+              The artwork reaches the canvas edge — no margin around it.
             </p>
           )}
         </>
