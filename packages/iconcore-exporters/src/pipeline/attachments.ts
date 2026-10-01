@@ -26,7 +26,7 @@ const textBlob = (content: string, mime = 'text/plain'): { content: string; mime
 
 /**
  * Web app manifest icons derived from the PNGs actually produced by the plan
- * (spec §3, web/pwa rows). Maskable icons (opaque background) are flagged via
+ * (web/pwa rows). Maskable icons (opaque background) are flagged via
  * `purpose: 'maskable'`.
  */
 const manifestIcons = (planned: PlannedArtifact[]): Array<{ src: string; sizes?: string; type: string }> =>
@@ -70,7 +70,7 @@ export const generateBrowserconfig = (): AttachmentOutput => {
   return { content: xml, mime: 'application/xml' };
 };
 
-/** iconcore-report.json: the executed plan, per artifact (spec §5). */
+/** iconcore-report.json: the executed plan, per artifact. */
 export const generatePlanReport = (
   context: ExportContext,
   plan: ExportPlan,

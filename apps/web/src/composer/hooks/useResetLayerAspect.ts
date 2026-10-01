@@ -5,7 +5,7 @@ import { useToast } from '../toast/ToastContext';
 import { resetLayerAspect } from '../utils/projectFactory';
 
 /**
- * IC3 §4.2 (option C) — the "Reset aspect ratio" action.
+ * the "Reset aspect ratio" action.
  *
  * Correcting a layer's proportion means rewriting `source.shape` to the asset's
  * intrinsic ratio: both the Canvas2D and the SVG backends stretch the source

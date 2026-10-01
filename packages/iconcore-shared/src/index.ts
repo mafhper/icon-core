@@ -237,7 +237,7 @@ export interface ExportProfile {
   /** Include a standalone preview.html contact sheet. Defaults to true. */
   includePreview?: boolean;
   /**
-   * Artifact-model fields (ADR-014, additive). When `artifacts` is present it is
+   * Artifact-model fields (additive). When `artifacts` is present it is
    * the persisted snapshot of the plan; otherwise the plan is derived from the
    * preset (new/legacy projects). The legacy `format`/`quality`/`structure`/`zip`
    * fields above are kept as a fallback and are never deleted.
@@ -248,7 +248,7 @@ export interface ExportProfile {
   destination?: ExportDestination;
 }
 
-// --- export artifact model (ADR-014) ---
+// --- export artifact model  ---
 
 /** Encoding of an exported file: raster, vector or container. */
 export type ExportFormat = 'svg' | 'png' | 'webp' | 'jpeg' | 'ico' | 'icns';
@@ -302,7 +302,7 @@ export interface ExportAttachment {
   /**
    * Whether the user still wants this file. Defaults to `true`.
    *
-   * Attachments are **declared, never implicit** (ADR-014 invariant: every
+   * Attachments are **declared, never implicit** (every
    * produced file derives from an enabled artifact or an enabled declared
    * attachment). A companion the user cannot see is a companion they cannot
    * turn off — which is how `preview.html` and `iconcore-report.json` ended up
@@ -323,7 +323,7 @@ export interface ExportContext {
   variants: IconVariant[];
 }
 
-/** A preset is a convenience generator of an initial plan (ADR-014 §2.6). */
+/** A preset is a convenience generator of an initial plan. */
 export interface ExportPreset {
   id: string;
   label: string;
@@ -362,7 +362,7 @@ export const EXPORT_FORMAT_MIME: Record<ExportFormat, string> = {
   icns: 'image/icns'
 };
 
-/** Derive an artifact's nature from its format (ADR-014 §1.2). */
+/** Derive an artifact's nature from its format. */
 export const kindOf = (format: ExportFormat): ExportArtifactKind => EXPORT_FORMAT_KIND[format];
 
 /** Container formats (`ico`/`icns`) carry embedded representations. */
@@ -441,8 +441,7 @@ export const detectLocale = (input?: string): Locale => {
   return 'en-US';
 };
 
-// --- UI/UX 2026 engineering contracts (PR-04) ---
-// Fixed by the redesign sprint master plan (.dev/docs/redesign-uiux-2026-plan.md, §6).
+// --- UI/UX 2026 engineering contracts ---
 // These types are the compilation-time surface of the editor + library contracts;
 // implementations land incrementally (path parser/editor, iconcore-library, reducer
 // integration) without changing existing behavior.

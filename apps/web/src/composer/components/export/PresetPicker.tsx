@@ -9,13 +9,13 @@ export interface PresetPickerProps {
 }
 
 /**
- * Step 1 — "where do you intend to use this icon?" (spec §7).
+ * Step 1 — "where do you intend to use this icon?".
  *
  * A preset is only the *initial* list of artifacts. Nine cards each carrying a
  * description, a platform line and a documentation line buried the plan under a
  * wall of text, so the options are now compact and the **selected** one explains
  * itself below. `Customize` turns the plan into a custom one (drops `presetId`,
- * keeps every artifact — spec §8).
+ * keeps every artifact —).
  */
 export const PresetPicker = ({ presets, plan, onSelect, onCustomize }: PresetPickerProps) => {
   const selected = presets.find((preset) => preset.id === plan.presetId);
