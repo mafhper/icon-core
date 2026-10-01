@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { IconCoreProject, IconLayer } from '@iconcore/shared';
-import { generateVariantPreset, isGeneratableVariant } from './variantPresets';
+import { generateVariantPreset, isGeneratableVariant, projectVariants } from './variantPresets';
 import { hexToRgb, relativeLuminance } from './color';
+import { createBlankProject } from './projectFactory';
 
 const layer = (id: string, color: string): IconLayer => ({
   id,
@@ -24,6 +25,9 @@ const project = (...colors: string[]): IconCoreProject => ({
   targets: [],
   exportProfile: { outputBaseName: 't', quality: 0.95, generateReport: true }
 });
+
+/** A one-layer project, for cases that reach into `layers[0]`. */
+const oneLayer = (): IconCoreProject => project('#ff0000');
 
 const luminanceOf = (color?: string) => relativeLuminance(hexToRgb(color ?? '#000000')!);
 
@@ -55,5 +59,51 @@ describe('variant presets', () => {
     expect(preset.background.kind === 'solid' ? preset.background.color : undefined).toBe('#f8fafc');
     const fill = preset.layerFills.l0;
     expect(luminanceOf(fill?.kind === 'solid' ? fill.color : undefined)).toBeLessThan(luminanceOf('#fafafa'));
+  });
+});
+
+describe('projectVariants', () => {
+  it('returns the three seeded variants for a brand-new project', () => {
+    // The real factory seeds light/dark/mono with a canvas background before
+    // any edit — the slots exist independently of whether the user touched them.
+    // Asserted against the real project so the seed cannot drift unnoticed.
+    expect(projectVariants(createBlankProject('T', 512))).toEqual(['light', 'dark', 'mono']);
+  });
+
+  it('returns nothing when the project declares no variants at all', () => {
+    expect(projectVariants(project())).toEqual([]);
+    expect(projectVariants(null)).toEqual([]);
+  });
+
+  it('counts a variant edited by hand, which has no key of its own', () => {
+    // UPDATE_LAYER_VARIANT writes layer overrides without creating a key.
+    const p = oneLayer();
+    p.layers[0].variantOverrides = { highContrast: { opacity: 0.5 } };
+    expect(projectVariants(p)).toEqual(['highContrast']);
+  });
+
+  it('ignores an empty entry left behind by an older build', () => {
+    // A project saved before the reducer started deleting keys still carries
+    // `highContrast: {}` for a cleared variant. No content, no slot.
+    const p = project();
+    p.variants = { highContrast: {} };
+    expect(projectVariants(p)).toEqual([]);
+  });
+
+  it('never includes default, even when a key exists for it', () => {
+    const p = project();
+    p.variants = { default: { canvas: { background: { kind: 'solid', color: '#ffffff' } } } };
+    expect(projectVariants(p)).toEqual([]);
+  });
+
+  it('keeps registry order and does not repeat a variant', () => {
+    const p = oneLayer();
+    p.variants = {
+      mono: { canvas: { background: { kind: 'solid', color: '#ffffff' } } },
+      light: { canvas: { background: { kind: 'solid', color: '#f8fafc' } } },
+      default: {}
+    };
+    p.layers[0].variantOverrides = { light: { opacity: 0.5 } };
+    expect(projectVariants(p)).toEqual(['light', 'mono']);
   });
 });

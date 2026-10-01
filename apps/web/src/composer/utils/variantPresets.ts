@@ -43,6 +43,56 @@ export interface VariantPreset {
   layerFills: Record<string, Fill | undefined>;
 }
 
+/**
+ * The variants a project has a slot for, in the order they should be offered.
+ *
+ * Two independent facts feed this, and conflating them is the bug this fixes:
+ *
+ * 1. **A slot exists** when `project.variants` has a key for it. A new project
+ *    seeds `light`, `dark` and `mono` (see `projectFactory`), so three slots
+ *    exist before the user edits anything.
+ * 2. **A variant was edited** when some layer carries a `variantOverrides`
+ *    entry. `UPDATE_LAYER_VARIANT` writes layer overrides *without* creating a
+ *    key, so a project edited by hand can name a variant that no key mentions.
+ *
+ * `default` is excluded: it is the implicit base, never a slot.
+ *
+ * A project written by an older build may also carry an empty entry for a
+ * variant that was cleared. An entry with no canvas override and no layer
+ * override is a leftover, not a slot, so it is filtered out.
+ */
+export const projectVariants = (project: IconCoreProject | null | undefined): IconVariant[] => {
+  if (!project) return [];
+
+  const edited = new Set<IconVariant>();
+  for (const layer of project.layers) {
+    for (const variant of Object.keys(layer.variantOverrides ?? {}) as IconVariant[]) {
+      if (variant !== 'default') edited.add(variant);
+    }
+  }
+
+  const seen = new Set<IconVariant>();
+  const ordered: IconVariant[] = [];
+  /** A variant counts when it is declared with content or was edited by hand. */
+  const counts = (variant: IconVariant): boolean =>
+    variant !== 'default' && (Boolean(project.variants[variant]?.canvas) || edited.has(variant));
+  const offer = (variant: IconVariant) => {
+    if (!counts(variant) || seen.has(variant)) return;
+    seen.add(variant);
+    ordered.push(variant);
+  };
+
+  // Registry order first, so the usual set reads light → dark → mono.
+  for (const variant of GENERATABLE_VARIANTS) offer(variant);
+
+  // Then anything the project named that the registry does not know (a variant
+  // edited by hand, or one from a future schema).
+  for (const variant of Object.keys(project.variants) as IconVariant[]) offer(variant);
+  for (const variant of edited) offer(variant);
+
+  return ordered;
+};
+
 /** Compute a starting-point preset for a variant from the project's default layers. */
 export const generateVariantPreset = (project: IconCoreProject, variant: GeneratableVariant): VariantPreset => {
   const layerFills: Record<string, Fill | undefined> = {};

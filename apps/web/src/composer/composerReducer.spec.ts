@@ -73,6 +73,59 @@ describe('Icon Core workspaces state', () => {
     const cleared = composerReducer(generated, { type: 'CLEAR_VARIANT', payload: { variant: 'dark' } });
     expect(cleared.project!.layers[0].variantOverrides?.dark).toBeUndefined();
   });
+
+  it('drops the variant key entirely when clearing, so it stops reading as existing', () => {
+    const created = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'T', size: 512 } });
+    const withLayer = composerReducer(created, {
+      type: 'ADD_LAYER',
+      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+    });
+
+    const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
+    expect(Object.keys(generated.project!.variants)).toContain('dark');
+
+    const cleared = composerReducer(generated, { type: 'CLEAR_VARIANT', payload: { variant: 'dark' } });
+    // The key must be gone, not blank: `Record<IconVariant, …>` is partial, so
+    // `{ dark: {} }` is indistinguishable from a real variant to `Object.keys`.
+    expect(Object.keys(cleared.project!.variants)).not.toContain('dark');
+    expect('dark' in cleared.project!.variants).toBe(false);
+  });
+
+  it('drops the variant key when promoting it into the base', () => {
+    const created = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'T', size: 512 } });
+    const withLayer = composerReducer(created, {
+      type: 'ADD_LAYER',
+      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+    });
+
+    const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'mono' } });
+    const promoted = composerReducer(generated, { type: 'PROMOTE_VARIANT', payload: { variant: 'mono' } });
+
+    // The variant's overrides were merged into the layers. NEW_PROJECT seeds the
+    // key, so promotion removes it and `projectVariants` stops offering a slot
+    // for it — there is nothing left of that variant to show.
+    expect(Object.keys(promoted.project!.variants)).not.toContain('mono');
+    expect(promoted.project!.layers[0].variantOverrides?.mono).toBeUndefined();
+  });
+
+  it('keeps sibling variants when one is cleared', () => {
+    const created = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'T', size: 512 } });
+    const withLayer = composerReducer(created, {
+      type: 'ADD_LAYER',
+      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+    });
+
+    const withDark = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
+    const withBoth = composerReducer(withDark, { type: 'GENERATE_VARIANT', payload: { variant: 'light' } });
+    const cleared = composerReducer(withBoth, { type: 'CLEAR_VARIANT', payload: { variant: 'dark' } });
+
+    // NEW_PROJECT seeds default/light/dark/mono, so the siblings that survive are
+    // the seeded ones minus the cleared key — not just the generated ones.
+    const keys = Object.keys(cleared.project!.variants);
+    expect(keys).not.toContain('dark');
+    expect(keys).toContain('light');
+    expect(keys).toContain('mono');
+  });
 });
 
 describe('background layer handle', () => {
