@@ -25,7 +25,7 @@ const variantClasses: Record<ButtonVariant, string> = {
  * Action button. Extends the native <button> semantics; `type` defaults to
  * "button" since these never submit.
  *
- * Ordering (004 §9.1): `type`/`disabled` are destructured out of props and
+ * Ordering: `type`/`disabled` are destructured out of props and
  * spread first as `{...rest}`, then written explicitly — so the safe default
  * is never clobbered by a stray `type` in the spread.
  *

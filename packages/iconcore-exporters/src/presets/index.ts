@@ -4,7 +4,7 @@ import { EXPORT_PRESETS, PRESET_ID_BY_TARGET } from './registry';
 export { PRESET_ID_BY_TARGET } from './registry';
 export type { ExportContext } from './registry';
 
-/** All preset definitions, in a stable order (registry order, spec §3). */
+/** All preset definitions, in a stable order (registry order). */
 export const getAllPresets = (): ExportPreset[] => EXPORT_PRESETS;
 
 /** Look up a preset by id (`tauri`, `web`, `custom`…) or `undefined`. */

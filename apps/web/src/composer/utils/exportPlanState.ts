@@ -10,9 +10,9 @@ import { isContainerSpec, kindOf, extensionForFormat } from '@iconcore/shared';
 import { buildPlan, getAllPresets, PRESET_ID_BY_TARGET, resolveArtifactPath } from '@iconcore/exporters';
 
 /**
- * EX5 — the editable export plan.
+ * the editable export plan.
  *
- * The plan is a plain list of artifacts (spec §0.1: "artifact, not a global
+ * The plan is a plain list of artifacts (: "artifact, not a global
  * format"). A preset is only the *initial* list; everything after it is the
  * user's, which is why this module is pure state manipulation with no React.
  * The hook (`useExportPlan`) is a thin wrapper so the behaviour is testable
@@ -47,7 +47,7 @@ const replaceArtifact = (
 /**
  * Build the initial plan.
  *
- * Priority (spec §8): a persisted snapshot wins, so reopening a project
+ * Priority: a persisted snapshot wins, so reopening a project
  * restores exactly what the user had. Otherwise the legacy enabled targets are
  * bridged to their presets, and a project with neither falls back to `web`.
  */
@@ -67,7 +67,7 @@ export const initialPlan = (
   const first = enabled[0];
   if (first) {
     // Legacy single-format projects: apply the global format to raster artifacts
-    // so the old choice is not silently lost (spec §8 legacy fallback).
+    // so the old choice is not silently lost (legacy fallback).
     const plan = bridgeLegacyTargets(context, enabled);
     return applyLegacyDefaults(plan, context);
   }

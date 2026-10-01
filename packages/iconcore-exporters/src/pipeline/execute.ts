@@ -21,8 +21,7 @@ export class PlanValidationError extends Error {
 const blobFor = (content: string, mime: string): Blob => new Blob([content], { type: mime });
 
 /**
- * EX4 pipeline — execute an `ExportPlan` without any UI (spec §5, §6, ADR-014
- * §2.9). Flow:
+ *  pipeline — execute an `ExportPlan` without any UI. Flow:
  *
  * 1. validate  → `planProblems` + nature warnings (Ready · N warnings);
  * 2. plan      → `PlannedArtifact[]` (enabled artifacts, resolved paths);
@@ -82,7 +81,7 @@ export const executePlan = async (
     onProgress?.({ phase: 'encoding', completed, total: planned.length, currentPath: item.path, done: false });
   }
 
-  // 4. Attachments **declared on the plan** — and nothing else (ADR-014
+  // 4. Attachments **declared on the plan** — and nothing else (
   //    invariant). README/report/preview used to be appended implicitly here,
   //    which meant a plan that asked for "just the .ico" still shipped an HTML
   //    sheet and two JSON files the user had no way to switch off. They are now

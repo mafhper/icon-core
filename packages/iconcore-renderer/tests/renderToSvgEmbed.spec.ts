@@ -25,7 +25,7 @@ const createProject = (layers: IconLayer[]): IconCoreProject => ({
   exportProfile: { outputBaseName: 'test', quality: 0.95, generateReport: false }
 });
 
-describe('renderToSvgWithOptions — raster image embedding (ADR-014 §7)', () => {
+describe('renderToSvgWithOptions — raster image embedding', () => {
   it('embeds a raster image layer as a data: URI, positioned like the PNG backend', () => {
     const project = createProject([rasterLayer()]);
     const result = renderToSvgWithOptions(project, 'default', {

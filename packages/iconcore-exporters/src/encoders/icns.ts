@@ -6,7 +6,7 @@ import { EXPORT_FORMAT_MIME } from '@iconcore/shared';
  * Apple's modern icon types are PNG blobs selected by an OSType. The mapping
  * below is the canonical physical-size table (icp4..ic10); entries are physical
  * pixel sizes, so @2x logical variants (ic11..ic14) collapse onto their physical
- * representation (ADR-014 §1.4).
+ * representation.
  *
  * Layout: 8-byte file header (`icns` + big-endian total length), then per
  * representation: 4-byte OSType, big-endian length (data + 8), data bytes.

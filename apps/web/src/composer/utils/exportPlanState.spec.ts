@@ -231,7 +231,7 @@ describe('formatLabel', () => {
   });
 });
 
-describe('EX6 — persistence round-trip (spec §8)', () => {  it('reopening a project restores the exact plan that was edited', () => {
+describe('persistence round-trip', () => {  it('reopening a project restores the exact plan that was edited', () => {
     // A user edits the Tauri plan down to two artifacts and saves it.
     let plan = initialPlan(ctx(withTargets('tauri')));
     plan = planAction(plan, ctx(), { type: 'removeArtifact', id: plan.artifacts[0].id });
@@ -290,7 +290,7 @@ describe('suffixPath', () => {
     expect(suffixPath('icons/32x32.png', ['icons/32x32.png'])).toBe('icons/32x32-2.png');
   });
 });
-describe('EX7 � acceptance gate through the web path (spec �9)', () => {
+describe('acceptance gate through the web path', () => {
   it('seeds a plan from the UI, edits it to svg+png+webp+ico, and executes all four', async () => {
     // This is the path the Export view actually takes: seed -> edit -> execute.
     const project = withTargets('web-favicon');
@@ -375,7 +375,7 @@ describe('Nothing is exported that the user did not ask for', () => {
     expect(paths).not.toContain('preview.html');
     expect(paths).not.toContain('iconcore-report.json');
     expect(paths).not.toContain('README.md');
-    // �while the icons still come out.
+    // — while the icons still come out.
     expect(paths).toContain('icon.ico');
     backend.destroy();
   });
