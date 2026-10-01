@@ -3,9 +3,9 @@ import JSZip from 'jszip';
 import { zipFiles } from './exportPackage';
 
 /**
- * Transport only (spec §2.5): the plan decides *what* is produced, this module
+ * Transport only: the plan decides *what* is produced, this module
  * only decides how it is delivered. The README/report/manifest generators moved
- * to `@iconcore/exporters` (pipeline attachments) in EX4.
+ * to `@iconcore/exporters` (pipeline attachments) in.
  */
 describe('zipFiles', () => {
   it('writes each file at its planned path', async () => {
