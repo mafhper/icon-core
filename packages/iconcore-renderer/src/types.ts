@@ -1,4 +1,4 @@
-import type { Fill, IconLayer, ShapeKind, Stroke, BlendMode } from '@iconcore/shared';
+import type { CanvasMaskShape, Fill, IconLayer, ShapeKind, Stroke, BlendMode } from '@iconcore/shared';
 
 export interface ImageHandle {
   width: number;
@@ -28,12 +28,18 @@ export interface RenderContext {
  */
 export type RenderBackground = 'canvas' | 'transparent';
 
-export interface RenderOptions {
+export type RenderOptions = {
   format?: 'png' | 'webp' | 'jpeg';
   /** 0..1, applied to lossy formats only. */
   quality?: number;
   /** Defaults to `canvas`; the export path passes `transparent`. */
   background?: RenderBackground;
+  /**
+   * `'none'` keeps the image full bleed — the default, and what every caller
+   * that never asked produced before. Any other value clips the finished image
+   * to that outline, which is how the export mirrors the canvas frame.
+   */
+  mask?: CanvasMaskShape | 'none';
 }
 
 export interface RenderBackend {

@@ -1,7 +1,8 @@
-import type { Dimensions, Fill, IconLayer, IconVariant, ShapeKind } from '@iconcore/shared';
-import { imageFilterToCss } from '@iconcore/shared';
+import type { CanvasMaskShape, Dimensions, Fill, IconLayer, IconVariant, ShapeKind } from '@iconcore/shared';
+import { imageFilterToCss, resolveMaskRadius } from '@iconcore/shared';
 import type { RenderBackend, ResolvedLayer } from './types';
 import { layerBaseRect } from './geometry';
+import { clipSquircle } from './masks/applyMask';
 
 const resolveLayerForVariant = (
   layer: IconLayer,
@@ -81,7 +82,15 @@ export const composeLayers = async (
   background: Fill,
   variant: IconVariant,
   safeArea: { inset: number; shape: ShapeKind } | undefined,
-  backend: RenderBackend
+  backend: RenderBackend,
+  /** When set, the finished image is clipped to this outline. See clipToShape. */
+  clipShape?: CanvasMaskShape,
+  /**
+   * The project's own canvas, read for the declared `maskRadius`. Falls back to
+   * `canvas` when omitted, so a caller with no project still clips — it just
+   * uses the shape default.
+   */
+  projectCanvas?: { size: number; height?: number; maskRadius?: number; maskShape?: CanvasMaskShape }
 ): Promise<Blob> => {
   const ctx = backend.createCanvas(canvas.width, canvas.height);
 
@@ -189,5 +198,62 @@ export const composeLayers = async (
     backend.applyMask(ctx, safeArea.shape, canvas.width, safeArea.inset * canvas.width);
   }
 
+  if (clipShape) {
+    // The export mirror. The canvas frame in the editor and the shape in the
+    // file come from the same two fields on `canvas`, so this is the editor's
+    // outline rather than a second opinion about it.
+    //
+    // Clipping is applied *here*, after the last layer and before `toBlob`,
+    // because a clip is a Canvas2D state: setting a path and clipping has to
+    // bracket the drawing. `applyMask` cannot do it — it saves and restores
+    // around the clip, which cancels it.
+    clipToShape(
+      ctx.native as CanvasRenderingContext2D,
+      canvas,
+      clipShape,
+      projectCanvas ?? { size: canvas.width, height: canvas.height, maskShape: clipShape }
+    );
+  }
+
   return backend.toBlob(ctx, 'image/png');
+};
+
+/**
+ * Clip the finished composition to the canvas outline.
+ *
+ * `canvas` here is the project's canvas, not the render target: the radius is
+ * **read from the document** through `resolveMaskRadius`, so a radius the owner
+ * set is the radius that appears. Recomputing the shape default inside this
+ * function would silently ignore `canvas.maskRadius` — which is exactly what a
+ * first version did, and what the test caught (asked for 22, got 24).
+ */
+const clipToShape = (
+  native: CanvasRenderingContext2D,
+  target: { width: number; height: number },
+  shape: CanvasMaskShape,
+  projectCanvas: { size: number; height?: number; maskRadius?: number }
+): void => {
+  const { width, height } = target;
+  const radius = Math.min(
+    resolveMaskRadius(projectCanvas),
+    Math.min(width, height) / 2
+  );
+
+  native.save();
+  native.beginPath();
+  switch (shape) {
+    case 'circle':
+      native.ellipse(width / 2, height / 2, Math.min(width, height) / 2, Math.min(width, height) / 2, 0, 0, Math.PI * 2);
+      break;
+    case 'squircle':
+      clipSquircle(native, Math.min(width, height));
+      break;
+    default:
+      native.roundRect(0, 0, width, height, radius);
+      break;
+  }
+  native.closePath();
+  native.clip();
+  // Intentionally no `restore()`: the clip must survive until `toBlob`. The
+  // context is discarded right after, so there is nothing to leak into.
 };

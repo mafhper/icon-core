@@ -1,4 +1,4 @@
-import type { IconCoreProject, IconVariant } from '@iconcore/shared';
+import type { CanvasMaskShape, IconCoreProject, IconVariant } from '@iconcore/shared';
 import type { RenderBackend } from '@iconcore/renderer';
 import { renderToSvgWithOptions } from '@iconcore/renderer';
 import type { RenderBackground } from '@iconcore/renderer';
@@ -29,6 +29,11 @@ export interface SvgEncodeOptions {
    * not become an opaque rectangle in the file.
    */
   background?: RenderBackground;
+  /**
+   * Clip the document to this outline, mirroring the raster path. 'none' and
+   * absent keep it full bleed.
+   */
+  mask?: CanvasMaskShape | 'none';
 }
 
 export const encodeSvg = async (
@@ -60,7 +65,8 @@ export const encodeSvg = async (
     maxEmbeddedImageBytes: options.maxEmbeddedImageBytes,
     size: options.size,
     height: options.height,
-    background: options.background
+    background: options.background,
+    mask: options.mask
   });
 
   return { blob: new Blob([svg], { type: 'image/svg+xml' }), warnings };

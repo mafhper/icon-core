@@ -1,5 +1,5 @@
-import type { ExportArtifactSpec, IconCoreProject, IconVariant } from '@iconcore/shared';
-import { resolveSize } from '@iconcore/shared';
+import type { CanvasMaskShape, ExportArtifactSpec, IconCoreProject, IconVariant } from '@iconcore/shared';
+import { isContainerFormat, resolveSize } from '@iconcore/shared';
 import type { RenderBackground, RenderBackend, RenderOptions } from '@iconcore/renderer';
 import { renderProject, resolveCanvasBackground } from '@iconcore/renderer';
 
@@ -42,7 +42,8 @@ export const encodeRaster = async (
   const options: RenderOptions = {
     format: artifact.format,
     quality: artifact.quality,
-    background: backgroundModeFor(artifact)
+    background: backgroundModeFor(artifact),
+    mask: maskModeFor(artifact, project)
   };
   const blob = await renderProject(project, variant, target, backend, options);
 
@@ -73,4 +74,35 @@ export const backgroundModeFor = (
   if (artifact.format === 'jpeg') return 'canvas';
   if (artifact.background === 'opaque') return 'canvas';
   return 'transparent';
+};
+
+/**
+ * The outline an exported artifact is clipped to, or `'none'` for full bleed.
+ *
+ * The canvas frame is the design: whatever shape and radius it carries is what
+ * the file shows, so the export reads it rather than guessing per preset. What
+ * it does **not** do is invent a shape — a project that declares none stays
+ * full bleed, exactly as before.
+ *
+ * Two artifacts opt out, and both for a reason the platform states in its own
+ * spec rather than taste:
+ *
+ * - **A container (`.ico`, `.icns`).** Windows and macOS read a single file and
+ *   pick the size they want. A rounded `.ico` is not a thing — the mask is
+ *   applied to the bitmap at display time, so a clipped one loses a ring of
+ *   pixels that the OS would have clipped identically.
+ * - **`background: 'opaque'`.** That flag means the artifact requires an opaque
+ *   background, which in practice is a PWA *maskable* icon. Those are cropped by
+ *   the launcher to whatever shape it likes, inside the safe zone, so a rounded
+ *   export would be cropped twice.
+ */
+export const maskModeFor = (
+  artifact: Pick<ExportArtifactSpec, 'format' | 'background'>,
+  project: IconCoreProject
+): CanvasMaskShape | 'none' => {
+  if (isContainerFormat(artifact.format)) return 'none';
+  if (artifact.background === 'opaque') return 'none';
+  // Nothing declared means nothing assumed: the project renders as it always did.
+  if (project.canvas.maskShape === undefined && project.canvas.maskRadius === undefined) return 'none';
+  return project.canvas.maskShape ?? 'rounded-rectangle';
 };

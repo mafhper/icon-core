@@ -1,10 +1,29 @@
-import type { Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
-import { resolveSize } from '@iconcore/shared';
+import type { CanvasMaskShape, Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
+import { resolveMaskRadius, resolveSize } from '@iconcore/shared';
 import { toRgba } from './color';
 import { layerBaseRect } from './geometry';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
 import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
 import type { RenderBackground } from './types';
+
+/**
+ * A superellipse outline for the SVG clip path.
+ *
+ * Same cubic approximation the canvas backend uses in `clipSquircle`, so the
+ * raster and vector pipelines agree on where the edge is — the parity the
+ * `IC51`/`IC-N6` work established for geometry.
+ */
+const squirclePath = (size: number): string => {
+  const n = 0.6;
+  const o = (size * (1 - n)) / 2;
+  return (
+    `<path d="M${o} 0 ` +
+    `C${size - o} 0 ${size} ${o} ${size} ${size - o} ` +
+    `C${size} ${size - o} ${size - o} ${size} ${o} ${size} ` +
+    `C${o} ${size} 0 ${size - o} 0 ${o} ` +
+    `C0 ${o} ${o} 0 ${o} 0Z"/>`
+  );
+};
 
 const resolveLayer = (layer: IconLayer, variant: IconVariant): IconLayer => {
   const override = layer.variantOverrides?.[variant];
@@ -233,6 +252,12 @@ export interface RenderSvgOptions {
    */
   background?: RenderBackground;
   /**
+   * Clip the document to this outline, mirroring the raster path. `'none'` (and
+   * absent) keeps it full bleed, which is what every caller that never asked
+   * produced before.
+   */
+  mask?: CanvasMaskShape | 'none';
+  /**
    * Natural dimensions per layer id for raster (non-SVG) image layers, so they
    * can be embedded as `data:` URIs. Without an entry the image
    * layer is omitted from the SVG — and a warning is reported unless
@@ -446,9 +471,33 @@ export const renderToSvgWithOptions = (
     size: requestedWidth ?? canvas.width,
     height: requestedHeight ?? (requestedWidth === undefined ? canvas.height : undefined)
   });
+  // The export mirror, matching the raster path: when the caller asks for a
+  // mask, the whole composition is wrapped in a clip so the file has the same
+  // outline the canvas frame shows. `'none'` leaves the document untouched,
+  // which is what every caller that never asked produced before.
+  let clipOpen = '';
+  let clipClose = '';
+  if (options.mask && options.mask !== 'none') {
+    const clipId = nextId('canvas-clip');
+    const { width, height } = canvas;
+    const radius = Math.min(
+      resolveMaskRadius(project.canvas),
+      Math.min(width, height) / 2
+    );
+    const outline =
+      options.mask === 'circle'
+        ? `<ellipse cx="${width / 2}" cy="${height / 2}" rx="${Math.min(width, height) / 2}" ry="${Math.min(width, height) / 2}"/>`
+        : options.mask === 'squircle'
+          ? squirclePath(Math.min(width, height))
+          : `<rect x="0" y="0" width="${width}" height="${height}" rx="${radius}" ry="${radius}"/>`;
+    defs.push(`<clipPath id="${clipId}">${outline}</clipPath>`);
+    clipOpen = `<g clip-path="url(#${clipId})">`;
+    clipClose = '</g>';
+  }
+
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${output.width}" height="${output.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">
-${defsBlock}${bgMarkup}${svgLayers}
+${defsBlock}${clipOpen}${bgMarkup}${svgLayers}${clipClose}
 </svg>`;
 
   return { svg, warnings };
