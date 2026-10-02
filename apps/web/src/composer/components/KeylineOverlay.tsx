@@ -1,3 +1,4 @@
+import { defaultMaskRadius } from '@iconcore/shared';
 import { useComposer } from '../ComposerContext';
 
 /**
@@ -13,7 +14,10 @@ export const KeylineOverlay = () => {
   const display = size * state.zoom;
   const center = size / 2;
   const stroke = Math.max(1, size * 0.0035);
-  const radius = size * 0.2237; // iOS superellipse ≈ 22.37% of width
+  // The keyline is the iOS superellipse reference, and `defaultMaskRadius`
+  // carries the same 22.37% for the `squircle` frame — one constant, so the
+  // guide and the frame it annotates cannot drift apart.
+  const radius = defaultMaskRadius('squircle', size);
   const safe = project.canvas.safeArea ? project.canvas.safeArea.inset * size : 0;
 
   return (

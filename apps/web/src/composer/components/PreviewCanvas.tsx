@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Circle, ImagePlus, Shapes, Slash, Square, Squircle, Star, Triangle, Type } from 'lucide-react';
 import type { IconLayer, IconVariant, IconCoreProject, ShapeDefinition } from '@iconcore/shared';
-import { resolveSize } from '@iconcore/shared';
+import { defaultMaskRadius, resolveSize } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
 import { ButtonGroup, IconButton, Menu, MenuItem, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
@@ -136,7 +136,11 @@ export const PreviewCanvas = () => {
   // below stays square-first (that is a UI surface, not the export model).
   const canvas = resolveSize(project.canvas);
   const displaySize = canvasSize * state.zoom;
-  const frameRadius = state.maskShape === 'circle' ? '50%' : state.maskShape === 'rounded-rectangle' ? '24px' : '4px';
+  // One resolver in `@iconcore/shared` owns the shape → radius rule. The old
+  // inline ternary handled three of the four shapes, so `squircle` silently got
+  // the square's 4px instead of the superellipse the keylines draw at.
+  const frameRadiusPx = project.canvas.maskRadius ?? defaultMaskRadius(state.maskShape, canvasSize);
+  const frameRadius = `${frameRadiusPx}px`;
 
   const scheduleTransform = (id: string, transform: IconLayer['transform']) => {
     pendingTransformRef.current = { id, transform };

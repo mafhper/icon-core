@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Eraser, Ratio } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
+import { defaultMaskRadius } from '@iconcore/shared';
 import { Button, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
@@ -134,6 +135,44 @@ export const LayerInspector = () => {
               }
               onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
             />
+          </Section>
+
+          <Section
+            title="Frame radius"
+            hint="How much the work area rounds its corners. Applies to the canvas frame and the background — the export stays full bleed, because the platform applies its own mask when it displays the icon."
+          >
+            <Slider
+              variant="inline"
+              label="Radius"
+              unit="px"
+              min="0"
+              max={Math.round(state.project.canvas.size / 2)}
+              value={Math.round(
+                state.project.canvas.maskRadius ??
+                  defaultMaskRadius(state.maskShape, state.project.canvas.size)
+              )}
+              onChange={(event) =>
+                dispatch({
+                  type: 'SET_CANVAS_MASK_RADIUS',
+                  payload: { radius: Number(event.target.value), transient: true }
+                })
+              }
+              onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
+            />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="text-[0.7rem] text-ic-text-muted hover:text-ic-accent-text hover:underline"
+                onClick={() =>
+                  dispatch({ type: 'SET_CANVAS_MASK_RADIUS', payload: { radius: null } })
+                }
+                disabled={state.project.canvas.maskRadius === undefined}
+              >
+                Reset to {Math.round(defaultMaskRadius(state.maskShape, state.project.canvas.size))}px
+                {' '}
+                for {state.maskShape}
+              </button>
+            </div>
           </Section>
         </div>
       </aside>
