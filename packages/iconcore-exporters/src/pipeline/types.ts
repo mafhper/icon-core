@@ -26,11 +26,17 @@ export interface PlannedArtifact {
   /** Mime type of the produced file. */
   mime: string;
   /**
-   * For raster/vector: the side length in px. For containers: the largest
+   * For raster/vector: the **width** in px. For containers: the largest
    * embedded entry (used by previews/catalogs — the container itself has no
-   * single size).
+   * single size). Square artifacts are fully described by `size` alone.
    */
   size: number;
+  /**
+   * Pixel height when the artifact is **not** square. Absent means square
+   * (`height = size`) — additive, so existing consumers that read only `size`
+   * keep working and square artifacts serialize exactly as before.
+   */
+  height?: number;
   /** Container physical entries (only when `format` is ico/icns). */
   entries?: number[];
 }

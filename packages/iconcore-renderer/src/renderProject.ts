@@ -1,4 +1,5 @@
-import type { Fill, IconCoreProject, IconVariant } from '@iconcore/shared';
+import type { Dimensions, Fill, IconCoreProject, IconVariant } from '@iconcore/shared';
+import { resolveSize } from '@iconcore/shared';
 import type { RenderBackend, RenderOptions } from './types';
 import { composeLayers } from './composeLayers';
 
@@ -9,14 +10,21 @@ export const resolveCanvasBackground = (project: IconCoreProject, variant: IconV
   return project.canvas.background;
 };
 
+/**
+ * Compose a project variant at `target` and encode it.
+ *
+ * `target` is the resolved pair (see `resolveSize` in `@iconcore/shared`). A
+ * square target is the only shape reachable before non-square existed, and it
+ * behaves exactly as the previous scalar parameter did.
+ */
 export const renderProject = async (
   project: IconCoreProject,
   variant: IconVariant,
-  targetSize: number,
+  target: Dimensions,
   backend: RenderBackend,
   options: RenderOptions = {}
 ): Promise<Blob> => {
-  const originalSize = project.canvas.size;
+  const original = resolveSize(project.canvas);
   const background = resolveCanvasBackground(project, variant);
 
   // The safe area is a GUIDE only (shown via the keyline overlay and the quality
@@ -29,7 +37,7 @@ export const renderProject = async (
   // combined with a downscale.
   const composed = await composeLayers(
     project.layers,
-    originalSize,
+    original,
     background,
     variant,
     undefined,
@@ -39,10 +47,10 @@ export const renderProject = async (
   const format = options.format ?? 'png';
   const { quality } = options;
 
-  if (targetSize === originalSize) {
+  if (target.width === original.width && target.height === original.height) {
     if (format === 'png') return composed;
-    return backend.resize(composed, originalSize, originalSize, format, quality);
+    return backend.resize(composed, original.width, original.height, format, quality);
   }
 
-  return backend.resize(composed, targetSize, targetSize, format, quality);
+  return backend.resize(composed, target.width, target.height, format, quality);
 };

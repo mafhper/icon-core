@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Circle, ImagePlus, Shapes, Slash, Square, Squircle, Star, Triangle, Type } from 'lucide-react';
 import type { IconLayer, IconVariant, IconCoreProject, ShapeDefinition } from '@iconcore/shared';
+import { resolveSize } from '@iconcore/shared';
 import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
 import { ButtonGroup, IconButton, Menu, MenuItem, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
@@ -80,7 +81,7 @@ const useRenderedIcon = (
     const backend = createCanvasBackend();
     const raf = requestAnimationFrame(async () => {
       try {
-        const blob = await renderProject(project, variant, project.canvas.size, backend);
+        const blob = await renderProject(project, variant, resolveSize(project.canvas), backend);
         if (cancelled) return;
         const next = URL.createObjectURL(blob);
         if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -131,6 +132,9 @@ export const PreviewCanvas = () => {
   if (!project) return null;
 
   const canvasSize = project.canvas.size;
+  // The renderer takes the resolved pair; the editor's own display/snapping math
+  // below stays square-first (that is a UI surface, not the export model).
+  const canvas = resolveSize(project.canvas);
   const displaySize = canvasSize * state.zoom;
   const frameRadius = state.maskShape === 'circle' ? '50%' : state.maskShape === 'rounded-rectangle' ? '24px' : '4px';
 
@@ -181,12 +185,12 @@ export const PreviewCanvas = () => {
       const baseLayer = project.layers.find((item) => item.id === drag.id);
       if (baseLayer) {
         const dragged = resolveLayerVariant(baseLayer, state.activeVariant);
-        const size = layerSize(dragged, canvasSize);
+        const size = layerSize(dragged, canvas);
         const others = project.layers
           .filter((item) => item.id !== drag.id && item.visible && item.role !== 'background')
           .map((item) => resolveLayerVariant(item, state.activeVariant))
           .map((item) => {
-            const s = layerSize(item, canvasSize);
+            const s = layerSize(item, canvas);
             return { x: item.transform.x, y: item.transform.y, width: s.width * item.transform.scale, height: s.height * item.transform.scale };
           });
         const safeInset = project.canvas.safeArea ? project.canvas.safeArea.inset * canvasSize : 0;
@@ -214,7 +218,7 @@ export const PreviewCanvas = () => {
       const baseLayer = project.layers.find((item) => item.id === drag.id);
       const dragged = baseLayer ? resolveLayerVariant(baseLayer, state.activeVariant) : null;
       if (!dragged) return;
-      const size = layerSize(dragged, canvasSize);
+      const size = layerSize(dragged, canvas);
       const radians = (drag.origin.rotation * Math.PI) / 180;
       const localX = dx * Math.cos(radians) + dy * Math.sin(radians);
       const localY = -dx * Math.sin(radians) + dy * Math.cos(radians);
@@ -357,7 +361,7 @@ export const PreviewCanvas = () => {
               const layer = resolveLayerVariant(baseLayer, state.activeVariant);
               if (!layer.visible) return null;
               const selected = state.activeLayerId === layer.id;
-              const rect = layerBaseRect(layer, canvasSize);
+              const rect = layerBaseRect(layer, canvas);
               const width = rect.w * state.zoom;
               const height = rect.h * state.zoom;
 

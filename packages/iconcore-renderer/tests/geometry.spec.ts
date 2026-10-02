@@ -22,11 +22,11 @@ describe('containSize', () => {
 
 describe('layerBaseRect', () => {
   it('uses the shape dimensions, centered on the canvas', () => {
-    expect(layerBaseRect(sourceWithShape(220, 140), 512)).toEqual({ cx: 256, cy: 256, w: 220, h: 140 });
+    expect(layerBaseRect(sourceWithShape(220, 140), { width: 512, height: 512 })).toEqual({ cx: 256, cy: 256, w: 220, h: 140 });
   });
 
   it('contains a shapeless image by its natural size when provided', () => {
-    expect(layerBaseRect(shapelessSource(), 512, { width: 1000, height: 500 })).toEqual({
+    expect(layerBaseRect(shapelessSource(), { width: 512, height: 512 }, { width: 1000, height: 500 })).toEqual({
       cx: 256,
       cy: 256,
       w: 512,
@@ -35,6 +35,6 @@ describe('layerBaseRect', () => {
   });
 
   it('falls back to the full canvas for a shapeless image with unknown size', () => {
-    expect(layerBaseRect(shapelessSource(), 512)).toEqual({ cx: 256, cy: 256, w: 512, h: 512 });
+    expect(layerBaseRect(shapelessSource(), { width: 512, height: 512 })).toEqual({ cx: 256, cy: 256, w: 512, h: 512 });
   });
 });

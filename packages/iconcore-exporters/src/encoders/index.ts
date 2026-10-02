@@ -53,7 +53,8 @@ export const encodeArtifact = async (
       return encodeSvg(project, variant, backend, {
         ...options.svg,
         // The artifact spec owns the size; the encoder used to drop it.
-        size: artifact.size ?? options.svg?.size
+        size: artifact.size ?? options.svg?.size,
+        height: artifact.height ?? options.svg?.height
       });
     case 'container':
       return encodeContainer(artifact as ExportContainerSpec, project, variant, backend);
@@ -79,7 +80,8 @@ const encodeContainer = async (
     if (!Number.isInteger(width) || width <= 0) {
       throw new Error(`Invalid ${artifact.format.toUpperCase()} entry size: ${width}.`);
     }
-    const blob = await renderProject(project, variant, width, backend, { format: 'png' });
+    // Container entries are physical sizes and are square by contract.
+    const blob = await renderProject(project, variant, { width, height: width }, backend, { format: 'png' });
     representations.push({ width, blob });
   }
 

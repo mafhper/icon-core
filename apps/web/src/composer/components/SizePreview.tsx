@@ -26,7 +26,7 @@ const useSizeThumbs = (project: IconCoreProject | null, variant: IconVariant, en
       const entries: Array<[number, string]> = [];
       for (const size of SIZES) {
         try {
-          const blob = await renderProject(project, variant, size, backend);
+          const blob = await renderProject(project, variant, { width: size, height: size }, backend);
           entries.push([size, URL.createObjectURL(blob)]);
         } catch (err) {
           console.error(`Size thumb ${size} failed:`, err);

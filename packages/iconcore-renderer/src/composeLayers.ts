@@ -1,4 +1,4 @@
-import type { Fill, IconLayer, IconVariant, ShapeKind } from '@iconcore/shared';
+import type { Dimensions, Fill, IconLayer, IconVariant, ShapeKind } from '@iconcore/shared';
 import { imageFilterToCss } from '@iconcore/shared';
 import type { RenderBackend, ResolvedLayer } from './types';
 import { layerBaseRect } from './geometry';
@@ -77,17 +77,17 @@ const traceShapePath = (
 
 export const composeLayers = async (
   layers: IconLayer[],
-  canvasSize: number,
+  canvas: Dimensions,
   background: Fill,
   variant: IconVariant,
   safeArea: { inset: number; shape: ShapeKind } | undefined,
   backend: RenderBackend
 ): Promise<Blob> => {
-  const ctx = backend.createCanvas(canvasSize, canvasSize);
+  const ctx = backend.createCanvas(canvas.width, canvas.height);
 
   // `kind: 'none'` means "no background paint" — keep the alpha channel.
   if (background.kind !== 'none') {
-    backend.applyFill(ctx, background, 0, 0, canvasSize, canvasSize);
+    backend.applyFill(ctx, background, 0, 0, canvas.width, canvas.height);
   }
 
   const resolved: ResolvedLayer[] = layers
@@ -133,13 +133,13 @@ export const composeLayers = async (
       ctxAny.font = `${text.fontWeight} ${text.fontSize}px ${text.fontFamily}`;
       ctxAny.textAlign = 'center';
       ctxAny.textBaseline = 'middle';
-      ctxAny.fillText(text.content, canvasSize / 2, canvasSize / 2);
+      ctxAny.fillText(text.content, canvas.width / 2, canvas.height / 2);
     }
 
     if (layer.resolvedSource.shape && layer.kind !== 'text') {
       const shape = layer.resolvedSource.shape;
-      const x = (canvasSize - shape.width) / 2;
-      const y = (canvasSize - shape.height) / 2;
+      const x = (canvas.width - shape.width) / 2;
+      const y = (canvas.height - shape.height) / 2;
       if (layer.resolvedFill) {
         ctxAny.save();
         traceShapePath(ctxAny, shape, x, y);
@@ -163,7 +163,7 @@ export const composeLayers = async (
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
         const blob = new Blob([bytes], { type: mimeType });
         const img = await backend.loadImage(blob);
-        const rect = layerBaseRect({ source: layer.resolvedSource }, canvasSize, img);
+        const rect = layerBaseRect({ source: layer.resolvedSource }, canvas, img);
         backend.drawImage(ctx, img, rect.cx - rect.w / 2, rect.cy - rect.h / 2, rect.w, rect.h);
       } catch {
         // Skip layers that fail to load
@@ -173,7 +173,7 @@ export const composeLayers = async (
     if (layer.resolvedSource.type === 'reference' && layer.resolvedSource.path) {
       try {
         const img = await backend.loadImage(layer.resolvedSource.path);
-        const rect = layerBaseRect({ source: layer.resolvedSource }, canvasSize, img);
+        const rect = layerBaseRect({ source: layer.resolvedSource }, canvas, img);
         backend.drawImage(ctx, img, rect.cx - rect.w / 2, rect.cy - rect.h / 2, rect.w, rect.h);
       } catch {
         // Skip layers that fail to load
@@ -184,7 +184,9 @@ export const composeLayers = async (
   }
 
   if (safeArea) {
-    backend.applyMask(ctx, safeArea.shape, canvasSize, safeArea.inset * canvasSize);
+    // Safe area is a square preview GUIDE by contract and never clips an export; a
+    // non-square guide is out of scope here, so the inset stays relative to `width`.
+    backend.applyMask(ctx, safeArea.shape, canvas.width, safeArea.inset * canvas.width);
   }
 
   return backend.toBlob(ctx, 'image/png');

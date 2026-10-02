@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { IconCoreProject, Fill, ShapeKind, SafeArea } from '@iconcore/shared';
+import { resolveSize } from '@iconcore/shared';
 import type { RenderBackend, RenderContext, ImageHandle } from '../src/types';
 
 function safeAreaToShapeKind(sa: SafeArea | undefined): { inset: number; shape: ShapeKind } | undefined {
@@ -118,7 +119,7 @@ describe('composeLayers', () => {
     const project = createMinimalProject();
     const blob = await composeLayers(
       project.layers,
-      project.canvas.size,
+      resolveSize(project.canvas),
       project.canvas.background,
       'default',
       safeAreaToShapeKind(project.canvas.safeArea),
@@ -147,7 +148,7 @@ describe('composeLayers', () => {
     });
     const blob = await composeLayers(
       project.layers,
-      project.canvas.size,
+      resolveSize(project.canvas),
       project.canvas.background,
       'default',
       safeAreaToShapeKind(project.canvas.safeArea),
@@ -175,7 +176,7 @@ describe('composeLayers', () => {
     });
     const blob = await composeLayers(
       project.layers,
-      project.canvas.size,
+      resolveSize(project.canvas),
       solidFill,
       'default',
       undefined,
@@ -191,7 +192,7 @@ describe('composeLayers', () => {
     const project = createMinimalProject({ canvas: { size: 128, background: { kind: 'none' } } });
     await composeLayers(
       project.layers,
-      project.canvas.size,
+      resolveSize(project.canvas),
       project.canvas.background,
       'default',
       undefined,
@@ -221,7 +222,7 @@ describe('composeLayers', () => {
     });
     await composeLayers(
       project.layers,
-      project.canvas.size,
+      resolveSize(project.canvas),
       project.canvas.background,
       'default',
       undefined,
@@ -629,7 +630,7 @@ describe('renderProject', () => {
     const backend = createMockBackend();
     const project = createProject();
 
-    const blob = await renderProject(project, 'default', 128, backend);
+    const blob = await renderProject(project, 'default', { width: 128, height: 128 }, backend);
     expect(blob).toBeDefined();
     expect(backend.resize).not.toHaveBeenCalled();
     backend.destroy();
@@ -640,7 +641,7 @@ describe('renderProject', () => {
     const backend = createMockBackend();
     const project = createProject();
 
-    const blob = await renderProject(project, 'default', 64, backend);
+    const blob = await renderProject(project, 'default', { width: 64, height: 64 }, backend);
     expect(blob).toBeDefined();
     expect(backend.resize).toHaveBeenCalled();
     backend.destroy();
@@ -657,7 +658,7 @@ describe('renderProject', () => {
       }
     });
 
-    const blob = await renderProject(project, 'dark', 128, backend);
+    const blob = await renderProject(project, 'dark', { width: 128, height: 128 }, backend);
     expect(blob).toBeDefined();
     expect(backend.applyFill).toHaveBeenCalled();
     backend.destroy();
@@ -670,7 +671,7 @@ describe('renderProject', () => {
       variants: { default: {} }
     });
 
-    const blob = await renderProject(project, 'default', 128, backend);
+    const blob = await renderProject(project, 'default', { width: 128, height: 128 }, backend);
     expect(blob).toBeDefined();
     backend.destroy();
   });
@@ -707,7 +708,7 @@ describe('composeLayers edge cases', () => {
       }
     ];
 
-    const blob = await composeLayers(layers, 128, solidFill, 'default', undefined, backend);
+    const blob = await composeLayers(layers, { width: 128, height: 128 }, solidFill, 'default', undefined, backend);
     expect(blob).toBeDefined();
     expect(backend.applyFill).toHaveBeenCalledTimes(3);
     backend.destroy();
@@ -729,7 +730,7 @@ describe('composeLayers edge cases', () => {
       fill: { kind: 'solid' as const, color: '#ff0000' }
     }];
 
-    const blob = await composeLayers(layers, 128, solidFill, 'default', undefined, backend);
+    const blob = await composeLayers(layers, { width: 128, height: 128 }, solidFill, 'default', undefined, backend);
     expect(blob).toBeDefined();
     expect(backend.applyBlendMode).toHaveBeenCalled();
     backend.destroy();
@@ -750,7 +751,7 @@ describe('composeLayers edge cases', () => {
       fill: { kind: 'solid' as const, color: '#ff0000' }
     }];
 
-    const blob = await composeLayers(layers, 128, solidFill, 'default', undefined, backend);
+    const blob = await composeLayers(layers, { width: 128, height: 128 }, solidFill, 'default', undefined, backend);
     expect(blob).toBeDefined();
     expect(backend.applyOpacity).toHaveBeenCalled();
     backend.destroy();
@@ -771,7 +772,7 @@ describe('composeLayers edge cases', () => {
       fill: { kind: 'solid' as const, color: '#ff0000' }
     }];
 
-    const blob = await composeLayers(layers, 128, solidFill, 'default', undefined, backend);
+    const blob = await composeLayers(layers, { width: 128, height: 128 }, solidFill, 'default', undefined, backend);
     expect(blob).toBeDefined();
     expect(backend.applyTransform).toHaveBeenCalled();
     backend.destroy();
@@ -804,7 +805,7 @@ describe('composeLayers edge cases', () => {
       }
     }];
 
-    const blob = await composeLayers(layers, 128, solidFill, 'dark', undefined, backend);
+    const blob = await composeLayers(layers, { width: 128, height: 128 }, solidFill, 'dark', undefined, backend);
     expect(blob).toBeDefined();
     expect(backend.applyTransform).toHaveBeenCalledWith(expect.anything(), { x: 10, y: 14, scale: 1.5, rotation: 12 });
     expect(backend.applyOpacity).toHaveBeenCalledWith(expect.anything(), 0.5);
@@ -819,7 +820,7 @@ describe('composeLayers edge cases', () => {
 
     const blob = await composeLayers(
       [],
-      128,
+      { width: 128, height: 128 },
       solidFill,
       'default',
       { inset: 10, shape: 'circle' },

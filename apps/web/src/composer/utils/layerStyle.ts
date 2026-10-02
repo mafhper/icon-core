@@ -1,4 +1,5 @@
 import type { Fill, GradientFill, IconLayer, LayerEffect } from '@iconcore/shared';
+import type { Dimensions } from '@iconcore/shared';
 import { layerBaseRect, normalizeStops, toRgba } from '@iconcore/renderer';
 
 const stopsCss = (fill: GradientFill): string =>
@@ -39,8 +40,8 @@ export const fillColor = (fill?: Fill): string =>
  * Delegates to the shared renderer geometry so the editor overlay, snapping and
  * the exporter agree on every layer's size.
  */
-export const layerSize = (layer: IconLayer, canvasSize: number) => {
-  const rect = layerBaseRect(layer, canvasSize);
+export const layerSize = (layer: IconLayer, canvas: Dimensions) => {
+  const rect = layerBaseRect(layer, canvas);
   return { width: rect.w, height: rect.h };
 };
 

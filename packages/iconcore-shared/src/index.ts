@@ -273,12 +273,20 @@ export interface ExportArtifactSpec {
   enabled: boolean;
   variant?: IconVariant;
   /**
-   * Output side length (icons are square). Raster artifacts compose at the
-   * canvas size and then resample to this. For `svg` only the root
-   * `width`/`height` change — the viewBox stays in canvas units, so the
-   * geometry matches the raster pipeline instead of scaling the artwork.
+   * Output width in px. Raster artifacts compose at the canvas size and then
+   * resample to this. For `svg` only the root `width`/`height` change — the
+   * viewBox stays in canvas units, so the geometry matches the raster pipeline
+   * instead of scaling the artwork.
    */
   size?: number;
+  /**
+   * Output height in px. **Additive and optional:** absent means square
+   * (`height = size`), which is what every artifact was before non-square
+   * existed, so an existing model resolves exactly as it always did.
+   * Always read it through {@link resolveSize} — never re-derive the
+   * square/non-square rule per caller.
+   */
+  height?: number;
   /** 0..1, applied to lossy formats (webp/jpeg) only. */
   quality?: number;
   background?: ExportBackground;
@@ -297,6 +305,31 @@ export interface ExportContainerSpec extends Omit<ExportArtifactSpec, 'format'> 
 }
 
 export type ExportArtifact = ExportArtifactSpec | ExportContainerSpec;
+
+/** A resolved pixel dimension pair. */
+export interface Dimensions {
+  width: number;
+  height: number;
+}
+
+/**
+ * The **single** place that resolves a pixel dimension pair from the model's
+ * additive shape: `size` is the width and an absent `height` means **square**
+ * (`height = size`).
+ *
+ * That fallback is what keeps this additive and optional — every canvas and
+ * every artifact predates non-square, so a model that only carries `size`
+ * resolves byte-for-byte as before. Callers that need dimensions pass their
+ * resolved pair down (raster and vector both); no caller re-derives the rule.
+ */
+export const resolveSize = (source: { size: number; height?: number }): Dimensions =>
+  source.height === undefined
+    ? { width: source.size, height: source.size }
+    : { width: source.size, height: source.height };
+
+/** True when a resolved pair is square. */
+export const isSquareSize = (dimensions: Dimensions): boolean =>
+  dimensions.width === dimensions.height;
 
 /** Non-icon file produced by a plan (manifest, report, preview…). */
 export type ExportAttachmentGenerator = 'manifest' | 'browserconfig' | 'report' | 'preview' | 'readme';
@@ -397,6 +430,13 @@ export interface IconCoreProject {
   };
   canvas: {
     size: number;
+    /**
+     * Canvas height in px. **Additive and optional:** absent means square
+     * (`height = size`) — the same contract as {@link ExportArtifactSpec.height}.
+     * No `schemaVersion` bump and no migration: an older document simply has
+     * no `height`.
+     */
+    height?: number;
     background: Fill;
     safeArea?: SafeArea;
     /**

@@ -1,4 +1,4 @@
-import type { IconLayer } from '@iconcore/shared';
+import type { Dimensions, IconLayer } from '@iconcore/shared';
 
 export interface LayerRect {
   /** Center X on the canvas, in canvas px (before the layer transform offset). */
@@ -34,19 +34,24 @@ export const containSize = (
  * Shape layers (and uploaded assets, which always carry a proportionally-sized
  * rectangle shape) use the shape dimensions. Shapeless image layers fall back to
  * a contain-fit of the natural source size, or the full canvas when unknown.
+ *
+ * `canvas` is the resolved pair. A square canvas resolves to exactly the scalar
+ * behaviour this had before non-square existed, because `width === height`.
  */
 export const layerBaseRect = (
   layer: Pick<IconLayer, 'source'>,
-  canvasSize: number,
+  canvas: Dimensions,
   natural?: { width: number; height: number }
 ): LayerRect => {
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
   const shape = layer.source.shape;
   if (shape) {
-    return { cx: canvasSize / 2, cy: canvasSize / 2, w: shape.width, h: shape.height };
+    return { cx, cy, w: shape.width, h: shape.height };
   }
   if (natural) {
-    const fit = containSize(natural.width, natural.height, canvasSize, canvasSize);
-    return { cx: canvasSize / 2, cy: canvasSize / 2, w: fit.w, h: fit.h };
+    const fit = containSize(natural.width, natural.height, canvas.width, canvas.height);
+    return { cx, cy, w: fit.w, h: fit.h };
   }
-  return { cx: canvasSize / 2, cy: canvasSize / 2, w: canvasSize, h: canvasSize };
+  return { cx, cy, w: canvas.width, h: canvas.height };
 };
