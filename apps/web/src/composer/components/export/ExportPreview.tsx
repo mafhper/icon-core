@@ -46,7 +46,7 @@ const useExportThumbs = (
       const entries: Array<[number, Thumb]> = [];
       for (const size of SIZES) {
         try {
-          const blob = await renderProject(project, variant, size, backend);
+          const blob = await renderProject(project, variant, { width: size, height: size }, backend);
           const bitmap = await createImageBitmap(blob);
           const fill = measureContentBox(bitmap);
           bitmap.close();

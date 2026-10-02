@@ -1,4 +1,5 @@
 import type { ExportArtifactSpec, IconCoreProject, IconVariant } from '@iconcore/shared';
+import { resolveSize } from '@iconcore/shared';
 import type { RenderBackend, RenderOptions } from '@iconcore/renderer';
 import { renderProject, resolveCanvasBackground } from '@iconcore/renderer';
 
@@ -28,9 +29,15 @@ export const encodeRaster = async (
     );
   }
 
-  const size = artifact.size ?? project.canvas.size;
+  // `size` alone stays square (the only shape reachable before non-square); an
+  // explicit `height` turns the pair non-square. Absent both, the canvas pair.
+  const canvas = resolveSize(project.canvas);
+  const target = resolveSize({
+    size: artifact.size ?? canvas.width,
+    height: artifact.height ?? (artifact.size === undefined ? canvas.height : undefined)
+  });
   const options: RenderOptions = { format: artifact.format, quality: artifact.quality };
-  const blob = await renderProject(project, variant, size, backend, options);
+  const blob = await renderProject(project, variant, target, backend, options);
 
   return { blob, warnings };
 };

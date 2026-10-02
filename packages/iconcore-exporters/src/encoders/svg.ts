@@ -17,6 +17,11 @@ export interface SvgEncodeOptions {
    * at the canvas size instead of the size the preset declared.
    */
   size?: number;
+  /**
+   * Requested pixel height from the artifact spec. Absent means square
+   * (`height = size`) — the additive contract of the model.
+   */
+  height?: number;
 }
 
 export const encodeSvg = async (
@@ -46,7 +51,8 @@ export const encodeSvg = async (
     imageSizes,
     skipImages: options.embedImages === false,
     maxEmbeddedImageBytes: options.maxEmbeddedImageBytes,
-    size: options.size
+    size: options.size,
+    height: options.height
   });
 
   return { blob: new Blob([svg], { type: 'image/svg+xml' }), warnings };

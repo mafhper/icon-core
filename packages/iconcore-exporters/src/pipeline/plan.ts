@@ -1,4 +1,5 @@
 import type {
+  Dimensions,
   ExportArtifact,
   ExportContext,
   ExportPlan,
@@ -7,7 +8,8 @@ import type {
 import {
   extensionForFormat,
   isContainerSpec,
-  kindOf
+  kindOf,
+  resolveSize
 } from '@iconcore/shared';
 import { targetForPreset } from '../presets';
 import type { PlannedArtifact } from './types';
@@ -16,13 +18,30 @@ import type { PlannedArtifact } from './types';
 const variantsFor = (artifact: ExportArtifact, variants: IconVariant[]): IconVariant[] =>
   artifact.variant ? [artifact.variant] : variants;
 
-/** Size label for the `{size}` token / catalog sizing. */
-const sizeFor = (artifact: ExportArtifact, canvasSize: number): number => {
+/**
+ * Resolve an artifact's output dimensions. The single rule lives in
+ * `resolveSize`: `size` alone is square, `size` + `height` is the pair, and an
+ * artifact that declares neither inherits the canvas pair. Containers carry
+ * physical `entries` and are square by contract.
+ */
+const dimensionsFor = (artifact: ExportArtifact, canvas: Dimensions): Dimensions => {
   if (isContainerSpec(artifact)) {
-    return artifact.entries.length > 0 ? Math.max(...artifact.entries) : canvasSize;
+    const side = artifact.entries.length > 0 ? Math.max(...artifact.entries) : canvas.width;
+    return { width: side, height: side };
   }
-  return artifact.size ?? canvasSize;
+  return resolveSize({
+    size: artifact.size ?? canvas.width,
+    height: artifact.height ?? (artifact.size === undefined ? canvas.height : undefined)
+  });
 };
+
+/**
+ * Width label for the `{size}` token / catalog sizing. A single token cannot
+ * express a pair, so `{size}` is the width — for a square artifact that is the
+ * same number it always was.
+ */
+const sizeFor = (artifact: ExportArtifact, canvas: Dimensions): number =>
+  dimensionsFor(artifact, canvas).width;
 
 const extensionFor = (artifact: ExportArtifact): string => extensionForFormat(artifact.format);
 
@@ -47,7 +66,7 @@ export const resolveArtifactPath = (
     name,
     variant,
     format: ext,
-    size: String(sizeFor(artifact, project.canvas.size))
+    size: String(sizeFor(artifact, resolveSize(project.canvas)))
   };
   if (target) labels.target = target;
 
@@ -80,6 +99,7 @@ export const planArtifacts = (
       variantsFor(artifact, variants).map((variant) => {
         const path = resolveArtifactPath(artifact, context, variant, plan.presetId);
         const isContainer = isContainerSpec(artifact);
+        const dimensions = dimensionsFor(artifact, resolveSize(project.canvas));
         return {
           artifact,
           path,
@@ -87,7 +107,10 @@ export const planArtifacts = (
           kind: kindOf(artifact.format),
           format: artifact.format,
           mime: artifactMime(artifact),
-          size: sizeFor(artifact, project.canvas.size),
+          size: dimensions.width,
+          // Only when non-square: a square artifact keeps serializing exactly as
+          // it did before `height` existed.
+          ...(dimensions.height !== dimensions.width ? { height: dimensions.height } : {}),
           entries: isContainer ? artifact.entries : undefined
         };
       })

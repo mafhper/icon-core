@@ -31,10 +31,16 @@ const textBlob = (content: string, mime = 'text/plain'): { content: string; mime
  */
 const manifestIcons = (planned: PlannedArtifact[]): Array<{ src: string; sizes?: string; type: string }> =>
   planned
-    .filter(({ artifact }) => artifact.format === 'png' && artifact.enabled)
-    .map(({ artifact, path }) => ({
-      // Container/raster sizes: PNG icons are square single sizes.
-      ...(artifact.format === 'png' && artifact.size ? { sizes: `${artifact.size}x${artifact.size}` } : {}),
+    // **Square only.** The manifest is a PWA install contract and its icons must
+    // be square, so a non-square asset (a 1200×630 banner, say) is left out
+    // instead of being declared with a size no platform can install. For every
+    // square artifact this is byte-for-byte the previous behaviour.
+    .filter(
+      ({ artifact, size, height }) =>
+        artifact.format === 'png' && artifact.enabled && (height ?? size) === size
+    )
+    .map(({ artifact, path, size }) => ({
+      sizes: `${size}x${size}`,
       src: path,
       type: 'image/png',
       ...(artifact.background === 'opaque' ? { purpose: 'maskable' } : {})
@@ -100,6 +106,8 @@ export const generatePlanReport = (
       format: item.format,
       mime: item.mime,
       size: item.size,
+      // Additive: present only when the artifact is non-square.
+      ...(item.height !== undefined ? { height: item.height } : {}),
       variant: item.variant
     })),
     files: files.map((file) => ({ path: file.path, size: file.size })),

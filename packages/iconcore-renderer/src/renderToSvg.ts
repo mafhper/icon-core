@@ -1,4 +1,5 @@
-import type { Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
+import type { Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
+import { resolveSize } from '@iconcore/shared';
 import { toRgba } from './color';
 import { layerBaseRect } from './geometry';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
@@ -33,14 +34,15 @@ const gradStopsMarkup = (fill: GradientFill): string =>
  * viewBox and was visibly cropped. Keep this in lockstep with
  * `applyTransform`; changing one without the other reintroduces the drift.
  */
-const layerTransformAttr = (size: number, transform: IconLayer['transform']): string => {
-  const half = size / 2;
+const layerTransformAttr = (canvas: Dimensions, transform: IconLayer['transform']): string => {
+  const halfW = canvas.width / 2;
+  const halfH = canvas.height / 2;
   const { x = 0, y = 0, scale = 1, rotation = 0 } = transform ?? {};
   return (
-    `translate(${half + x},${half + y}) ` +
+    `translate(${halfW + x},${halfH + y}) ` +
     `rotate(${rotation}) ` +
     `scale(${scale}) ` +
-    `translate(${-half},${-half})`
+    `translate(${-halfW},${-halfH})`
   );
 };
 
@@ -241,6 +243,11 @@ export interface RenderSvgOptions {
    * Omitted, the document renders at the canvas size.
    */
   size?: number;
+  /**
+   * Requested pixel height of the artifact. Same additive contract as the
+   * model: absent means square (`height = size`).
+   */
+  height?: number;
 }
 
 export interface RenderSvgResult {
@@ -263,7 +270,7 @@ export const renderToSvgWithOptions = (
   const warnings: string[] = [];
   const { imageSizes, skipImages = false, maxEmbeddedImageBytes } = options;
 
-  const size = project.canvas.size;
+  const canvas = resolveSize(project.canvas);
   const bg = project.variants[variant]?.canvas?.background ?? project.canvas.background;
 
   const defs: string[] = [];
@@ -273,16 +280,16 @@ export const renderToSvgWithOptions = (
   // --- background ---------------------------------------------------------
   let bgMarkup = '';
   if (bg.kind !== 'none') {
-    const rect: ShapeDefinition = { kind: 'rectangle', width: size, height: size };
+    const rect: ShapeDefinition = { kind: 'rectangle', width: canvas.width, height: canvas.height };
     if (bg.kind === 'angular-gradient' || bg.kind === 'diamond-gradient') {
       const clipId = nextId('bg-clip');
-      defs.push(`<clipPath id="${clipId}"><rect width="${size}" height="${size}"/></clipPath>`);
+      defs.push(`<clipPath id="${clipId}"><rect width="${canvas.width}" height="${canvas.height}"/></clipPath>`);
       bgMarkup = `<g clip-path="url(#${clipId})">${approximationMarkup(bg, rect)}</g>\n`;
     } else {
       const paint = paintFor(bg, nextId('bg'));
       if (paint) {
         if (paint.defs) defs.push(paint.defs);
-        bgMarkup = `<rect width="${size}" height="${size}" fill="${paint.paint}"/>\n`;
+        bgMarkup = `<rect width="${canvas.width}" height="${canvas.height}" fill="${paint.paint}"/>\n`;
       }
     }
   }
@@ -299,7 +306,7 @@ export const renderToSvgWithOptions = (
 
   for (const layer of visible) {
     const opacity = layer.opacity;
-    const transformAttr = layerTransformAttr(size, layer.transform);
+    const transformAttr = layerTransformAttr(canvas, layer.transform);
 
     // Build SVG filter for this layer if it has an imageFilter
     const filterId = nextId(`filter-${layer.id}`);
@@ -321,7 +328,7 @@ export const renderToSvgWithOptions = (
       }
       // Canvas draws text at the canvas centre (`fillText(content, S/2, S/2)`)
       // with the layer transform already applied around that same centre.
-      svgLayers += `<text x="${size / 2}" y="${size / 2}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${layer.text.content}</text>\n`;
+      svgLayers += `<text x="${canvas.width / 2}" y="${canvas.height / 2}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${layer.text.content}</text>\n`;
       continue;
     }
 
@@ -342,7 +349,7 @@ export const renderToSvgWithOptions = (
         // SVG export must place it in the same rectangle: pin the document's
         // viewport to its intrinsic size, then map that onto the rect. Without
         // this, PNG and SVG exports of the same project disagreed.
-        const layerRect = layerBaseRect({ source: layer.source }, size, natural);
+        const layerRect = layerBaseRect({ source: layer.source }, canvas, natural);
         const placement =
           `translate(${layerRect.cx - layerRect.w / 2},${layerRect.cy - layerRect.h / 2}) ` +
           `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
@@ -362,7 +369,7 @@ export const renderToSvgWithOptions = (
     if (layer.source.data && layer.source.mimeType && layer.source.mimeType !== 'image/svg+xml') {
       const natural = imageSizes?.get(layer.id);
       if (natural && !skipImages) {
-        const layerRect = layerBaseRect({ source: layer.source }, size, natural);
+        const layerRect = layerBaseRect({ source: layer.source }, canvas, natural);
         const placement =
           `translate(${layerRect.cx - layerRect.w / 2},${layerRect.cy - layerRect.h / 2}) ` +
           `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
@@ -411,8 +418,8 @@ export const renderToSvgWithOptions = (
       opacity,
       transformAttr,
       filterAttr,
-      (size - shape.width) / 2,
-      (size - shape.height) / 2
+      (canvas.width - shape.width) / 2,
+      (canvas.height - shape.height) / 2
     );
   }
 
@@ -421,9 +428,16 @@ export const renderToSvgWithOptions = (
   // `size` scales the document without moving anything: the viewBox keeps
   // describing the canvas in canvas units, so the geometry a reader measures is
   // the same one the compositor produced.
-  const outputSize = options.size && options.size > 0 ? options.size : size;
+  // Output document size: the artifact's requested pair, or the canvas pair.
+  // `size` alone stays square (the only shape that existed before non-square).
+  const requestedWidth = options.size && options.size > 0 ? options.size : undefined;
+  const requestedHeight = options.height && options.height > 0 ? options.height : undefined;
+  const output = resolveSize({
+    size: requestedWidth ?? canvas.width,
+    height: requestedHeight ?? (requestedWidth === undefined ? canvas.height : undefined)
+  });
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${outputSize}" height="${outputSize}" viewBox="0 0 ${size} ${size}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${output.width}" height="${output.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">
 ${defsBlock}${bgMarkup}${svgLayers}
 </svg>`;
 
