@@ -362,6 +362,20 @@ export interface ExportContext {
 }
 
 /** A preset is a convenience generator of an initial plan. */
+/**
+ * How a preset lays out several variants of the same artifact.
+ *
+ * `shared` (the default, and every preset before this field existed): every
+ * variant of an artifact resolves to the **same** path. That is correct for a
+ * platform contract — `tauri.conf.json` wants `icons/32x32.png` at exactly that
+ * path and there is nothing to negotiate — and wrong for anything a human or a
+ * browser consumes by URL, because the variants overwrite each other.
+ *
+ * `per-folder`: `default` keeps the declared path and every other variant goes
+ * under a `<variant>/` folder, so they coexist.
+ */
+export type VariantLayout = 'shared' | 'per-folder';
+
 export interface ExportPreset {
   id: string;
   label: string;
@@ -370,6 +384,12 @@ export interface ExportPreset {
   createArtifacts(context: ExportContext): ExportArtifactSpec[];
   recommended?: boolean;
   documentation?: string;
+  /**
+   * Defaults to `shared`. A preset that ships web-consumable assets (favicons,
+   * PWA icons, marketing art) should declare `per-folder`; anything whose paths
+   * are read by a build tool should leave it alone.
+   */
+  variantLayout?: VariantLayout;
 }
 
 export const EXPORT_FORMAT_KIND: Record<ExportFormat, ExportArtifactKind> = {

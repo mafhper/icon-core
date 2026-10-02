@@ -2,6 +2,7 @@ import type { ExportArtifact, ExportContext, ExportPlan, IconVariant } from '@ic
 import { isContainerSpec } from '@iconcore/shared';
 import { resolveCanvasBackground } from '@iconcore/renderer';
 import { planProblems } from '../planner';
+import { resolveArtifactPath } from './plan';
 
 export interface PlanValidation {
   /** True when there are no structural problems. */
@@ -76,13 +77,71 @@ export const artifactNatureWarnings = (
 };
 
 /**
+ * Paths that two or more renders would write, each with the variants that
+ * collide on it.
+ *
+ * This is the guard for the silent-overwrite class of defect: an artifact with
+ * no explicit `variant` expands once per selected variant, and if the preset
+ * shares one path across variants the renders land on top of each other. The
+ * user selects three variants, the pipeline renders three times, and the
+ * archive holds one file — with no warning anywhere.
+ *
+ * Reported as a **problem**, not a warning: the export would produce a
+ * different result than the plan describes, and silently dropping a variant is
+ * worse than refusing to export.
+ */
+const pathCollisions = (
+  plan: ExportPlan,
+  context: ExportContext,
+  variants: IconVariant[]
+): string[] => {
+  // Claimants are `<artifactId> (<variant>)` so that two *different* artifacts
+  // writing the same path collide even when both render `default` — counting
+  // variants alone would see one claimant and let it through.
+  const byPath = new Map<string, Set<string>>();
+
+  const claim = (path: string, who: string) => {
+    const seen = byPath.get(path) ?? new Set<string>();
+    seen.add(who);
+    byPath.set(path, seen);
+  };
+
+  for (const artifact of plan.artifacts) {
+    if (!artifact.enabled) continue;
+    const own = artifact.variant ? [artifact.variant] : variants;
+    for (const variant of own) {
+      claim(resolveArtifactPath(artifact, context, variant, plan.presetId), `${artifact.id} (${variant})`);
+    }
+  }
+
+  for (const attachment of plan.attachments) {
+    if (attachment.enabled === false) continue;
+    claim(attachment.path, attachment.path);
+  }
+
+  const problems: string[] = [];
+  for (const [path, claimants] of byPath) {
+    if (claimants.size < 2) continue;
+    const list = [...claimants].join(', ');
+    problems.push(
+      `"${path}" would be written by ${claimants.size} different outputs (${list}). ` +
+        `They overwrite each other and only one survives. Rename an artifact's output path, ` +
+        `pin it to a single variant, or pick a preset that keeps one folder per variant.`
+    );
+  }
+  return problems;
+};
+
+/**
  * Validate a plan before execution:
- * - structural problems come from {@link planProblems} (extension/size/entries/ids);
+ * - structural problems come from {@link planProblems} (extension/size/entries/ids)
+ *   plus {@link pathCollisions} (two outputs, one path);
  * - nature warnings come from {@link artifactNatureWarnings} (alpha/opaqueness,
  *   container sets, lossy quality). Warnings never block execution.
  *
  * `variants` must be the set the plan will expand, so per-variant transparency
- * is judged on every variant that will actually be rendered.
+ * and path collisions are judged on every variant that will actually be
+ * rendered.
  */
 export const validatePlan = (
   plan: ExportPlan,
@@ -90,7 +149,7 @@ export const validatePlan = (
   options: { variants?: IconVariant[] } = {}
 ): PlanValidation => {
   const variants = options.variants ?? ['default'];
-  const problems = planProblems(plan);
+  const problems = [...planProblems(plan), ...pathCollisions(plan, context, variants)];
   const warnings = plan.artifacts
     .filter((artifact) => artifact.enabled)
     .flatMap((artifact) => artifactNatureWarnings(artifact, context, { variants }));

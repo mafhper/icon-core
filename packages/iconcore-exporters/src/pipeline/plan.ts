@@ -11,7 +11,7 @@ import {
   kindOf,
   resolveSize
 } from '@iconcore/shared';
-import { targetForPreset } from '../presets';
+import { getPreset, targetForPreset } from '../presets';
 import type { PlannedArtifact } from './types';
 
 /** A resolved variant set: one entry when the artifact is explicit, else the defaults. */
@@ -46,11 +46,23 @@ const sizeFor = (artifact: ExportArtifact, canvas: Dimensions): number =>
 const extensionFor = (artifact: ExportArtifact): string => extensionForFormat(artifact.format);
 
 /**
+ * The declared path already names the variant, so a folder prefix would be
+ * redundant (and would double it for a custom plan that opted in explicitly).
+ */
+const pathNamesVariant = (declared: string): boolean => /\{variant\}/.test(declared);
+
+/**
  * Resolve an artifact path: substitute the documented tokens
  * `{name} {variant} {format} {size} {target}`  and guarantee the
  * extension matches the format. `{name}` comes from `exportProfile.outputBaseName`
  * (the single source for the base name); `{target}` falls back to the
  * legacy `IconTarget` the plan's preset supersedes.
+ *
+ * When the preset declares `variantLayout: 'per-folder'`, every variant other
+ * than `default` is placed under a `<variant>/` folder. Without this, N
+ * variants resolve to one path and the last render silently overwrites the
+ * others — which is what made "I selected three variants and got one file"
+ * reproducible.
  */
 export const resolveArtifactPath = (
   artifact: ExportArtifact,
@@ -72,12 +84,23 @@ export const resolveArtifactPath = (
 
   let path = artifact.path.replace(/\{(\w+)\}/g, (token, key: string) => labels[key] ?? token);
 
+  if (variant !== 'default' && !pathNamesVariant(artifact.path) && presetUsesVariantFolders(presetId)) {
+    path = `${variant}/${path}`;
+  }
+
   // Deterministic extension (never `icon.png.png`): append only when missing.
   if (!path.toLowerCase().endsWith(`.${ext}`)) {
     path = `${path}.${ext}`;
   }
   return path;
 };
+
+/**
+ * Whether the preset reserves a folder per variant. Defaults to `false`, so a
+ * preset that never declared a layout keeps the paths it has always had.
+ */
+const presetUsesVariantFolders = (presetId?: string): boolean =>
+  presetId ? getPreset(presetId)?.variantLayout === 'per-folder' : false;
 
 /**
  * Plan the artifacts of an `ExportPlan`: expand every *enabled*
