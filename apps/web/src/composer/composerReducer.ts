@@ -143,10 +143,21 @@ const setProject = (state: ComposerState, project: IconCoreProject, view: Compos
   ...commitProject(state, project),
   project,
   view,
-  activeLayerId: project.layers[project.layers.length - 1]?.id ?? null,
+  // The topmost *content* layer, by zIndex — not `layers[length - 1]`. Array
+  // order is not paint order: the Background handle is stored last while
+  // carrying the lowest zIndex, so the old expression selected the Background
+  // every time a project was opened.
+  activeLayerId: topmostContentLayer(project),
   enabledTargets: enabledTargetsFromProject(project),
   isDirty: false
 });
+
+/** The front-most layer that actually renders, or `null` for an empty project. */
+const topmostContentLayer = (project: IconCoreProject): string | null => {
+  const content = project.layers.filter((layer) => layer.role !== 'background');
+  if (content.length === 0) return null;
+  return content.reduce((top, layer) => (layer.zIndex > top.zIndex ? layer : top)).id;
+};
 
 const updateProjectTargets = (project: IconCoreProject, target: IconTarget, enabled: boolean): IconCoreProject => {
   const existing = project.targets.some((entry) => entry.target === target)
@@ -177,8 +188,31 @@ const withoutVariant = (
   return next;
 };
 
-const reorderLayers = (layers: IconLayer[]): IconLayer[] =>
-  layers.map((layer, index) => ({ ...layer, zIndex: index }));
+/**
+ * Renumber `zIndex` to a dense ascending sequence, **by zIndex order**.
+ *
+ * Sorting first is the whole point. Array order and zIndex order are not the
+ * same thing: `ADD_LAYER` appends the Background handle to the end of the array
+ * while giving it the *lowest* zIndex, because it is a UI handle that must sit
+ * at the bottom of the list and never renders. Renumbering by array position
+ * therefore handed that handle the topmost zIndex — so deleting any layer
+ * floated the Background above the artwork in the sidebar, while the canvas
+ * stayed correct (the Background never paints).
+ *
+ * The Background is additionally pinned last, so "keep it at the bottom" does
+ * not depend on whatever zIndex it happens to carry.
+ */
+const reorderLayers = (layers: IconLayer[]): IconLayer[] => {
+  const sorted = [...layers].sort((a, b) => a.zIndex - b.zIndex);
+  const content = sorted.filter((layer) => layer.role !== 'background');
+  const backgrounds = sorted.filter((layer) => layer.role === 'background');
+
+  // Content gets 0..n-1 ascending; the Background handle is pinned at -1, below
+  // everything. Giving it the *last* index would promote it to the top of the
+  // list, which is the opposite of what it is for.
+  const renumbered = content.map((layer, index) => ({ ...layer, zIndex: index }));
+  return [...backgrounds.map((layer) => ({ ...layer, zIndex: -1 })), ...renumbered];
+};
 
 const moveLayer = (layers: IconLayer[], id: string, direction: 'forward' | 'backward' | 'front' | 'back'): IconLayer[] => {
   const sorted = [...layers].sort((a, b) => a.zIndex - b.zIndex);
@@ -222,11 +256,19 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
         }
         const minZ = state.project.layers.reduce((min, layer) => Math.min(min, layer.zIndex), 0);
         const handle = createBackgroundLayer(state.project.canvas.size, minZ - 1);
-        const project = { ...state.project, layers: [...state.project.layers, handle] };
+        // Inserted at the *front* of the array so array order and zIndex order
+        // agree. Appending it (with the lowest zIndex) is what let a later
+        // renumber-by-position lift the Background to the top of the list.
+        const project = { ...state.project, layers: [handle, ...state.project.layers] };
         return { ...commitProject(state, project), activeLayerId: handle.id };
       }
 
-      const zIndex = state.project.layers.length;
+      // "Above everything", computed from the layers that actually render. The
+      // Background handle carries the lowest zIndex, so `layers.length` was not
+      // the top: with one artwork plus a background, the next layer landed on
+      // z=2 and left a gap that a later renumber had to close.
+      const topZ = state.project.layers.reduce((max, layer) => Math.max(max, layer.zIndex), -1);
+      const zIndex = topZ + 1;
       const layer = action.payload.asset
         ? createLayerFromAsset(
             action.payload.asset,

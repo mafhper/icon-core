@@ -189,34 +189,33 @@ export const LayerList = () => {
             >
               {layer.locked ? <Lock size={12} /> : <Unlock size={12} />}
             </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: 'DUPLICATE_LAYER', payload: { id: layer.id } });
+              }}
+              aria-label={`Duplicate ${layer.name}`}
+              title="Duplicate layer"
+              className="p-1 text-ic-text-muted hover:text-ic-text"
+            >
+              {withIconStroke(<Copy size={12} />)}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: 'REMOVE_LAYER', payload: { id: layer.id } });
+              }}
+              aria-label={`Delete ${layer.name}`}
+              title="Delete layer"
+              className="p-1 text-ic-text-muted hover:text-ic-danger"
+            >
+              {withIconStroke(<Trash2 size={12} />)}
+            </button>
           </div>
           );
         })}
-      </div>
-
-      <div
-        className="mt-4 pt-4 border-t border-ic-border flex gap-2"
-        style={{ visibility: state.activeLayerId ? 'visible' : 'hidden' }}
-        aria-hidden={!state.activeLayerId}
-      >
-        <button
-          type="button"
-          disabled={!state.activeLayerId}
-          onClick={() => state.activeLayerId && dispatch({ type: 'DUPLICATE_LAYER', payload: { id: state.activeLayerId } })}
-          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-ic-elevated text-xs hover:bg-ic-border"
-        >
-          {withIconStroke(<Copy size={12} />)}
-          Duplicate
-        </button>
-        <button
-          type="button"
-          disabled={!state.activeLayerId}
-          onClick={() => state.activeLayerId && dispatch({ type: 'REMOVE_LAYER', payload: { id: state.activeLayerId } })}
-          className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-ic-danger/20 text-ic-danger text-xs hover:bg-ic-danger/30"
-        >
-          {withIconStroke(<Trash2 size={12} />)}
-          Delete
-        </button>
       </div>
 
       <QualityWarnings />
