@@ -1,40 +1,133 @@
+# ============================
+# Privado: workspace e contexto de agente
+# ============================
+.dev/
+_dev/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+QWEN.md
+KIMI.md
+.codex/
+.agents/
+.claude/
+.claude-code/
+.cursor/
+.gemini/
+.gemini-clipboard/
+.kimi/
+.qwen/
+.roo/
+.windsurf/
+
+# ============================
+# Sistema operacional e icones de pasta
+# (icone customizado no Explorador grava desktop.ini dentro da pasta)
+# ============================
+# Cada nome vem com a classe de caracteres de caixa porque o Windows tem
+# `core.ignorecase=true` e esconde o buraco: `Thumbs.db` casa `thumbs.db` na sua
+# maquina e nao casa no clone Linux nem no CI. O `[Tt]` e o que torna a regra
+# valer nos dois lugares.
+# Medido neste padrao de classes: `?` e classe de caractere NAO casam o ponto
+# literal do nome, mas `*` casa. E a classe so cobre o caractere que segue dela,
+# entao `.ds_store` exige a classe tambem no `S` do meio: `.[Dd][Ss]_[Ss]tore`.
+[Dd]esktop.ini
+[Tt]humbs.db
+ehthumbs.db
+.[Dd][Ss]_[Ss]tore
+*.lnk
+
+# ============================
+# Dependencias
+# ============================
+node_modules/
+
+# ============================
+# Build / saida
+# ============================
+dist/
+dist-ssr/
+build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+*.local
+
+# ============================
+# Temporarios e backups
+# ============================
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# ============================
 # Logs
-logs
+# ============================
+logs/
 *.log
+*.out
+*.err
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Build
-node_modules
-dist
-dist-pages
-dist-ssr
-*.local
-bun.lockb
-bun.lock
-coverage
-playwright-report
-test-results
-tests/e2e/__screenshots__
-.turbo
-**/*.tsbuildinfo
-apps/desktop/src-tauri/target/
+# ============================
+# Variaveis de ambiente
+# ============================
+.env
+.env.*
+# Exemplo e produto, segredo nao e: a regra e por FORMATO do nome, e nao pelo
+# nome exato. `!.env.example` sozinho quebrava onde o exemplo tinha sufixo
+# (`*.local.example`, `*.test.example`) -- e o arquivo continuava no repo,
+# com o `git add` de qualquer um pulando a mudanca dele.
+!*.example
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
+# ============================
+# Editores / IDE
+# ============================
+# `.vscode/` (com barra, sem ancora) pega em QUALQUER profundidade -- um
+# `.vscode/` dentro de `apps/site/` e configuracao local tanto quanto o da raiz.
+# A excecao vem depois e ancorada com `/`: sem a ancora, `!.vscode/` reabriria
+# tambem os aninhados e a regra seguinte nao os voltaria a fechar.
+.vscode/
+!/.vscode/
+/.vscode/*
+!/.vscode/extensions.json
+.idea/
+*.swp
+*.swo
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.sublime-project
+*.sublime-workspace
+.cache/
 
-# DEV
-.dev/
-_dev/
-AGENTS.md
+# --- Build ---
+dist-pages
+dist-ssr
+
+# --- Testes ---
+playwright-report/
+test-results/
+tests/e2e/__screenshots__/
+
+# --- Turborepo ---
+.turbo/
+
+# --- Tauri (desktop) ---
+apps/desktop/src-tauri/target/
+
+# --- Gerenciadores nao usados neste repo ---
+bun.lock
+bun.lockb
+
+# --- Sondas de porta: scraps de verificacao local, nao sao produto ---
+sonda-porta.ts
+/ports.ts
+/ports.mjs

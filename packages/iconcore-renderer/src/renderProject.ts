@@ -57,7 +57,12 @@ export const renderProject = async (
     background,
     variant,
     undefined,
-    backend
+    backend,
+    // Absent by default, so calling code that never asked for a mask keeps the
+    // full-bleed output it has always produced. The export path passes the
+    // canvas shape explicitly, which is what makes the file mirror the editor.
+    options.mask === 'none' ? undefined : options.mask,
+    project.canvas
   );
 
   const format = options.format ?? 'png';

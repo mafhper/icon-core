@@ -453,6 +453,26 @@ export const defaultMaskRadius = (shape: CanvasMaskShape, size: number): number 
   }
 };
 
+/**
+ * The corner radius a canvas actually uses.
+ *
+ * The declared `maskRadius` wins; absent means the shape's own default. This is
+ * the **one** resolver, shared by the editor frame and the export mask, which is
+ * what makes "what I see is what I export" true rather than approximate.
+ */
+export const resolveMaskRadius = (canvas: {
+  size: number;
+  height?: number;
+  maskRadius?: number;
+  maskShape?: CanvasMaskShape;
+}): number => {
+  const { width, height } = resolveSize(canvas);
+  if (canvas.maskRadius !== undefined) return canvas.maskRadius;
+  // The shape defaults are written for a square, so take the larger side for a
+  // non-square canvas rather than letting a 1200x630 pick the short side.
+  return defaultMaskRadius(canvas.maskShape ?? 'rounded-rectangle', Math.max(width, height));
+};
+
 /** Only `jpeg` lacks an alpha channel. */
 export const supportsAlpha = (format: ExportFormat): boolean => format !== 'jpeg';
 
@@ -505,6 +525,19 @@ export interface IconCoreProject {
      * mask at display time).
      */
     maskRadius?: number;
+    /**
+     * The shape of the canvas frame. **Additive and optional:** absent means
+     * `'rounded-rectangle'`, which is what the editor's initial state has always
+     * been, so an older document renders exactly as it did. No migration, no
+     * `schemaVersion` bump.
+     *
+     * This used to live only in the editor's UI state, which is why the export
+     * could not mirror what the canvas shows: a shape chosen but not saved was
+     * invisible to anything that read the document. With the shape and the radius
+     * both on the canvas, "what I see is what I export" becomes a fact rather
+     * than a hope.
+     */
+    maskShape?: CanvasMaskShape;
   };
   layers: IconLayer[];
   variants: Partial<Record<IconVariant, VariantOverrides>>;

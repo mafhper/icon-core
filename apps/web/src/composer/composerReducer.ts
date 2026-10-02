@@ -600,8 +600,22 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
     case 'TOGGLE_SNAPPING':
       return { ...state, showSnapping: !state.showSnapping };
 
-    case 'SET_MASK_SHAPE':
-      return { ...state, maskShape: action.payload };
+    case 'SET_MASK_SHAPE': {
+      // The shape belongs to the document, not just to the toolbar: it is part
+      // of what the user drew, and the export has to be able to reproduce it.
+      // Previously it lived only in `state`, so a shape chosen but not saved was
+      // invisible to anything that read the project.
+      const base = state.project
+        ? {
+            ...state,
+            project: {
+              ...state.project,
+              canvas: { ...state.project.canvas, maskShape: action.payload }
+            }
+          }
+        : state;
+      return { ...base, maskShape: action.payload };
+    }
 
     case 'SET_EDITOR_BACKDROP':
       return { ...state, editorBackdrop: action.payload };

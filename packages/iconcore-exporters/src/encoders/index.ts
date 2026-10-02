@@ -10,7 +10,7 @@ import type { RenderBackend } from '@iconcore/renderer';
 import { renderProject } from '@iconcore/renderer';
 import type { EncoderOutput } from './types';
 import type { RasterFormat } from './raster';
-import { encodeRaster, backgroundModeFor } from './raster';
+import { encodeRaster, backgroundModeFor, maskModeFor } from './raster';
 import type { SvgEncodeOptions } from './svg';
 import { encodeSvg } from './svg';
 import { encodeIco } from './ico';
@@ -55,7 +55,8 @@ export const encodeArtifact = async (
         // The artifact spec owns the size; the encoder used to drop it.
         size: artifact.size ?? options.svg?.size,
         height: artifact.height ?? options.svg?.height,
-        background: backgroundModeFor(artifact)
+        background: backgroundModeFor(artifact),
+        mask: maskModeFor(artifact, project)
       });
     case 'container':
       return encodeContainer(artifact as ExportContainerSpec, project, variant, backend);
