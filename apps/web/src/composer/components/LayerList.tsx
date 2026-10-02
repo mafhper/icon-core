@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Eye, EyeOff, Lock, Unlock, Trash2, Copy } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, Copy, ChevronRight } from 'lucide-react';
+import type { IconLayer } from '@iconcore/shared';
 import { withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { QualityWarnings } from './QualityWarnings';
 import { LayerContextMenu } from './LayerContextMenu';
+import { groupLayers } from '../utils/layerGroups';
 
+/** Drag-and-drop and rename both need the flat, display-ordered list. */
 export const LayerList = () => {
   const { state, dispatch } = useComposer();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; layerId: string } | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const project = state.project;
   // Displayed top-to-bottom in descending zIndex (top of the list = front-most).
@@ -17,8 +21,16 @@ export const LayerList = () => {
     () => (project ? [...project.layers].sort((a, b) => b.zIndex - a.zIndex) : []),
     [project]
   );
+  // Presentation only: `IconLayer.kind` already carries everything the groups
+  // need, so grouping is a view concern and never touches the document.
+  const groups = useMemo(() => groupLayers(layers), [layers]);
 
   if (!project) return null;
+
+  const endDrag = () => {
+    setDraggingId(null);
+    setDragOverId(null);
+  };
 
   const reorder = (draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
@@ -38,15 +50,16 @@ export const LayerList = () => {
     dispatch({ type: 'REORDER_LAYER', payload: { id: draggedId, newIndex } });
   };
 
-  const endDrag = () => {
-    setDraggingId(null);
-    setDragOverId(null);
-  };
-
   const commitRename = (id: string, value: string) => {
     const name = value.trim();
     if (name) dispatch({ type: 'UPDATE_LAYER', payload: { id, changes: { name } } });
     dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: null } });
+  };
+
+  const openMenu = (e: React.MouseEvent, layer: IconLayer) => {
+    e.preventDefault();
+    dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
+    setMenu({ x: e.clientX, y: e.clientY, layerId: layer.id });
   };
 
   return (
@@ -57,7 +70,7 @@ export const LayerList = () => {
         </h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-1">
+      <div className="flex-1 overflow-y-auto space-y-3">
         {layers.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-16 h-16 mb-4 rounded-2xl bg-ic-elevated flex items-center justify-center">
@@ -74,146 +87,70 @@ export const LayerList = () => {
             </span>
           </div>
         )}
-        {layers.map((layer, idx) => {
-          const previewUrl = layer.source.type === 'inline' && layer.source.data && layer.source.mimeType
-            ? `data:${layer.source.mimeType};base64,${layer.source.data}`
-            : null;
 
+        {groups.map((group) => {
+          const isCollapsed = collapsed[group.id] === true;
           return (
-          <div
-            key={layer.id}
-            draggable={state.renamingLayerId !== layer.id}
-            onDragStart={(e) => {
-              setDraggingId(layer.id);
-              e.dataTransfer.effectAllowed = 'move';
-            }}
-            onDragEnter={() => setDragOverId(layer.id)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              if (draggingId) reorder(draggingId, layer.id);
-              endDrag();
-            }}
-            onDragEnd={endDrag}
-            onClick={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } })}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
-              setMenu({ x: e.clientX, y: e.clientY, layerId: layer.id });
-            }}
-            className={`ic-layer-row composer-layer-enter flex items-center gap-2 px-3 py-2 rounded-lg cursor-grab transition ${
-              draggingId === layer.id ? 'is-dragging' : ''
-            } ${dragOverId === layer.id && draggingId && draggingId !== layer.id ? 'is-drag-over' : ''} ${
-              state.activeLayerId === layer.id
-                ? 'bg-ic-accent/20 border border-ic-accent/50'
-                : 'hover:bg-ic-elevated border border-transparent'
-            }`}
-            style={{ animationDelay: `${idx * 30}ms` }}
-          >
-            <div aria-hidden="true" className="w-8 h-8 rounded bg-ic-elevated flex items-center justify-center overflow-hidden text-xs">
-              {previewUrl ? (
-                <img src={previewUrl} alt="" className="h-full w-full object-contain" />
-              ) : (
-                layer.source.shape?.kind === 'circle' ? '●' : layer.source.shape?.kind === 'rectangle' ? '■' : '◆'
-              )}
-            </div>
-            {state.renamingLayerId === layer.id ? (
-              <input
-                type="text"
-                defaultValue={layer.name}
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-                onFocus={(e) => e.currentTarget.select()}
-                onBlur={(e) => commitRename(layer.id, e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') commitRename(layer.id, e.currentTarget.value);
-                  if (e.key === 'Escape') dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: null } });
-                }}
-                className="flex-1 min-w-0 text-xs px-1 py-0.5 rounded bg-ic-elevated border border-ic-accent focus:outline-none"
-              />
-            ) : (
-              // Keyboard selection lives here: the button is focusable and its
-              // Enter/Space click bubbles to the row, so pointer and keyboard
-              // share one selection path. F2 renames; Shift+F10/ContextMenu
-              // opens the layer menu (both were pointer-only before).
+            <section key={group.id} aria-label={group.label}>
               <button
                 type="button"
-                aria-current={state.activeLayerId === layer.id ? 'true' : undefined}
-                onKeyDown={(event) => {
-                  if (event.key === 'F2') {
-                    event.preventDefault();
-                    dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
-                    dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: layer.id } });
-                  } else if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
-                    event.preventDefault();
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
-                    setMenu({ x: rect.right, y: rect.bottom, layerId: layer.id });
-                  }
-                }}
-                className="flex min-w-0 flex-1 items-center rounded-md text-left"
+                onClick={() =>
+                  setCollapsed((prev) => ({ ...prev, [group.id]: !(prev[group.id] === true) }))
+                }
+                aria-expanded={!isCollapsed}
+                className="w-full flex items-center gap-1.5 px-1 py-1 mb-1 rounded text-left text-[0.7rem] font-semibold uppercase tracking-wide text-ic-text-muted hover:text-ic-text"
               >
-                <span
-                  className="flex-1 text-xs truncate"
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: layer.id } });
-                  }}
-                  title="Double-click to rename"
-                >
-                  {layer.name}
+                <ChevronRight
+                  size={12}
+                  className={`shrink-0 transition-transform duration-150 ${isCollapsed ? '' : 'rotate-90'}`}
+                />
+                {group.label}
+                <span className="ml-auto text-[0.68rem] font-normal normal-case tracking-normal text-ic-text-faint tabular-nums">
+                  {group.layers.length}
                 </span>
               </button>
-            )}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                dispatch({ type: 'TOGGLE_LAYER_VISIBILITY', payload: { id: layer.id } });
-              }}
-              aria-label={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
-              title={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
-              className="p-1 text-ic-text-muted hover:text-ic-text"
-            >
-              {layer.visible ? <Eye size={12} /> : <EyeOff size={12} />}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                dispatch({ type: 'TOGGLE_LAYER_LOCK', payload: { id: layer.id } });
-              }}
-              aria-label={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
-              title={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
-              className="p-1 text-ic-text-muted hover:text-ic-text"
-            >
-              {layer.locked ? <Lock size={12} /> : <Unlock size={12} />}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                dispatch({ type: 'DUPLICATE_LAYER', payload: { id: layer.id } });
-              }}
-              aria-label={`Duplicate ${layer.name}`}
-              title="Duplicate layer"
-              className="p-1 text-ic-text-muted hover:text-ic-text"
-            >
-              {withIconStroke(<Copy size={12} />)}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                dispatch({ type: 'REMOVE_LAYER', payload: { id: layer.id } });
-              }}
-              aria-label={`Delete ${layer.name}`}
-              title="Delete layer"
-              className="p-1 text-ic-text-muted hover:text-ic-danger"
-            >
-              {withIconStroke(<Trash2 size={12} />)}
-            </button>
-          </div>
+
+              {isCollapsed ? (
+                <p className="px-3 pb-1 text-[0.7rem] text-ic-text-faint">{group.hint}</p>
+              ) : (
+                <div className="space-y-1">
+                  {group.layers.map((layer, idx) => (
+                    <LayerRow
+                      key={layer.id}
+                      layer={layer}
+                      index={idx}
+                      active={state.activeLayerId === layer.id}
+                      renaming={state.renamingLayerId === layer.id}
+                      dragging={draggingId === layer.id}
+                      dragOver={dragOverId === layer.id && draggingId !== null && draggingId !== layer.id}
+                      onSelect={() => dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } })}
+                      onContextMenu={(e) => openMenu(e, layer)}
+                      onToggleVisibility={() =>
+                        dispatch({ type: 'TOGGLE_LAYER_VISIBILITY', payload: { id: layer.id } })
+                      }
+                      onToggleLock={() =>
+                        dispatch({ type: 'TOGGLE_LAYER_LOCK', payload: { id: layer.id } })
+                      }
+                      onDuplicate={() =>
+                        dispatch({ type: 'DUPLICATE_LAYER', payload: { id: layer.id } })
+                      }
+                      onRemove={() => dispatch({ type: 'REMOVE_LAYER', payload: { id: layer.id } })}
+                      onRename={(value) => commitRename(layer.id, value)}
+                      onBeginRename={() =>
+                        dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: layer.id } })
+                      }
+                      onDragStart={() => setDraggingId(layer.id)}
+                      onDragEnter={() => setDragOverId(layer.id)}
+                      onDrop={() => {
+                        if (draggingId) reorder(draggingId, layer.id);
+                        endDrag();
+                      }}
+                      onDragEnd={endDrag}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           );
         })}
       </div>
@@ -224,5 +161,173 @@ export const LayerList = () => {
         <LayerContextMenu x={menu.x} y={menu.y} layerId={menu.layerId} onClose={() => setMenu(null)} />
       )}
     </aside>
+  );
+};
+
+interface LayerRowProps {
+  layer: IconLayer;
+  /** Position within its group, so the entrance stagger stays local. */
+  index: number;
+  active: boolean;
+  renaming: boolean;
+  dragging: boolean;
+  dragOver: boolean;
+  onSelect: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onToggleVisibility: () => void;
+  onToggleLock: () => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+  onRename: (value: string) => void;
+  onBeginRename: () => void;
+  onDragStart: () => void;
+  onDragEnter: () => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
+}
+
+/** One layer row. Split out so the group headers do not have to share a map. */
+const LayerRow = ({
+  layer,
+  index,
+  active,
+  renaming,
+  dragging,
+  dragOver,
+  onSelect,
+  onContextMenu,
+  onToggleVisibility,
+  onToggleLock,
+  onDuplicate,
+  onRemove,
+  onRename,
+  onBeginRename,
+  onDragStart,
+  onDragEnter,
+  onDrop,
+  onDragEnd
+}: LayerRowProps) => {
+  const previewUrl =
+    layer.source.type === 'inline' && layer.source.data && layer.source.mimeType
+      ? `data:${layer.source.mimeType};base64,${layer.source.data}`
+      : null;
+
+  return (
+    <div
+      draggable={!renaming}
+      onDragStart={(e) => {
+        onDragStart();
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragEnter={onDragEnter}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop();
+      }}
+      onDragEnd={onDragEnd}
+      onClick={onSelect}
+      onContextMenu={onContextMenu}
+      className={`ic-layer-row composer-layer-enter flex items-center gap-2 px-3 py-2 rounded-lg cursor-grab transition ${
+        dragging ? 'is-dragging' : ''
+      } ${dragOver ? 'is-drag-over' : ''} ${
+        active
+          ? 'bg-ic-accent/20 border border-ic-accent/50'
+          : 'hover:bg-ic-elevated border border-transparent'
+      }`}
+      style={{ animationDelay: `${index * 30}ms` }}
+    >
+      <div
+        aria-hidden="true"
+        className="w-8 h-8 rounded bg-ic-elevated flex items-center justify-center overflow-hidden text-xs"
+      >
+        {previewUrl ? (
+          <img src={previewUrl} alt="" className="h-full w-full object-contain" />
+        ) : layer.source.shape?.kind === 'circle' ? (
+          '●'
+        ) : layer.source.shape?.kind === 'rectangle' ? (
+          '■'
+        ) : (
+          '◆'
+        )}
+      </div>
+
+      {renaming ? (
+        <input
+          type="text"
+          defaultValue={layer.name}
+          autoFocus
+          onClick={(e) => e.stopPropagation()}
+          onFocus={(e) => e.target.select()}
+          onBlur={(e) => onRename(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+            if (e.key === 'Escape') onRename(layer.name);
+          }}
+          className="flex-1 min-w-0 bg-ic-bg border border-ic-accent/50 rounded px-1.5 py-0.5 text-xs text-ic-text"
+        />
+      ) : (
+        <button
+          type="button"
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onBeginRename();
+          }}
+          className="flex-1 min-w-0 truncate text-left text-xs text-ic-text border-0 bg-transparent cursor-text"
+          title="Double-click to rename"
+        >
+          {layer.name}
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleVisibility();
+        }}
+        aria-label={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
+        title={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
+        className="p-1 text-ic-text-muted hover:text-ic-text"
+      >
+        {layer.visible ? <Eye size={12} /> : <EyeOff size={12} />}
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleLock();
+        }}
+        aria-label={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
+        title={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
+        className="p-1 text-ic-text-muted hover:text-ic-text"
+      >
+        {layer.locked ? <Lock size={12} /> : <Unlock size={12} />}
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDuplicate();
+        }}
+        aria-label={`Duplicate ${layer.name}`}
+        title="Duplicate layer"
+        className="p-1 text-ic-text-muted hover:text-ic-text"
+      >
+        {withIconStroke(<Copy size={12} />)}
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        aria-label={`Delete ${layer.name}`}
+        title="Delete layer"
+        className="p-1 text-ic-text-muted hover:text-ic-danger"
+      >
+        {withIconStroke(<Trash2 size={12} />)}
+      </button>
+    </div>
   );
 };
