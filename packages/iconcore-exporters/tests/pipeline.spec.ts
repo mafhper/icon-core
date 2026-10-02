@@ -77,13 +77,15 @@ const ctx = (project?: IconCoreProject): ExportContext => ({
 describe('resolveArtifactPath (path tokens)', () => {
   it('substitutes {name}, {format}, {size}, {variant}, {target}', () => {
     const context = ctx(createProject({ exportProfile: { outputBaseName: 'my-icon', quality: 0.9, generateReport: false } }));
+    // Uses the `custom` preset so the per-variant folder (a separate concern,
+    // covered in variantPaths.spec.ts) does not sit on top of token substitution.
     const path = resolveArtifactPath(
-      { id: 'a', format: 'png', path: 'icons/{name}-{size}.{format}', enabled: true, size: 64, target: 'web-favicon' },
+      { id: 'a', format: 'png', path: '{target}/{name}-{size}-{variant}.{format}', enabled: true, size: 64, target: 'web-favicon' },
       context,
       'dark',
-      'web'
+      'custom'
     );
-    expect(path).toBe('icons/my-icon-64.png');
+    expect(path).toBe('web-favicon/my-icon-64-dark.png');
     expect(path).not.toContain('{');
   });
 

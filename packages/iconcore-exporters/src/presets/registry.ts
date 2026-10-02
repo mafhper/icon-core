@@ -88,6 +88,9 @@ export const EXPORT_PRESETS: ExportPreset[] = [
     description: 'Favicons for a site: PNG/ICO/SVG plus apple-touch-icon and the manifest/browserconfig pair.',
     platforms: ['web'],
     recommended: true,
+    // A browser asks for `/favicon.ico` by path, so `default` stays at the root;
+    // the other variants go in folders instead of overwriting each other.
+    variantLayout: 'per-folder',
     documentation: 'site.webmanifest + browserconfig.xml are produced as attachments',
     createArtifacts: () => [
       raster('web-png-16', 'favicon-16x16.png', 16),
@@ -104,6 +107,8 @@ export const EXPORT_PRESETS: ExportPreset[] = [
     description: 'Install icons (192/512) plus an opaque maskable version, with the web manifest.',
     platforms: ['web'],
     recommended: true,
+    // The manifest lists icons by path, so the same contract as `web`.
+    variantLayout: 'per-folder',
     createArtifacts: () => [
       raster('pwa-png-192', 'icon-192x192.png', 192),
       raster('pwa-png-512', 'icon-512x512.png', 512),
@@ -141,6 +146,8 @@ export const EXPORT_PRESETS: ExportPreset[] = [
     label: 'Marketing / social icons',
     description: 'Large PNGs (256/512/1024) for web and social previews.',
     platforms: ['web'],
+    // Consumed by humans and by social scrapers, never by a build config.
+    variantLayout: 'per-folder',
     createArtifacts: () => [
       raster('marketing-png-256', 'marketing/icon-256.png', 256),
       raster('marketing-png-512', 'marketing/icon-512.png', 512),
