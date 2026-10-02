@@ -427,6 +427,32 @@ export const kindOf = (format: ExportFormat): ExportArtifactKind => EXPORT_FORMA
 export const isContainerFormat = (format: ExportFormat): format is 'ico' | 'icns' =>
   EXPORT_FORMAT_KIND[format] === 'container';
 
+/** The shapes the canvas frame can take. */
+export type CanvasMaskShape = 'square' | 'circle' | 'rounded-rectangle' | 'squircle';
+
+/**
+ * The frame radius a canvas shows when it does not declare one.
+ *
+ * `squircle` uses the iOS superellipse value (22.37% of the side) because that
+ * is what the shape approximates — `KeylineOverlay` already draws its guide at
+ * exactly this ratio, so the two agree instead of drifting apart. The other two
+ * are the values the editor had hard-coded before the radius became
+ * controllable.
+ */
+export const defaultMaskRadius = (shape: CanvasMaskShape, size: number): number => {
+  switch (shape) {
+    case 'circle':
+      // A circle's corner radius is half the side; the frame uses `50%`.
+      return size / 2;
+    case 'squircle':
+      return size * 0.2237;
+    case 'rounded-rectangle':
+      return 24;
+    case 'square':
+      return 4;
+  }
+};
+
 /** Only `jpeg` lacks an alpha channel. */
 export const supportsAlpha = (format: ExportFormat): boolean => format !== 'jpeg';
 
@@ -466,6 +492,19 @@ export interface IconCoreProject {
      * and never clips the export.
      */
     importMargin?: number;
+    /**
+     * Corner radius of the canvas frame, in px. **Additive and optional:**
+     * absent means the shape's own default (see `defaultMaskRadius`), which is
+     * what every project looked like before the radius was controllable — so an
+     * older document renders exactly as it always did. No migration, no
+     * `schemaVersion` bump.
+     *
+     * Distinct from `safeArea`, which is a guide. This one is the visible edge
+     * of the work area: it rounds the frame in the editor and nothing else,
+     * because the export is full-bleed by design (the platform applies its own
+     * mask at display time).
+     */
+    maskRadius?: number;
   };
   layers: IconLayer[];
   variants: Partial<Record<IconVariant, VariantOverrides>>;

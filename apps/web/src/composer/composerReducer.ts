@@ -68,6 +68,11 @@ export type ComposerAction =
   | { type: 'SET_ACTIVE_TARGET'; payload: { target: IconTarget; enabled: boolean } }
   | { type: 'SET_CANVAS_BACKGROUND'; payload: { background: Fill; transient?: boolean } }
   | { type: 'SET_CANVAS_IMPORT_MARGIN'; payload: { margin: number; transient?: boolean } }
+  | {
+      type: 'SET_CANVAS_MASK_RADIUS';
+      /** `null` restores the shape's own default instead of pinning a value. */
+      payload: { radius: number | null; transient?: boolean };
+    }
   | { type: 'UPDATE_EXPORT_PROFILE'; payload: Partial<ExportProfile> }
   | { type: 'NAVIGATE'; payload: ComposerView }
   | { type: 'UNDO' }
@@ -510,6 +515,25 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       const project = {
         ...state.project,
         canvas: { ...state.project.canvas, importMargin: Math.max(0, Math.min(0.45, action.payload.margin)) }
+      };
+      return action.payload.transient
+        ? { ...state, project, isDirty: true }
+        : commitProject(state, project);
+    }
+
+    case 'SET_CANVAS_MASK_RADIUS': {
+      if (!state.project) return state;
+      const side = state.project.canvas.size;
+      const project = {
+        ...state.project,
+        canvas: {
+          ...state.project.canvas,
+          // Clamped to half the side: beyond that the corners cross over. `null`
+          // clears the field, which restores the shape's own default.
+          maskRadius: action.payload.radius === null
+            ? undefined
+            : Math.max(0, Math.min(side / 2, action.payload.radius))
+        }
       };
       return action.payload.transient
         ? { ...state, project, isDirty: true }
