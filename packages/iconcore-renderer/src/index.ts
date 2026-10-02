@@ -21,4 +21,11 @@ export { applyMask } from './masks/applyMask';
 export { layerBaseRect, containSize } from './geometry';
 export type { LayerRect } from './geometry';
 export { parseSvgIntrinsicSize, setSvgViewport } from './svgSize';
-export type { RenderBackend, RenderContext, ImageHandle, ResolvedLayer, RenderOptions } from './types';
+export type {
+  RenderBackend,
+  RenderBackground,
+  RenderContext,
+  ImageHandle,
+  ResolvedLayer,
+  RenderOptions
+} from './types';

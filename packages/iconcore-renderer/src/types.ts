@@ -13,10 +13,27 @@ export interface RenderContext {
 }
 
 /** Final-encode options for a rendered icon (format + lossy quality). */
+/**
+ * Whether the composed image paints the project's canvas background.
+ *
+ * `canvas` (the default) keeps the long-standing behaviour: the background the
+ * user sees in the editor is the background in the output. Every editor and
+ * preview caller wants this — it is the same picture they are looking at.
+ *
+ * `transparent` omits the background paint and keeps the alpha channel. The
+ * export path asks for it, because a canvas background seeded by the factory
+ * (`projectFactory` fills `light`/`dark`/`mono` with opaque colours) is a
+ * *design-time* choice, and a favicon that arrives with a white square the user
+ * never asked for is wrong on a light tab and invisible on a dark one.
+ */
+export type RenderBackground = 'canvas' | 'transparent';
+
 export interface RenderOptions {
   format?: 'png' | 'webp' | 'jpeg';
   /** 0..1, applied to lossy formats only. */
   quality?: number;
+  /** Defaults to `canvas`; the export path passes `transparent`. */
+  background?: RenderBackground;
 }
 
 export interface RenderBackend {
