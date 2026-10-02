@@ -1,6 +1,7 @@
 import type { IconCoreProject, IconVariant } from '@iconcore/shared';
 import type { RenderBackend } from '@iconcore/renderer';
 import { renderToSvgWithOptions } from '@iconcore/renderer';
+import type { RenderBackground } from '@iconcore/renderer';
 
 export interface SvgEncodeOptions {
   /**
@@ -22,6 +23,12 @@ export interface SvgEncodeOptions {
    * (`height = size`) — the additive contract of the model.
    */
   height?: number;
+  /**
+   * Whether to paint the project background. `canvas` (the default) matches the
+   * editor; the export path passes `transparent` so a seeded variant colour does
+   * not become an opaque rectangle in the file.
+   */
+  background?: RenderBackground;
 }
 
 export const encodeSvg = async (
@@ -52,7 +59,8 @@ export const encodeSvg = async (
     skipImages: options.embedImages === false,
     maxEmbeddedImageBytes: options.maxEmbeddedImageBytes,
     size: options.size,
-    height: options.height
+    height: options.height,
+    background: options.background
   });
 
   return { blob: new Blob([svg], { type: 'image/svg+xml' }), warnings };

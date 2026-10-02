@@ -10,7 +10,7 @@ import type { RenderBackend } from '@iconcore/renderer';
 import { renderProject } from '@iconcore/renderer';
 import type { EncoderOutput } from './types';
 import type { RasterFormat } from './raster';
-import { encodeRaster } from './raster';
+import { encodeRaster, backgroundModeFor } from './raster';
 import type { SvgEncodeOptions } from './svg';
 import { encodeSvg } from './svg';
 import { encodeIco } from './ico';
@@ -54,7 +54,8 @@ export const encodeArtifact = async (
         ...options.svg,
         // The artifact spec owns the size; the encoder used to drop it.
         size: artifact.size ?? options.svg?.size,
-        height: artifact.height ?? options.svg?.height
+        height: artifact.height ?? options.svg?.height,
+        background: backgroundModeFor(artifact)
       });
     case 'container':
       return encodeContainer(artifact as ExportContainerSpec, project, variant, backend);
@@ -81,7 +82,12 @@ const encodeContainer = async (
       throw new Error(`Invalid ${artifact.format.toUpperCase()} entry size: ${width}.`);
     }
     // Container entries are physical sizes and are square by contract.
-    const blob = await renderProject(project, variant, { width, height: width }, backend, { format: 'png' });
+    // The background rule is the artifact's, so a maskable-style ICO keeps its
+    // colour while a normal one exports with alpha.
+    const blob = await renderProject(project, variant, { width, height: width }, backend, {
+      format: 'png',
+      background: backgroundModeFor(artifact)
+    });
     representations.push({ width, blob });
   }
 

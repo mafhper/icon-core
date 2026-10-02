@@ -4,6 +4,7 @@ import { toRgba } from './color';
 import { layerBaseRect } from './geometry';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
 import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
+import type { RenderBackground } from './types';
 
 const resolveLayer = (layer: IconLayer, variant: IconVariant): IconLayer => {
   const override = layer.variantOverrides?.[variant];
@@ -226,6 +227,12 @@ const approximationMarkup = (fill: GradientFill, shape: ShapeDefinition, steps =
 
 export interface RenderSvgOptions {
   /**
+   * `canvas` (the default) paints the project background, matching what the
+   * editor shows. `transparent` omits it and keeps transparency — what the
+   * export path asks for, for the same reason as `RenderOptions.background`.
+   */
+  background?: RenderBackground;
+  /**
    * Natural dimensions per layer id for raster (non-SVG) image layers, so they
    * can be embedded as `data:` URIs. Without an entry the image
    * layer is omitted from the SVG — and a warning is reported unless
@@ -271,7 +278,10 @@ export const renderToSvgWithOptions = (
   const { imageSizes, skipImages = false, maxEmbeddedImageBytes } = options;
 
   const canvas = resolveSize(project.canvas);
-  const bg = project.variants[variant]?.canvas?.background ?? project.canvas.background;
+  const bg =
+    options.background === 'transparent'
+      ? ({ kind: 'none' } as const)
+      : (project.variants[variant]?.canvas?.background ?? project.canvas.background);
 
   const defs: string[] = [];
   let idSeq = 0;

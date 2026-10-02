@@ -1,6 +1,6 @@
 import type { Dimensions, Fill, IconCoreProject, IconVariant } from '@iconcore/shared';
 import { resolveSize } from '@iconcore/shared';
-import type { RenderBackend, RenderOptions } from './types';
+import type { RenderBackend, RenderBackground, RenderOptions } from './types';
 import { composeLayers } from './composeLayers';
 
 /** Resolve the effective image background for a variant (variant override wins). */
@@ -8,6 +8,22 @@ export const resolveCanvasBackground = (project: IconCoreProject, variant: IconV
   const overridden = project.variants[variant]?.canvas?.background;
   if (overridden) return overridden;
   return project.canvas.background;
+};
+
+/**
+ * The background a render should paint.
+ *
+ * `transparent` wins over the project's own background: the caller has said it
+ * wants an alpha channel, and an editor choice about what the canvas looks like
+ * is not an instruction about what the file must contain.
+ */
+export const resolveRenderBackground = (
+  project: IconCoreProject,
+  variant: IconVariant,
+  mode: RenderBackground = 'canvas'
+): Fill => {
+  if (mode === 'transparent') return { kind: 'none' };
+  return resolveCanvasBackground(project, variant);
 };
 
 /**
@@ -25,7 +41,7 @@ export const renderProject = async (
   options: RenderOptions = {}
 ): Promise<Blob> => {
   const original = resolveSize(project.canvas);
-  const background = resolveCanvasBackground(project, variant);
+  const background = resolveRenderBackground(project, variant, options.background);
 
   // The safe area is a GUIDE only (shown via the keyline overlay and the quality
   // audit) — it never clips or masks the exported pixels. Icons render full-bleed

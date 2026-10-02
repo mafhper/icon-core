@@ -1,6 +1,6 @@
 import type { ExportArtifactSpec, IconCoreProject, IconVariant } from '@iconcore/shared';
 import { resolveSize } from '@iconcore/shared';
-import type { RenderBackend, RenderOptions } from '@iconcore/renderer';
+import type { RenderBackground, RenderBackend, RenderOptions } from '@iconcore/renderer';
 import { renderProject, resolveCanvasBackground } from '@iconcore/renderer';
 
 export type RasterFormat = 'png' | 'webp' | 'jpeg';
@@ -36,8 +36,41 @@ export const encodeRaster = async (
     size: artifact.size ?? canvas.width,
     height: artifact.height ?? (artifact.size === undefined ? canvas.height : undefined)
   });
-  const options: RenderOptions = { format: artifact.format, quality: artifact.quality };
+
+  // Transparent unless the artifact *asks* for opaque (a PWA maskable tile) or
+  // the format cannot carry alpha at all. See `backgroundModeFor`.
+  const options: RenderOptions = {
+    format: artifact.format,
+    quality: artifact.quality,
+    background: backgroundModeFor(artifact)
+  };
   const blob = await renderProject(project, variant, target, backend, options);
 
   return { blob, warnings };
+};
+
+/**
+ * Whether an artifact exports with the canvas background painted.
+ *
+ * The factory seeds every variant with an **opaque** colour (`light` #f8fafc,
+ * `dark` #111827, `mono` #ffffff) so the editor has something to look at. That
+ * is a design-time convenience, and letting it into the file meant every
+ * exported PNG arrived as an opaque square — wrong on a light tab, invisible on
+ * a dark one. So the export asks for alpha by default.
+ *
+ * Two cases still paint, both already expressible in the model:
+ *
+ * - `artifact.background === 'opaque'` — the artifact *requires* an opaque
+ *   background. That is what `pwa-maskable-512` is, and the manifest marks it
+ *   `purpose: 'maskable'`; without a background a maskable icon gets cropped.
+ * - **JPEG has no alpha channel.** Asking for transparency there would flatten
+ *   to black, which is worse than the seeded colour. `artifactNatureWarnings`
+ *   already tells the user about the flattening.
+ */
+export const backgroundModeFor = (
+  artifact: Pick<ExportArtifactSpec, 'format' | 'background'>
+): RenderBackground => {
+  if (artifact.format === 'jpeg') return 'canvas';
+  if (artifact.background === 'opaque') return 'canvas';
+  return 'transparent';
 };
