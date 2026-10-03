@@ -2,6 +2,7 @@ import type { BlendMode, CanvasMaskShape, Dimensions, Fill, GradientFill, IconCo
 import { resolveMaskRadius, resolveSize } from '@iconcore/shared';
 import { toRgba } from './color';
 import { layerBaseRect } from './geometry';
+import { superellipsePathD } from './geometry/superellipse';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
 import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
 import type { RenderBackground } from './types';
@@ -13,28 +14,8 @@ import type { RenderBackground } from './types';
  * raster and vector pipelines agree on where the edge is — the parity the
  * `IC51`/`IC-N6` work established for geometry.
  */
-const squirclePath = (size: number): string => squirclePathRect(size, size);
-
-/**
- * The same outline for a non-square box.
- *
- * `squirclePath(size)` assumed a square, because the only caller was the canvas
- * mask. A squircle *shape* is `width × height`, and reusing the square form for
- * it drew a circle-ish blob. Scaling the same normalised curve per axis keeps one
- * definition of the shape instead of two.
- */
-const squirclePathRect = (width: number, height: number): string => {
-  const n = 0.6;
-  const ox = (width * (1 - n)) / 2;
-  const oy = (height * (1 - n)) / 2;
-  return (
-    `<path d="M${ox} 0 ` +
-    `C${width - ox} 0 ${width} ${oy} ${width} ${height - oy} ` +
-    `C${width} ${height - oy} ${width - ox} ${height} ${ox} ${height} ` +
-    `C${ox} ${height} 0 ${height - oy} 0 ${oy} ` +
-    `C0 ${oy} ${ox} 0 ${ox} 0Z"/>`
-  );
-};
+const squirclePath = (size: number): string =>
+  `<path d="${superellipsePathD(size, size)}"/>`;
 
 /**
  * CSS `mix-blend-mode` for a domain `BlendMode`.
@@ -235,7 +216,9 @@ const shapeMarkup = (
   // The curve was already in this file for the mask; a shape now uses the same
   // one, so the two pipelines cannot disagree about where the edge is.
   if (shape.kind === 'squircle') {
-    const outline = squirclePathRect(shape.width, shape.height).replace('/>', ` ${common}/>`);
+    // The shared definition — the same function the canvas compositor traces —
+    // so the vector and raster pipelines cannot disagree about where the edge is.
+    const outline = `<path d="${superellipsePathD(shape.width, shape.height)}" ${common}/>`;
     return `<g transform="translate(${ox} ${oy})">${outline}</g>\n`;
   }
 
@@ -500,7 +483,7 @@ export const renderToSvgWithOptions = (
     );
   }
 
-  const defsBlock = defs.length > 0 ? `  <defs>\n    ${defs.join('\n    ')}\n  </defs>\n` : '';
+  const defsBlock = () => (defs.length > 0 ? `  <defs>\n    ${defs.join('\n    ')}\n  </defs>\n` : '');
 
   // `size` scales the document without moving anything: the viewBox keeps
   // describing the canvas in canvas units, so the geometry a reader measures is
@@ -537,24 +520,26 @@ export const renderToSvgWithOptions = (
     clipClose = '</g>';
   }
 
-  // `mix-blend-mode` blends against the **backdrop**, and by default that is
-  // everything painted earlier — including the background rectangle. The canvas
-  // compositor sets `globalCompositeOperation` while drawing a layer, so its
-  // blend never reaches the background. Without `isolation` the SVG reaches past
-  // the artwork and blends onto the page behind it, which is the near-miss case
-  // that makes a blend look plausible in isolation and wrong in the document.
+  // Note on `isolation: an earlier version emitted `isolation:isolate` here, on
+  // the reasoning that `mix-blend-mode` blends against the backdrop and would
+  // reach past the artwork. Measured, that is not what happens — the `<svg>` root
+  // establishes its own stacking context, so the backdrop inside the document is
+  // already the document. Rendering the same blend over a black page and over a
+  // red page produced byte-identical pixels with and without the attribute.
   //
-  // Only emitted when a layer actually declares a mode: an ordinary document gets
-  // byte-identical markup to what it produced before blend support existed.
-  const usesBlend = project.layers.some((layer) => {
-    const resolved = resolveLayer(layer, variant);
-    return resolved.blendMode !== undefined && resolved.blendMode !== 'normal';
-  });
-  const isolationAttr = usesBlend ? ' style="isolation:isolate"' : '';
+  // It was removed rather than kept as a harmless extra, because an attribute
+  // that claims to prevent something which cannot happen is a comment waiting to
+  // mislead whoever reads this next.
 
+  // A function, not a string: the canvas clip below pushes into `defs` *after*
+  // this point, so a snapshot taken here would omit the very `<clipPath>` the
+  // `clip-path` attribute points at. That was the bug — the exported SVG
+  // referenced `url(#canvas-clip-N)` with no such id in the document, so the
+  // masked export rendered unclipped. Fixed by evaluating `defs` at the last
+  // possible moment.
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${output.width}" height="${output.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"${isolationAttr}>
-${defsBlock}${clipOpen}${bgMarkup}${svgLayers}${clipClose}
+<svg xmlns="http://www.w3.org/2000/svg" width="${output.width}" height="${output.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">
+${defsBlock()}${clipOpen}${bgMarkup}${svgLayers}${clipClose}
 </svg>`;
 
   return { svg, warnings };

@@ -3,6 +3,7 @@ import type { ImageHandle, RenderBackend, RenderContext } from '../types';
 import { toRgba } from '../color';
 import { clamp01 } from '../color';
 import { conicStartRadians, cssAngleVector, expandStops, sampleStops } from '../gradient';
+import { traceSuperellipse } from '../geometry/superellipse';
 
 const addStops = (gradient: CanvasGradient, fill: GradientFill): void => {
   for (const stop of expandStops(fill.stops)) {
@@ -186,13 +187,9 @@ const applyAlphaMask = (
   } else if (shape === 'rounded-rectangle') {
     native.roundRect(x, y, width, height, size * 0.2);
   } else if (shape === 'squircle') {
-    const curvature = 0.6;
-    const offset = width * (1 - curvature) / 2;
-    native.moveTo(x + offset, y);
-    native.bezierCurveTo(x + width - offset, y, x + width, y + offset, x + width, y + height - offset);
-    native.bezierCurveTo(x + width, y + height - offset, x + width - offset, y + height, x + offset, y + height);
-    native.bezierCurveTo(x + offset, y + height, x, y + height - offset, x, y + offset);
-    native.bezierCurveTo(x, y + offset, x + offset, y, x + offset, y);
+    // Shared definition: this used to compute one offset from `width` and use it
+    // for both axes, so a non-square mask was stretched. See `geometry/superellipse`.
+    traceSuperellipse(native, x, y, width, height);
   } else {
     native.rect(x, y, width, height);
   }
