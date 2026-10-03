@@ -2,7 +2,7 @@ import type { ExportArtifact, ExportContext, ExportPlan, IconVariant } from '@ic
 import { isContainerSpec } from '@iconcore/shared';
 import { resolveCanvasBackground } from '@iconcore/renderer';
 import { planProblems } from '../planner';
-import { resolveArtifactPath } from './plan';
+import { resolveArtifactPath, variantsFor } from './plan';
 
 export interface PlanValidation {
   /** True when there are no structural problems. */
@@ -108,9 +108,13 @@ const pathCollisions = (
 
   for (const artifact of plan.artifacts) {
     if (!artifact.enabled) continue;
-    const own = artifact.variant ? [artifact.variant] : variants;
+    const own = variantsFor(artifact, variants);
+    const multiVariant = own.length > 1;
     for (const variant of own) {
-      claim(resolveArtifactPath(artifact, context, variant, plan.presetId), `${artifact.id} (${variant})`);
+      claim(
+        resolveArtifactPath(artifact, context, variant, plan.presetId, { multiVariant }),
+        `${artifact.id} (${variant})`
+      );
     }
   }
 
