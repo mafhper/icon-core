@@ -14,8 +14,15 @@ import {
 import { getPreset, targetForPreset } from '../presets';
 import type { PlannedArtifact } from './types';
 
-/** A resolved variant set: one entry when the artifact is explicit, else the defaults. */
-const variantsFor = (artifact: ExportArtifact, variants: IconVariant[]): IconVariant[] =>
+/**
+ * A resolved variant set: one entry when the artifact is explicit, else the defaults.
+ *
+ * Exported because the path has to be resolved **identically** in the planner
+ * and in the validator. They used to compute this separately, which is how two
+ * callers could disagree about what a plan writes — and a plan that validates
+ * cleanly but then collides at export time is the worst possible outcome.
+ */
+export const variantsFor = (artifact: ExportArtifact, variants: IconVariant[]): IconVariant[] =>
   artifact.variant ? [artifact.variant] : variants;
 
 /**
@@ -68,7 +75,8 @@ export const resolveArtifactPath = (
   artifact: ExportArtifact,
   context: ExportContext,
   variant: IconVariant,
-  presetId?: string
+  presetId?: string,
+  options: { multiVariant?: boolean } = {}
 ): string => {
   const project = context.project;
   const name = project.exportProfile.outputBaseName || project.metadata.shortName || project.metadata.name;
@@ -84,7 +92,24 @@ export const resolveArtifactPath = (
 
   let path = artifact.path.replace(/\{(\w+)\}/g, (token, key: string) => labels[key] ?? token);
 
-  if (variant !== 'default' && !pathNamesVariant(artifact.path) && presetUsesVariantFolders(presetId)) {
+  // Two independent reasons to give a non-default variant its own folder, and
+  // the second one overrides the preset either way:
+  //
+  // 1. The preset declares `per-folder` — because something outside the ZIP
+  //    (a manifest, a browser request) addresses those paths by name.
+  // 2. **This artifact expands to more than one variant.** Without a folder,
+  //    every variant would resolve to the same string and the plan could not be
+  //    exported at all. That is not a preference, it is an impossible export,
+  //    and it used to be reachable: the preset the Export screen starts on —
+  //    `custom`, "start empty" — declares no `variantLayout`, so ticking a
+  //    second variant produced collisions on every artifact and the export
+  //    button stayed disabled with the reason hidden in a warning panel.
+  //
+  //    So an undeclared preset now means "safe", not "collide". A preset still
+  //    opts out by naming the variant in the path (`{variant}`), which is the
+  //    documented way to pin an artifact to one variant.
+  const needsOwnFolder = options.multiVariant === true || presetUsesVariantFolders(presetId);
+  if (variant !== 'default' && !pathNamesVariant(artifact.path) && needsOwnFolder) {
     path = `${variant}/${path}`;
   }
 
@@ -118,9 +143,14 @@ export const planArtifacts = (
 
   return plan.artifacts
     .filter((artifact) => artifact.enabled)
-    .flatMap((artifact) =>
-      variantsFor(artifact, variants).map((variant) => {
-        const path = resolveArtifactPath(artifact, context, variant, plan.presetId);
+    .flatMap((artifact) => {
+      const expanded = variantsFor(artifact, variants);
+      const multiVariant = expanded.length > 1;
+
+      return expanded.map((variant) => {
+        const path = resolveArtifactPath(artifact, context, variant, plan.presetId, {
+          multiVariant
+        });
         const isContainer = isContainerSpec(artifact);
         const dimensions = dimensionsFor(artifact, resolveSize(project.canvas));
         return {
@@ -136,8 +166,8 @@ export const planArtifacts = (
           ...(dimensions.height !== dimensions.width ? { height: dimensions.height } : {}),
           entries: isContainer ? artifact.entries : undefined
         };
-      })
-    );
+      });
+    });
 };
 
 const artifactMime = (artifact: ExportArtifact): string => {
