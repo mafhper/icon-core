@@ -4,6 +4,12 @@ import { ArrowRight, Layers2, MonitorDown, PenTool, CloudUpload, X } from 'lucid
 import { useComposer } from '../ComposerContext';
 import { fileToLayerAsset, isSupportedLayerFile } from '../utils/fileLayers';
 import { createProjectFromAsset } from '../utils/projectFactory';
+import {
+  decideNewProject,
+  NEW_PROJECT_CONFIRM_COPY,
+  type NewProjectGuard
+} from '../utils/newProjectGuard';
+import { ConfirmModal } from './ConfirmModal';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 import { Button, TextField, withIconStroke } from '@iconcore/ui';
@@ -16,9 +22,10 @@ type UploadMode = 'edit' | 'export';
  * project, and on demand (dismissible) when returning Home with a project open.
  */
 export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
-  const { dispatch, navigate } = useComposer();
+  const { state, dispatch, navigate } = useComposer();
   const [projectName, setProjectName] = useState('My Icon');
   const [isImporting, setIsImporting] = useState(false);
+  const [confirmacao, setConfirmacao] = useState<NewProjectGuard | null>(null);
   const uploadMode = useRef<UploadMode>('edit');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -38,9 +45,29 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
 
   useFocusTrap(dialogRef, true);
 
-  const createProject = () => {
+  const startProject = () => {
     dispatch({ type: 'NEW_PROJECT', payload: { name: projectName.trim() || 'My Icon', size: 512, view: 'edit-space' } });
     navigate('edit-space');
+  };
+
+  /**
+   * Creating a project is destructive in a way the button does not show: the
+   * autosave fires about two seconds later and overwrites the stored copy, and
+   * nothing archives it first. So this asks — but only when there is something to
+   * lose, because a prompt that always fires stops being read.
+   */
+  const createProject = () => {
+    const guard = decideNewProject({
+      currentProject: state.project,
+      isDirty: state.isDirty
+    });
+
+    if (guard.kind === 'confirm') {
+      setConfirmacao(guard);
+      return;
+    }
+
+    startProject();
   };
 
   const requestUpload = (mode: UploadMode) => {
@@ -64,7 +91,8 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
   };
 
   return createPortal(
-    <div className="ic-modal-overlay" onClick={close}>
+    <>
+      <div className="ic-modal-overlay" onClick={close}>
       <div ref={dialogRef} tabIndex={-1} className="ic-welcome-modal" role="dialog" aria-modal="true" aria-label="Start a new icon" onClick={(event) => event.stopPropagation()}>
         {dismissible && (
           <button type="button" className="ic-modal-close" onClick={close} aria-label="Close">
@@ -136,7 +164,21 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
           </a>
         </footer>
       </div>
-    </div>,
+      </div>
+
+      {confirmacao?.kind === 'confirm' && (
+        <ConfirmModal
+          title="Start a new icon?"
+          message={NEW_PROJECT_CONFIRM_COPY[confirmacao.reason](confirmacao.projectName)}
+          confirmLabel="Start new"
+          onConfirm={() => {
+            setConfirmacao(null);
+            startProject();
+          }}
+          onCancel={() => setConfirmacao(null)}
+        />
+      )}
+    </>,
     document.body
   );
 };
