@@ -252,26 +252,67 @@ fs.mkdirSync(OUT, { recursive: true });
 const maskFor = (project) =>
   project.canvas.maskShape ??
   (project.canvas.maskRadius !== undefined ? 'rounded-rectangle' : 'none');
-const servir = http.createServer((req, res) => {
-  const url = decodeURIComponent((req.url ?? '/').split('?')[0]);
+/**
+ * The browser has to be able to fetch the built modules, and each one imports
+ * its siblings by relative path, so the whole emitted tree has to be reachable.
+ *
+ * Serving that by joining the request path onto the filesystem is what CodeQL
+ * flags as "uncontrolled data used in path expression", and rightly so: a `../`
+ * in a URL escapes the repository. Instead every allowed path is *enumerated*
+ * from disk and the request has to match one of them exactly, so no traversal is
+ * representable — not merely unlikely.
+ */
+const RAIZES = ['shared', 'renderer', 'engine'].map((p) => `packages/iconcore-${p}/dist`);
 
-  if (url.endsWith('.html')) {
+const SERVIR = new Set(['index.html']);
+const SERVIR_RESOLVIDO = new Map();
+
+for (const raiz of RAIZES) {
+  const base = path.join(process.cwd(), raiz);
+  if (!fs.existsSync(base)) continue;
+  SERVIR.add(raiz);
+  SERVIR_RESOLVIDO.set(raiz, path.join(base, 'index.js'));
+
+  for (const arquivo of fs.readdirSync(base, { recursive: true, withFileTypes: true })) {
+    if (!arquivo.isFile() || !arquivo.name.endsWith('.js')) continue;
+    const absoluto = path.join(arquivo.parentPath, arquivo.name);
+    const relativo = path.relative(process.cwd(), absoluto).split(path.sep).join('/');
+    SERVIR.add(relativo);
+    SERVIR_RESOLVIDO.set(relativo, absoluto);
+  }
+}
+
+/** `caminho` → an absolute path, only for a path that is already allow-listed. */
+const resolverServido = (caminho) => {
+  if (!SERVIR.has(caminho)) return null;
+  return SERVIR_RESOLVIDO.get(caminho) ?? null;
+};
+
+const servir = http.createServer((req, res) => {
+  // Decode each segment, not the whole path: decoding the whole thing turns an
+  // encoded `%2F` into a real separator, which is how a traversal sneaks past a
+  // check that only looks at the raw string.
+  const segmentos = (req.url ?? '/').split('?')[0].split('/').filter(Boolean).map(decodeURIComponent);
+  const caminho = segmentos.join('/');
+
+  if (caminho === '' || caminho === 'index.html' || caminho.endsWith('.html')) {
     res.writeHead(200, { 'content-type': 'text/html' });
     res.end('<!doctype html><meta charset="utf-8"><body></body>');
     return;
   }
 
-  const arquivo = path.join(process.cwd(), url.replace(/^\/+/, ''));
-  if (fs.existsSync(arquivo) && fs.statSync(arquivo).isFile()) {
-    const tipo = { '.js': 'text/javascript', '.json': 'application/json' }[path.extname(arquivo)]
-      ?? 'application/octet-stream';
-    res.writeHead(200, { 'content-type': tipo });
+  // The absolute path was built when the allow-list was enumerated, from disk,
+  // not from the request. A request can therefore only ever select among paths
+  // that already exist; it cannot name one.
+  const arquivo = resolverServido(caminho);
+  if (arquivo) {
+    res.writeHead(200, { 'content-type': 'text/javascript' });
     res.end(fs.readFileSync(arquivo));
     return;
   }
 
   res.writeHead(404);
-  res.end('nao encontrado');
+  res.end('nao servido');
 });
 
 await new Promise((ok) => servir.listen(0, '127.0.0.1', ok));
