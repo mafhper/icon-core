@@ -7,7 +7,7 @@ import type {
   IconVariant
 } from '@iconcore/shared';
 import { isContainerSpec, kindOf, extensionForFormat } from '@iconcore/shared';
-import { buildPlan, getAllPresets, PRESET_ID_BY_TARGET, resolveArtifactPath } from '@iconcore/exporters';
+import { buildPlan, getAllPresets, planArtifacts, PRESET_ID_BY_TARGET } from '@iconcore/exporters';
 
 /**
  * the editable export plan.
@@ -276,16 +276,16 @@ export const suffixPath = (path: string, taken: string[]): string => {
  * This is the answer to "what exactly am I about to get?" — the user reported
  * unchecking things and still receiving an HTML sheet and JSON files, so the
  * final list is shown *before* exporting rather than discovered afterwards.
- * Mirrors `planArtifacts` path resolution, without rendering anything.
+ *
+ * It calls `planArtifacts` rather than re-deriving the paths. It used to
+ * mirror that resolution inline, and the mirror drifted: it resolved the
+ * variant set itself and did not know about the multi-variant rule, so the list
+ * it showed could disagree with what the validator accepted — the panel would
+ * show three variants writing the same file while the export was enabled. One
+ * resolver, called once, is the only version of this that cannot rot.
  */
 export const plannedOutputPaths = (plan: ExportPlan, context: ExportContext, variants: IconVariant[]): string[] => {
-  const artifacts = plan.artifacts
-    .filter((artifact) => artifact.enabled)
-    .flatMap((artifact) =>
-      (artifact.variant ? [artifact.variant] : variants).map((variant) =>
-        resolveArtifactPath(artifact, context, variant, plan.presetId)
-      )
-    );
+  const artifacts = planArtifacts(plan, context, { variants }).map((planned) => planned.path);
   const attachments = plan.attachments
     .filter((attachment) => attachment.enabled !== false)
     .map((attachment) => attachment.path);

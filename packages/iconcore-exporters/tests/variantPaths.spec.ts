@@ -149,17 +149,51 @@ describe('path collisions block the export', () => {
     expect(validation.ready).toBe(true);
   });
 
-  it('refuses a multi-variant export on a shared-path preset, naming the reason', () => {
+  it('now exports a multi-variant plan on a shared-path preset, one folder per variant', () => {
+    // This used to assert the opposite: a preset with no `variantLayout` made
+    // every variant resolve to the same path, so the export was refused. The
+    // refusal was correct — the paths really did collide — but it left the
+    // owner with no way out except picking a different preset, which is what
+    // the Export screen started on and so what they always landed in.
+    //
+    // Detecting the collision was the fix for silent overwriting. Making the
+    // collision unreachable is the fix for the blocked button. Both are needed:
+    // a plan can still collide for a real reason (two specs claiming one file),
+    // and the validator still has to say so.
     const plan = collisionPlan('tauri');
     const validation = validatePlan(plan, ctx(), { variants: ['light', 'dark', 'mono'] });
 
-    expect(validation.ready).toBe(false);
+    expect(validation.problems.filter((p) => p.includes('would be written by'))).toEqual([]);
+    expect(validation.ready).toBe(true);
+
+    // `default` keeps the path the platform config expects; the rest are
+    // separated, the same contract the `web` preset uses for `/favicon.ico`.
+    const paths = planArtifacts(plan, ctx(), { variants: ['default', 'light', 'dark', 'mono'] }).map(
+      (p) => p.path
+    );
+    expect(new Set(paths).size).toBe(paths.length);
+    expect(paths.filter((p) => p.startsWith('light/'))).toHaveLength(paths.length / 4);
+  });
+
+  it('still refuses a real collision and names the variants', () => {
+    const plan = collisionPlan('tauri');
+    // Two specs pinned to the same variant, claiming the same path. No folder
+    // can separate these — a pinned artifact expands to one variant, so it gets
+    // no folder — which is exactly the case the folder rule cannot rescue and
+    // the validator still has to report.
+    plan.artifacts = [
+      { id: 'one', format: 'png', path: 'icon.png', enabled: true, size: 512, variant: 'light' },
+      { id: 'two', format: 'png', path: 'icon.png', enabled: true, size: 256, variant: 'light' }
+    ];
+
+    const validation = validatePlan(plan, ctx(), { variants: ['light', 'dark'] });
     const collision = validation.problems.find((p) => p.includes('would be written by'));
+
+    expect(validation.ready).toBe(false);
     expect(collision).toBeDefined();
-    // The message has to name the variants, not just say "collision".
-    expect(collision).toContain('light');
-    expect(collision).toContain('dark');
-    expect(collision).toContain('mono');
+    // The message has to name the claimants, not just say "collision".
+    expect(collision).toContain('one (light)');
+    expect(collision).toContain('two (light)');
   });
 
   it('still accepts a single-variant export on a shared-path preset', () => {
