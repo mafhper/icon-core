@@ -1,4 +1,4 @@
-import type { CanvasMaskShape, Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
+import type { BlendMode, CanvasMaskShape, Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
 import { resolveMaskRadius, resolveSize } from '@iconcore/shared';
 import { toRgba } from './color';
 import { layerBaseRect } from './geometry';
@@ -13,16 +13,41 @@ import type { RenderBackground } from './types';
  * raster and vector pipelines agree on where the edge is — the parity the
  * `IC51`/`IC-N6` work established for geometry.
  */
-const squirclePath = (size: number): string => {
+const squirclePath = (size: number): string => squirclePathRect(size, size);
+
+/**
+ * The same outline for a non-square box.
+ *
+ * `squirclePath(size)` assumed a square, because the only caller was the canvas
+ * mask. A squircle *shape* is `width × height`, and reusing the square form for
+ * it drew a circle-ish blob. Scaling the same normalised curve per axis keeps one
+ * definition of the shape instead of two.
+ */
+const squirclePathRect = (width: number, height: number): string => {
   const n = 0.6;
-  const o = (size * (1 - n)) / 2;
+  const ox = (width * (1 - n)) / 2;
+  const oy = (height * (1 - n)) / 2;
   return (
-    `<path d="M${o} 0 ` +
-    `C${size - o} 0 ${size} ${o} ${size} ${size - o} ` +
-    `C${size} ${size - o} ${size - o} ${size} ${o} ${size} ` +
-    `C${o} ${size} 0 ${size - o} 0 ${o} ` +
-    `C0 ${o} ${o} 0 ${o} 0Z"/>`
+    `<path d="M${ox} 0 ` +
+    `C${width - ox} 0 ${width} ${oy} ${width} ${height - oy} ` +
+    `C${width} ${height - oy} ${width - ox} ${height} ${ox} ${height} ` +
+    `C${ox} ${height} 0 ${height - oy} 0 ${oy} ` +
+    `C0 ${oy} ${ox} 0 ${ox} 0Z"/>`
   );
+};
+
+/**
+ * CSS `mix-blend-mode` for a domain `BlendMode`.
+ *
+ * `normal` is the default and is omitted so an ordinary layer's markup is
+ * byte-identical to what it was before blend support existed. The five modes the
+ * domain allows are all CSS spellings, so this is a lookup rather than a
+ * translation — written as a map so a future mode fails loudly instead of
+ * silently rendering as `normal`.
+ */
+const blendModeAttr = (mode: BlendMode | undefined): string => {
+  if (!mode || mode === 'normal') return '';
+  return ` style="mix-blend-mode:${mode}"`;
 };
 
 const resolveLayer = (layer: IconLayer, variant: IconVariant): IconLayer => {
@@ -159,11 +184,13 @@ const shapeMarkup = (
   transform: string,
   filterAttr: string = '',
   offsetX = 0,
-  offsetY = 0
+  offsetY = 0,
+  blendMode?: BlendMode
 ): string => {
   const t = transform ? ` transform="${transform}"` : '';
   const f = filterAttr ? ` ${filterAttr}` : '';
-  const common = `fill="${paint}" opacity="${opacity}"${t}${f}`;
+  const b = blendModeAttr(blendMode);
+  const common = `fill="${paint}" opacity="${opacity}"${t}${f}${b}`;
   const ox = offsetX;
   const oy = offsetY;
 
@@ -201,7 +228,18 @@ const shapeMarkup = (
     return `<polygon points="${pts}" ${common}/>\n`;
   }
 
-  const rx = shape.kind === 'squircle' ? shape.width * 0.25 : shape.cornerRadius ?? 0;
+  // A squircle is a superellipse, not a rounded rectangle. It used to be written
+  // as `<rect rx="width * 0.25">`, which is a different curve entirely — measured
+  // against the canvas backend, that put 10,2% of pixels outside tolerance and
+  // was visible side by side as a rounded rect where the editor drew a squircle.
+  // The curve was already in this file for the mask; a shape now uses the same
+  // one, so the two pipelines cannot disagree about where the edge is.
+  if (shape.kind === 'squircle') {
+    const outline = squirclePathRect(shape.width, shape.height).replace('/>', ` ${common}/>`);
+    return `<g transform="translate(${ox} ${oy})">${outline}</g>\n`;
+  }
+
+  const rx = shape.cornerRadius ?? 0;
   return `<rect x="${ox}" y="${oy}" width="${shape.width}" height="${shape.height}" rx="${rx}" ${common}/>\n`;
 };
 
@@ -439,7 +477,10 @@ export const renderToSvgWithOptions = (
     if (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient') {
       const clipId = nextId(`clip-${layer.id}`);
       defs.push(`<clipPath id="${clipId}">${shapeMarkup(shape, '#000000', 1, '')}</clipPath>`);
-      svgLayers += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})"${filterAttr}>${approximationMarkup(fill, shape)}</g>\n`;
+      // The approximation stands in for a conic/diamond gradient, and it inherits
+      // the layer's blend mode too — otherwise a layer with both would lose the
+      // blend in SVG while keeping it on canvas.
+      svgLayers += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})"${filterAttr}${blendModeAttr(layer.blendMode)}>${approximationMarkup(fill, shape)}</g>\n`;
       continue;
     }
 
@@ -454,7 +495,8 @@ export const renderToSvgWithOptions = (
       transformAttr,
       filterAttr,
       (canvas.width - shape.width) / 2,
-      (canvas.height - shape.height) / 2
+      (canvas.height - shape.height) / 2,
+      layer.blendMode
     );
   }
 
@@ -495,8 +537,23 @@ export const renderToSvgWithOptions = (
     clipClose = '</g>';
   }
 
+  // `mix-blend-mode` blends against the **backdrop**, and by default that is
+  // everything painted earlier — including the background rectangle. The canvas
+  // compositor sets `globalCompositeOperation` while drawing a layer, so its
+  // blend never reaches the background. Without `isolation` the SVG reaches past
+  // the artwork and blends onto the page behind it, which is the near-miss case
+  // that makes a blend look plausible in isolation and wrong in the document.
+  //
+  // Only emitted when a layer actually declares a mode: an ordinary document gets
+  // byte-identical markup to what it produced before blend support existed.
+  const usesBlend = project.layers.some((layer) => {
+    const resolved = resolveLayer(layer, variant);
+    return resolved.blendMode !== undefined && resolved.blendMode !== 'normal';
+  });
+  const isolationAttr = usesBlend ? ' style="isolation:isolate"' : '';
+
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${output.width}" height="${output.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${output.width}" height="${output.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"${isolationAttr}>
 ${defsBlock}${clipOpen}${bgMarkup}${svgLayers}${clipClose}
 </svg>`;
 

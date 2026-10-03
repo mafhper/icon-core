@@ -1,6 +1,4 @@
-# ============================
-# Privado: workspace e contexto de agente
-# ============================
+# Workspace privado
 .dev/
 _dev/
 AGENTS.md
@@ -20,31 +18,17 @@ KIMI.md
 .roo/
 .windsurf/
 
-# ============================
-# Sistema operacional e icones de pasta
-# (icone customizado no Explorador grava desktop.ini dentro da pasta)
-# ============================
-# Cada nome vem com a classe de caracteres de caixa porque o Windows tem
-# `core.ignorecase=true` e esconde o buraco: `Thumbs.db` casa `thumbs.db` na sua
-# maquina e nao casa no clone Linux nem no CI. O `[Tt]` e o que torna a regra
-# valer nos dois lugares.
-# Medido neste padrao de classes: `?` e classe de caractere NAO casam o ponto
-# literal do nome, mas `*` casa. E a classe so cobre o caractere que segue dela,
-# entao `.ds_store` exige a classe tambem no `S` do meio: `.[Dd][Ss]_[Ss]tore`.
-[Dd]esktop.ini
-[Tt]humbs.db
+# Sistema operacional
+desktop.ini
+Thumbs.db
 ehthumbs.db
-.[Dd][Ss]_[Ss]tore
+.DS_Store
 *.lnk
 
-# ============================
 # Dependencias
-# ============================
 node_modules/
 
-# ============================
-# Build / saida
-# ============================
+# Build
 dist/
 dist-ssr/
 build/
@@ -53,17 +37,13 @@ coverage/
 *.tsbuildinfo
 *.local
 
-# ============================
-# Temporarios e backups
-# ============================
+# Temporarios
 *.tmp
 *.temp
 *.bak
 *.orig
 
-# ============================
 # Logs
-# ============================
 logs/
 *.log
 *.out
@@ -74,60 +54,31 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# ============================
-# Variaveis de ambiente
-# ============================
+# Ambiente
 .env
 .env.*
-# Exemplo e produto, segredo nao e: a regra e por FORMATO do nome, e nao pelo
-# nome exato. `!.env.example` sozinho quebrava onde o exemplo tinha sufixo
-# (`*.local.example`, `*.test.example`) -- e o arquivo continuava no repo,
-# com o `git add` de qualquer um pulando a mudanca dele.
 !*.example
 
-# ============================
-# Editores / IDE
-# ============================
-# `.vscode/` (com barra, sem ancora) pega em QUALQUER profundidade -- um
-# `.vscode/` dentro de `apps/site/` e configuracao local tanto quanto o da raiz.
-# A excecao vem depois e ancorada com `/`: sem a ancora, `!.vscode/` reabriria
-# tambem os aninhados e a regra seguinte nao os voltaria a fechar.
+# Editores
 .vscode/
 !/.vscode/
 /.vscode/*
 !/.vscode/extensions.json
 .idea/
-*.swp
-*.swo
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
+.cache/
 *.sw?
 *.sublime-project
 *.sublime-workspace
-.cache/
-
-# --- Build ---
 dist-pages
-dist-ssr
-
-# --- Testes ---
 playwright-report/
 test-results/
 tests/e2e/__screenshots__/
-
-# --- Turborepo ---
 .turbo/
-
-# --- Tauri (desktop) ---
 apps/desktop/src-tauri/target/
-
-# --- Gerenciadores nao usados neste repo ---
 bun.lock
 bun.lockb
 
-# --- Sondas de porta: scraps de verificacao local, nao sao produto ---
+# Sondas
 sonda-porta.ts
 /ports.ts
 /ports.mjs
