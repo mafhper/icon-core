@@ -1,6 +1,7 @@
 import type { CanvasMaskShape, Dimensions, Fill, IconLayer, IconVariant, ShapeKind } from '@iconcore/shared';
 import { imageFilterToCss, resolveMaskRadius } from '@iconcore/shared';
 import type { RenderBackend, ResolvedLayer } from './types';
+import { traceSuperellipse } from './geometry/superellipse';
 import { layerBaseRect } from './geometry';
 import { clipSquircle } from './masks/applyMask';
 
@@ -38,21 +39,13 @@ const traceShapePath = (
   } else if (shape.kind === 'rounded-rectangle') {
     native.roundRect(x, y, width, height, shape.cornerRadius ?? Math.min(width, height) * 0.18);
   } else if (shape.kind === 'squircle') {
-    // The same normalised superellipse the SVG renderer writes: `n = 0.6` and the
-    // offset scaled per axis. This used to use `min(width, height) * 0.22` on both
-    // axes with control points at the midpoints, which is a *different* curve —
-    // and `squirclePath` in `renderToSvg` used a third variant. Three definitions
-    // of "squircle" is how the canvas and the SVG export drifted apart (measured:
-    // 10,2% of pixels outside tolerance, visible as a rounded rect in SVG).
-    // One definition, in `squircleCurve`, consumed by both.
-    const n = 0.6;
-    const ox = (width * (1 - n)) / 2;
-    const oy = (height * (1 - n)) / 2;
-    native.moveTo(x + ox, y);
-    native.bezierCurveTo(x + width - ox, y, x + width, y + oy, x + width, y + height - oy);
-    native.bezierCurveTo(x + width, y + height - oy, x + width - ox, y + height, x + ox, y + height);
-    native.bezierCurveTo(x + ox, y + height, x, y + height - oy, x, y + oy);
-    native.bezierCurveTo(x, y + oy, x + ox, y, x + ox, y);
+    // The one definition, shared with the SVG pipeline and with the mask in
+    // `backends/canvas.ts`. This branch used to use `min(width, height) * 0.22`
+    // on both axes with control points at the midpoints, while the mask used
+    // `width * (1 - 0.6) / 2` for both — two curves for one word, which is how
+    // the canvas and the SVG export drifted apart (measured: 10,2% of pixels
+    // outside tolerance, visible as a rounded rect in SVG).
+    traceSuperellipse(native, x, y, width, height);
   } else if (shape.kind === 'triangle') {
     native.moveTo(x + width / 2, y);
     native.lineTo(x + width, y + height);
@@ -102,6 +95,28 @@ export const composeLayers = async (
   projectCanvas?: { size: number; height?: number; maskRadius?: number; maskShape?: CanvasMaskShape }
 ): Promise<Blob> => {
   const ctx = backend.createCanvas(canvas.width, canvas.height);
+  const ctxAny = ctx.native as CanvasRenderingContext2D;
+
+  /**
+   * The canvas mask is clipped **before** anything is drawn.
+   *
+   * `clip()` in Canvas2D is not a filter over the finished image: it changes
+   * what subsequent drawing operations are allowed to touch. A clip applied
+   * after the layers are painted brackets nothing, and the render comes back
+   * unclipped. This version did exactly that — the outline was traced after the
+   * last layer, which is why measuring the PNGs showed `mask: 'rounded-rectangle'`
+   * and `mask: 'none'` producing byte-identical output.
+   *
+   * So the order is: establish the clip, paint, encode. `applyMask` cannot do
+   * this either, because it saves and restores around the clip, which cancels it.
+   */
+  if (clipShape) {
+    clipToShape(ctxAny, canvas, clipShape, projectCanvas ?? {
+      size: canvas.width,
+      height: canvas.height,
+      maskShape: clipShape
+    });
+  }
 
   // `kind: 'none'` means "no background paint" — keep the alpha channel.
   if (background.kind !== 'none') {
@@ -205,23 +220,6 @@ export const composeLayers = async (
     // Safe area is a square preview GUIDE by contract and never clips an export; a
     // non-square guide is out of scope here, so the inset stays relative to `width`.
     backend.applyMask(ctx, safeArea.shape, canvas.width, safeArea.inset * canvas.width);
-  }
-
-  if (clipShape) {
-    // The export mirror. The canvas frame in the editor and the shape in the
-    // file come from the same two fields on `canvas`, so this is the editor's
-    // outline rather than a second opinion about it.
-    //
-    // Clipping is applied *here*, after the last layer and before `toBlob`,
-    // because a clip is a Canvas2D state: setting a path and clipping has to
-    // bracket the drawing. `applyMask` cannot do it — it saves and restores
-    // around the clip, which cancels it.
-    clipToShape(
-      ctx.native as CanvasRenderingContext2D,
-      canvas,
-      clipShape,
-      projectCanvas ?? { size: canvas.width, height: canvas.height, maskShape: clipShape }
-    );
   }
 
   return backend.toBlob(ctx, 'image/png');

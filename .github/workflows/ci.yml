@@ -61,6 +61,13 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      # Renders the same projects through the canvas compositor and through the
+      # SVG export, and compares them pixel by pixel. This caught the SVG export
+      # dropping blendMode and drawing a squircle as a rounded rect — neither of
+      # which any other gate could see.
+      - name: SVG/canvas parity
+        run: node scripts/check-svg-parity.mjs
+
       - name: End-to-end tests
         run: npm run test:e2e
 

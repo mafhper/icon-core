@@ -113,11 +113,12 @@ describe('blend mode', () => {
     expect(svg).not.toContain('style=');
   });
 
-  it('isolates the group so the blend cannot reach the page behind it', () => {
-    // `mix-blend-mode` blends against the backdrop, which by default includes
-    // the background rectangle and whatever the SVG is embedded in. The canvas
-    // compositor blends while drawing a layer, so it never reaches the
-    // background — without isolation the SVG looks plausible and is wrong.
+  it('does not need isolation: the <svg> root is already a stacking context', () => {
+    // This asserted the opposite once, on the reasoning that `mix-blend-mode`
+    // reaches past the artwork. Measured, it does not: rendering the same blend
+    // over a black page and over a red page produced byte-identical pixels. The
+    // assertion stays as a negative so the attribute does not come back with its
+    // plausible-sounding rationale.
     const svg = render(
       project([
         shapeLayer({ kind: 'rectangle', width: 140, height: 140, cornerRadius: 0 }),
@@ -127,12 +128,7 @@ describe('blend mode', () => {
       ])
     );
 
-    expect(svg).toContain('isolation:isolate');
-  });
-
-  it('leaves a document with no blend free of isolation', () => {
-    const svg = render(project([shapeLayer({ kind: 'rectangle', width: 120, height: 120, cornerRadius: 0 })]));
-
+    expect(svg).toContain('mix-blend-mode:multiply');
     expect(svg).not.toContain('isolation');
   });
 
