@@ -14,7 +14,7 @@
   "scripts": {
     "dev:web": "npm run dev --workspace=@iconcore/web",
     "dev:promo": "npm run dev --workspace=@iconcore/promo",
-    "build:packages": "npm run build --workspace=@iconcore/shared && npm run build --workspace=@iconcore/engine && npm run build --workspace=@iconcore/renderer && npm run build --workspace=@iconcore/validator && npm run build --workspace=@iconcore/exporters && npm run build --workspace=@iconcore/cli && npm run build --workspace=@iconcore/ui",
+    "build:packages": "npm run build --workspace=@iconcore/shared && npm run build --workspace=@iconcore/engine && npm run build --workspace=@iconcore/renderer && npm run build --workspace=@iconcore/validator && npm run build --workspace=@iconcore/exporters && npm run build --workspace=@iconcore/cli && npm run build --workspace=@iconcore/ui && node scripts/fix-esm-extensions.mjs",
     "build:web": "npm run build --workspace=@iconcore/web",
     "build:promo": "npm run build --workspace=@iconcore/promo",
     "build:desktop-frontend": "npm run build:desktop --workspace=@iconcore/web",

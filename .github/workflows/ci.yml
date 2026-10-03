@@ -53,6 +53,11 @@ jobs:
       - name: Build workspace
         run: npm run build
 
+      # The CLI's bin had never been executed by CI, which is why a build that
+      # could not load stayed green. `dist` exists by this point.
+      - name: CLI smoke (the built bin must run)
+        run: node scripts/cli-smoke.mjs
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
