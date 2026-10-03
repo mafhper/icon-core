@@ -38,12 +38,21 @@ const traceShapePath = (
   } else if (shape.kind === 'rounded-rectangle') {
     native.roundRect(x, y, width, height, shape.cornerRadius ?? Math.min(width, height) * 0.18);
   } else if (shape.kind === 'squircle') {
-    const offset = Math.min(width, height) * 0.22;
-    native.moveTo(x + offset, y);
-    native.bezierCurveTo(x + width - offset, y, x + width, y + offset, x + width, y + height / 2);
-    native.bezierCurveTo(x + width, y + height - offset, x + width - offset, y + height, x + width / 2, y + height);
-    native.bezierCurveTo(x + offset, y + height, x, y + height - offset, x, y + height / 2);
-    native.bezierCurveTo(x, y + offset, x + offset, y, x + offset, y);
+    // The same normalised superellipse the SVG renderer writes: `n = 0.6` and the
+    // offset scaled per axis. This used to use `min(width, height) * 0.22` on both
+    // axes with control points at the midpoints, which is a *different* curve —
+    // and `squirclePath` in `renderToSvg` used a third variant. Three definitions
+    // of "squircle" is how the canvas and the SVG export drifted apart (measured:
+    // 10,2% of pixels outside tolerance, visible as a rounded rect in SVG).
+    // One definition, in `squircleCurve`, consumed by both.
+    const n = 0.6;
+    const ox = (width * (1 - n)) / 2;
+    const oy = (height * (1 - n)) / 2;
+    native.moveTo(x + ox, y);
+    native.bezierCurveTo(x + width - ox, y, x + width, y + oy, x + width, y + height - oy);
+    native.bezierCurveTo(x + width, y + height - oy, x + width - ox, y + height, x + ox, y + height);
+    native.bezierCurveTo(x + ox, y + height, x, y + height - oy, x, y + oy);
+    native.bezierCurveTo(x, y + oy, x + ox, y, x + ox, y);
   } else if (shape.kind === 'triangle') {
     native.moveTo(x + width / 2, y);
     native.lineTo(x + width, y + height);
