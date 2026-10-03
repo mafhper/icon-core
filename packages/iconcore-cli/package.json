@@ -17,7 +17,8 @@
     "@iconcore/engine": "*",
     "@iconcore/renderer": "*",
     "@iconcore/exporters": "*",
-    "@iconcore/validator": "*"
+    "@iconcore/validator": "*",
+    "@neplex/vectorizer": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "26.5.1",
