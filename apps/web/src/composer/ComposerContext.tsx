@@ -8,6 +8,7 @@ import {
   type ComposerView
 } from './composerReducer';
 import { parseProjectFile } from './utils/projectGuard';
+import { saveProject, describeSaveOutcome } from './utils/projectStorage';
 import { useToast } from './toast/ToastContext';
 
 const STORAGE_KEY = 'iconcore-composer-project';
@@ -48,6 +49,7 @@ const restoreInitialState = (): { init: ComposerState; failed: boolean } => {
 export const ComposerProvider = ({ children }: { children: ReactNode }) => {
   const toast = useToast();
   const restoredRef = useRef<{ init: ComposerState; failed: boolean } | null>(null);
+  const quotaAvisadaRef = useRef(false);
   if (restoredRef.current === null) restoredRef.current = restoreInitialState();
   const [state, dispatch] = useReducer(composerReducer, restoredRef.current.init);
 
@@ -60,12 +62,31 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (state.project && state.isDirty) {
       const timer = setTimeout(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.project));
-        dispatch({ type: 'SET_DIRTY', payload: false });
+        const outcome = saveProject(localStorage, STORAGE_KEY, state.project);
+        // Only a quota failure clears the dirty flag. Telling the editor the work
+        // is saved when it is not would be the same silent failure one layer
+        // down.
+        if (outcome.kind === 'saved') {
+          dispatch({ type: 'SET_DIRTY', payload: false });
+          return;
+        }
+
+        const aviso = describeSaveOutcome(outcome);
+        if (aviso && !quotaAvisadaRef.current) {
+          quotaAvisadaRef.current = true;
+          toast.error(aviso);
+        }
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [state.project, state.isDirty]);
+  }, [state.project, state.isDirty, toast]);
+
+  // The autosave keeps failing after the first notice, so the flag is what keeps
+  // one full project from producing a toast on every keystroke. It clears when
+  // the project fits again, which is the only time the situation has changed.
+  useEffect(() => {
+    if (!state.isDirty) quotaAvisadaRef.current = false;
+  }, [state.isDirty]);
 
   useEffect(() => {
     const handleHashChange = () => {
