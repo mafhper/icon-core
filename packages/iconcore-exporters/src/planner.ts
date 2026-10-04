@@ -34,7 +34,14 @@ const ATTACHMENTS_BY_PRESET: Record<string, ExportAttachment[]> = {
     { path: 'browserconfig.xml', generator: 'browserconfig' },
     ...COMPANION_ATTACHMENTS
   ],
-  pwa: [{ path: 'manifest.webmanifest', generator: 'manifest' }, ...COMPANION_ATTACHMENTS]
+  pwa: [{ path: 'manifest.webmanifest', generator: 'manifest' }, ...COMPANION_ATTACHMENTS],
+  // O XML que **declara** o adaptive icon. Sem ele o Android 8.0+ ignora as duas camadas
+  // e cai no PNG legado — o export continua tendo gerado as camadas, e ninguém descobre
+  // por que o ícone não aplica a máscara do launcher.
+  android: [
+    { path: 'mipmap-anydpi-v26/ic_launcher.xml', generator: 'android-adaptive' },
+    { path: 'mipmap-anydpi-v26/ic_launcher_round.xml', generator: 'android-adaptive' }
+  ]
 };
 
 /**

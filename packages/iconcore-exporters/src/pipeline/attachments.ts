@@ -76,6 +76,57 @@ export const generateBrowserconfig = (): AttachmentOutput => {
   return { content: xml, mime: 'application/xml' };
 };
 
+/**
+ * `mipmap-anydpi-v26/ic_launcher.xml` — a declaracao que liga as duas camadas do adaptive icon.
+ *
+ * Sem esse arquivo o Android **nunca usa** o adaptive: ele cai no `ic_launcher.png`
+ * legado, e a pessoa perde a máscara por shape, o parallax e a consistência com os outros
+ * ícones do sistema. É um arquivo de três linhas que decide o ícone inteiro.
+ *
+ * ## Por que ele é attachment e não artifact
+ *
+ * `ExportFormat` é `svg | png | webp | jpeg | ico | icns` — não há formato de texto, e
+ * acrescentar um só para isso seria um tipo novo no schema por causa de um XML. O
+ * precedente já existe: `browserconfig.xml` e `site.webmanifest` são attachments, e
+ * `ExportAttachmentGenerator` é a extensão certa.
+ *
+ * ## O `monochrome` é opcional de propósito
+ *
+ * A camada monocromática (ícones tematizados, Android 13+) é uma silhueta de **uma cor
+ * só**, que no app é o override de paint de SVG. Emitir a referência sem ter a camada
+* `@drawable/ic_launcher_monochrome` no projeto seria um XML que **não compila** — o
+ * `aapt` falha em resource-not-found. Então a linha só entra se o artefato existir.
+ *
+ * ## `ic_launcher.xml` e `ic_launcher_round.xml` são idênticos
+ *
+ * O Android usa o segundo quando o launcher pede ícone redondo (`android:roundIcon`).
+ * Os dois apontam para as mesmas camadas, então um gerador só serve os dois, e o
+ * `Attachment.path` é quem decide o nome em disco.
+ */
+export const generateAndroidAdaptiveIcon = (planned: PlannedArtifact[]): AttachmentOutput => {
+  const tem = (id: string) =>
+    planned.some(({ artifact, path }) => artifact.enabled && (artifact.id === id || path.includes(id)));
+
+  const linhas = ['  <background android:drawable="@mipmap/ic_launcher_background"/>'];
+  linhas.push('  <foreground android:drawable="@mipmap/ic_launcher_foreground"/>');
+  if (tem('ic_launcher_monochrome')) {
+    linhas.push('  <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>');
+  }
+
+  const xml = `<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Gerado pelo Icon Core. Copie a pasta mipmap-anydpi-v26/ para res/ do projeto Android.
+
+  O Android 8.0+ le este arquivo; abaixo da API 26 ele ignora e usa o ic_launcher.png
+  legado, que o mesmo export tambem gera.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+${linhas.join('\n')}
+</adaptive-icon>
+`;
+  return { content: xml, mime: 'application/xml' };
+};
+
 /** iconcore-report.json: the executed plan, per artifact. */
 export const generatePlanReport = (
   context: ExportContext,
@@ -146,6 +197,8 @@ export const generateAttachment = (
       return generateWebManifest(resolve.context, resolve.planned);
     case 'browserconfig':
       return generateBrowserconfig();
+    case 'android-adaptive':
+      return generateAndroidAdaptiveIcon(resolve.planned);
     case 'report':
       return generatePlanReport(
         resolve.context,

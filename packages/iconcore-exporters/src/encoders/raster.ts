@@ -47,7 +47,53 @@ export const encodeRaster = async (
   };
   const blob = await renderProject(project, variant, target, backend, options);
 
-  return { blob, warnings };
+  return {
+    blob: artifact.safeZone === undefined ? blob : await aplicarSafeZone(blob, target, artifact.safeZone, backend),
+    warnings
+  };
+};
+
+/**
+ * Recompoe a arte com a **safe zone** da plataforma.
+ *
+ * O render acima produz a arte preenchendo o canvas inteiro. Para uma camada adaptive do
+ * Android isso está errado: o foreground é 108×108dp mas só os **66×66dp centrais**
+ * sobrevivem à máscara do launcher, e os 18dp de cada lado são cortados — ou usados para
+ * parallax. A arte precisa ser reduzida a `safeZone` do canvas e centralizada no restante.
+ *
+ * ## Por que um segundo passo, e não um `target` menor
+ *
+ * Reduzir o `target` e depois esticar daria uma arte borrada: o rasterizador ampliaria uma
+ * imagem pequena. O caminho é renderizar no tamanho **final** e reduzir por composição, que
+ * é o mesmo que o sistema faz ao aplicar a máscara.
+ *
+ * ## A sanidade
+ *
+ * `safeZone` fora de `(0, 1]` é rejeitado aqui, com aviso, e não lançado. Um preset com
+ * valor quebrado é erro de **dados**, não de código: o export deve terminar e dizer o que
+ * está errado. `safeZone <= 0` cairia em `drawImage` com tamanho zero e produziria um PNG
+ * transparente sem explicação.
+ */
+const aplicarSafeZone = async (
+  blob: Blob,
+  target: { width: number; height: number },
+  safeZone: number,
+  backend: RenderBackend
+): Promise<Blob> => {
+  if (!(safeZone > 0) || safeZone > 1) {
+    throw new Error(`safeZone precisa estar em (0, 1]; veio ${safeZone}.`);
+  }
+  if (safeZone === 1) return blob;
+
+  const largura = Math.round(target.width * safeZone);
+  const altura = Math.round(target.height * safeZone);
+  const dx = Math.round((target.width - largura) / 2);
+  const dy = Math.round((target.height - altura) / 2);
+
+  const img = await backend.loadImage(blob);
+  const ctx = backend.createCanvas(target.width, target.height);
+  backend.drawImage(ctx, img, dx, dy, largura, altura);
+  return backend.toBlob(ctx, 'png');
 };
 
 /**

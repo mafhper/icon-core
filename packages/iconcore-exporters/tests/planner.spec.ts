@@ -42,6 +42,7 @@ describe('presets', () => {
       'macos',
       'desktop-generic',
       'marketing',
+      'android',
       'custom'
     ]);
     expect(new Set(presets.map((preset) => preset.id)).size).toBe(presets.length);
