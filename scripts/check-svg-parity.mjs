@@ -144,6 +144,37 @@ const PROJECTS = {
     }
   ]),
 
+  /**
+   * `IC63/1b` — override de cor em layer `svg`.
+   *
+   * A fixture que faltava enquanto o recurso não existia. O `check-svg-parity` compara
+   * `renderProject` (canvas, que rasteriza por `Image`) contra `renderToSvg` (que injeta
+   * o markup) — então uma fixture de override exercita **os dois pipelines de uma vez**,
+   * que é a única forma de provar que eles concordam.
+   *
+   * `#ffffff` vira `#101010`; `#ff8800` fica. Se a reescrita fosse "pintar a camada
+   * inteira", o laranja mudaria junto e esta fixture reprovaria — e é por isso que ela
+   * tem duas cores, e não uma.
+   */
+  svgCor: base('svgCor', [
+    {
+      id: 'lsvgcor',
+      name: 'svg',
+      kind: 'svg',
+      visible: true,
+      zIndex: 0,
+      source: {
+        type: 'inline',
+        mimeType: 'image/svg+xml',
+        data: 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNiIgZmlsbD0iI2ZmODgwMCIvPjwvc3ZnPg==',
+        shape: { kind: 'rectangle', width: 384, height: 384 }
+      },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      opacity: 1,
+      svgPaintOverrides: { '#ffffff': '#101010' }
+    }
+  ]),
+
   // Alpha compositing.
   opacidade: base('opacidade', [
     shape({ kind: 'rectangle', width: 216, height: 216, cornerRadius: 0 }, {
@@ -299,6 +330,7 @@ const ACEITACAO = {
   gradiente: { minFora: null },
   radial: { minFora: 0.5 },
   opacidade: { minFora: 0.5 },
+  svgCor: { minFora: 0.5 },
   texto: { minFora: null },
   textoEBold: { minFora: null },
   blend: { minFora: 0.5 },
@@ -425,21 +457,49 @@ const referencias = await page.evaluate(
     const renderer = await import(`${baseUrl}/packages/iconcore-renderer/dist/index.js`);
     const out = {};
 
-    for (const [nome, project] of Object.entries(projects)) {
+    const renderizar = async (project, mask) => {
       const backend = renderer.createCanvasBackend();
-      // renderProject(project, variant, target, backend, options)
-      const blob = await renderer.renderProject(project, 'default', { width: 256, height: 256 }, backend, {
-        mask: masks[nome]
-      });
+      const blob = await renderer.renderProject(project, 'default', { width: 256, height: 256 }, backend, { mask });
       const bytes = new Uint8Array(await blob.arrayBuffer());
-
       let bin = '';
       const chunk = 0x8000;
       for (let i = 0; i < bytes.length; i += chunk) {
         bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
       }
-      out[nome] = btoa(bin);
       backend.destroy();
+      return btoa(bin);
+    };
+
+    for (const [nome, project] of Object.entries(projects)) {
+      out[nome] = await renderizar(project, masks[nome]);
+
+      /**
+       * `IC63/1b` — **um override que não faz nada é um bug**, e a comparação
+       * canvas↔SVG não o pega.
+       *
+       * Repare no buraco, que só apareceu quando a mutação foi rodada: tirando o
+       * `svgPaintOverrides` da fixture, a concordância continuava em **99,3%** e o
+       * portão passava. Sem override, os dois pipelines pintam o branco original e
+       * concordam perfeitamente — "iguais" inclui "iguais porque nenhum fez nada".
+       *
+       * Então, para qualquer projeto que declare override, renderiza-se também o
+       * **controle**, com os overrides removidos, e exige-se que os bytes mudem. É a
+       * única forma de a fixture afirmar que o recurso funciona, e não apenas que os
+       * dois lados são iguais.
+       *
+       * Sem flag: vale para toda fixture futura que declarar override, inclusive as
+       * que ninguém lembrar de marcar.
+       */
+      const temOverride = project.layers.some((l) => l.svgPaintOverrides && Object.keys(l.svgPaintOverrides).length > 0);
+      if (temOverride) {
+        const controle = {
+          ...project,
+          layers: project.layers.map((l) =>
+            l.svgPaintOverrides ? { ...l, svgPaintOverrides: undefined } : l
+          )
+        };
+        out[`${nome}__controle`] = await renderizar(controle, masks[nome]);
+      }
     }
 
     return out;
@@ -614,6 +674,35 @@ const media = comNumero.reduce((a, l) => a + l.concordancia, 0) / (comNumero.len
 console.log(`\nmedia ${media.toFixed(1)}% em ${comNumero.length} fixtures`);
 
 if (erros.length) console.log(`erros de pagina: ${erros.slice(0, 3).join(' | ')}`);
+
+/**
+ * O override tem que **mudar alguma coisa**.
+ *
+ * Comparado por bytes de PNG, e não por pixel: a pergunta é "o render com override é o
+ * mesmo objeto que o render sem?", e igualdade de bytes é a forma mais barata de
+ * perguntar isso. Um override inerte — chave que não casa com nada no arquivo, pipeline
+ * que esqueceu de ligar, reescrita que casa errado — produz bytes idênticos, e é
+ * exatamente esse o defeito que a concordância canvas↔SVG não enxerga.
+ */
+const overridesInertes = [];
+for (const nome of Object.keys(PROJECTS)) {
+  const controle = referencias[`${nome}__controle`];
+  if (controle === undefined) continue;
+
+  if (referencias[nome] === controle) {
+    overridesInertes.push(nome);
+  } else {
+    console.log(`  override ativo    ${nome.padEnd(22)} o render muda em relacao ao controle`);
+  }
+}
+
+if (overridesInertes.length) {
+  console.error(
+    `\nSVG parity FALHOU: override sem efeito em ${overridesInertes.join(', ')} — ` +
+      `o render e identico ao controle sem overrides`
+  );
+  process.exit(1);
+}
 
 if (reprovados.length) {
   console.error(`\nSVG parity FALHOU: ${reprovados.join(', ')}`);

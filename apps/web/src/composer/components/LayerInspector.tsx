@@ -7,8 +7,10 @@ import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
 import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
+import { readSvgLayerColors } from '../utils/svgLayerColors';
 import { useResetLayerAspect } from '../hooks/useResetLayerAspect';
 import { FillEditor } from './FillEditor';
+import { SvgPaintEditor } from './SvgPaintEditor';
 import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
@@ -57,6 +59,20 @@ export const LayerInspector = () => {
     () => (baseLayer ? resolveLayerVariant(baseLayer, activeVariant) : null),
     [baseLayer, activeVariant]
   );
+
+  /**
+   * `IC63/1b` — as cores do arquivo, lidas do markup.
+   *
+   * Memoizado em `source.data`, e não em `layer`: o inspector re-renderiza a cada
+   * arrasto de slider, e `atob` + varredura de markup a 60 Hz seria trabalho jogado
+   * fora. A dependência é o que realmente decide a lista — o base64 — então trocar o
+   * slider não relê o arquivo, e trocar o arquivo relê.
+   *
+   * Sai de `baseLayer` e não de `layer` de propósito: as cores são do **arquivo**, e
+   * um override de variante mexe no mapa, não no markup. Ler do layer resolvido
+   * gastaria o mesmo trabalho para o mesmo resultado.
+   */
+  const coresSvg = useMemo(() => (baseLayer ? readSvgLayerColors(baseLayer) : []), [baseLayer]);
 
   if (!state.project) {
     return (
@@ -333,12 +349,37 @@ export const LayerInspector = () => {
         )}
 
         <Section title="Color">
-          <FillEditor
-            label="Fill"
-            fill={layer.fill ?? { kind: 'solid', color: fillColor(layer.fill) }}
-            onChange={(next, transient) => updateLayer({ fill: next }, transient)}
-            onCommit={commit}
-          />
+          {/*
+            `IC63/1b` — para `kind: 'svg'`, o `Fill` é **trocado**, não acrescido.
+
+            A layer não tem `fill` próprio: a cor mora no markup, e o renderer injeta o
+            documento verbatim (`renderToSvg.ts:391-419`), sem nunca ler `layer.fill`.
+            O controle que ficava aqui mostrava "transparent" para uma camada
+            desenhando branco, com a nota *"No fill — the shape is transparent"* — que
+            era falsa. E mexer nele não fazia nada, nos dois sentidos.
+
+            Deixar os dois lado a lado seria pior que qualquer um deles sozinho: um
+            controle que parece funcionar, ao lado do que funciona.
+
+            Só a **pintura** sai. `Opacity` e `Blend mode` continuam valendo para SVG —
+            são aplicação de camada, e o `filterAttr`/`opacity` do renderer já os
+            aplica ao group que envolve o documento.
+          */}
+          {layer.kind === 'svg' ? (
+            <SvgPaintEditor
+              colors={coresSvg}
+              overrides={layer.svgPaintOverrides}
+              onChange={(svgPaintOverrides, transient) => updateLayer({ svgPaintOverrides }, transient)}
+              onCommit={commit}
+            />
+          ) : (
+            <FillEditor
+              label="Fill"
+              fill={layer.fill ?? { kind: 'solid', color: fillColor(layer.fill) }}
+              onChange={(next, transient) => updateLayer({ fill: next }, transient)}
+              onCommit={commit}
+            />
+          )}
 
           <Slider
             variant="inline"

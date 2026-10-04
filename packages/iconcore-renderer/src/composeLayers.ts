@@ -4,6 +4,7 @@ import type { RenderBackend, ResolvedLayer } from './types';
 import { traceSuperellipse } from './geometry/superellipse';
 import { layerBaseRect } from './geometry';
 import { clipSquircle } from './masks/applyMask';
+import { applySvgPaintOverrides } from './svgPaint';
 
 const resolveLayerForVariant = (
   layer: IconLayer,
@@ -21,7 +22,12 @@ const resolveLayerForVariant = (
     resolvedSource: overrides?.source ? { ...layer.source, ...overrides.source } : layer.source,
     resolvedTransform: overrides?.transform ? { ...layer.transform, ...overrides.transform } : layer.transform,
     resolvedText: overrides?.text ? { ...layer.text, ...overrides.text } as IconLayer['text'] : layer.text,
-    resolvedEffects: overrides?.effects ?? layer.effects
+    resolvedEffects: overrides?.effects ?? layer.effects,
+    // Merged, not replaced: a variant that recolors one paint keeps the layer's others.
+    resolvedSvgPaintOverrides:
+      overrides?.svgPaintOverrides || layer.svgPaintOverrides
+        ? { ...layer.svgPaintOverrides, ...overrides?.svgPaintOverrides }
+        : undefined
   };
 };
 
@@ -191,10 +197,40 @@ export const composeLayers = async (
     if (layer.resolvedSource.type === 'inline' && layer.resolvedSource.data) {
       try {
         const mimeType = layer.resolvedSource.mimeType ?? 'image/png';
-        const binary = atob(layer.resolvedSource.data);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const blob = new Blob([bytes], { type: mimeType });
+
+        /**
+         * `IC63/1b` — the canvas half of the recolor.
+         *
+         * The canvas rasterizes the asset through `Image`, so there is no paint model to
+         * write into: the only place the color exists is **the markup**, and it has to be
+         * rewritten *before* it becomes a blob. Same pure function the SVG pipeline
+         * calls (`applySvgPaintOverrides`), which is what keeps the two renderings from
+         * drifting — `IC-N28` happened because the rewrite would have been written twice.
+         *
+         * The recolored path builds the blob from the **text bytes** instead of decoding
+         * base64 and re-encoding it: the round trip would be pure waste, and this is the
+         * only place in the renderer where a Blob is built from markup.
+         *
+         * Guarded on there being overrides, so the overwhelmingly common case — an SVG
+         * nobody recolored — takes the exact same bytes it always did.
+         */
+        const overrides = layer.resolvedSvgPaintOverrides;
+        const temOverride = overrides && Object.keys(overrides).length > 0;
+        const ehSvg = mimeType === 'image/svg+xml';
+
+        let blob: Blob;
+        if (temOverride && ehSvg) {
+          const markup = atob(layer.resolvedSource.data);
+          blob = new Blob([new TextEncoder().encode(applySvgPaintOverrides(markup, overrides))], {
+            type: mimeType
+          });
+        } else {
+          const binary = atob(layer.resolvedSource.data);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          blob = new Blob([bytes], { type: mimeType });
+        }
+
         const img = await backend.loadImage(blob);
         const rect = layerBaseRect({ source: layer.resolvedSource }, canvas, img);
         backend.drawImage(ctx, img, rect.cx - rect.w / 2, rect.cy - rect.h / 2, rect.w, rect.h);

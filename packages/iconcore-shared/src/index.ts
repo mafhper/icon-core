@@ -191,6 +191,21 @@ export interface IconLayer {
   effects?: LayerEffect[];
   text?: TextDefinition;
   imageFilter?: ImageFilter;
+  /**
+   * Recolors the paint of an imported `svg` layer, keyed by the **normalized source
+   * color** (`#rrggbb`, or an opaque CSS token like `currentcolor`).
+   *
+   * A `kind: 'svg'` layer has no `fill` of its own: the color lives in the markup, and
+   * the renderer injects the document verbatim. Setting `fill` on such a layer did
+   * nothing, in both directions — the inspector offered a control and the renderer
+   * never read it.
+   *
+   * Keyed by source color rather than by a single tint, so **multicolor artwork stays
+   * multicolor**: changing the white in a two-color icon leaves the other alone.
+   *
+   * Optional, so every project saved before this field is still valid, untouched.
+   */
+  svgPaintOverrides?: Record<string, string>;
   variantOverrides?: Partial<Record<IconVariant, Partial<Omit<IconLayer, 'id' | 'role' | 'variantOverrides'>>>>;
 }
 
