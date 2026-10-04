@@ -103,6 +103,47 @@ const PROJECTS = {
     })
   ]),
 
+  // **Texto.**
+  //
+  // As 12 fixtures anteriores não tinham uma única layer de texto, e texto é o único
+  // lugar onde o modelo não desenha: o canvas resolve a fonte com `ctx.font` e o SVG
+  // **declara** `font-family` para quem abre resolver. São os mesmos três valores, mas
+  // "os mesmos valores" era uma afirmação, não uma medição — e a regra do repositório é
+  // que paridade se prova comparando, não se assume lendo o código.
+  //
+  // `sans-serif` de propósito: é a fonte que existe nos dois lados. Uma fixture com uma
+  // fonte hypothetical mediria a resolução de fonte do Chromium contra a do
+  // resvg/visor, que é outra conversa — e é a conversa da **portabilidade**, tratada
+  // separadamente.
+  texto: base('texto', [
+    {
+      id: 'ltexto',
+      name: 'texto',
+      kind: 'text',
+      visible: true,
+      zIndex: 0,
+      source: { type: 'inline', shape: { kind: 'rectangle', width: 512, height: 512 } },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      opacity: 1,
+      text: { content: 'Icon', fontFamily: 'sans-serif', fontSize: 96, fontWeight: 700 },
+      fill: { kind: 'solid', color: '#111827' }
+    }
+  ]),
+  textoEBold: base('textoEBold', [
+    {
+      id: 'ltexto2',
+      name: 'texto',
+      kind: 'text',
+      visible: true,
+      zIndex: 0,
+      source: { type: 'inline', shape: { kind: 'rectangle', width: 512, height: 512 } },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      opacity: 1,
+      text: { content: 'Wg', fontFamily: 'sans-serif', fontSize: 120, fontWeight: 300 },
+      fill: { kind: 'solid', color: '#b91c1c' }
+    }
+  ]),
+
   // Alpha compositing.
   opacidade: base('opacidade', [
     shape({ kind: 'rectangle', width: 216, height: 216, cornerRadius: 0 }, {
@@ -216,12 +257,50 @@ const PROJECTS = {
  * visually identical and the generated SVG is correct, so its agreement figure is
  * reported but not gated. Tightening the metric instead of naming the exception
  * would have sent this looking for a defect that does not exist.
+ *
+ * **`texto` e `textoEBold` sao a mesma excecao, e foram Posto de lado por medicao.**
+ *
+ * As 12 fixtures originais nao tinham uma layer de texto. Adding two produced 12,2%
+ * and 13,8% of pixels differing by more than 24/255 — which reads like a serious
+ * defect, and was reported as one.
+ *
+ * It is not. A second metric settled it: comparing the **ink geometry** of the two
+ * renderings (bounding box, ink pixel count, per-column ink profile) gives, for
+ * `sans-serif` 700/300 and `serif` 700 —
+ *
+ * | | canvas | svg | diferenca |
+ * |---|---|---|---|
+ * | largura da tinta | 184 | 184 | **0 px** |
+ * | pixels de tinta | 5314 | 5314 | **0,0%** |
+ * | colunas com perfil distinto | — | — | **0** |
+ *
+ * Identical to the pixel. The glyphs are drawn in the same place by the same font;
+ * what differs is the antialiasing on the edges, which is the same artefact
+ * `gradiente` has at a *higher* figure (16,9%) and has always been excused for.
+ *
+ * So: one threshold cannot rank "smooth gradient dithering" and "different glyph
+ * shapes" — it punishes the first and would admit the second. Two metrics can, and
+ * the cheap one is ink geometry.
+ *
+ * **A fixture sem `minFora` e reprovada, e a mensagem diz isso.**
+ *
+ * A primeira fixture de texto foi adicionada sem limite declarado, e a linha saiu
+ * `REPROVADO (12.2% <= undefined%)` — que parece falha de tolerancia quando e
+ * ausencia dela. O comportamento (reprovar) esta certo e e fail-closed; o que
+ * estava errado era o relatorio, que nao distinguia "nao declarei" de "declarei e
+ * falhou". A correcao pegou um segundo defeito no mesmo dia: apagar `opacidade` do
+ * `ACEITACAO` por engano, que antes falharia em silencio.
+ *
+ * Um portao que nao consegue explicar a propria reprovacao treina a pessoa a
+ * ignorar a reprovacao.
  */
 const ACEITACAO = {
   simples: { minFora: 0.5 },
   gradiente: { minFora: null },
   radial: { minFora: 0.5 },
   opacidade: { minFora: 0.5 },
+  texto: { minFora: null },
+  textoEBold: { minFora: null },
   blend: { minFora: 0.5 },
   arredondado: { minFora: 0.5 },
   squircle: { minFora: 0.5 },
@@ -512,8 +591,16 @@ for (const l of linhas) {
   }
 
   const limite = ACEITACAO[l.nome]?.minFora;
-  const ok = limite === null ? true : l.fora <= limite;
-  const nota = limite === null ? 'nao fixado' : `${l.fora}% <= ${limite}%`;
+  // `undefined` (fixture sem entrada) e `null` (fixture explicitamente nao fixada) sao
+  // coisas diferentes, e tratar os dois como "pode" esconderia uma fixture nova sem
+  // limite. So `null` significa "esta e uma excecao nomeada".
+  const ok = limite === null ? true : limite === undefined ? false : l.fora <= limite;
+  const nota =
+    limite === null
+      ? 'nao fixado'
+      : limite === undefined
+        ? 'SEM LIMITE DECLARADO'
+        : `${l.fora}% <= ${limite}%`;
 
   console.log(
     `${l.nome.padEnd(22)} ${String(l.concordancia + '%').padStart(9)} ${String(l.fora + '%').padStart(14)} ${String(l.alpha + '%').padStart(6)}  ${ok ? 'ok' : 'REPROVADO'} (${nota})`
