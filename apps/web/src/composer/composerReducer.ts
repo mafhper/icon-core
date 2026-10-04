@@ -96,6 +96,14 @@ export type ComposerAction =
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'SET_DIRTY'; payload: boolean }
+  /**
+   * Renames the open project **in the document**.
+   *
+   * Separate from the layer-name field because this is the project's own name: it is
+   * what the storage list shows, what the pointer carries, and what the header renders,
+   * so all four have to move together.
+   */
+  | { type: 'SET_PROJECT_NAME'; payload: string }
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_KEYLINES' }
@@ -630,6 +638,19 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'SET_DIRTY':
       return { ...state, isDirty: action.payload };
+
+    case 'SET_PROJECT_NAME': {
+      const name = action.payload.trim();
+      // A rename is an edit, not a load: `isDirty` stays true so the autosave writes
+      // the new name through, and `projectId` is untouched so it lands on the same
+      // record rather than minting a second project.
+      if (!state.project || !name || state.project.metadata.name === name) return state;
+      return {
+        ...state,
+        project: { ...state.project, metadata: { ...state.project.metadata, name } },
+        isDirty: true
+      };
+    }
 
     case 'SET_ZOOM':
       return { ...state, zoom: clampZoom(action.payload) };

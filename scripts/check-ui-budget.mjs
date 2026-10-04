@@ -72,12 +72,35 @@ if (budget.coreTsxBudget !== undefined) {
 
 // --- Hex literal ratchet ----------------------------------------------------
 const hexExceptions = new Set(budget.hexExceptions ?? []);
+
+/**
+ * Strip comments before counting.
+ *
+ * The regex `#[0-9a-fA-F]{3,8}` cannot tell a colour from prose, and prose is full
+ * of things that look like one: a pull-request reference (`#197`) is three hex digits,
+ * and the `IC-N28` write-up cites half a dozen. A comment is not a colour, so counting
+ * it makes the ratchet report a number that does not mean what the guard says it means
+ * — and, worse, spends the budget on prose so the next **real** colour has nowhere to
+ * go.
+ *
+ * Found the hard way: a comment citing the quota fix pushed the count to its ceiling,
+ * and the honest options were to reword the comment or fix the instrument. The
+ * instrument was wrong.
+ *
+ * Conservative by design — it only removes `//` to end of line and `/* … *​/`. A `/*`
+ * inside a string or a regex would confuse it, and the failure mode of that confusion
+ * is *under*-counting a real colour, so the mutation check below asserts the opposite
+ * direction: a hex in code still fails, a hex in a comment still passes.
+ */
+const semComentarios = (text) =>
+  text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+
 let hexCount = 0;
 for (const dir of budget.hexScanDirs ?? []) {
   for (const file of collectTs(path.join(rootDir, dir))) {
     const rel = path.relative(rootDir, file).replace(/\\/g, '/');
     if (hexExceptions.has(rel)) continue;
-    const text = fs.readFileSync(file, 'utf8');
+    const text = semComentarios(fs.readFileSync(file, 'utf8'));
     hexCount += (text.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).length;
   }
 }

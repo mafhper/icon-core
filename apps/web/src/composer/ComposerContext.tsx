@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useReducer, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   composerReducer,
   initialState,
@@ -12,6 +12,7 @@ import {
   openProjectStore,
   readPointer,
   writePointer,
+  type ProjectPointer,
   type ProjectStore
 } from './utils/projectStore';
 import { useToast } from './toast/ToastContext';
@@ -41,6 +42,23 @@ interface ComposerContextValue {
   state: ComposerState;
   dispatch: React.Dispatch<ComposerAction>;
   navigate: (view: ComposerView) => void;
+
+  // --- `D2`: the list of stored projects -----------------------------------
+  //
+  // The welcome needs to answer "is there something to continue, and what is it?",
+  // and the store is the only thing that knows. It lives here rather than in the
+  // modal because **the modal must not open its own IndexedDB connection** — two
+  // connections to one database is how you get a blocked upgrade and a version
+  // change that silently never completes.
+  storedProjects: ProjectPointer[];
+  projectsLoading: boolean;
+  /** Re-reads the list. Called when the welcome opens, not on every autosave. */
+  refreshProjects: () => Promise<void>;
+  /** Opens a stored project, keeping its storage id so the autosave writes back to it. */
+  openStoredProject: (id: string) => Promise<boolean>;
+  removeStoredProject: (id: string) => Promise<void>;
+  /** Renames in the stored document, not just in the list. */
+  renameStoredProject: (id: string, name: string) => Promise<boolean>;
 }
 
 const ComposerContext = createContext<ComposerContextValue | null>(null);
@@ -189,16 +207,106 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
     requestAnimationFrame(() => window.scrollTo({ left: 0, top: 0, behavior: 'auto' }));
   }, [state.view]);
 
-  const navigate = (view: ComposerView) => {
+  const navigate = useCallback((view: ComposerView) => {
     if (window.location.hash !== `#/${view}`) {
       window.location.hash = `/${view}`;
       return;
     }
     dispatch({ type: 'NAVIGATE', payload: view });
-  };
+  }, []);
+
+  // --- `D2`: the stored-project list ---------------------------------------
+
+  const [storedProjects, setStoredProjects] = useState<ProjectPointer[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
+  const refreshProjects = useCallback(async () => {
+    const store = storeRef.current;
+    // Before the open finishes there is nothing to list, and `store.list()` would be
+    // a promise nobody is waiting on. The welcome calls this on mount, which is after
+    // the restore in every path that has projects.
+    if (!store) return;
+    setProjectsLoading(true);
+    try {
+      setStoredProjects(await store.list());
+    } catch {
+      // A list that fails to load is an empty list, not a broken welcome: the three
+      // creation paths do not depend on it.
+      setStoredProjects([]);
+    } finally {
+      setProjectsLoading(false);
+    }
+  }, []);
+
+  const openStoredProject = useCallback(
+    async (id: string) => {
+      const store = storeRef.current;
+      if (!store) return false;
+      const found = await store.read(id);
+      if (!found) return false;
+      // The record's own id, so the autosave writes back to the record it came from
+      // instead of minting a second copy of the project the user just opened.
+      dispatch({ type: 'LOAD_PROJECT', payload: { project: found.project, projectId: found.id } });
+      navigate('edit-space');
+      return true;
+    },
+    [navigate]
+  );
+
+  const removeStoredProject = useCallback(async (id: string) => {
+    const store = storeRef.current;
+    if (!store) return;
+    await store.remove(id);
+    setStoredProjects((atual) => atual.filter((p) => p.id !== id));
+
+    // Deleting the open project must not leave the pointer naming it, or the next
+    // session would announce a project that no longer exists.
+    const pointer = readPointer(window.localStorage);
+    if (pointer?.id === id) writePointer(window.localStorage, null);
+  }, []);
+
+  const renameStoredProject = useCallback(
+    async (id: string, name: string) => {
+      const store = storeRef.current;
+      const trimmed = name.trim();
+      if (!store || !trimmed) return false;
+
+      // A read-modify-write, because the name lives **in the document**. Renaming only
+      // the list row would produce a row that disagrees with what reopening produces.
+      const found = await store.read(id);
+      if (!found) return false;
+
+      const project = { ...found.project, metadata: { ...found.project.metadata, name: trimmed } };
+      const outcome = await store.write({ id, name: trimmed, project });
+      if (outcome.kind !== 'saved') return false;
+
+      setStoredProjects((atual) => atual.map((p) => (p.id === id ? { ...p, name: trimmed } : p)));
+
+      // Keep the open project's name and the pointer in step, or the header and the
+      // list would show two different names for the same project.
+      if (state.projectId === id) {
+        dispatch({ type: 'SET_PROJECT_NAME', payload: trimmed });
+        writePointer(window.localStorage, { id, name: trimmed, updatedAt: Date.now() });
+      }
+      return true;
+    },
+    [state.projectId]
+  );
 
   return (
-    <ComposerContext.Provider value={{ state, dispatch, navigate }}>
+    <ComposerContext.Provider
+      value={{
+        state,
+        dispatch,
+        navigate,
+        storedProjects,
+        projectsLoading,
+        refreshProjects,
+        openStoredProject,
+        removeStoredProject,
+        renameStoredProject
+      }}
+    >
       {/* Announced, not decorative: this is the one moment the app is deliberately
           not showing the work, and a screen reader user is owed the same fact a
           sighted one gets from the wait.
