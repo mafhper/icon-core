@@ -48,7 +48,7 @@ export const useKeyboardShortcuts = () => {
 
       if (isMod && e.key === 'l') {
         e.preventDefault();
-        dispatch({ type: 'ADD_LAYER', payload: { shape: { kind: 'circle', width: 100, height: 100 } } });
+        dispatch({ type: 'ADD_LAYER', payload: { kind: 'shape', shape: { kind: 'circle', width: 100, height: 100 } } });
         return;
       }
 

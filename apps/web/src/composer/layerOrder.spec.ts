@@ -50,7 +50,7 @@ describe('layer order survives a deletion', () => {
     expect(first.name).toBe('First');
 
     // 2. add a transparent background
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { background: true } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'background' } });
     const bg = state.project!.layers.find((l) => l.role === 'background')!;
     // The handle starts at the bottom.
     const beforeDelete = zByName(state.project!.layers);
@@ -59,7 +59,7 @@ describe('layer order survives a deletion', () => {
     // 3. add a second SVG component on top
     state = composerReducer(state, {
       type: 'ADD_LAYER',
-      payload: { asset: asset('Second') }
+      payload: { kind: 'asset', asset: asset('Second') }
     });
     expect(names(state.project!.layers)).toContain('Second');
 
@@ -82,9 +82,9 @@ describe('layer order survives a deletion', () => {
 
   it('never gives the background handle the topmost zIndex', () => {
     let state = withProject();
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { background: true } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'background' } });
     for (const name of ['A', 'B', 'C']) {
-      state = composerReducer(state, { type: 'ADD_LAYER', payload: { asset: asset(name) } });
+      state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'asset', asset: asset(name) } });
     }
 
     // Delete from the top down, which is what a user does when tidying up.
@@ -108,9 +108,9 @@ describe('layer order survives a deletion', () => {
 
   it('keeps zIndex unique after a deletion', () => {
     let state = withProject();
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { background: true } });
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { asset: asset('A') } });
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { asset: asset('B') } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'background' } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'asset', asset: asset('A') } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'asset', asset: asset('B') } });
 
     const b = state.project!.layers.find((l) => l.name === 'B')!;
     state = composerReducer(state, { type: 'REMOVE_LAYER', payload: { id: b.id } });
@@ -121,9 +121,9 @@ describe('layer order survives a deletion', () => {
 
   it('does not disturb the order when the deleted layer was in the middle', () => {
     let state = withProject();
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { background: true } });
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { asset: asset('Middle') } });
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { asset: asset('Top') } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'background' } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'asset', asset: asset('Middle') } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'asset', asset: asset('Top') } });
 
     const orderBefore = [...state.project!.layers].sort((a, b) => a.zIndex - b.zIndex).map((l) => l.role ?? l.name);
     const middle = state.project!.layers.find((l) => l.name === 'Middle')!;
@@ -135,8 +135,8 @@ describe('layer order survives a deletion', () => {
 
   it('opening a project selects the topmost artwork, not the Background', () => {
     let state = withProject();
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { background: true } });
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { asset: asset('Second') } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'background' } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'asset', asset: asset('Second') } });
 
     // Re-open the same project, which is what happens on load or workspace switch.
     const reopened = composerReducer(state, {
@@ -150,8 +150,8 @@ describe('layer order survives a deletion', () => {
 
   it('moving a layer to the back does not lift it above the background', () => {
     let state = withProject();
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { background: true } });
-    state = composerReducer(state, { type: 'ADD_LAYER', payload: { asset: asset('Art') } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'background' } });
+    state = composerReducer(state, { type: 'ADD_LAYER', payload: { kind: 'asset', asset: asset('Art') } });
 
     const art = state.project!.layers.find((l) => l.name === 'Art')!;
     state = composerReducer(state, { type: 'MOVE_LAYER', payload: { id: art.id, direction: 'back' } });

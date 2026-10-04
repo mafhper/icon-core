@@ -102,7 +102,7 @@ export const CommandPalette = () => {
       description: 'Add a new shape layer',
       shortcut: `${mod}+L`,
       category: 'layers',
-      action: () => dispatch({ type: 'ADD_LAYER', payload: { shape: { kind: 'circle', width: 100, height: 100 } } })
+      action: () => dispatch({ type: 'ADD_LAYER', payload: { kind: 'shape', shape: { kind: 'circle', width: 100, height: 100 } } })
     },
     {
       id: 'delete-layer',

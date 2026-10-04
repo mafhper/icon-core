@@ -62,7 +62,7 @@ describe('Icon Core workspaces state', () => {
     const created = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'T', size: 512 } });
     const withLayer = composerReducer(created, {
       type: 'ADD_LAYER',
-      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+      payload: { kind: 'shape', shape: { kind: 'circle', width: 100, height: 100 } }
     });
 
     const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
@@ -78,7 +78,7 @@ describe('Icon Core workspaces state', () => {
     const created = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'T', size: 512 } });
     const withLayer = composerReducer(created, {
       type: 'ADD_LAYER',
-      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+      payload: { kind: 'shape', shape: { kind: 'circle', width: 100, height: 100 } }
     });
 
     const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
@@ -95,7 +95,7 @@ describe('Icon Core workspaces state', () => {
     const created = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'T', size: 512 } });
     const withLayer = composerReducer(created, {
       type: 'ADD_LAYER',
-      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+      payload: { kind: 'shape', shape: { kind: 'circle', width: 100, height: 100 } }
     });
 
     const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'mono' } });
@@ -112,7 +112,7 @@ describe('Icon Core workspaces state', () => {
     const created = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'T', size: 512 } });
     const withLayer = composerReducer(created, {
       type: 'ADD_LAYER',
-      payload: { shape: { kind: 'circle', width: 100, height: 100 } }
+      payload: { kind: 'shape', shape: { kind: 'circle', width: 100, height: 100 } }
     });
 
     const withDark = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
@@ -136,7 +136,7 @@ describe('background layer handle', () => {
     const loaded = withProject(createProjectFromAsset(asset));
     const before = loaded.project!.layers.map((layer) => layer.zIndex);
 
-    const added = composerReducer(loaded, { type: 'ADD_LAYER', payload: { background: true } });
+    const added = composerReducer(loaded, { type: 'ADD_LAYER', payload: { kind: 'background' } });
     const handle = added.project!.layers.find((layer) => layer.role === 'background');
 
     expect(handle).toBeDefined();
@@ -147,8 +147,8 @@ describe('background layer handle', () => {
 
   it('re-selects the existing handle instead of duplicating it', () => {
     const loaded = withProject(createProjectFromAsset(asset));
-    const once = composerReducer(loaded, { type: 'ADD_LAYER', payload: { background: true } });
-    const twice = composerReducer(once, { type: 'ADD_LAYER', payload: { background: true } });
+    const once = composerReducer(loaded, { type: 'ADD_LAYER', payload: { kind: 'background' } });
+    const twice = composerReducer(once, { type: 'ADD_LAYER', payload: { kind: 'background' } });
 
     expect(twice.project!.layers.filter((layer) => layer.role === 'background')).toHaveLength(1);
     expect(twice.project!.layers).toHaveLength(once.project!.layers.length);
