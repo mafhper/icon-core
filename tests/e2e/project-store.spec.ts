@@ -463,3 +463,99 @@ test.describe('o app restaura o projeto', () => {
     await expect(page.getByText('Opening')).toHaveCount(0);
   });
 });
+
+test.describe('o id do projeto muda quando o projeto muda', () => {
+  /** Every record in the store, read through the app's own database. */
+  const registros = (page: import('@playwright/test').Page) =>
+    page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((resolvePromise, reject) => {
+        const request = indexedDB.open('iconcore-projects', 1);
+        request.onsuccess = () => resolvePromise(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const all = await new Promise<{ id: string; name: string; project: { metadata: { name: string } } }[]>(
+        (resolvePromise, reject) => {
+          const request = db.transaction('projects', 'readonly').objectStore('projects').getAll();
+          request.onsuccess = () => resolvePromise(request.result);
+          request.onerror = () => reject(request.error);
+        }
+      );
+      return all.map((r) => ({ id: r.id, guardadaComo: r.name, projeto: r.project?.metadata?.name ?? '?' }));
+    });
+
+  /**
+   * Autosave is debounced by two seconds, so a layer has to be added and then waited
+   * out.
+   *
+   * "Add text layer" and not "Add shape": the shape control is a **menu trigger**
+   * (`PreviewCanvas.tsx:279`), so clicking it opens a menu and adds nothing. A first
+   * draft used it, the project stayed empty, the #198 guard correctly declined to warn
+   * about an empty project, and the test failed at the alert dialog with no clue why.
+   */
+  const salvar = async (page: import('@playwright/test').Page) => {
+    await page.getByRole('button', { name: 'Add text layer' }).click();
+    await page.waitForTimeout(3000);
+  };
+
+  test('abrir, editar, criar outro e editar: os dois projetos sobrevivem', async ({ page }) => {
+    await page.goto('/icon-core/app/');
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'iconcore-composer-project',
+        JSON.stringify({
+          schemaVersion: 3,
+          metadata: { name: 'Meu Icone', shortName: 'Meu Icone' },
+          canvas: { size: 512, background: { kind: 'solid', color: '#f8fafc' } },
+          layers: [],
+          variants: { default: {} },
+          targets: [{ target: 'tauri', enabled: true }]
+        })
+      );
+      localStorage.removeItem('iconcore-current-project');
+    });
+    await page.reload();
+    await page.waitForSelector('[role="status"]:has-text("Opening")', { state: 'detached', timeout: 15_000 });
+    await expect(page.getByText('Meu Icone', { exact: true }).first()).toBeVisible();
+
+    // Save the restored project under its own id.
+    await salvar(page);
+
+    const depoisDoPrimeiro = await registros(page);
+    expect(depoisDoPrimeiro).toHaveLength(1);
+    const idDoPrimeiro = depoisDoPrimeiro[0].id;
+
+    // A fresh project, the way the welcome does it — and with **the same name on
+    // purpose**, so the assertion below is about identity rather than about two
+    // differently-named things. Two records called "Meu Icone" can only be told apart
+    // by their id.
+    await page.getByRole('button', { name: 'Meu Icone' }).first().click();
+    await page.getByLabel('Project name').fill('Meu Icone');
+
+    // #198: with a project open, creating another is destructive and asks first.
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    await page.getByRole('alertdialog').waitFor();
+    await page.getByRole('button', { name: 'Start new' }).click();
+
+    await salvar(page);
+
+    const depoisDoSegundo = await registros(page);
+
+    // **The assertion that was missing.** Before the fix: one record, overwritten with
+    // a project that had none of the first one's layers.
+    expect(depoisDoSegundo).toHaveLength(2);
+
+    // Both carry the same project name on purpose, so they can only be told apart by
+    // id. A first draft indexed them by name into a Map, and the second silently
+    // replaced the first — the length assertion passed and the lookup was checking one
+    // record twice. The check that matters is set membership, not a keyed lookup.
+    const ids = depoisDoSegundo.map((r) => r.id);
+    expect(new Set(ids).size).toBe(2);
+    expect(ids).toContain(idDoPrimeiro);
+    expect(depoisDoSegundo.every((r) => r.projeto === 'Meu Icone')).toBe(true);
+
+    // And the pointer now names the newest one, not the old.
+    const ponteiro = await page.evaluate(() => JSON.parse(localStorage.getItem('iconcore-current-project') ?? 'null'));
+    expect(ponteiro).not.toBeNull();
+    expect(ponteiro.id).not.toBe(idDoPrimeiro);
+  });
+});

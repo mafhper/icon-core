@@ -26,6 +26,24 @@ export type ComposerView = PublicRoute;
 export interface ComposerState {
   view: ComposerView;
   project: IconCoreProject | null;
+  /**
+   * Storage identity of the open project, minted fresh on every explicit
+   * replacement (`NEW_PROJECT` and `LOAD_PROJECT`, the only callers of
+   * `setProject`) and never touched by an edit.
+   *
+   * **Why this is in the state and not in a ref.** A first version kept it in a
+   * ref inside `ComposerProvider`, set once when the restore finished. A ref cannot
+   * see a dispatch, so "New project" reused the restored project's id and the
+   * autosave overwrote that record — reintroducing exactly the silent destruction
+   * #198 removed, one layer down: the guard stopped the `localStorage` slot from
+   * being clobbered while the IndexedDB record was clobbered anyway.
+   *
+   * An `IconCoreProject` has no stable identity of its own, and `state.project`
+   * changes identity on every edit, so neither could have carried this. Minting it
+   * where the project is deliberately replaced is the only place the distinction
+   * between "a different project" and "an edit" actually exists.
+   */
+  projectId: string | null;
   activeLayerId: string | null;
   renamingLayerId: string | null;
   activeVariant: IconVariant;
@@ -46,7 +64,7 @@ export interface ComposerState {
 
 export type ComposerAction =
   | { type: 'NEW_PROJECT'; payload: { name: string; size: number; view?: ComposerView } }
-  | { type: 'LOAD_PROJECT'; payload: { project: IconCoreProject; view?: ComposerView } | IconCoreProject }
+  | { type: 'LOAD_PROJECT'; payload: { project: IconCoreProject; view?: ComposerView; projectId?: string } | IconCoreProject }
   | { type: 'ADD_LAYER'; payload: { asset?: FileLayerAsset; shape?: ShapeDefinition; text?: boolean; background?: boolean } }
   | { type: 'UPDATE_LAYER'; payload: { id: string; changes: Partial<IconLayer>; transient?: boolean } }
   | { type: 'UPDATE_LAYER_VARIANT'; payload: { id: string; variant: IconVariant; changes: Partial<Omit<IconLayer, 'id' | 'variantOverrides'>>; transient?: boolean } }
@@ -88,6 +106,7 @@ export type ComposerAction =
 export const initialState: ComposerState = {
   view: 'workspaces',
   project: null,
+  projectId: null,
   activeLayerId: null,
   renamingLayerId: null,
   activeVariant: 'default',
@@ -144,9 +163,26 @@ const commitProject = (state: ComposerState, project: IconCoreProject): Composer
   };
 };
 
+/**
+ * A storage id for a project that is replacing another.
+ *
+ * Unique within one browser profile, which is the scope that matters: the id is the
+ * IndexedDB key and the pointer target, never anything that leaves the machine.
+ *
+ * `crypto.randomUUID` without a fallback, deliberately: `createShapeLayer` and the
+ * other factories in `projectFactory.ts` already depend on it the same way, and a
+ * reducer that invents its own fallback would make the id format depend on the
+ * environment in a way nothing else in the document does.
+ */
+const mintProjectId = (): string => `p-${crypto.randomUUID()}`;
+
 const setProject = (state: ComposerState, project: IconCoreProject, view: ComposerView): ComposerState => ({
   ...commitProject(state, project),
   project,
+  // Always a new identity. `NEW_PROJECT` and `LOAD_PROJECT` are the only callers,
+  // and both mean "this is a different project" — which is exactly when the autosave
+  // must stop writing over the previous record.
+  projectId: mintProjectId(),
   view,
   // The topmost *content* layer, by zIndex — not `layers[length - 1]`. Array
   // order is not paint order: the Background handle is stored last while
@@ -245,7 +281,14 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'LOAD_PROJECT': {
       const payload = 'project' in action.payload ? action.payload : { project: action.payload };
-      return setProject(state, payload.project, payload.view ?? 'edit-space');
+      return {
+        ...setProject(state, payload.project, payload.view ?? 'edit-space'),
+        // The restore knows the record it read, and reusing that id is the whole point:
+        // minting a fresh one would make the next autosave write a *second* copy of the
+        // project the user just opened. A caller that does not know an id (opening a
+        // file, for instance) falls back to the freshly minted one.
+        projectId: payload.projectId ?? mintProjectId()
+      };
     }
 
     case 'ADD_LAYER': {

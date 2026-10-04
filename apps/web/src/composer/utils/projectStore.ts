@@ -405,9 +405,19 @@ export const openProjectStore = async (deps: OpenStoreDeps): Promise<OpenedStore
   };
 };
 
+/**
+ * The id for a project being migrated in.
+ *
+ * Prefixed `p-`, like the id the reducer mints for a replacement project. The two
+ * minting sites were written a week apart and disagreed: this one returned a bare
+ * UUID while `mintProjectId` returns `p-<uuid>`. Both are valid IndexedDB keys, so
+ * nothing broke and nothing complained — but an id that appears in two formats
+ * depending on how the project came to be is the kind of thing that makes a later
+ * reader assume there are two kinds of id.
+ */
 const defaultId = (): string => {
   const c = globalThis.crypto;
-  if (c && typeof c.randomUUID === 'function') return c.randomUUID();
+  if (c && typeof c.randomUUID === 'function') return `p-${c.randomUUID()}`;
   // A random id only has to be unique within one browser profile.
   return `p-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
 };
