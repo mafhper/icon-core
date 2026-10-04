@@ -74,13 +74,23 @@ if (!falhas.length) {
   }
 }
 
-// 3. `build` is the one command that cannot work yet: the Node rendering
-// backend is a hard `throw` ("not yet implemented… wait for Phase 6"). So this
-// is a **ratchet**, not an endorsement: it asserts the failure is the known one
-// and is reported cleanly, so a stack trace or a silent no-op fails. When the
-// backend lands and `build` starts writing files, this assertion fails and has
-// to be updated on purpose.
-const KNOWN_BACKEND_GAP = 'not yet implemented';
+// 3. `build` is the one command that cannot work: the Node rendering backend is a
+// hard `throw`, and by `ADR-017` it stays that way — the CLI is not where
+// rasterization goes. So this is a **ratchet**, not an endorsement: it asserts the
+// failure is the known one and is reported cleanly, so a stack trace, a silent
+// no-op, or a *different* failure all fail. When the `IC61F` build path starts
+// writing files, this assertion fails and has to be updated on purpose.
+//
+// The needle below matched the old wording ("not yet implemented"), which the
+// error message no longer uses — and it was going to fail on that alone, reporting
+// an "unknown reason" for a failure it had just been told about.
+//
+// What it matches now is the *claim* ("there is no Node render backend"), not a
+// sentence and not a pointer to a document. Both of those drift: prose gets
+// reworded, and an ADR number means nothing to someone who has not read it. The
+// claim has to stay true for the ratchet to keep meaning anything, because it is
+// the thing being asserted.
+const KNOWN_BACKEND_GAP = 'Node render backend';
 
 if (!falhas.length && projetoCriado) {
   const out = path.join(os.tmpdir(), 'iconcore-cli-build-probe');
