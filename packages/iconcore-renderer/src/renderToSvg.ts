@@ -1,6 +1,7 @@
 import type { BlendMode, CanvasMaskShape, Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
 import { resolveMaskRadius, resolveSize } from '@iconcore/shared';
 import { toRgba } from './color';
+import { escapeXml } from './escapeXml';
 import { layerBaseRect } from './geometry';
 import { superellipsePathD } from './geometry/superellipse';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
@@ -385,7 +386,13 @@ export const renderToSvgWithOptions = (
       }
       // Canvas draws text at the canvas centre (`fillText(content, S/2, S/2)`)
       // with the layer transform already applied around that same centre.
-      svgLayers += `<text x="${canvas.width / 2}" y="${canvas.height / 2}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${layer.text.content}</text>\n`;
+      //
+      // `content` e `fontFamily` vêm do `.iconcore.json` da pessoa e são escapados. São as
+      // **duas** interpolações deste arquivo que recebem dado do usuário — as demais são
+      // números e valores derivados (`fontSize`, `fontWeight`, `paint`, offsets). Sem o
+      // escape, `AT&T` produz XML malformado que nenhum leitor abre, e um nome de família
+      // com aspas fecha o atributo. Ver `escapeXml.ts` para o porquê de uma função só.
+      svgLayers += `<text x="${canvas.width / 2}" y="${canvas.height / 2}" text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(layer.text.fontFamily)}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${escapeXml(layer.text.content)}</text>\n`;
       continue;
     }
 
