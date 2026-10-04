@@ -7,6 +7,7 @@ import { superellipsePathD } from './geometry/superellipse';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
 import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
 import { applySvgPaintOverrides } from './svgPaint';
+import { isItalic, resolveTextPlacement } from './textLayout';
 import type { RenderBackground } from './types';
 
 /**
@@ -384,15 +385,36 @@ export const renderToSvgWithOptions = (
         if (resolved.defs) defs.push(resolved.defs);
         paint = resolved.paint;
       }
-      // Canvas draws text at the canvas centre (`fillText(content, S/2, S/2)`)
-      // with the layer transform already applied around that same centre.
+// `IC63/2` — a mesma função de geometria que o canvas consome
+      // (`resolveTextPlacement`), traduzida para o vocabulário do SVG: `text-anchor`
+      // em vez de `ctx.textAlign`. Um `text-anchor="start"` no ponto errado, ou um
+      // `font-style` esquecido, é a divergência que a fixture de texto agora mede.
+      //
+      // `font-style` é atributo **separado** aqui, ao contrário do canvas: a assinatura
+      // `ctx.font` é posicional (`[italic] [weight] size family`) e o SVG não tem
+      // assinatura nenhuma. Omitir o atributo quando não é itálico, em vez de escrever
+      // `font-style="normal"`, mantém o SVG exportado menor — e `normal` é o padrão.
       //
       // `content` e `fontFamily` vêm do `.iconcore.json` da pessoa e são escapados. São as
       // **duas** interpolações deste arquivo que recebem dado do usuário — as demais são
       // números e valores derivados (`fontSize`, `fontWeight`, `paint`, offsets). Sem o
       // escape, `AT&T` produz XML malformado que nenhum leitor abre, e um nome de família
       // com aspas fecha o atributo. Ver `escapeXml.ts` para o porquê de uma função só.
-      svgLayers += `<text x="${canvas.width / 2}" y="${canvas.height / 2}" text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(layer.text.fontFamily)}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${escapeXml(layer.text.content)}</text>\n`;
+      const place = resolveTextPlacement(canvas, layer.source.shape, layer.text.textAlign);
+      const styleAttr = isItalic(layer.text.fontStyle) ? ' font-style="italic"' : '';
+      // `xml:space="preserve"` é obrigatório aqui, e não é cosmético.
+      //
+      // SVG 1.1 define `xml:space="default"` como: remover quebras de linha, converter
+      // tabs, remover espaços das pontas e **consolidar espaços contíguos em um**. O canvas
+      // não faz nada disso. Sem o atributo, `"A  B"` sai com um espaço no SVG e dois no
+      // canvas — e as fixtures de texto eram `"Icon"` e `"Wg"`, que não têm espaço
+      // nenhum, pelo mesmo motivo pelo qual nunca pegaram o `&`.
+      //
+      // Por que `xml:space` e não `white-space: pre`: o SVG 2 substituiu `xml:space` por
+      // `white-space`, mas o **librsvg não implementa o `white-space` do SVG 2** — a
+      // documentação dele diz isso textualmente. `xml:space` é hoje a única forma que
+      // funciona nos dois rasterizadores, e o Illustrator emite em todo SVG que exporta.
+      svgLayers += `<text x="${place.x}" y="${place.y}" text-anchor="${place.svgAnchor}" dominant-baseline="middle" font-family="${escapeXml(layer.text.fontFamily)}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}"${styleAttr} fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr} xml:space="preserve">${escapeXml(layer.text.content)}</text>\n`;
       continue;
     }
 

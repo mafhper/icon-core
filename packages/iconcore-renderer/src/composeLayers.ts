@@ -5,6 +5,7 @@ import { traceSuperellipse } from './geometry/superellipse';
 import { layerBaseRect } from './geometry';
 import { clipSquircle } from './masks/applyMask';
 import { applySvgPaintOverrides } from './svgPaint';
+import { canvasFontShorthand, resolveTextPlacement } from './textLayout';
 
 const resolveLayerForVariant = (
   layer: IconLayer,
@@ -169,10 +170,15 @@ export const composeLayers = async (
     if (layer.kind === 'text' && layer.resolvedText) {
       const text = layer.resolvedText;
       ctxAny.fillStyle = layer.resolvedFill?.kind === 'solid' ? layer.resolvedFill.color ?? '#111827' : '#111827';
-      ctxAny.font = `${text.fontWeight} ${text.fontSize}px ${text.fontFamily}`;
-      ctxAny.textAlign = 'center';
+      ctxAny.font = canvasFontShorthand(text);
+      // `IC63/2` — a âncora vem da caixa da layer, não do centro do canvas. Sem isto,
+      // alinhar à esquerda faria o texto crescer para a direita a partir do meio, que é
+      // o oposto de "esquerda". A geometria mora em `textLayout.ts` e o SVG consome a
+      // mesma função — dois pipelines, uma decisão.
+      const place = resolveTextPlacement(canvas, layer.resolvedSource.shape, text.textAlign);
+      ctxAny.textAlign = place.canvasAlign;
       ctxAny.textBaseline = 'middle';
-      ctxAny.fillText(text.content, canvas.width / 2, canvas.height / 2);
+      ctxAny.fillText(text.content, place.x, place.y);
     }
 
     if (layer.resolvedSource.shape && layer.kind !== 'text') {

@@ -129,6 +129,36 @@ export interface TextDefinition {
   fontFamily: string;
   fontSize: number;
   fontWeight: number;
+  /**
+   * Horizontal alignment **inside the layer's own shape** (`source.shape`).
+   *
+   * Not the canvas: a `left` anchored at the canvas centre would grow the text to the
+   * *right* of the middle, which is the opposite of what "left" means to the person
+   * reading it. The shape has been the layer's footprint since `createTextLayer`
+   * (58% of the canvas width) and is what resize already respects.
+   *
+   * **Additive and optional:** absent means `'center'`, which is exactly how every text
+   * layer rendered before this field existed. No migration, no `schemaVersion` bump.
+   */
+  textAlign?: 'left' | 'center' | 'right';
+  /**
+   * `'italic'` slants the glyphs; anything else (including absent) is upright.
+   *
+   * A string rather than a boolean because a boolean cannot tell "upright" from "not
+   * set". The difference is invisible in the editor and shows up in the export.
+   *
+   * **`oblique` foi removido do modelo.** O Agente B, ao revisar o `IC63/2`, apontou que
+   * ele estava no tipo sem existir na UI — e um terceiro estado que ninguém produz
+   * significa um valor a serializar, persistir, testar e exportar. Ele já entrou no
+   * `.iconcore.json` de quem usou esta branch durante o desenvolvimento, então um
+   * arquivo assim tem `fontStyle: "oblique"` e cai em "upright". **Remover depois não
+   * seria compatível**; por isso saiu agora, e não quando aparecer a primeira UI para
+   * ele. Se um dia for preciso, `oblique` volta — e a entrada será o mesmo `italic` no
+   * Canvas e no SVG, que é o que a especificação do SVG exige.
+   *
+   * **Aditivo e opcional**, como acima.
+   */
+  fontStyle?: 'normal' | 'italic';
 }
 
 export interface ShapeDefinition {
