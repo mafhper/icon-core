@@ -742,3 +742,56 @@ test.describe('a lista de projetos', () => {
     await expect(rows.getByRole('button', { name: 'Continue Segundo' })).toHaveCount(0);
   });
 });
+
+test.describe('a cor de um SVG importado', () => {
+  /** Dois tons, de propósito: trocar um não pode levar o outro. */
+  const SVG_BICOLOR =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+    '<rect x="2" y="2" width="20" height="20" fill="#ffffff"/>' +
+    '<circle cx="12" cy="12" r="6" fill="#ff8800"/>' +
+    '</svg>';
+
+  const importar = async (page: import('@playwright/test').Page) => {
+    await page.goto('/icon-core/app/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForSelector('[role="status"]:has-text("Opening")', { state: 'detached', timeout: 15_000 });
+
+    // O welcome aceita SVG na via "Upload into Edit Space" — a mesma entrada da pessoa.
+    await page.getByRole('button', { name: /Upload into Edit Space/ }).click();
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'marca.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(SVG_BICOLOR, 'utf8')
+    });
+    await page.waitForTimeout(900);
+
+    await page.getByText('marca', { exact: false }).first().click();
+    await page.waitForTimeout(600);
+  };
+
+  const campo = (page: import('@playwright/test').Page, hex: string) =>
+    page.getByLabel(new RegExp(`^Replace ${hex}, used \\d+ times hex$`, 'i'));
+
+  test('lista as cores do arquivo e esconde o Fill', async ({ page }) => {
+    await importar(page);
+
+    // As duas cores que o arquivo usa, cada uma na sua linha — e não um controle com
+    // duas cores, que é o que "pintar a camada" faria.
+    await expect(campo(page, '#ffffff')).toBeVisible();
+    await expect(campo(page, '#ff8800')).toBeVisible();
+
+    // **O Fill sumiu.** Era ele que prometia "transparent" para uma camada que
+    // desenhava branco, e não fazia nada quando mexido.
+    //
+    // `exact: true` é obrigatório: sem ele o seletor casa "Add background fill layer",
+    // um botão da barra de layers sem relação nenhuma — e foi assim que a primeira
+    // versão deste teste reprovou achando que o defeito continuava lá.
+    await expect(page.getByLabel('Fill', { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/No fill/i)).toHaveCount(0);
+
+    // E o resto da seção continua, porque opacidade e blend são de camada.
+    await expect(page.getByText('Opacity')).toBeVisible();
+    await expect(page.getByText('Blend mode')).toBeVisible();
+  });
+});

@@ -66,6 +66,14 @@ export interface ResolvedLayer extends Omit<IconLayer, 'variantOverrides'> {
   resolvedTransform: IconLayer['transform'];
   resolvedText?: IconLayer['text'];
   resolvedEffects?: IconLayer['effects'];
+  /**
+   * `IC63/1b`. Variant-aware, because a recolor is exactly the kind of change a brand
+   * variant wants: the same artwork in light and dark, with the paint swapped.
+   *
+   * Merged rather than replaced — a variant that overrides one color keeps the rest,
+   * which is what "this variant changes the accent" should mean.
+   */
+  resolvedSvgPaintOverrides?: Record<string, string>;
 }
 
 export { composeLayers } from './composeLayers';

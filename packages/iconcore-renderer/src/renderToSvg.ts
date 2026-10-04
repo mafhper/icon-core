@@ -5,6 +5,7 @@ import { layerBaseRect } from './geometry';
 import { superellipsePathD } from './geometry/superellipse';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
 import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
+import { applySvgPaintOverrides } from './svgPaint';
 import type { RenderBackground } from './types';
 
 /**
@@ -391,10 +392,23 @@ export const renderToSvgWithOptions = (
     if (layer.source.type === 'inline' && layer.source.data && layer.source.mimeType === 'image/svg+xml') {
       try {
         const svgContent = atob(layer.source.data);
+        /**
+         * `IC63/1b` — the color override, applied **here**, before anything else.
+         *
+         * This is the SVG half of a two-pipeline change. The canvas half lives in
+         * `composeLayers.ts` and calls the same pure function, which is the whole point:
+         * one function, two callers, so the two renderings agree **by construction**
+         * rather than by a fixture someone has to remember to add. Writing the rewrite
+         * twice is how `IC-N28` happened — two pipelines that nobody compared.
+         *
+         * Before namespacing, deliberately: ids inside the document are not colors, and
+         * the override only rewrites paint values.
+         */
+        const recolored = applySvgPaintOverrides(svgContent, layer.svgPaintOverrides ?? {});
         // Namespace before anything else: an imported document carries its own
         // short ids, and two layers defining the same one would make every
         // `url(#…)` resolve to whichever definition came first.
-        const scoped = namespaceSvgIds(svgContent, `l${layer.id}`);
+        const scoped = namespaceSvgIds(recolored, `l${layer.id}`);
         const natural = parseSvgIntrinsicSize(scoped);
         if (!natural) {
           // No intrinsic size to align with: embed as-is (previous behaviour).
