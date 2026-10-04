@@ -122,6 +122,26 @@ describe('preset android — o que ele emite', () => {
     const caminhos = artefatos().map((a) => a.path);
     expect(new Set(caminhos).size).toBe(caminhos.length);
   });
+
+  it('o icone redondo e circular, e o quadrado nao', () => {
+    // Sem isto, `ic_launcher_round.png` e' uma copia byte a byte do quadrado, e o arquivo
+    // que existe para ser redondo nao e' redondo. Na API 26+ a mascara adaptativa torna a
+    // forma irrelevante; abaixo dela o launcher carrega o arquivo como veio.
+    const redondo = artefatos().find((a) => a.path === 'mipmap-xhdpi/ic_launcher_round.png');
+    const quadrado = artefatos().find((a) => a.path === 'mipmap-xhdpi/ic_launcher.png');
+    expect(redondo?.maskShape).toBe('circle');
+    expect(quadrado?.maskShape).toBeUndefined();
+  });
+
+  it('a camada adaptive e a monocromatica NAO sao mascaradas', () => {
+    // A forma e' do sistema, nao nossa. Aplicar uma mascara aqui cortaria a camada duas
+    // vezes: uma pela nossa, outra pela do launcher — e o parallax (que usa justamente
+    // os 18dp de fora) deixaria de aparecer.
+    for (const nome of ['foreground', 'background', 'monochrome']) {
+      const artefato = artefatos().find((a) => a.path.endsWith(`xhdpi/ic_launcher_${nome}.png`));
+      expect(artefato?.maskShape, nome).toBeUndefined();
+    }
+  });
 });
 
 describe('preset android — o XML que declara o adaptive', () => {
@@ -144,27 +164,49 @@ describe('preset android — o XML que declara o adaptive', () => {
     expect(xml).toContain('<foreground android:drawable="@mipmap/ic_launcher_foreground"/>');
   });
 
-  it('nao declara <monochrome> quando a camada nao existe', () => {
-    // Um `@drawable/ic_launcher_monochrome` que nao existe no projeto faz o `aapt`
-    // falhar com resource-not-found. Melhor o XML sem a linha do que um XML que nao
-    // compila — e o preset ainda nao produz a camada.
+  it('declara <monochrome>: o preset produz a camada', () => {
+    // A propriedade: com a camada no plano, o XML tem que referenciá-la. Sem a linha, o
+    // ícone tematizado do Android 13+ simplesmente não existe — e o sistema não avisa.
     const xml = generateAndroidAdaptiveIcon(planejado()).content;
-    expect(xml).not.toContain('monochrome');
+    expect(xml).toContain('<monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>');
   });
 
-  it('declara <monochrome> quando a camada existe', () => {
-    const comCamada = [
-      ...planejado(),
-      {
-        artifact: { id: 'ic_launcher_monochrome', format: 'png', path: 'mipmap-xhdpi/ic_launcher_monochrome.png', enabled: true, size: 216 },
-        path: 'mipmap-xhdpi/ic_launcher_monochrome.png',
-        format: 'png',
-        mime: '',
-        size: 216
-      } as unknown as PlannedArtifact
-    ];
-    const xml = generateAndroidAdaptiveIcon(comCamada).content;
-    expect(xml).toContain('<monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>');
+  it('a camada monocromática sai da variant mono, transparente e com safe zone', () => {
+    const mono = artefatos().find((a) => a.path === 'mipmap-xhdpi/ic_launcher_monochrome.png');
+    // O Android **tinge** a camada com a cor do tema: o que importa é o alfa da forma.
+    // Fundo pintado viraria um bloco sólido tingido — o oposto de um ícone tematizado.
+    expect(mono?.variant).toBe('mono');
+    expect(mono?.background).not.toBe('opaque');
+    // E a mesma safe zone da camada colorida, porque a máscara do sistema é a mesma.
+    expect(mono?.safeZone).toBeCloseTo(66 / 108, 10);
+  });
+
+  it('a camada monocromática existe nas cinco densidades', () => {
+    for (const densidade of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+      expect(
+        artefatos().some((a) => a.path === `mipmap-${densidade}/ic_launcher_monochrome.png`),
+        densidade
+      ).toBe(true);
+    }
+  });
+
+  it('nao declara <monochrome> quando a camada nao esta no plano', () => {
+    // A segurança que sobrou: um `@drawable/ic_launcher_monochrome` que não existe no
+    // projeto faz o `aapt` falhar com resource-not-found. Um XML que não compila é pior
+    // que um XML sem a linha — então o gerador decide pelo plano, não por suposição.
+    const xml = generateAndroidAdaptiveIcon([]).content;
+    expect(xml).not.toContain('monochrome');
+    expect(xml).toContain('<foreground');
+  });
+
+  it('o gerador decide pelo plano, e uma camada desabilitada nao entra', () => {
+    // Um artefato com `enabled: false` e' um artefato que a pessoa desligou: o XML nao pode
+    // referenciar um arquivo que nao sera gravado, ou o `aapt` falha com resource-not-found
+    // — e a falha aparece no build da pessoa, nao no export.
+    const desligada = planejado().map((p) =>
+      p.path.includes('ic_launcher_monochrome') ? { ...p, artifact: { ...p.artifact, enabled: false } } : p
+    );
+    expect(generateAndroidAdaptiveIcon(desligada).content).not.toContain('monochrome');
   });
 
   it('o plano declara os dois XML em mipmap-anydpi-v26', () => {

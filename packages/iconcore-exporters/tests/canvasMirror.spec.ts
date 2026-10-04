@@ -165,4 +165,30 @@ describe('where the mirror must not apply', () => {
     // shape was rounded-rectangle, so that is the honest reading.
     expect(maskModeFor({ format: 'png' }, project({ maskRadius: 22 }))).toBe('rounded-rectangle');
   });
+
+  it('the artifact own shape wins over the project', () => {
+    // Android's `ic_launcher_round.png` exists to BE round. Without this the file is a
+    // byte-for-byte copy of the square one, and the shape can only come from the project —
+    // which is a single shape for the whole export.
+    expect(maskModeFor({ format: 'png', maskShape: 'circle' }, project({ maskShape: 'squircle' }))).toBe(
+      'circle'
+    );
+    // E o round do Android e' circle mesmo num projeto sem shape declarado.
+    expect(maskModeFor({ format: 'png', maskShape: 'circle' }, project())).toBe('circle');
+  });
+
+  it('an artifact with no shape still follows the project', () => {
+    // A regressão que importa: `maskShape` e' aditivo. Quem nunca pediu tem que receber a
+    // mesma forma de sempre.
+    expect(maskModeFor({ format: 'png' }, project({ maskShape: 'squircle' }))).toBe('squircle');
+    expect(maskModeFor({ format: 'png' }, project())).toBe('none');
+  });
+
+  it('an opaque artifact stays full bleed even asking for a shape', () => {
+    // Um PNG opaco recortado vira um disco com fundo transparente na borda — que é pior
+    // que não recortar. A regra do opaco vem antes da forma, e antes dela mesmo.
+    expect(maskModeFor({ format: 'png', background: 'opaque', maskShape: 'circle' }, project())).toBe(
+      'none'
+    );
+  });
 });
