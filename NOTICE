@@ -14,9 +14,11 @@ Rune Icons
   Source: https://github.com/Nexvyn/runeicons
   License text: LICENSES/runeicons-LICENSE.txt
 
-  This product includes icons from Rune Icons, distributed under the
-  Apache License, Version 2.0. The icon SVGs are used as the initial stock
-  for the built-in icon library of Icon Core.
+  NOT YET REDISTRIBUTED. Rune Icons is the accepted source of Icon Core's
+  built-in icon library (ADR-009) and this notice is kept in place so the
+  attribution travels with the license text, but no Rune icon is included in
+  this distribution. The "This product includes" claim is added when the
+  library lands.
 
 ISC components
 --------------

@@ -10,21 +10,28 @@ asset's `files` are populated, that those files exist).
 
 | Component | License | Source | License text | Attribution |
 |---|---|---|---|---|
-| Rune Icons (icon set) | Apache-2.0 | https://github.com/Nexvyn/runeicons (upstream used for the built-in icon library) | `LICENSES/runeicons-LICENSE.txt` | See `NOTICE` |
 | Lucide (app icons) | ISC | https://lucide.dev (npm `lucide-react`) | https://github.com/lucide-icons/lucide/blob/main/LICENSE | See `NOTICE` |
 
-### Rune Icons — Apache License 2.0
+> **Rune Icons is registered but not yet redistributed.** It is listed in
+> `third-party/manifest.json` as the accepted source of the built-in icon library
+> (`ADR-009`, Apache-2.0), and its license text is kept in `LICENSES/`. **No Rune
+> SVG is in this repository yet** — the 217 live in a local research corpus outside
+> version control, and ingesting them is the `IC10` work. Until that lands, the
+> guard runs vacuously on `files: []` and nothing about Rune ships.
 
-The built-in icon library (to be ingested in PR-09) is made available from the
+### Rune Icons — Apache License 2.0 (accepted source, not yet redistributed)
+
+The built-in icon library will be made available from the
 [Rune Icons](https://github.com/Nexvyn/runeicons) project (Apache-2.0,
-Copyright 2026 Runeicons). Redistribution and modifications are governed by the
-terms of the Apache License, Version 2.0, a copy of which is kept at
-`LICENSES/runeicons-LICENSE.txt`.
+Copyright 2026 Runeicons), as decided in `ADR-009`. Redistribution and
+modifications will be governed by the terms of the Apache License, Version 2.0, a
+copy of which is kept at `LICENSES/runeicons-LICENSE.txt`.
 
-Icon Core ships only a selection of the original icon set; the original set
-may contain more icons. The Source form of the icons we distribute is their
-SVG source, which is not modified on ingestion (normalization happens only in
-memory at runtime).
+**Status: not redistributed.** When the icons land, this section will state what
+ships — most likely a selection rather than the whole set, whose Source form is the
+unmodified SVG (normalization happens only in memory at runtime) — and
+`third-party/manifest.json` will carry the `files` globs so the guard verifies them
+rather than passing on an empty array.
 
 ### Lucide — ISC License
 
