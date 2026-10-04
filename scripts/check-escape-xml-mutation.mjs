@@ -70,18 +70,59 @@ const MUTANTES = [
   }
 ];
 
+/**
+ * Executa o spec e diz se ele **rodou**.
+ *
+ * A versao anterior chamava `execFileSync('npx', [...])`. No Windows, `npx` e' `npx.cmd`,
+ * que o `execFileSync` nao lanca — deu `ENOENT`, o `catch` tratou como "teste reprovou",
+ * e **todo mutante pareceu morto sem que um teste tivesse rodado**. O gate reportava
+ * 5/5 medindo a falha do launcher.
+ *
+ * Duas correcoes, e a segunda e a que importa:
+ *
+ * 1. invocar `node` + o `vitest.mjs` do `node_modules`, que nao depende de shell;
+ * 2. distinguir **"o teste rodou e reprovou"** de **"o teste nao rodou"**. Um gate que
+ *    confunde as duas nao mede nada, e parece verde — que e o pior defeito possivel
+ *    num portao.
+ */
+const VITEST = path.join(RAIZ, 'node_modules/vitest/vitest.mjs');
+
 const rodarSpec = () => {
+  if (!fs.existsSync(VITEST)) {
+    return { rodou: false, passou: false, motivo: `vitest nao encontrado em ${VITEST} (rode npm ci)` };
+  }
   try {
     execFileSync(
-      'npx',
-      ['vitest', 'run', SPEC, '--root', 'packages/iconcore-renderer', '--reporter=dot'],
+      process.execPath,
+      [VITEST, 'run', SPEC, '--root', 'packages/iconcore-renderer', '--reporter=dot'],
       { cwd: RAIZ, stdio: 'pipe', encoding: 'utf8' }
     );
-    return { passou: true };
+    return { rodou: true, passou: true };
   } catch (erro) {
-    return { passou: false, saida: `${erro.stdout ?? ''}${erro.stderr ?? ''}` };
+    const codigo = erro.code;
+    if (codigo === 'ENOENT') {
+      return { rodou: false, passou: false, motivo: `nao consegui lancar node: ${codigo}` };
+    }
+    // exit 1 = os testes rodaram e falharam. E o resultado que o gate quer.
+    return { rodou: true, passou: false, saida: `${erro.stdout ?? ''}${erro.stderr ?? ''}` };
   }
 };
+
+/**
+ * O spec precisa passar **sem** mutacao. Sem este passo, um spec ja quebrado faria todo
+ * mutante "morrer" — o gate approve uma suite que nao verifica nada.
+ */
+const sane = rodarSpec();
+if (!sane.rodou) {
+  console.error(`REPROVADO — o spec nao pode ser executado: ${sane.motivo}`);
+  console.error('  Um portao que nao roda nao pode dizer que os mutantes morreram.');
+  process.exit(1);
+}
+if (!sane.passou) {
+  console.error('REPROVADO — o spec ja falha SEM mutacao. O gate mediria um spec quebrado:');
+  console.error((sane.saida ?? '').split('\n').slice(0, 14).join('\n'));
+  process.exit(1);
+}
 
 const mutar = (mutante) => {
   const original = fs.readFileSync(mutante.arquivo, 'utf8');
@@ -107,6 +148,15 @@ for (const mutante of MUTANTES) {
   try {
     original = mutar(mutante);
     const resultado = rodarSpec();
+
+    if (!resultado.rodou) {
+      // Um mutante que "morreu" porque o comando nao lancou nao morreu. Contar como morte
+      // seria o mesmo erro que este gate tinha antes, so que agora com outra forma.
+      sobreviveram++;
+      console.log(`  INDETERMINADO  ${mutante.nome} — ${resultado.motivo}`);
+      continue;
+    }
+
     if (resultado.passou) {
       sobreviveram++;
       console.log(`  SOBREVIVEU  ${mutante.nome}`);
