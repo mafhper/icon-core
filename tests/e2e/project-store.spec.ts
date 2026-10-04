@@ -559,3 +559,120 @@ test.describe('o id do projeto muda quando o projeto muda', () => {
     expect(ponteiro.id).not.toBe(idDoPrimeiro);
   });
 });
+
+test.describe('a lista de projetos', () => {
+  const salvar = async (page: import('@playwright/test').Page) => {
+    await page.getByRole('button', { name: 'Add text layer' }).click();
+    await page.waitForTimeout(3000);
+  };
+
+  /**
+   * The Topbar's accessible name **is the open project's name** (`Topbar.tsx:59`),
+   * falling back to "Icon Core" only while none is open. So Home is found by the
+   * name of whatever is currently open, and the caller has to know it.
+   *
+   * Two drafts got this wrong, both by assuming the fallback: once it looked for
+   * "Icon Core" while a project was open and found nothing, and once it forgot
+   * `exact: true` and matched "About Icon Core" as well.
+   */
+  const irParaHome = async (page: import('@playwright/test').Page, projetoAberto: string) => {
+    await page.getByRole('button', { name: projetoAberto, exact: true }).first().click();
+  };
+
+  /**
+   * Open the welcome, whether or not it is already up.
+   *
+   * The first draft always clicked Home, and hung: with no project open the welcome
+   * is **not dismissible** (`ComposerApp.tsx:39` passes `dismissible={Boolean(project)}`),
+   * so `.ic-modal-overlay` sat on top of the button and swallowed every click.
+   */
+  const abrirWelcome = async (page: import('@playwright/test').Page, projetoAberto: string) => {
+    if (await page.getByRole('dialog', { name: 'Start a new icon' }).isVisible().catch(() => false)) {
+      return;
+    }
+    await irParaHome(page, projetoAberto);
+    await page.getByRole('dialog', { name: 'Start a new icon' }).waitFor();
+  };
+
+  const criar = async (page: import('@playwright/test').Page, nome: string, projetoAberto: string) => {
+    await abrirWelcome(page, projetoAberto);
+    await page.getByLabel('Project name').fill(nome);
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+    // #198 warns when there is something to lose, and by this point there is.
+    const dialogo = page.getByRole('alertdialog');
+    if (await dialogo.isVisible().catch(() => false)) {
+      await page.getByRole('button', { name: 'Start new' }).click();
+    }
+    await page.waitForTimeout(400);
+    await salvar(page);
+  };
+
+  const lista = (page: import('@playwright/test').Page) => page.getByRole('list', { name: 'Stored projects' });
+
+  const recomecar = async (page: import('@playwright/test').Page) => {
+    await page.goto('/icon-core/app/');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.waitForSelector('[role="status"]:has-text("Opening")', { state: 'detached', timeout: 15_000 });
+  };
+
+  test('oferece Continuar como primeira opcao, com o mais recente', async ({ page }) => {
+    await recomecar(page);
+
+    // The first run has no project open, so the Home button falls back to "Icon Core".
+    await criar(page, 'Primeiro', 'Icon Core');
+    await criar(page, 'Segundo', 'Primeiro');
+
+    await irParaHome(page, 'Segundo');
+
+    const rows = lista(page);
+    await expect(rows).toBeVisible();
+    await expect(rows.getByRole('listitem')).toHaveCount(2);
+
+    // **Continue is first**, and it is the newest. This is the owner's requirement and
+    // the reason the list exists above the three creation cards.
+    const primeiro = rows.getByRole('listitem').first();
+    await expect(primeiro.getByRole('button', { name: /^Continue/ })).toBeVisible();
+    await expect(primeiro.getByRole('button', { name: 'Continue Segundo' })).toBeVisible();
+
+    // Both are offered, so neither is unreachable.
+    await expect(rows.getByRole('button', { name: 'Continue Primeiro' })).toBeVisible();
+    await expect(rows.getByRole('button', { name: 'Continue Segundo' })).toBeVisible();
+
+    // And the creation paths are still there, below.
+    await expect(page.getByText('Create in Edit Space')).toBeVisible();
+  });
+
+  test('Continue abre o projeto escolhido, nao o outro', async ({ page }) => {
+    await recomecar(page);
+
+    await criar(page, 'Primeiro', 'Icon Core');
+    await criar(page, 'Segundo', 'Primeiro');
+
+    await irParaHome(page, 'Segundo');
+    await lista(page).getByRole('button', { name: 'Continue Primeiro' }).click();
+
+    // The header renders the open project's name.
+    await expect(page.getByRole('button', { name: 'Primeiro', exact: true }).first()).toBeVisible();
+  });
+
+  test('apagar pede confirmacao e remove da lista', async ({ page }) => {
+    await recomecar(page);
+
+    await criar(page, 'Primeiro', 'Icon Core');
+    await criar(page, 'Segundo', 'Primeiro');
+
+    await irParaHome(page, 'Segundo');
+    const rows = lista(page);
+    await expect(rows.getByRole('listitem')).toHaveCount(2);
+
+    // Destructive, so it asks. "Delete Segundo" opens the dialog; the dialog's own
+    // button is the plain "Delete".
+    await rows.getByRole('button', { name: 'Delete Segundo' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+
+    await expect(rows.getByRole('listitem')).toHaveCount(1);
+    await expect(rows.getByRole('button', { name: 'Continue Primeiro' })).toBeVisible();
+    await expect(rows.getByRole('button', { name: 'Continue Segundo' })).toHaveCount(0);
+  });
+});

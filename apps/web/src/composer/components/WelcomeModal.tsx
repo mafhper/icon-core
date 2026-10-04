@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, Layers2, MonitorDown, PenTool, CloudUpload, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, PenTool, CloudUpload, Layers2, ArrowRight, MonitorDown, FolderOpen, Trash2, Check } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
 import { fileToLayerAsset, isSupportedLayerFile } from '../utils/fileLayers';
 import { createProjectFromAsset } from '../utils/projectFactory';
@@ -12,6 +12,7 @@ import {
 import { ConfirmModal } from './ConfirmModal';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
+import { describeProjectRow } from '../utils/projectRows';
 import { Button, TextField, withIconStroke } from '@iconcore/ui';
 
 type UploadMode = 'edit' | 'export';
@@ -20,12 +21,31 @@ type UploadMode = 'edit' | 'export';
  * The app's entry point, presented as a modal over the editor window (rather
  * than a full marketing-style page). Shown automatically when there is no
  * project, and on demand (dismissible) when returning Home with a project open.
+ *
+ * **`D2`: the list of stored projects.** `Continue` is the first thing offered
+ * whenever there is something to continue, because the common case is returning to
+ * work, not starting it. The three creation paths are unchanged and stay below it:
+ * an existing project is something the user came back for, and burying it under
+ * "start a new icon" is the same mistake as a restore that overwrites.
  */
 export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
-  const { state, dispatch, navigate } = useComposer();
+  const {
+    state,
+    dispatch,
+    navigate,
+    storedProjects,
+    projectsLoading,
+    refreshProjects,
+    openStoredProject,
+    removeStoredProject,
+    renameStoredProject
+  } = useComposer();
   const [projectName, setProjectName] = useState('My Icon');
   const [isImporting, setIsImporting] = useState(false);
   const [confirmacao, setConfirmacao] = useState<NewProjectGuard | null>(null);
+  const [confirmarApagar, setConfirmarApagar] = useState<string | null>(null);
+  const [renomeando, setRenomeando] = useState<string | null>(null);
+  const [novoNome, setNovoNome] = useState('');
   const uploadMode = useRef<UploadMode>('edit');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -33,6 +53,13 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
   const close = () => {
     if (dismissible) navigate('edit-space');
   };
+
+  // The list is read on open rather than kept live: re-reading on every autosave
+  // would re-render the whole composer tree every two seconds to redraw a menu the
+  // user may not be looking at.
+  useEffect(() => {
+    void refreshProjects();
+  }, [refreshProjects]);
 
   useEffect(() => {
     if (!dismissible) return;
@@ -52,9 +79,9 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
 
   /**
    * Creating a project is destructive in a way the button does not show: the
-   * autosave fires about two seconds later and overwrites the stored copy, and
-   * nothing archives it first. So this asks — but only when there is something to
-   * lose, because a prompt that always fires stops being read.
+   * autosave fires about two seconds later and writes a **new record** — the previous
+   * project survives, but its slot as "current" ends here. So this asks, but only when
+   * there is something to lose, because a prompt that always fires stops being read.
    */
   const createProject = () => {
     const guard = decideNewProject({
@@ -90,6 +117,28 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
     }
   };
 
+  const abrir = async (id: string) => {
+    const ok = await openStoredProject(id);
+    // A record that vanished between the list being drawn and the click is not worth
+    // an error dialog; the list is simply stale and the next open will be right.
+    if (!ok) await refreshProjects();
+  };
+
+  const apagar = async (id: string) => {
+    setConfirmarApagar(null);
+    await removeStoredProject(id);
+  };
+
+  const confirmarRenomear = async (id: string) => {
+    const nome = novoNome.trim();
+    setRenomeando(null);
+    if (!nome) return;
+    const ok = await renameStoredProject(id, nome);
+    if (!ok) await refreshProjects();
+  };
+
+  const lista = storedProjects.length > 0;
+
   return createPortal(
     <>
       <div className="ic-modal-overlay" onClick={close}>
@@ -113,9 +162,98 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
             <AnimatedIconCoreLogo className="ic-welcome-logo" animated={false} />
             <span className="ic-product-mark">Icon Core</span>
           </div>
-          <h1>Start a new icon</h1>
-          <p>Create from scratch, or bring artwork in and refine it before exporting every target.</p>
+          <h1>{lista ? 'Your projects' : 'Start a new icon'}</h1>
+          <p>
+            {lista
+              ? 'Continue where you left off, or start something new.'
+              : 'Create from scratch, or bring artwork in and refine it before exporting every target.'}
+          </p>
         </header>
+
+        {/*
+          `D2` — the list.
+
+          Tailwind utilities rather than new classes: the UI budget guard has five
+          lines of CSS left and one hex literal, and its policy is that budgets never
+          rise. Every colour here resolves through the existing `@theme` mapping.
+        */}
+        {lista && (
+          <ul aria-label="Stored projects" className="m-0 mb-4 flex list-none flex-col gap-1 p-0">
+            {storedProjects.map((project, index) => (
+              <li
+                key={project.id}
+                className="flex items-center gap-2 rounded-ic-md border border-ic-border bg-ic-surface px-2 py-1.5"
+              >
+                {index === 0 ? (
+                  <Button
+                    variant="primary"
+                    iconLeft={<FolderOpen size={15} />}
+                    onClick={() => void abrir(project.id)}
+                    aria-label={`Continue ${project.name}`}
+                  >
+                    Continue {project.name}
+                  </Button>
+                ) : (
+                  <button
+                    type="button"
+                    className="flex min-h-[var(--ic-control-md)] flex-1 cursor-pointer items-center gap-2 rounded-ic-md border border-ic-border bg-ic-surface px-3 text-left text-[13px] text-ic-text transition-colors duration-150 hover:bg-ic-elevated focus-visible:ring-2 focus-visible:ring-ic-accent-ring"
+                    onClick={() => void abrir(project.id)}
+                    aria-label={`Continue ${project.name}`}
+                  >
+                    <FolderOpen size={15} />
+                    <span className="flex-1 truncate">{project.name}</span>
+                    <span className="text-ic-text-faint">{describeProjectRow(project)}</span>
+                  </button>
+                )}
+
+                {renomeando === project.id ? (
+                  <span className="flex items-center gap-1">
+                    <TextField
+                      label={`New name for ${project.name}`}
+                      value={novoNome}
+                      onChange={(event) => setNovoNome(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-ic-sm p-1.5 text-ic-text hover:bg-ic-elevated"
+                      onClick={() => void confirmarRenomear(project.id)}
+                      aria-label={`Save name for ${project.name}`}
+                    >
+                      <Check size={15} />
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="cursor-pointer rounded-ic-sm p-1.5 text-ic-text-muted hover:bg-ic-elevated"
+                    onClick={() => {
+                      setRenomeando(project.id);
+                      setNovoNome(project.name);
+                    }}
+                    aria-label={`Rename ${project.name}`}
+                  >
+                    <PenTool size={14} />
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-ic-sm p-1.5 text-ic-text-muted hover:bg-ic-elevated"
+                  onClick={() => setConfirmarApagar(project.id)}
+                  aria-label={`Delete ${project.name}`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {projectsLoading && !lista && (
+          <p role="status" className="mb-3 text-ic-text-muted">
+            Looking for saved projects…
+          </p>
+        )}
 
         <div className="ic-welcome-grid">
           <article className="ic-welcome-card is-primary">
@@ -158,7 +296,7 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
           </a>
           <a href="https://github.com/mafhper/icon-core" target="_blank" rel="noreferrer">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0.315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
             </svg>
             Join the development community
           </a>
@@ -176,6 +314,16 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
             startProject();
           }}
           onCancel={() => setConfirmacao(null)}
+        />
+      )}
+
+      {confirmarApagar && (
+        <ConfirmModal
+          title="Delete this project?"
+          message="It will be removed from this browser. Anything already exported stays where it is."
+          confirmLabel="Delete"
+          onConfirm={() => void apagar(confirmarApagar)}
+          onCancel={() => setConfirmarApagar(null)}
         />
       )}
     </>,
