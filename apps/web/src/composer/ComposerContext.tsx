@@ -97,6 +97,12 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
   const writeSeqRef = useRef(0);
   const quotaAvisadaRef = useRef(false);
 
+  // Declared before the store-open effect on purpose: that effect writes this state,
+  // and a `const` referenced from an effect body works only because the body runs after
+  // the component finished. Correct, and a trap for whoever moves one line.
+  const [storedProjects, setStoredProjects] = useState<ProjectPointer[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
   useEffect(() => {
     let vivo = true;
 
@@ -104,6 +110,27 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
       .then(({ store, pointer }) => {
         if (!vivo) return;
         storeRef.current = store;
+
+        // **The list is read here, where the store is known to exist** — not by the
+        // welcome on its mount.
+        //
+        // The first version did the opposite and the list never appeared on a cold
+        // start: `openProjectStore` is async, the welcome is the very first thing to
+        // mount when there is no project, so `refreshProjects` ran while
+        // `storeRef.current` was still `null`, returned early, and was never called
+        // again. One project on disk, an empty list, no error anywhere. The tests missed
+        // it because every one of them saved a project first, which is exactly the
+        // await the cold-start path skips.
+        store
+          .list()
+          .then((projects) => {
+            if (vivo) setStoredProjects(projects);
+          })
+          .catch(() => {
+            // A list that fails to load is an empty list, not a broken welcome: the
+            // three creation paths do not depend on it.
+            if (vivo) setStoredProjects([]);
+          });
 
         if (!pointer) {
           setRestoredName(null);
@@ -217,21 +244,16 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
 
   // --- `D2`: the stored-project list ---------------------------------------
 
-  const [storedProjects, setStoredProjects] = useState<ProjectPointer[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState(false);
-
   const refreshProjects = useCallback(async () => {
     const store = storeRef.current;
-    // Before the open finishes there is nothing to list, and `store.list()` would be
-    // a promise nobody is waiting on. The welcome calls this on mount, which is after
-    // the restore in every path that has projects.
+    // The list is already loaded by the store-open effect, so reaching this before the
+    // store exists means the open has not landed yet — and it will load the list on its
+    // own. Skipping here is therefore correct, and no longer the bug it used to be.
     if (!store) return;
     setProjectsLoading(true);
     try {
       setStoredProjects(await store.list());
     } catch {
-      // A list that fails to load is an empty list, not a broken welcome: the three
-      // creation paths do not depend on it.
       setStoredProjects([]);
     } finally {
       setProjectsLoading(false);
