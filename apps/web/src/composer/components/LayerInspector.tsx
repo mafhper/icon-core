@@ -19,7 +19,20 @@ const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'sq
 const BACKDROP_OPTIONS = [
   { value: 'dots', label: 'Dots' },
   { value: 'grid', label: 'Grid' },
-  { value: 'plain', label: 'Plain' },
+  { value: 'plain', label: 'Plain' }
+] as const;
+
+/**
+ * Alinhamento do texto, em rótulos que dizem o que cada botão faz.
+ *
+ * `Left` / `Center` / `Right` e não `0` / `1` / `2`: o valor é curto e o nome **é** o
+ * significado. Um campo numérico de 0 a 2 seria adivinhável, e a mesma razão que fez a
+ * `VariantBar` usar palavras em vez de índices.
+ */
+const TEXT_ALIGN_OPTIONS = [
+  { value: 'left', label: 'Left' },
+  { value: 'center', label: 'Center' },
+  { value: 'right', label: 'Right' }
 ] as const;
 
 /**
@@ -274,6 +287,51 @@ export const LayerInspector = () => {
                 onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
               />
             </div>
+
+            {/*
+              `IC63/2` — itálico e alinhamento.
+
+              A caixa do alinhamento é o **shape da layer** (58% da largura do canvas,
+              `createTextLayer`), não o canvas inteiro: ancorar à esquerda no meio do
+              canvas faria o texto crescer para a direita a partir do centro, que é o
+              oposto de "esquerda". A geometria mora em `textLayout.ts` e os dois
+              pipelines consomem a mesma função.
+
+              O alinhamento vem **primeiro** na UI e não como um campo numérico solto:
+              três botões em texto (`Left / Center / Right`) dizem o que cada um faz, e
+              nenhum número de 0 a 2 seria adivinhável. É a mesma escolha da
+              `VariantBar`, e pela mesma razão — o valor é curto e o nome é o
+              significado.
+
+              Sem CSS novo: o budget de `index.css` tem 5 linhas de folga e a política é
+              que budget não sobe.
+            */}
+            <SegmentedControl
+              aria-label="Text alignment"
+              options={TEXT_ALIGN_OPTIONS}
+              value={layer.text?.textAlign ?? 'center'}
+              onChange={(textAlign) =>
+                updateLayer({ text: { ...layer.text, textAlign } as IconLayer['text'] })
+              }
+            />
+
+            {/*
+              `IC63/2` — o itálico é o único controle de "estilo" que entra aqui.
+
+              `letterSpacing` ficou de fora de propósito: ele exigiria um campo novo no
+              modelo **e** nos dois renderers, e é exatamente o tipo de adição que entra
+              "já que a caixa está aberta" e sai sem medição. Fica para quando alguém
+              precisar dele num logo, e não como Keys.
+            */}
+            <Switch
+              label="Italic"
+              checked={layer.text?.fontStyle === 'italic'}
+              onChange={(event) =>
+                updateLayer({
+                  text: { ...layer.text, fontStyle: event.target.checked ? 'italic' : 'normal' } as IconLayer['text']
+                })
+              }
+            />
           </Section>
         )}
 

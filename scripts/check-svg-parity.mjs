@@ -203,6 +203,77 @@ const PROJECTS = {
     }
   ]),
 
+  /**
+   * `IC63/2` — itálico, e por que o alinhamento **não** tem fixture aqui.
+   *
+   * Houve três fixtures de alinhamento (`textoEsquerda`, `textoDireita`) neste arquivo,
+   * e elas **não mediam nada**. A mutação que trocava `textAlign: 'left'` por
+   * `'center'` na fixture passou sem mudar um único número — o patch aplicava (verificado
+   * à parte), o portão ficava verde, e as linhas saíam byte a byte iguais.
+   *
+   * Não era defeito da feature. Três sondas seguidas/stableceram:
+   *
+   *   1. o SVG emite `text-anchor="start" x=30`, `middle x=128`, `end x=226` — três
+   *      âncoras corretas e distintas;
+   *   2. a geometria da tinta de canvas e SVG é **idêntica ao pixel** — bbox igual,
+   *      0 px de diferença de tinta, 0 colunas com perfil distinto;
+   *   3. logo, os dois pipelines **honram** o campo e **concordam** entre si.
+   *
+   * E é essa concordância que torna a fixture cega: ela compara **canvas contra SVG**, e
+   * os dois se movem juntos quando o campo muda. Ela mede *concordância*, não
+   * *correção*. Um portão que só compara duas coisas que andam juntas não vê o valor de
+   * nenhuma das duas.
+   *
+   > Esta é a lição do `IC63/1b` ao contrário. Lá a fixture comparava canvas com SVG e
+   > eu a tomei como prova de que o override funcionava — não funcionava, e foi por isso
+   > que existe o gate de "o override tem que mudar o render". Aqui ela parece prova da
+   > âncora e não é. **Comparar contra o outro pipeline prova divergência, nunca
+   > correção.** Correção precisa de valor absoluto.
+   *
+   * O alinhamento está travado em outro lugar, e em ambos os casos por valor absoluto:
+   *
+   * - **15 testes de unidade** em `textLayout.spec.ts`, mutation gate **8/8**, incluindo
+   *   "left ancora no centro" e "right ancora no centro" — as duas mutações que
+   *   colocariam o texto no lugar errado;
+   * - **o markup emitido**, que é um número: `text-anchor="start"`, `x="30"`,
+   *   `font-style="italic"` presente ou ausente.
+   *
+   * Então as fixtures saem em vez de afrouxarem o limite. Fixture que não falha é pior
+   * que fixture nenhuma: parece cobertura.
+   *
+   * ## Por que esta fica
+   *
+   * `textoItalico` mede outra coisa, e **não** é um caso como o alinhamento. O
+   * itálico não desloca a caixa: a tinta começa no mesmo pixel (`x=79` medido, igual ao
+   * upright), e o que muda é a **inclinação dos glifos** dentro dela. Isso produz uma
+   * divergência de borda de verdade entre os dois pipelines — e é por isso que o limite
+   * é `1%` e não `null`: se alguém remover o `font-style` do SVG, esta fixture
+   * reprova.
+   *
+   * Verificado por corte: sem `font-style`, o pixel cai para 0,8% → **1,3%** e reprova
+   * (a medição está no log do PR).
+   */
+  textoItalico: base('textoItalico', [
+    {
+      id: 'ltextitalic',
+      name: 'texto',
+      kind: 'text',
+      visible: true,
+      zIndex: 0,
+      source: { type: 'reference', path: '', shape: { kind: 'rectangle', width: 196, height: 44 } },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      opacity: 1,
+      text: {
+        content: 'Italico',
+        fontFamily: 'sans-serif',
+        fontSize: 22,
+        fontWeight: 400,
+        fontStyle: 'italic'
+      },
+      fill: { kind: 'solid', color: '#111827' }
+    }
+  ]),
+
   // Alpha compositing.
   opacidade: base('opacidade', [
     shape({ kind: 'rectangle', width: 216, height: 216, cornerRadius: 0 }, {
@@ -359,6 +430,7 @@ const ACEITACAO = {
   radial: { minFora: 0.5 },
   opacidade: { minFora: 0.5 },
   svgCor: { minFora: 0.5 },
+  textoItalico: { minFora: 1 },
   texto: { minFora: null },
   textoEBold: { minFora: null },
   textoHostil: { minFora: null },
