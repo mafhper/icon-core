@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   composerReducer,
   initialState,
@@ -7,11 +7,35 @@ import {
   type ComposerAction,
   type ComposerView
 } from './composerReducer';
-import { parseProjectFile } from './utils/projectGuard';
-import { saveProject, describeSaveOutcome } from './utils/projectStorage';
+import { describeSaveOutcome } from './utils/projectStorage';
+import {
+  openProjectStore,
+  readPointer,
+  writePointer,
+  type ProjectStore
+} from './utils/projectStore';
 import { useToast } from './toast/ToastContext';
 
-const STORAGE_KEY = 'iconcore-composer-project';
+/**
+ * Where the open project lives, and how it gets there.
+ *
+ * **What changed with `D1`.** The autosave used to write one `localStorage` slot
+ * synchronously, and the provider restored from it while rendering — which is why
+ * reopening the app went straight to the editor with no flash. IndexedDB is
+ * **asynchronous**, so that trick is gone: the open is now a step the provider has
+ * to wait for, and the first render happens before the project is known.
+ *
+ * **The phase is the whole design.** `restoring` exists so the app can say *"we
+ * are getting your project"* rather than flashing an empty editor and then filling
+ * it. The alternative — optimistically rendering the editor and swapping the
+ * project in a moment later — is what makes an app feel broken, and it is exactly
+ * the false-belief failure the quota fix (#197) was about, one level up.
+ *
+ * **Nothing here can block the editor for long.** `openProjectStore` never rejects:
+ * an unreadable pointer, a storage that throws on `getItem`, a blocked IndexedDB and
+ * a legacy slot that fails to parse all resolve to "start from an empty workspace",
+ * because a project the user cannot open is worth less than an editor they can use.
+ */
 
 interface ComposerContextValue {
   state: ComposerState;
@@ -21,52 +45,130 @@ interface ComposerContextValue {
 
 const ComposerContext = createContext<ComposerContextValue | null>(null);
 
-const restoreInitialState = (): { init: ComposerState; failed: boolean } => {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return { init: initialState, failed: false };
-  try {
-    // Accepts v2 (legacy) and v3, migrating to the canonical v3 document.
-    const project = parseProjectFile(saved);
-    if (!project) throw new Error('unrecognized project payload');
-    return {
-      init: {
-        ...initialState,
-        project,
-        view: 'edit-space',
-        history: [project],
-        historyIndex: 0,
-        enabledTargets: new Set(project.targets.filter((target) => target.enabled).map((target) => target.target))
-      },
-      failed: false
-    };
-  } catch (err) {
-    console.warn('Failed to restore saved Icon Core project:', err);
-    localStorage.removeItem(STORAGE_KEY);
-    return { init: initialState, failed: true };
-  }
-};
+/**
+ * The synchronous half of the restore: what the pointer alone can tell us.
+ *
+ * The pointer is a UUID and a name in `localStorage`, readable during render. It is
+ * what lets the app know *whether* a saved project exists before the body arrives,
+ * which is the difference between "opening your project" and "here is an empty
+ * canvas, sorry".
+ */
+const peekPointerName = (): string | null => readPointer(window.localStorage)?.name ?? null;
 
 export const ComposerProvider = ({ children }: { children: ReactNode }) => {
   const toast = useToast();
-  const restoredRef = useRef<{ init: ComposerState; failed: boolean } | null>(null);
+
+  const [restoring, setRestoring] = useState(true);
+  const [restoredName, setRestoredName] = useState<string | null>(() => peekPointerName());
+
+  // Read once, before the first paint, so the reducer never starts from a half-known
+  // project. `useRef` rather than state because it must not trigger a render.
+  const restoreRef = useRef<{
+    init: ComposerState;
+    failed: boolean;
+    name: string | null;
+    pointerId: string | null;
+  } | null>(null);
+  if (restoreRef.current === null) {
+    restoreRef.current = {
+      init: initialState,
+      failed: false,
+      name: restoredName,
+      pointerId: readPointer(window.localStorage)?.id ?? null
+    };
+  }
+
+  const [state, dispatch] = useReducer(composerReducer, restoreRef.current.init);
+
+  // The store outlives any single save, so it lives in a ref rather than in state:
+  // putting it in state would make every save re-render the whole composer tree.
+  const storeRef = useRef<ProjectStore | null>(null);
+  const pointerIdRef = useRef<string | null>(restoreRef.current.pointerId);
+  const projectIdRef = useRef<string | null>(null);
+  // Autosave writes can finish out of order. This counter is what makes "the last
+  // write wins" true rather than hopeful: a stale result is recognised and ignored
+  // instead of clearing `isDirty` for work that was never stored.
+  const writeSeqRef = useRef(0);
   const quotaAvisadaRef = useRef(false);
-  if (restoredRef.current === null) restoredRef.current = restoreInitialState();
-  const [state, dispatch] = useReducer(composerReducer, restoredRef.current.init);
 
   useEffect(() => {
-    if (restoredRef.current?.failed) {
+    let vivo = true;
+
+    openProjectStore({ storage: window.localStorage, factory: window.indexedDB ?? null })
+      .then(({ store, pointer }) => {
+        if (!vivo) return;
+        storeRef.current = store;
+
+        if (!pointer) {
+          setRestoredName(null);
+          setRestoring(false);
+          return;
+        }
+
+        pointerIdRef.current = pointer.id;
+        setRestoredName(pointer.name);
+
+        return store.read(pointer.id).then((found) => {
+          if (!vivo) return;
+          if (!found) {
+            // The pointer named something the store cannot produce. The store has
+            // already fallen back to wherever the project actually is, so the honest
+            // outcome is an empty workspace with the name still offered — the user
+            // picks "New" and keeps going.
+            setRestoring(false);
+            return;
+          }
+          projectIdRef.current = found.id;
+          dispatch({ type: 'LOAD_PROJECT', payload: { project: found.project } });
+          setRestoring(false);
+        });
+      })
+      .catch((error: unknown) => {
+        // `openProjectStore` is written not to reject. Reaching here means a defect
+        // in it, and swallowing that silently would be the same false belief the
+        // quota fix removed.
+        if (!vivo) return;
+        console.warn('Could not open the project store:', error);
+        setRestoring(false);
+      });
+
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (restoring) return;
+    if (restoreRef.current?.failed) {
       toast.error('Could not restore your saved project. Starting with a clean workspace.');
     }
-  }, [toast]);
+  }, [restoring, toast]);
 
   useEffect(() => {
-    if (state.project && state.isDirty) {
-      const timer = setTimeout(() => {
-        const outcome = saveProject(localStorage, STORAGE_KEY, state.project);
-        // Only a quota failure clears the dirty flag. Telling the editor the work
-        // is saved when it is not would be the same silent failure one layer
-        // down.
+    if (restoring) return;
+    if (!state.project || !state.isDirty) return;
+
+    const timer = setTimeout(() => {
+      const store = storeRef.current;
+      const project = state.project;
+      if (!store || !project) return;
+
+      const seq = ++writeSeqRef.current;
+      const id = projectIdRef.current ?? pointerIdRef.current ?? null;
+
+      // No store yet means the open has not finished; the `restoring` guard above
+      // normally prevents this, and skipping beats racing the restore.
+      if (!id) return;
+
+      const name = project.metadata.name;
+
+      void store.write({ id, name, project }).then((outcome) => {
+        if (seq !== writeSeqRef.current) return; // a newer write already answered
+
         if (outcome.kind === 'saved') {
+          const updatedAt = Date.now();
+          writePointer(window.localStorage, { id, name, updatedAt });
+          pointerIdRef.current = id;
           dispatch({ type: 'SET_DIRTY', payload: false });
           return;
         }
@@ -76,14 +178,15 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
           quotaAvisadaRef.current = true;
           toast.error(aviso);
         }
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [state.project, state.isDirty, toast]);
+      });
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [state.project, state.isDirty, restoring, toast]);
 
   // The autosave keeps failing after the first notice, so the flag is what keeps
-  // one full project from producing a toast on every keystroke. It clears when
-  // the project fits again, which is the only time the situation has changed.
+  // one full project from producing a toast on every keystroke. It clears when the
+  // project fits again, which is the only time the situation has changed.
   useEffect(() => {
     if (!state.isDirty) quotaAvisadaRef.current = false;
   }, [state.isDirty]);
@@ -117,6 +220,25 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <ComposerContext.Provider value={{ state, dispatch, navigate }}>
+      {/* Announced, not decorative: this is the one moment the app is deliberately
+          not showing the work, and a screen reader user is owed the same fact a
+          sighted one gets from the wait.
+
+          Tailwind utilities, not a new class, for a reason worth stating: the UI
+          budget guard has five lines of CSS left and one hex literal, and its policy
+          is that budgets never go up. `bg-ic-surface` and `text-ic-text-muted`
+          resolve through the existing `@theme` mapping, so this costs zero CSS lines
+          and zero literals — and the colour guard stays measurable, because a raw
+          hex here would have been the 97th. */}
+      {restoring && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-50 grid place-items-center bg-ic-surface text-ic-text-muted"
+        >
+          {restoredName ? `Opening ${restoredName}…` : 'Opening your workspace…'}
+        </div>
+      )}
       {children}
     </ComposerContext.Provider>
   );
