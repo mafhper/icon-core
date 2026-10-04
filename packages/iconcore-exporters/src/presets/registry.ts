@@ -11,7 +11,9 @@ const raster = (
   id: string,
   path: string,
   size: number,
-  extras: Partial<Pick<ExportArtifactSpec, 'background' | 'quality' | 'target' | 'variant'>> = {}
+  extras: Partial<
+    Pick<ExportArtifactSpec, 'background' | 'quality' | 'target' | 'variant' | 'safeZone'>
+  > = {}
 ): ExportArtifactSpec => ({
   id,
   format: 'png',
@@ -20,6 +22,16 @@ const raster = (
   size,
   ...extras
 });
+
+/**
+ * The Android adaptive-icon safe zone: **66 of 108dp**.
+ *
+ * Both layers are 108×108dp, but only the central 66×66dp is guaranteed visible — the
+ * outer 18dp on each side is cropped by the launcher's mask and used for parallax. The
+ * number is the one from the platform's own docs (`SAFEZONE_SCALE = 66f / 72f` in
+ * `AdaptiveIconDrawable.java`), not a round number chosen for looks.
+ */
+const SAFE_ZONE = 66 / 108;
 
 /** Convenience builder for an SVG (vector) artifact. */
 const vector = (id: string, path: string, size: number): ExportArtifactSpec => ({
@@ -152,6 +164,47 @@ export const EXPORT_PRESETS: ExportPreset[] = [
       raster('marketing-png-256', 'marketing/icon-256.png', 256),
       raster('marketing-png-512', 'marketing/icon-512.png', 512),
       raster('marketing-png-1024', 'marketing/icon-1024.png', 1024)
+    ]
+  },
+  {
+    id: 'android',
+    label: 'Android app icon',
+    description:
+      'Adaptive icon layers + legacy launcher bitmaps + Play Store listing, all raster. ' +
+      'The foreground is inset to the 66dp safe zone of the 108dp layer.',
+    platforms: ['android'],
+    documentation:
+      'res/mipmap-* for the bitmaps; res/mipmap-anydpi-v26/*.xml is produced as an attachment',
+    createArtifacts: () => [
+      // ── Adaptive layers ────────────────────────────────────────────────────────
+      // Both layers are 108×108dp; only the central 66×66dp of the foreground is
+      // guaranteed visible. `safeZone: 66/108` is that inset — WITHOUT it the logo is
+      // cropped by every launcher mask (circle, squircle, teardrop).
+      raster('android-foreground-mdpi', 'mipmap-mdpi/ic_launcher_foreground.png', 108, { safeZone: SAFE_ZONE }),
+      raster('android-foreground-hdpi', 'mipmap-hdpi/ic_launcher_foreground.png', 162, { safeZone: SAFE_ZONE }),
+      raster('android-foreground-xhdpi', 'mipmap-xhdpi/ic_launcher_foreground.png', 216, { safeZone: SAFE_ZONE }),
+      raster('android-foreground-xxhdpi', 'mipmap-xxhdpi/ic_launcher_foreground.png', 324, { safeZone: SAFE_ZONE }),
+      raster('android-foreground-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_foreground.png', 432, { safeZone: SAFE_ZONE }),
+      // The background is full bleed on purpose — it is what fills the mask.
+      raster('android-background-mdpi', 'mipmap-mdpi/ic_launcher_background.png', 108, { background: 'opaque' }),
+      raster('android-background-hdpi', 'mipmap-hdpi/ic_launcher_background.png', 162, { background: 'opaque' }),
+      raster('android-background-xhdpi', 'mipmap-xhdpi/ic_launcher_background.png', 216, { background: 'opaque' }),
+      raster('android-background-xxhdpi', 'mipmap-xxhdpi/ic_launcher_background.png', 324, { background: 'opaque' }),
+      raster('android-background-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_background.png', 432, { background: 'opaque' }),
+      // ── Legacy launcher, below API 26 ───────────────────────────────────────────
+      raster('android-legacy-mdpi', 'mipmap-mdpi/ic_launcher.png', 48),
+      raster('android-legacy-hdpi', 'mipmap-hdpi/ic_launcher.png', 72),
+      raster('android-legacy-xhdpi', 'mipmap-xhdpi/ic_launcher.png', 96),
+      raster('android-legacy-xxhdpi', 'mipmap-xxhdpi/ic_launcher.png', 144),
+      raster('android-legacy-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher.png', 192),
+      raster('android-round-mdpi', 'mipmap-mdpi/ic_launcher_round.png', 48),
+      raster('android-round-hdpi', 'mipmap-hdpi/ic_launcher_round.png', 72),
+      raster('android-round-xhdpi', 'mipmap-xhdpi/ic_launcher_round.png', 96),
+      raster('android-round-xxhdpi', 'mipmap-xxhdpi/ic_launcher_round.png', 144),
+      raster('android-round-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_round.png', 192),
+      // ── Play Store listing ─────────────────────────────────────────────────────
+      // 512×512 and **opaque**: Play rejects alpha, and applies its own rounding.
+      raster('android-play-512', 'play-store-512.png', 512, { background: 'opaque' })
     ]
   },
   {

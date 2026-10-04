@@ -1,4 +1,4 @@
-import { FileCode2, FileJson, FileText, Globe, Info } from 'lucide-react';
+import { FileCode2, FileJson, FileText, Globe, Info, Smartphone } from 'lucide-react';
 import type { ExportPlan } from '@iconcore/shared';
 import { attachmentLabel, canDisableAttachment } from '../../utils/exportPlanState';
 
@@ -10,6 +10,7 @@ export interface CompanionFilesProps {
 const ICON_FOR = {
   manifest: Globe,
   browserconfig: Globe,
+  'android-adaptive': Smartphone,
   report: FileJson,
   preview: FileCode2,
   readme: FileText

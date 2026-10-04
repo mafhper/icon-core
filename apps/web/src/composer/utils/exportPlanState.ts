@@ -296,8 +296,16 @@ export const plannedOutputPaths = (plan: ExportPlan, context: ExportContext, var
 export const formatLabel = (format: ExportArtifact['format']): string =>
   format === 'jpeg' ? 'JPEG' : format.toUpperCase();
 
-/** Attachments that are part of the integration and should read as locked. */
-const INTEGRATION_ATTACHMENTS = new Set(['manifest', 'browserconfig']);
+/**
+ * Attachments that are part of the integration and should read as locked.
+ *
+ * `android-adaptive` entra aqui pelo mesmo motivo de `manifest` e `browserconfig`: **sem**
+ * ele o preset não entrega o que promete. O Android 8.0+ ignora as duas camadas e usa o
+ * PNG legado — o export gera as camadas, ninguém vê o resultado, e o usuário conclui que
+ * o preset não funciona. Um arquivo que pode ser desligado e quebra a integração é
+ * exatamente o que este conjunto impede.
+ */
+const INTEGRATION_ATTACHMENTS = new Set(['manifest', 'browserconfig', 'android-adaptive']);
 
 /** Human label for a companion generator, for the editor list. */
 export const attachmentLabel = (generator: ExportAttachment['generator']): string => {
@@ -306,6 +314,8 @@ export const attachmentLabel = (generator: ExportAttachment['generator']): strin
       return 'Web app manifest';
     case 'browserconfig':
       return 'Browser config';
+    case 'android-adaptive':
+      return 'Android adaptive icon XML';
     case 'report':
       return 'Export report';
     case 'preview':

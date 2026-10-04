@@ -308,7 +308,7 @@ export type ExportDestination = 'zip' | 'folder' | 'files';
 export type ExportBackground = 'transparent' | 'opaque';
 
 /** Platform a preset targets. */
-export type ExportPlatform = 'windows' | 'macos' | 'linux' | 'web';
+export type ExportPlatform = 'windows' | 'macos' | 'linux' | 'web' | 'android';
 
 export interface ExportArtifactSpec {
   id: string;
@@ -335,6 +335,23 @@ export interface ExportArtifactSpec {
   /** 0..1, applied to lossy formats (webp/jpeg) only. */
   quality?: number;
   background?: ExportBackground;
+  /**
+   * The fraction of the canvas the **artwork** occupies, centred. The rest is padding the
+   * platform uses for its own framing. Absent means full bleed, which is what every
+   * artifact produced before this field existed.
+   *
+   * Android is the reason this exists. The adaptive icon foreground is a 108×108dp layer,
+   * but only the **central 66×66dp** is guaranteed visible — the outer 18dp on each side is
+   * cropped by the launcher's mask (circle, squircle, teardrop) and used for parallax.
+   * An icon rendered full bleed is therefore cut off on every Android launcher.
+   *
+   * The same shape appears on PWA maskable icons, which need the artwork inside the
+   * central 80% — but there it is already covered by `background: 'opaque'` plus the
+   * person doing the padding by hand. One field covers both when that is wired.
+   *
+   * **Additive and optional**, so an existing plan resolves exactly as before.
+   */
+  safeZone?: number;
   /** Origin target, for traceability. */
   target?: IconTarget;
   options?: Record<string, unknown>;
@@ -377,7 +394,13 @@ export const isSquareSize = (dimensions: Dimensions): boolean =>
   dimensions.width === dimensions.height;
 
 /** Non-icon file produced by a plan (manifest, report, preview…). */
-export type ExportAttachmentGenerator = 'manifest' | 'browserconfig' | 'report' | 'preview' | 'readme';
+export type ExportAttachmentGenerator =
+  | 'manifest'
+  | 'browserconfig'
+  | 'android-adaptive'
+  | 'report'
+  | 'preview'
+  | 'readme';
 
 export interface ExportAttachment {
   path: string;
