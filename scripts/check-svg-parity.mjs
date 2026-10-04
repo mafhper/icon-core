@@ -145,6 +145,34 @@ const PROJECTS = {
   ]),
 
   /**
+   * Texto hostil ao XML, hostil **só** ao XML.
+   *
+   * As duas fixtures de texto acima eram `"Icon"` e `"Wg"` — que não têm nada de
+   * especial, e é por isso que o `&` malformado passou anos sem aparecer. Esta fixture dá
+   * ao portão de XML bem-formado uma entrada que **pode** reprovar; sem ela o portão
+   * mediria nada e passaria sempre.
+   *
+   * O `fontFamily` aqui é `sans-serif` de propósito: hostile no **nome** da fonte mede
+   * disponibilidade de fonte — que difere entre Chromium e libvips e não tem nada a ver
+   * com XML. Nome de família com aspas é testado no spec unitário, onde a afirmação é
+   * sobre o atributo e não sobre paridade de rasterização.
+   */
+  textoHostil: base('textoHostil', [
+    {
+      id: 'ltexto3',
+      name: 'texto hostil',
+      kind: 'text',
+      visible: true,
+      zIndex: 0,
+      source: { type: 'inline', shape: { kind: 'rectangle', width: 512, height: 512 } },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      opacity: 1,
+      text: { content: 'AT&T <b> "q" 5>3', fontFamily: 'sans-serif', fontSize: 64, fontWeight: 600 },
+      fill: { kind: 'solid', color: '#065f46' }
+    }
+  ]),
+
+  /**
    * `IC63/1b` — override de cor em layer `svg`.
    *
    * A fixture que faltava enquanto o recurso não existia. O `check-svg-parity` compara
@@ -333,6 +361,7 @@ const ACEITACAO = {
   svgCor: { minFora: 0.5 },
   texto: { minFora: null },
   textoEBold: { minFora: null },
+  textoHostil: { minFora: null },
   blend: { minFora: 0.5 },
   arredondado: { minFora: 0.5 },
   squircle: { minFora: 0.5 },
@@ -541,10 +570,59 @@ for (const [nome, project] of Object.entries(PROJECTS)) {
   candidatos[nome] = buf.toString('base64');
 }
 
+
 // ── Compare ────────────────────────────────────────────────────────────────────
 const cmpBrowser = await chromium.launch();
 const cmpPage = await cmpBrowser.newPage();
 await cmpPage.setContent('<body></body>');
+
+// ── Gate: XML bem-formado ───────────────────────────────────────────────────────
+//
+// O `escapeXml` foi encontrado **por acaso**: um `&` num logo real gerou um SVG que
+// nenhum leitor abre, e nenhuma fixture media isso. Um portão acha por construção o que
+// um teste só acha se alguém lembrar de escrever.
+//
+// `xmllint` foi a primeira ideia e não existe no toolchain (e não no CI, que é
+// ubuntu — mas também não no Windows de quem desenvolve). `DOMParser` **existe**: é o
+// parser do Chromium que este script já abre, e é mais estrito que o parser tolerante do
+// Node. Zero dependencia nova.
+//
+// Este portão mede **uma coisa**: o documento abre. Ele não substitui as assertions
+// absolutas do `escapeXml.spec.ts` — diz que o XML é válido, não que o texto está
+// certo. Os dois são necessários e medem coisas diferentes.
+
+const svgsParaValidar = Object.fromEntries(
+  Object.entries(PROJECTS).map(([nome, project]) => [
+    nome,
+    renderToSvgWithOptions(project, 'default', { mask: maskFor(project) }).svg
+  ])
+);
+
+const malformados = await cmpPage.evaluate((svgs) => {
+  const parser = new DOMParser();
+  const ruins = [];
+  for (const [nome, svg] of Object.entries(svgs)) {
+    const doc = parser.parseFromString(svg, 'image/svg+xml');
+    // O parser do Chromium sinaliza falha com um elemento `parsererror` na raiz, e não
+    // com exceção: `parseFromString` sempre devolve um documento.
+    const erro = doc.querySelector('parsererror');
+    if (erro || doc.documentElement.nodeName === 'parsererror') {
+      ruins.push({ nome, motivo: (erro?.textContent ?? 'raiz = parsererror').trim().slice(0, 220) });
+    }
+  }
+  return ruins;
+}, svgsParaValidar);
+
+if (malformados.length > 0) {
+  console.error('\n✖ XML malformado — o arquivo nao abre em nenhum leitor:');
+  for (const { nome, motivo } of malformados) console.error(`    ${nome}\n      ${motivo}\n`);
+  console.error('  Um `&`, `<` ou aspa solto no texto da pessoa produz exatamente isto.');
+  console.error('  Ver packages/iconcore-renderer/src/escapeXml.ts.\n');
+  await cmpBrowser.close();
+  process.exit(1);
+}
+
+console.log(`XML bem-formado: ${Object.keys(svgsParaValidar).length} SVG abrem (DOMParser).`);
 
 const nomes = Object.keys(PROJECTS).filter((n) =>
   usarBaseline ? fs.existsSync(`${BASELINE}/${n}.png`) : true
