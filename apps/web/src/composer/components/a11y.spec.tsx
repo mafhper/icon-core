@@ -58,34 +58,34 @@ describe('ExportView (accessible names)', () => {
     localStorage.removeItem('iconcore-composer-project');
   });
 
-  it('names the preset picker and every artifact toggle', () => {
+  it('names the preset picker and every artifact toggle', async () => {
     renderExport();
 
-    expect(screen.getByRole('group', { name: 'Export presets' })).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Export presets' })).toBeInTheDocument();
     // The Tauri target seeds real containers — the regression  exists for.
-    const toggles = screen.getAllByRole('checkbox', { name: /^Include / });
+    const toggles = await screen.findAllByRole('checkbox', { name: /^Include / });
     expect(toggles.length).toBeGreaterThan(0);
     toggles.forEach((toggle) => {
       expect(toggle).toHaveAccessibleName();
     });
   });
 
-  it('names each row action by the artifact it acts on', () => {
+  it('names each row action by the artifact it acts on', async () => {
     renderExport();
 
-    expect(screen.getAllByRole('button', { name: /^Edit / }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /^Duplicate / }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /^Remove / }).length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole('button', { name: /^Edit / })).length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole('button', { name: /^Duplicate / })).length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole('button', { name: /^Remove / })).length).toBeGreaterThan(0);
   });
 
-  it('exposes the destination as a named group and labels the export action', () => {
+  it('exposes the destination as a named group and labels the export action', async () => {
     renderExport();
 
     // The FieldGroup and the SegmentedControl must not share a name, or a screen
     // reader announces "Destination" twice.
-    expect(screen.getByRole('group', { name: 'Destination' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Delivery destination' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Export ZIP|Export to folder|Download/ })).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Destination' })).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Delivery destination' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Export ZIP|Export to folder|Download/ })).toBeInTheDocument();
   });
 
   it('explains the empty state instead of rendering a broken plan', () => {

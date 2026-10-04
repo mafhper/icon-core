@@ -13,7 +13,12 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: /(ui-gallery|inspector-layout|polish)\.spec\.ts/,
+  // `project-store` is here rather than in `playwright.config.ts` because it needs
+  // the **web app**, not the promo page: the claims it settles are about
+  // IndexedDB in a real engine — a round trip, a payload past the 5.101 KB
+  // `localStorage` ceiling, and survival across a closed tab — and none of that
+  // exists on the promo site.
+  testMatch: /(ui-gallery|inspector-layout|polish|project-store)\.spec\.ts/,
   webServer: {
     command: process.env.CI
       ? 'npm run preview --workspace=@iconcore/web -- --host 127.0.0.1 --port 4182'
