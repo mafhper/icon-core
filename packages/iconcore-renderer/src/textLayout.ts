@@ -157,6 +157,23 @@ const GENERICAS = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fanta
  */
 const NOME_INVALIDO_SEM_ASPAS = /^-?[0-9]|[^A-Za-z0-9_\-\s\u00A0-\uFFFF]|^\s|\s$/;
 
+/**
+ * Escape de string CSS, em **passada única**.
+ *
+ * O CodeQL marcou `js/incomplete-sanitization` nesta linha: eu escapava só as aspas, e um
+ * `\` na entrada ficava de fora. `\"` na entrada virava `\"` na saída, que o CSS lê como
+ * **aspa de fechamento** — e o nome de família saía da citação, deixando o resto do
+ * `ctx.font` sob controle de quem escreveu o `.iconcore.json`.
+ *
+ * A ordem importa: `\` tem que ser escapado **antes** das aspas, senão o `\` introduzido
+ * pelo escape da aspa seria escapado de novo. Por isso os dois numa tabela e uma passada
+ * só, que é o mesmo motivo de `escapeXml` não encadear `replace`.
+ */
+const ESCAPE_CSS: Record<string, string> = {
+  '\\': '\\\\',
+  '"': '\\"'
+};
+
 /** Cita um nome de família só quando ele precisa. `Inter, Sora, sans-serif` passa inteiro. */
 export const cssFontFamily = (fontFamily: string): string =>
   fontFamily
@@ -166,7 +183,7 @@ export const cssFontFamily = (fontFamily: string): string =>
       if (nome === '' || nome.startsWith('"') || nome.startsWith("'")) return nome;
       if (GENERICAS.has(nome.toLowerCase())) return nome;
       if (!NOME_INVALIDO_SEM_ASPAS.test(nome)) return nome;
-      return `"${nome.replace(/"/g, '\\"')}"`;
+      return `"${nome.replace(/[\\"]/g, (ch) => ESCAPE_CSS[ch])}"`;
     })
     .join(', ');
 

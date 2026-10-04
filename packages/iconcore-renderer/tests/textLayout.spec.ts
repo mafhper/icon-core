@@ -184,6 +184,25 @@ describe('cssFontFamily — nome de família que o ctx.font não aceita', () => 
     expect(cssFontFamily("'Outra'")).toBe("'Outra'");
   });
 
+  it('escapa a barra invertida, sem o qual a aspa de fechamento escapa', () => {
+    // Achado do CodeQL (`js/incomplete-sanitization`) na primeira versão desta função: ela
+    // escapava as aspas mas não a barra. `\"` na entrada virava `\"` na saída, que o CSS
+    // lê como **fim da citação** — e o resto do `ctx.font` passava a ser controlado por
+    // quem escreveu o `.iconcore.json`.
+    expect(cssFontFamily('3D\\" Icons')).toBe('"3D\\\\\\" Icons"');
+    // Só a barra, sem aspa: também precisa de escape dentro da citação.
+    expect(cssFontFamily('3D\\Icons')).toBe('"3D\\\\Icons"');
+  });
+
+  it('a citação produceda fecha no lugar certo', () => {
+    // A propriedade que importa: depois do escape, **não** pode sobrar aspa não escapada
+    // dentro do conteúdo citado.
+    const saida = cssFontFamily('A"B\\C');
+    const dentro = saida.slice(1, -1);
+    expect(dentro.replace(/\\\\|\\"/g, '')).not.toContain('"');
+    expect(saida.startsWith('"') && saida.endsWith('"')).toBe(true);
+  });
+
   it('a assinatura inteira sai com o nome citado', () => {
     // O defeito é do `ctx.font`, e a asserção é na assinatura.
     expect(canvasFontShorthand({ fontFamily: '3D Icons', fontSize: 96, fontWeight: 700 })).toBe(
