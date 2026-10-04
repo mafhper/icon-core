@@ -83,6 +83,13 @@ jobs:
       - name: ADD_LAYER payload type gate
         run: node scripts/check-add-layer-payload-types.mjs
 
+      # A regra que o dono fixou ao pedir o preset Android: "se o Android não lê o SVG,
+      # não faz sentido exportar o formato para esse preset" — generalizada para todo preset.
+      # Um artefato em formato que nenhuma plataforma do preset lê é inútil, e falha no
+      # build da pessoa, não no export.
+      - name: Preset format coherence
+        run: node scripts/check-preset-format-coherence.mjs
+
       - name: End-to-end tests
         run: npm run test:e2e
 
