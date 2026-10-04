@@ -83,12 +83,136 @@ describe('normalizeSvgPaint', () => {
     expect(normalizeSvgPaint('rgb(a,b,c)')).toBe('rgb(a,b,c)');
   });
 
+  it('rgb() nao deixa numero survive com lixo em volta', () => {
+    // A defesa é o `canalAtual` acumulado caractere a caractere: a letra entra no
+    // pedaço, e o teste de dígitos recusa o pedaço inteiro. Estas duas formas eram as
+    // que passavam quando o teste de dígitos não existia — `12abc` vira `#0c0000`, e
+    // `1.2.3` vira `#010203`, ambos sem erro em lugar nenhum.
+    expect(normalizeSvgPaint('rgb(12abc, 0, 0)')).not.toMatch(/^#[0-9a-f]{6}$/);
+    expect(normalizeSvgPaint('rgb(1.2.3, 0, 0)')).not.toMatch(/^#[0-9a-f]{6}$/);
+    expect(normalizeSvgPaint('rgb(., 0, 0)')).not.toMatch(/^#[0-9a-f]{6}$/);
+    expect(normalizeSvgPaint('rgb(0, 0, 12abc)')).not.toMatch(/^#[0-9a-f]{6}$/);
+    // E nada disso pode virar um hex de 8 caracteres, que é o sinal do bug.
+    expect(normalizeSvgPaint('rgb(300, 0, 0)')).not.toMatch(/^#[0-9a-f]{7,}$/);
+    expect(normalizeSvgPaint('rgb(12abc, 0, 0)')).not.toMatch(/^#[0-9a-f]{7,}$/);
+    // Decimal válido continua válido: `1.5` é número arredondado, não lixo. O
+    // arredondamento é de `canal` (`Math.round`), então 1,5 vira 2 — `#020000`.
+    expect(normalizeSvgPaint('rgb(1.5, 0, 0)')).toBe('#020000');
+    expect(normalizeSvgPaint('rgb(1.4, 0, 0)')).toBe('#010000');
+
+    // O ponto tem de deixar número dos **dois** lados. `Number('.5')` é 0,5 e
+    // `Number('.')` é `NaN`, mas uma checagem frouxa deixaria `.` virar 0 — e
+    // `rgb(., 0, 0)` viraria `#000000`, que é uma cor real e completamente inventada.
+    expect(normalizeSvgPaint('rgb(.5, 0, 0)')).toBe('rgb(.5, 0, 0)');
+    expect(normalizeSvgPaint('rgb(., 0, 0)')).toBe('rgb(., 0, 0)');
+    expect(normalizeSvgPaint('rgb(1., 0, 0)')).toBe('rgb(1., 0, 0)');
+  });
+
+  it('rgb() nao le lixo como numero', () => {
+    // `parseFloat('12abc')` devolve **12**, e `Number.isNaN(12)` passa. Com `isNaN` no
+    // lugar de `isFinite`, `rgb(12abc, 0, 0)` virava `#0c0000` — uma cor inventada, sem
+    // nenhum erro em lugar nenhum. Uma cor errada que não reclama é a pior classe de
+    // defeito possível aqui, porque o override aponta para ela e nada acontece.
+    expect(normalizeSvgPaint('rgb(12abc, 0, 0)')).toBe('rgb(12abc, 0, 0)');
+    expect(normalizeSvgPaint('rgb(0, 0x10, 0)')).toBe('rgb(0, 0x10, 0)');
+    // `Infinity` nao vira numero: `Number('Infinity')` e `Infinity`, e `isFinite` e o
+    // unico que barra. A chave volta em **minuscula** porque e o token normalizado que o
+    // browser resolve — e o mesmo token, so escrito diferente.
+    expect(normalizeSvgPaint('rgb(Infinity, 0, 0)')).toBe('rgb(infinity, 0, 0)');
+    // E o que é número continua sendo número.
+    expect(normalizeSvgPaint('rgb(12, 0, 0)')).toBe('#0c0000');
+
+    // O sinal exato do que `parseFloat` faria: o `12` do começo. Esta é a linha que
+    // **não pode** passar, e ela falhou quando o teste de dígitos não existia — a
+    // mutacao correspondente era `parseFloat` + `isNaN`, e `rgb(12abc, 0, 0)` virava
+    // `#0c0000`.
+    expect(normalizeSvgPaint('rgb(12abc, 0, 0)')).toBe('rgb(12abc, 0, 0)');
+    // E o espelho: com o `12` sozinho, `#0c0000` **é** a resposta certa.
+    expect(normalizeSvgPaint('rgb(12, 0, 0)')).toBe('#0c0000');
+    // `0x10` — hexadecimal. `parseFloat` parava no `0` e dava `#000000`, que é uma cor
+    // real e completamente errada.
+    expect(normalizeSvgPaint('rgb(0x10, 0, 0)')).toBe('rgb(0x10, 0, 0)');
+  });
+
+  it('rgb() so aceita tres canais, ou tres mais alpha', () => {
+    // Quatro componentes viram canal: `rgb(1,2,3,4)` é invalido, e `parseFloat` do
+    // quarto não impede nada — o quarto simplesmente viraria o azul. E o `)` engolido
+    // num pedaço era o caminho pelo qual lixo entrava como se fosse canal.
+    expect(normalizeSvgPaint('rgb(1, 2, 3, 4)')).toBe('rgb(1, 2, 3, 4)');
+    expect(normalizeSvgPaint('rgb(1, 2, 3, 4, 5)')).toBe('rgb(1, 2, 3, 4, 5)');
+    expect(normalizeSvgPaint('rgb(1, 2)')).toBe('rgb(1, 2)');
+    // Com alpha, é válido e o alpha não entra na chave.
+    expect(normalizeSvgPaint('rgba(255, 0, 0, 0.5)')).toBe('#ff0000');
+  });
+
+  it('rgb() nao aceita lixo depois do fecha parenteses', () => {
+    // `rgb(1,2,3)extra)` tem um `(` e um `)` no lugar certo, e o que está entre eles
+    // não é só o corpo. Sem a checagem do ultimo caractere, virava `#010203` — cor
+    // válida vindo de texto que não é uma cor.
+    // `rgb(1, 2, 3)extra)` nao casa com **nenhuma** sintaxe de cor que o browser
+    // resolve — nem `rgb()` (o corpo tem lixo), nem token opaco (o `)` no fim). Sai
+    // `null`, e a cor desaparece da lista em vez de virar uma cor inventada. E
+    // desaparecer é o resultado correto: um paint que ninguém consegue resolver também
+    // não tem cor para mostrar.
+    expect(normalizeSvgPaint('rgb(1, 2, 3)extra)')).toBeNull();
+
+    // E o sinal que cobre o resto: sem `fecha === length - 1`, qualquer lixo **antes**
+    // do `)` final passa, porque o `lastIndexOf` acha um parêntese que existe.
+    expect(normalizeSvgPaint('rgb(1, 2, 3)x')).toBeNull();
+    expect(normalizeSvgPaint('rgb(1, 2, 3)z')).toBeNull();
+    expect(normalizeSvgPaint('rgb(1, 2, 3))')).toBeNull();
+
+    // **Espaço nas pontas é legítimo**: `rgb( 1, 2, 3 )` é CSS válido, e
+    // `normalizeSvgPaint` faz `trim()` antes de tudo. A versão anterior deste teste
+    // exigia `null` para `rgb(1, 2, 3) `, e estava errada por dois motivos — o espaço é
+    // válido, e o `trim()` acontece **antes** do `parseRgbFunction`, então o `)` nunca
+    // é o último caractere do texto que o parser vê.
+    expect(normalizeSvgPaint('rgb( 1, 2, 3 )')).toBe('#010203');
+    expect(normalizeSvgPaint('rgb(1,2,3)')).toBe('#010203');
+    expect(normalizeSvgPaint('rgba(1,2,3,0.5)')).toBe('#010203');
+  });
+
   it('devolve null para lixo, em vez de inventar uma cor', () => {
     expect(normalizeSvgPaint('#xyz')).toBeNull();
     expect(normalizeSvgPaint('#12345')).toBeNull();
     expect(normalizeSvgPaint('!important')).toBeNull();
     expect(normalizeSvgPaint('2px')).toBeNull();
     expect(normalizeSvgPaint('0.5')).toBeNull();
+  });
+
+  it('recusa canal fora de 0..255, em vez de gerar um hex de 8 caracteres', () => {
+    // `rgb(300, 0, 0)` é inválido por especificação. `Math.round(300)` passa de 255,
+    // `toString(16)` produz **dois** dígitos, e a cor sairia com 8 caracteres — um hex
+    // que o resto do arquivo não reconheceria, e que voltaria como token opaco no
+    // próximo round trip. Uma cor malformada que "parece" uma cor é pior que uma recusada.
+    //
+    // **O token, e não `null`.** `rgb(300,0,0)` continua sendo um token CSS que o
+    // browser resolve — e `normalizeSvgPaint` é a fronteira do *hex normalizado*, não
+    // um validador de SVG. Recusar aqui tiraria a linha da lista de cores, e a pessoa
+    // perderia a chance de trocar exatamente a cor que está errada. O que não pode
+    // acontecer é a cor virar um hex de 8 caracteres que o pipeline não reconhece.
+    expect(normalizeSvgPaint('rgb(300, 0, 0)')).toBe('rgb(300, 0, 0)');
+    expect(normalizeSvgPaint('rgb(-1, 0, 0)')).toBe('rgb(-1, 0, 0)');
+    // E o round trip não corrompe: o token volta como token.
+    expect(normalizeSvgPaint('rgb(300,0,0)')).not.toMatch(/^#[0-9a-f]{7,}$/);
+    // Dentro da faixa, continua sendo hex.
+    expect(normalizeSvgPaint('rgb(0, 0, 255)')).toBe('#0000ff');
+    expect(normalizeSvgPaint('rgb(255, 255, 255)')).toBe('#ffffff');
+  });
+
+  it('nao demora com entrada patologica — o CodeQL apontou isto', () => {
+    // A versão anterior era `/^rgba?\(\s*([^)]+)\)$/`, marcada pelo CodeQL como *polynomial
+    // regular expression used on uncontrolled data*, severidade alta: `rgb(` seguido de
+    // muitos espaços custa tempo quadrático. E o input é o conteúdo de um arquivo que a
+    // pessoa arrasta para o app — não controlado, por definição.
+    const adversario = `rgb(${' '.repeat(40_000)}x)`;
+    const t0 = performance.now();
+    normalizeSvgPaint(adversario);
+    const ms = performance.now() - t0;
+
+    // 50 ms é folgado de propósito: a asserção é sobre a **ordem de grandeza**, e um
+    // limite apertado transformaria uma máquina lenta em teste flake.
+    expect(ms).toBeLessThan(50);
   });
 });
 

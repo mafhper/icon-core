@@ -128,6 +128,104 @@ const HEX_NOMES: Map<string, string> = new Map(
 const canal = (v: number): string => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
 
 /**
+ * `rgb(…)` / `rgba(…)` → `#rrggbb`, **sem regex**.
+ *
+ * Aceita os três separadores que a especificação permite (vírgula, espaço e barra) e
+ * porcentagem, porque um SVG real usa os três. Alpha é ignorado na chave, como no hex de
+ * 8 dígitos — `#abcd` e `#abbb` são a mesma cor para o olho, e duas chaves para uma cor
+ * fariam dois swatches.
+ *
+ * O corpo é separado por `split` sobre um conjunto de caracteres, e não por regex com
+ * quantificador: é a diferença entre custo linear e quadrático num input que é o
+ * conteúdo de um arquivo arbitrário.
+ *
+ * Devolve `null` para o que não der, e o chamador trata como token opaco — destino
+ * honesto para `rgb(a,b,c)`.
+ */
+const parseRgbFunction = (texto: string): string | null => {
+  if (!texto.startsWith('rgb(') && !texto.startsWith('rgba(')) return null;
+
+  // O corpo é **exatamente** o que está entre o `(` e o `)` finais.
+  //
+  // `rgb(1,2,3)extra)` tem um `(` na posição 3 e um `)` no fim, e o que está entre eles
+  // não é só o corpo — é o corpo mais lixo. Por isso o `)` tem de ser o **último
+  // caractere**: sem essa checagem, `rgb(1,2,3)x` também passaria, porque o
+  // `lastIndexOf` acha um parêntese que existe, e a cor viraria válida vindo de um texto
+  // que não é uma cor.
+  const abre = texto.indexOf('(');
+  const fecha = texto.lastIndexOf(')');
+  if (fecha <= abre || fecha !== texto.length - 1) return null;
+
+  const corpo = texto.slice(abre + 1, fecha).trim();
+
+  /**
+   * Cada componente tem de ser **so numero**. Um scan caractere a caractere, e nao
+   * `parseFloat` + validacao: `parseFloat('12abc')` devolve `12` com o resto descartado,
+   * e a validacao depois nao tem como saber que algo foi jogado fora.
+   *
+   * E o que faz `rgb(12abc, 0, 0)` virar `#0c0000` — uma cor **inventada**, sem erro em
+   * lugar nenhum, e com o override apontando para ela. Cor errada que nao reclama e a
+   * pior classe de defeito aqui: nao ha sintoma para investigar.
+   */
+  const numeros: number[] = [];
+  const porcentagens: boolean[] = [];
+  let i = 0;
+  let canalAtual = '';
+
+  const fecharCanal = (): boolean => {
+    if (canalAtual === '') return false;
+    const ehPorcentagem = canalAtual.endsWith('%');
+    const corpoNumero = ehPorcentagem ? canalAtual.slice(0, -1) : canalAtual;
+    if (corpoNumero === '') return false;
+    // Um canal e **so digitos**, com no maximo um ponto decimal.
+    //
+    // `Number()` sozinho nao basta, e o motivo e fino: `Number('12abc')` e `NaN` (bom),
+    // mas `Number('1.2.3')` e `NaN` tambem, enquanto **`parseFloat('12abc')` e `12`**.
+    // A primeira versao usava `parseFloat` e so recusava `isNaN`, entao `rgb(12abc, 0, 0)`
+    // virava `#0c0000` — uma cor inventada, sem erro em lugar nenhum.
+    if (!/^[0-9]+(\.[0-9]+)?$/.test(corpoNumero)) return false;
+    const n = Number(corpoNumero);
+    if (!Number.isFinite(n) || n < 0 || n > 255) return false;
+    numeros.push(ehPorcentagem ? (n / 100) * 255 : n);
+    porcentagens.push(ehPorcentagem);
+    canalAtual = '';
+    return true;
+  };
+
+  while (i < corpo.length) {
+    const ch = corpo[i];
+    const separador = ch === ',' || ch === '/' || ch === ' ';
+    if (separador) {
+      // Um separador seguido de outro, ou no fim, nao fecha canal: `rgb(1, 2, 3)`
+      // deixa o espaco final sem numero.
+      if (canalAtual !== '' && !fecharCanal()) return null;
+      canalAtual = '';
+      i += 1;
+      continue;
+    }
+    // `12abc` — a letra entra no pedaco, e `^[0-9.]+$` recusa. Um sinal negativo
+    // tambem: `rgb(-1, 0, 0)` e invalido e precisa ser recusado, e o `-` cai aqui.
+    if (!/[0-9.%]/.test(ch)) return null;
+    canalAtual += ch;
+    i += 1;
+  }
+  if (canalAtual !== '' && !fecharCanal()) return null;
+
+  // Três canais, ou três mais alpha.
+  if (numeros.length !== 3 && numeros.length !== 4) return null;
+
+  // O quarto só é alpha se estiver na faixa 0..1 — e um alpha percentual também.
+  // Sem esta checagem, `rgb(1, 2, 3, 4)` viraria `#010203`: o `4` entraria no lugar do
+  // azul, e a cor pareceria válida vindo de texto que não é uma cor.
+  if (numeros.length === 4) {
+    const alpha = porcentagens[3] ? numeros[3] / 255 : numeros[3];
+    if (!(alpha >= 0 && alpha <= 1)) return null;
+  }
+
+  return `#${numeros.slice(0, 3).map((n) => canal(n)).join('')}`;
+};
+
+/**
  * Normaliza qualquer paint de cor para `#rrggbb` minúsculo.
  *
  * Devolve `null` para o que não é cor — e `null` é a diferença entre "não aparece na
@@ -172,16 +270,17 @@ export const normalizeSvgPaint = (value: string): string | null => {
   const nomeado = HEX_NOMES.get(minusculo);
   if (nomeado) return nomeado;
 
-  // `rgb()` / `rgba()`, com ou sem espacos. Só decimal e porcentagem — as outras
-  // notações caem fora e viram token, porque o browser resolve.
-  const rgb = /^rgba?\(\s*([^)]+)\)$/.exec(minusculo);
-  if (rgb) {
-    const partes = rgb[1].split(/[\s,/]+/).filter(Boolean);
-    if (partes.length >= 3) {
-      const nums = partes.slice(0, 3).map((p) => (p.endsWith('%') ? (parseFloat(p) / 100) * 255 : parseFloat(p)));
-      if (!nums.some((n) => Number.isNaN(n))) return `#${nums.map((n) => canal(n)).join('')}`;
-    }
-  }
+  // `rgb()` / `rgba()`. **Sem regex** — CodeQL marcou a versão anterior
+  // (`/^rgba?\(\s*([^)]+)\)$/`) como *polynomial regular expression used on
+  // uncontrolled data*, severidade alta: uma string `rgb(` com muitos espaços faz o
+  // casamento explodir quadraticamente. E o input é literalmente não controlado — é o
+  // conteúdo de um arquivo que a pessoa arrasta para o app.
+  //
+  // O próprio pacote já tinha o caminho certo: `color.ts:84` diz "sem regex
+  // (ReDoS-safe)" e faz o mesmo parse com `indexOf`/`slice`. Segui-o em vez de inventar
+  // uma variante.
+  const rgb = parseRgbFunction(minusculo);
+  if (rgb) return rgb;
 
   /**
    * Token opaco: `currentColor`, system colors (`CanvasText`), e as funcoes de cor que
