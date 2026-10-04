@@ -352,6 +352,20 @@ export interface ExportArtifactSpec {
    * **Additive and optional**, so an existing plan resolves exactly as before.
    */
   safeZone?: number;
+  /**
+   * The outline this artifact is clipped to, overriding the project's canvas shape.
+   *
+   * Android is the reason: the legacy `ic_launcher_round.png` exists to be **round**, and
+   * a copy of the square one is what you get if the shape only comes from the project. On
+   * API 26+ the adaptive mask makes the shape irrelevant, but below that the launcher
+   * loads the file as-is.
+   *
+   * Absent means "whatever the project declares", which is what every artifact produced
+   * before this field existed.
+   *
+   * **Additive and optional**, so an existing plan resolves exactly as before.
+   */
+  maskShape?: CanvasMaskShape;
   /** Origin target, for traceability. */
   target?: IconTarget;
   options?: Record<string, unknown>;

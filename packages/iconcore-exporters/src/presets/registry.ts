@@ -12,7 +12,10 @@ const raster = (
   path: string,
   size: number,
   extras: Partial<
-    Pick<ExportArtifactSpec, 'background' | 'quality' | 'target' | 'variant' | 'safeZone'>
+    Pick<
+      ExportArtifactSpec,
+      'background' | 'quality' | 'target' | 'variant' | 'safeZone' | 'maskShape'
+    >
   > = {}
 ): ExportArtifactSpec => ({
   id,
@@ -32,6 +35,22 @@ const raster = (
  * `AdaptiveIconDrawable.java`), not a round number chosen for looks.
  */
 const SAFE_ZONE = 66 / 108;
+
+/**
+ * A camada monocromática do adaptive icon.
+ * `variant: 'mono'` porque é a variant que o app já mantém como "logo em escala de cinza"
+ * — e o Android **tinge** a camada com a cor do tema, então o que importa é o alfa da
+ * forma, não a cor. `background: 'transparent'` pelo mesmo motivo: fundo pintado viraria
+ * um bloco sólido tingido pelo sistema, que é o oposto de um ícone tematizado.
+ *
+ * A safe zone é a mesma da foreground colorida, e pelo mesmo motivo: o sistema aplica a
+ * mesma máscara.
+ */
+const MONO = {
+  variant: 'mono',
+  background: 'transparent',
+  safeZone: SAFE_ZONE
+} as const satisfies Partial<ExportArtifactSpec>;
 
 /** Convenience builder for an SVG (vector) artifact. */
 const vector = (id: string, path: string, size: number): ExportArtifactSpec => ({
@@ -197,14 +216,28 @@ export const EXPORT_PRESETS: ExportPreset[] = [
       raster('android-legacy-xhdpi', 'mipmap-xhdpi/ic_launcher.png', 96),
       raster('android-legacy-xxhdpi', 'mipmap-xxhdpi/ic_launcher.png', 144),
       raster('android-legacy-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher.png', 192),
-      raster('android-round-mdpi', 'mipmap-mdpi/ic_launcher_round.png', 48),
-      raster('android-round-hdpi', 'mipmap-hdpi/ic_launcher_round.png', 72),
-      raster('android-round-xhdpi', 'mipmap-xhdpi/ic_launcher_round.png', 96),
-      raster('android-round-xxhdpi', 'mipmap-xxhdpi/ic_launcher_round.png', 144),
-      raster('android-round-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_round.png', 192),
+      raster('android-round-mdpi', 'mipmap-mdpi/ic_launcher_round.png', 48, { maskShape: 'circle' }),
+      raster('android-round-hdpi', 'mipmap-hdpi/ic_launcher_round.png', 72, { maskShape: 'circle' }),
+      raster('android-round-xhdpi', 'mipmap-xhdpi/ic_launcher_round.png', 96, { maskShape: 'circle' }),
+      raster('android-round-xxhdpi', 'mipmap-xxhdpi/ic_launcher_round.png', 144, { maskShape: 'circle' }),
+      raster('android-round-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_round.png', 192, { maskShape: 'circle' }),
       // ── Play Store listing ─────────────────────────────────────────────────────
       // 512×512 and **opaque**: Play rejects alpha, and applies its own rounding.
-      raster('android-play-512', 'play-store-512.png', 512, { background: 'opaque' })
+      raster('android-play-512', 'play-store-512.png', 512, { background: 'opaque' }),
+      // ── Camada monocromática, Android 13+ ─────────────────────────────────────
+      // Ícone tematizado: o sistema tinge a camada com a cor do tema. Por isso ela é
+      // **fundo transparente** com a forma no alfa, e sai da variant `mono` do projeto —
+      // que já é o logo em escala de cinza, e que o `mono` do app mantém.
+      //
+      // **A safe zone também vale aqui.** O guia da plataforma mostra a camada monocromática
+      // centralizada nos mesmos 66dp, e o arquivo do Android usa a mesma fórmula. Sem o
+      // inset, o ícone tematizado é cortado exatamente como o colorido — e é o único que a
+      // pessoa vê no tema escuro do sistema, então o defeito aparece mais.
+      raster('android-monochrome-mdpi', 'mipmap-mdpi/ic_launcher_monochrome.png', 108, MONO),
+      raster('android-monochrome-hdpi', 'mipmap-hdpi/ic_launcher_monochrome.png', 162, MONO),
+      raster('android-monochrome-xhdpi', 'mipmap-xhdpi/ic_launcher_monochrome.png', 216, MONO),
+      raster('android-monochrome-xxhdpi', 'mipmap-xxhdpi/ic_launcher_monochrome.png', 324, MONO),
+      raster('android-monochrome-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_monochrome.png', 432, MONO)
     ]
   },
   {

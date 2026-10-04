@@ -143,11 +143,13 @@ export const backgroundModeFor = (
  *   export would be cropped twice.
  */
 export const maskModeFor = (
-  artifact: Pick<ExportArtifactSpec, 'format' | 'background'>,
+  artifact: Pick<ExportArtifactSpec, 'format' | 'background' | 'maskShape'>,
   project: IconCoreProject
 ): CanvasMaskShape | 'none' => {
   if (isContainerFormat(artifact.format)) return 'none';
   if (artifact.background === 'opaque') return 'none';
+  // The artifact's own shape wins: a preset can ship a round variant of a square logo.
+  if (artifact.maskShape !== undefined) return artifact.maskShape;
   // Nothing declared means nothing assumed: the project renders as it always did.
   if (project.canvas.maskShape === undefined && project.canvas.maskRadius === undefined) return 'none';
   return project.canvas.maskShape ?? 'rounded-rectangle';
