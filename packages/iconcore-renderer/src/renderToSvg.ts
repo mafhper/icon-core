@@ -6,6 +6,8 @@ import { superellipsePathD } from './geometry/superellipse';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
 import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
 import { applySvgPaintOverrides } from './svgPaint';
+import { resolveTextPlacement } from './textLayout';
+import { escapeXmlText } from './escapeXml';
 import type { RenderBackground } from './types';
 
 /**
@@ -383,9 +385,22 @@ export const renderToSvgWithOptions = (
         if (resolved.defs) defs.push(resolved.defs);
         paint = resolved.paint;
       }
-      // Canvas draws text at the canvas centre (`fillText(content, S/2, S/2)`)
-      // with the layer transform already applied around that same centre.
-      svgLayers += `<text x="${canvas.width / 2}" y="${canvas.height / 2}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}" fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${layer.text.content}</text>\n`;
+      // `IC63/2` — a mesma função de geometria que o canvas consome
+      // (`resolveTextPlacement`), traduzida para o vocabulário do SVG: `text-anchor`
+      // em vez de `ctx.textAlign`. Um `text-anchor="start"` no ponto errado, ou um
+      // `font-style` esquecido, é a divergência que a fixture de texto agora mede.
+      //
+      // `font-style` é atributo **separado** aqui, ao contrário do canvas: a assinatura
+      // `ctx.font` é posicional (`[italic] [weight] size family`) e o SVG não tem
+      // assinatura nenhuma. Omitir o atributo quando não é itálico, em vez de escrever
+      // `font-style="normal"`, mantém o SVG exportado menor — e `normal` é o padrão.
+      const place = resolveTextPlacement(canvas, layer.source.shape, layer.text.textAlign);
+      const italico = layer.text.fontStyle === 'italic' || layer.text.fontStyle === 'oblique';
+      const styleAttr = italico ? ' font-style="italic"' : '';
+      // `IC63/2b` — o conteúdo é **nosso** texto de saída, então vai escapado. Um `&`
+      // solto é XML malformado e nenhum leitor abre; um `<` fecha o elemento mais cedo.
+      // Nenhum teste media isso, porque as fixtures de texto eram "Icon" e "Wg".
+      svgLayers += `<text x="${place.x}" y="${place.y}" text-anchor="${place.svgAnchor}" dominant-baseline="middle" font-family="${layer.text.fontFamily}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}"${styleAttr} fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${escapeXmlText(layer.text.content)}</text>\n`;
       continue;
     }
 

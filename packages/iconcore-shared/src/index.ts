@@ -129,6 +129,28 @@ export interface TextDefinition {
   fontFamily: string;
   fontSize: number;
   fontWeight: number;
+  /**
+   * Horizontal alignment **inside the layer's own shape** (`source.shape`).
+   *
+   * Not the canvas: a `left` anchored at the canvas centre would grow the text to the
+   * *right* of the middle, which is the opposite of what "left" means to the person
+   * reading it. The shape has been the layer's footprint since `createTextLayer`
+   * (58% of the canvas width) and is what resize already respects.
+   *
+   * **Additive and optional:** absent means `'center'`, which is exactly how every text
+   * layer rendered before this field existed. No migration, no `schemaVersion` bump.
+   */
+  textAlign?: 'left' | 'center' | 'right';
+  /**
+   * `'italic'` slants the glyphs; anything else (including absent) is upright.
+   *
+   * A string rather than a boolean because CSS has three states here — `normal`,
+   * `italic` and `oblique` — and a boolean cannot tell "upright" from "not set". The
+   * difference is invisible in the editor and shows up in the export.
+   *
+   * **Additive and optional**, as above.
+   */
+  fontStyle?: 'normal' | 'italic' | 'oblique';
 }
 
 export interface ShapeDefinition {
