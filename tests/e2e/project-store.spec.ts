@@ -616,6 +616,72 @@ test.describe('a lista de projetos', () => {
     await page.waitForSelector('[role="status"]:has-text("Opening")', { state: 'detached', timeout: 15_000 });
   };
 
+  /**
+   * The regression that matters most, and the one the first version of `D2` failed.
+   *
+   * Every other test here saves a project **first**, which is also the await that the
+   * cold-start path skips. So they all passed while the shipped list was broken: on a
+   * cold start the welcome is the first thing to mount, `openProjectStore` has not
+   * resolved yet, `refreshProjects` ran against a `null` store, returned, and was never
+   * called again. One project on disk, an empty list, nothing in the console.
+   *
+   * So: write the project straight into storage from the page, reload, and read the
+   * list the first time the welcome appears — no navigation, no project creation.
+   */
+  test('lista um projeto ja salvo ao abrir, sem navegar para Home', async ({ page }) => {
+    await page.goto('/icon-core/app/');
+    await page.evaluate(() => localStorage.clear());
+
+    // Author a project into IndexedDB from inside the page, so the only thing that
+    // happens next is a reload.
+    const gravado = await page.evaluate(async () => {
+      const project = {
+        schemaVersion: 3,
+        metadata: { name: 'Vem do armazenamento', shortName: 'Vem do armazenamento' },
+        canvas: { size: 512, background: { kind: 'solid', color: '#f8fafc' } },
+        layers: [],
+        variants: { default: {} },
+        targets: [{ target: 'tauri', enabled: true }]
+      };
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const r = indexedDB.open('iconcore-projects');
+        r.onsuccess = () => resolve(r.result);
+        r.onerror = () => reject(r.error);
+        r.onupgradeneeded = () => {
+          // Creating the store here rather than relying on the app: this test must not
+          // depend on the app having run first. `DB_NAME`/`STORE_PROJECTS` are the two
+          // constants that matter, and a rename in the store would break this silently.
+          const database = r.result;
+          if (!database.objectStoreNames.contains('projects')) {
+            database.createObjectStore('projects', { keyPath: 'id' });
+          }
+        };
+      });
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction('projects', 'readwrite');
+        tx.objectStore('projects').put({
+          id: 'p-vindo-armazenamento',
+          name: 'Vem do armazenamento',
+          updatedAt: Date.now(),
+          project
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+      return true;
+    });
+    expect(gravado).toBe(true);
+
+    // No pointer: this is a project that exists but is not the current one, which is
+    // exactly the state `D2` exists for.
+    await page.reload();
+    await page.waitForSelector('[role="status"]:has-text("Opening")', { state: 'detached', timeout: 15_000 });
+
+    await expect(lista(page)).toBeVisible();
+    await expect(lista(page).getByRole('button', { name: 'Continue Vem do armazenamento' })).toBeVisible();
+  });
+
   test('oferece Continuar como primeira opcao, com o mais recente', async ({ page }) => {
     await recomecar(page);
 
