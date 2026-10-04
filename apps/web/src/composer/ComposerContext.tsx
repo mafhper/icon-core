@@ -63,19 +63,9 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
 
   // Read once, before the first paint, so the reducer never starts from a half-known
   // project. `useRef` rather than state because it must not trigger a render.
-  const restoreRef = useRef<{
-    init: ComposerState;
-    failed: boolean;
-    name: string | null;
-    pointerId: string | null;
-  } | null>(null);
+  const restoreRef = useRef<{ init: ComposerState; name: string | null } | null>(null);
   if (restoreRef.current === null) {
-    restoreRef.current = {
-      init: initialState,
-      failed: false,
-      name: restoredName,
-      pointerId: readPointer(window.localStorage)?.id ?? null
-    };
+    restoreRef.current = { init: initialState, name: restoredName };
   }
 
   const [state, dispatch] = useReducer(composerReducer, restoreRef.current.init);
@@ -83,8 +73,6 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
   // The store outlives any single save, so it lives in a ref rather than in state:
   // putting it in state would make every save re-render the whole composer tree.
   const storeRef = useRef<ProjectStore | null>(null);
-  const pointerIdRef = useRef<string | null>(restoreRef.current.pointerId);
-  const projectIdRef = useRef<string | null>(null);
   // Autosave writes can finish out of order. This counter is what makes "the last
   // write wins" true rather than hopeful: a stale result is recognised and ignored
   // instead of clearing `isDirty` for work that was never stored.
@@ -105,7 +93,6 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        pointerIdRef.current = pointer.id;
         setRestoredName(pointer.name);
 
         return store.read(pointer.id).then((found) => {
@@ -118,8 +105,7 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
             setRestoring(false);
             return;
           }
-          projectIdRef.current = found.id;
-          dispatch({ type: 'LOAD_PROJECT', payload: { project: found.project } });
+          dispatch({ type: 'LOAD_PROJECT', payload: { project: found.project, projectId: found.id } });
           setRestoring(false);
         });
       })
@@ -139,36 +125,25 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (restoring) return;
-    if (restoreRef.current?.failed) {
-      toast.error('Could not restore your saved project. Starting with a clean workspace.');
-    }
-  }, [restoring, toast]);
-
-  useEffect(() => {
-    if (restoring) return;
     if (!state.project || !state.isDirty) return;
 
     const timer = setTimeout(() => {
       const store = storeRef.current;
       const project = state.project;
-      if (!store || !project) return;
+      const id = state.projectId;
+      if (!store || !project || !id) return;
 
       const seq = ++writeSeqRef.current;
-      const id = projectIdRef.current ?? pointerIdRef.current ?? null;
-
-      // No store yet means the open has not finished; the `restoring` guard above
-      // normally prevents this, and skipping beats racing the restore.
-      if (!id) return;
-
       const name = project.metadata.name;
 
       void store.write({ id, name, project }).then((outcome) => {
         if (seq !== writeSeqRef.current) return; // a newer write already answered
 
         if (outcome.kind === 'saved') {
-          const updatedAt = Date.now();
-          writePointer(window.localStorage, { id, name, updatedAt });
-          pointerIdRef.current = id;
+          // The pointer follows whichever project was saved last, which is the one
+          // the editor is showing. It is written only on success, so a refused save
+          // cannot point the next session at work that was never stored.
+          writePointer(window.localStorage, { id, name, updatedAt: Date.now() });
           dispatch({ type: 'SET_DIRTY', payload: false });
           return;
         }
@@ -182,7 +157,11 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [state.project, state.isDirty, restoring, toast]);
+    // `state.projectId` is a real dependency, not a formality: a new project keeps a
+    // new id, and if the effect ignored it a replacement that arrived already dirty
+    // would be written under the **previous** project's key — the same silent
+    // overwrite, one effect later.
+  }, [state.project, state.projectId, state.isDirty, restoring, toast]);
 
   // The autosave keeps failing after the first notice, so the flag is what keeps
   // one full project from producing a toast on every keystroke. It clears when the
