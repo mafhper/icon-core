@@ -62,10 +62,37 @@ export interface ComposerState {
   historyIndex: number;
 }
 
+/**
+ * `ADD_LAYER` e um **tipo fechado**, nao uma bolsa de opcionais.
+ *
+ * Antes o payload era `{ asset?; shape?; text?; background? }` — todos opcionais, o que
+ * o torna um *weak type*: uma chamada com `{ layer: ... }`, que e semanticamente
+ * invalida, era aceita em silencio. Aconteceu: um teste do `IC63/2` despachou
+ * `payload: { layer: createTextLayer(...) }` e rodou.
+ *
+ * A explicacao de que "o TypeScript aceitou porque os campos sao opcionais" estava
+ * **errada** — e o Agente B, ao revisar, apontou isso. *Weak type detection* reprovaria.
+ * A razao real: `vitest` descarta tipos sem checar, e `typecheck` nao tinha sido rodado.
+ * Por isso a correcao tem duas partes, e a segunda importa mais que a primeira:
+ *
+ * 1. uniao discriminada — o compilador passa a **impedir** a classe de erro;
+ * 2. `scripts/check-add-layer-payload-types.mjs` — prova com `tsc` que a forma errada
+ *    ainda e reprovada. Um teste que so vale porque o compilador recusa nao e verificado
+ *    por runner de teste.
+ *
+ * O `kind` e o discriminante porque ele **aparece no payload**: da para olhar o objeto e
+ * saber o que ele cria, e o `switch` do reducer fica exaustivo por compilacao.
+ */
+export type AddLayerPayload =
+  | { kind: 'asset'; asset: FileLayerAsset }
+  | { kind: 'shape'; shape: ShapeDefinition }
+  | { kind: 'text' }
+  | { kind: 'background' };
+
 export type ComposerAction =
   | { type: 'NEW_PROJECT'; payload: { name: string; size: number; view?: ComposerView } }
   | { type: 'LOAD_PROJECT'; payload: { project: IconCoreProject; view?: ComposerView; projectId?: string } | IconCoreProject }
-  | { type: 'ADD_LAYER'; payload: { asset?: FileLayerAsset; shape?: ShapeDefinition; text?: boolean; background?: boolean } }
+  | { type: 'ADD_LAYER'; payload: AddLayerPayload }
   | { type: 'UPDATE_LAYER'; payload: { id: string; changes: Partial<IconLayer>; transient?: boolean } }
   | { type: 'UPDATE_LAYER_VARIANT'; payload: { id: string; variant: IconVariant; changes: Partial<Omit<IconLayer, 'id' | 'variantOverrides'>>; transient?: boolean } }
   | { type: 'COMMIT_HISTORY' }
@@ -302,7 +329,7 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
     case 'ADD_LAYER': {
       if (!state.project) return state;
 
-      if (action.payload.background) {
+      if (action.payload.kind === 'background') {
         // The Background layer is a single handle for `canvas.background`:
         // re-selecting an existing one, or creating it below every other layer
         // (without shifting their zIndex, since it never renders).
@@ -325,21 +352,37 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       // z=2 and left a gap that a later renumber had to close.
       const topZ = state.project.layers.reduce((max, layer) => Math.max(max, layer.zIndex), -1);
       const zIndex = topZ + 1;
-      const layer = action.payload.asset
-        ? createLayerFromAsset(
+
+      // `switch` exaustivo em vez de encadeamento de condicoes. A antiga cascata
+      // `asset ? ... : text ? ... : shape ? ... : createShapeLayer(...)` tinha um
+      // ramo final implicito: um payload sem nenhum campo caia em "shape vazio" e
+      // criava uma layer sem querer. Com a uniao discriminada o default e
+      // `never`, e uma forma nova sem treatment vira **erro de compilacao**.
+      let layer: IconLayer;
+      switch (action.payload.kind) {
+        case 'asset':
+          layer = createLayerFromAsset(
             action.payload.asset,
             state.project.canvas.size,
             zIndex,
             state.project.canvas.importMargin
-          )
-        : action.payload.text
-          ? createTextLayer(state.project.canvas.size, zIndex)
-          : action.payload.shape
-            ? {
-                ...createShapeLayer(state.project.canvas.size, zIndex),
-                source: { type: 'reference' as const, path: '', shape: action.payload.shape }
-              }
-            : createShapeLayer(state.project.canvas.size, zIndex);
+          );
+          break;
+        case 'text':
+          layer = createTextLayer(state.project.canvas.size, zIndex);
+          break;
+        case 'shape':
+          layer = {
+            ...createShapeLayer(state.project.canvas.size, zIndex),
+            source: { type: 'reference' as const, path: '', shape: action.payload.shape }
+          };
+          break;
+        default: {
+          const exaustivo: never = action.payload;
+          return exaustivo;
+        }
+      }
+
       const project = { ...state.project, layers: [...state.project.layers, layer] };
       return { ...commitProject(state, project), activeLayerId: layer.id };
     }

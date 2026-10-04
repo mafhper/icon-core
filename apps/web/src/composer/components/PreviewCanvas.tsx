@@ -283,7 +283,7 @@ export const PreviewCanvas = () => {
                   key={shape.kind}
                   icon={shape.icon}
                   label={shape.label}
-                  onSelect={() => dispatch({ type: 'ADD_LAYER', payload: { shape: shape.defaults } })}
+                  onSelect={() => dispatch({ type: 'ADD_LAYER', payload: { kind: 'shape', shape: shape.defaults } })}
                 />
               ))}
             </Menu>
@@ -291,14 +291,14 @@ export const PreviewCanvas = () => {
               <IconButton
                 icon={<Type size={16} />}
                 aria-label="Add text layer"
-                onClick={() => dispatch({ type: 'ADD_LAYER', payload: { text: true } })}
+                onClick={() => dispatch({ type: 'ADD_LAYER', payload: { kind: 'text' } })}
               />
             </Tooltip>
             <Tooltip content="Add background fill layer">
               <IconButton
                 icon={<Square size={16} fill="currentColor" strokeWidth={1} />}
                 aria-label="Add background fill layer"
-                onClick={() => dispatch({ type: 'ADD_LAYER', payload: { background: true } })}
+                onClick={() => dispatch({ type: 'ADD_LAYER', payload: { kind: 'background' } })}
               />
             </Tooltip>
             <Tooltip content="Upload image">

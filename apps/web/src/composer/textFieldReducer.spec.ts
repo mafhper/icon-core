@@ -34,14 +34,20 @@ const comTexto = (): { state: ReturnType<typeof composerReducer>; indice: number
     payload: { name: 'Com texto', size: 512, view: 'edit-space' }
   });
 
-  // `ADD_LAYER` **não** recebe uma layer pronta: o payload é `{ text: true }` e o
-  // reducer chama `createTextLayer` (`composerReducer.ts:68`). A primeira versão deste
-  // arquivo passou `{ layer: createTextLayer(512, 0) }` — um payload que o tipo não
-  // descreve, e que produz um projeto **sem** layer de texto. O TypeScript aceitou
-  // porque `payload` é um objeto com campos opcionais, e `layer` é simplesmente ignorado.
+// `ADD_LAYER` **não** recebe uma layer pronta: o payload é `{ kind: 'text' }` e o
+  // reducer chama `createTextLayer`. A primeira versão deste arquivo passou
+  // `{ layer: createTextLayer(512, 0) }` — um payload que o tipo não descrevia, e que
+  // produzia um projeto **sem** layer de texto.
+  //
+  // A explicação que dei na época ("o TypeScript aceitou porque os campos são opcionais")
+  // estava **errada**: `payload` era um *weak type*, e o TypeScript reprovaria. O que
+  // aconteceu é que eu rodei `vitest` direto, que descarta tipos sem checar, e não rodei
+  // `typecheck` antes de confiar. O payload agora é uma união discriminada, e
+  // `scripts/check-add-layer-payload-types.mjs` prova com `tsc` que a forma errada é
+  // **ainda** reprovada.
   const estado = composerReducer(base, {
     type: 'ADD_LAYER',
-    payload: { text: true }
+    payload: { kind: 'text' }
   });
 
   const indice = estado.project!.layers.findIndex((l) => l.kind === 'text');

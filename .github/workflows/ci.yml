@@ -68,6 +68,21 @@ jobs:
       - name: SVG/canvas parity
         run: node scripts/check-svg-parity.mjs
 
+      # Two gates that were previously versioned but never wired here, so they only ever
+      # ran on one machine — and on that machine they were measuring the *launcher's*
+      # failure rather than the mutation. A gate that no CI runs is not a gate.
+      #
+      #   escape-xml mutation: 5 real defects injected one at a time into the source; the
+      #     spec must fail on each. Verifies the coverage exists, not just the tests.
+      #   add-layer payload types: `tsc` must reject the wrong action payload and accept
+      #     the right one. A runtime test cannot check this, because the protection IS
+      #     the compiler (ADR-021).
+      - name: escapeXml mutation gate
+        run: node scripts/check-escape-xml-mutation.mjs
+
+      - name: ADD_LAYER payload type gate
+        run: node scripts/check-add-layer-payload-types.mjs
+
       - name: End-to-end tests
         run: npm run test:e2e
 

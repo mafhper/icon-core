@@ -25,7 +25,7 @@ export const useLayerImport = () => {
     for (const file of files) {
       try {
         const asset = await fileToLayerAsset(file);
-        dispatch({ type: 'ADD_LAYER', payload: { asset } });
+        dispatch({ type: 'ADD_LAYER', payload: { kind: 'asset', asset } });
       } catch (err) {
         failures++;
         console.error('Failed to import layer:', err);
