@@ -56,6 +56,20 @@ export interface ComposerState {
   maskShape: 'square' | 'circle' | 'rounded-rectangle' | 'squircle';
   compareDefault: boolean;
   showKeylines: boolean;
+  /**
+   * A máscara da `import margin`, sobre o ícone.
+   *
+   * **Ligada por padrão**, e o inverso do `showKeylines`. A razão é o que cada uma
+   * responde: a keyline é uma referência de plataforma que a pessoa liga quando quer,
+   * enquanto a margem só aparece quando o valor é **maior que zero** — e aí ela é a
+   * resposta visível a um controle que a pessoa acabou de mexer. Desligada por padrão,
+   * a máscara apareceria sozinha na primeira importação com margem, e o dono perdeu o
+   * controle sobre aparecer.
+   *
+   * Não compartilha o flag da keyline: `Cmd/Ctrl+G` é da keyline e não deve mexer na
+   * margem — são duas referências diferentes sobre a mesma caixa.
+   */
+  showMarginOverlay: boolean;
   showSnapping: boolean;
   /**
  * A cor da bancada em volta do ícone.
@@ -145,6 +159,7 @@ export type ComposerAction =
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_KEYLINES' }
+  | { type: 'TOGGLE_MARGIN_OVERLAY' }
   | { type: 'TOGGLE_SNAPPING' }
   | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' }
   /**
@@ -172,6 +187,7 @@ export const initialState: ComposerState = {
   workAreaColor: null,
   compareDefault: false,
   showKeylines: false,
+  showMarginOverlay: true,
   showSnapping: true,
   history: [],
   historyIndex: -1
@@ -718,6 +734,11 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'TOGGLE_GRID':
       return { ...state, showGrid: !state.showGrid };
+
+    case 'TOGGLE_MARGIN_OVERLAY':
+      // Sem `isDirty`: ver a nota de `SET_WORK_AREA_COLOR` — a bancada e a referencia
+      // de trabalho, nao a arte. E `IC-N7` nao pode acusar mudanca aqui.
+      return { ...state, showMarginOverlay: !state.showMarginOverlay };
 
     case 'TOGGLE_KEYLINES':
       return { ...state, showKeylines: !state.showKeylines };

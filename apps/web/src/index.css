@@ -736,6 +736,18 @@ input[type='range'] {
   color: var(--ic-gold);
 }
 
+/* A máscara da import margin. `pointer-events: none` é obrigatório: ela fica sobre o
+   frame, e um SVG que intercepta clique roubaria a seleção da camada de baixo. A cor é
+   `--ic-accent` e não `--ic-gold`, que já pertence à keyline — duas guias na mesma
+   caixa com a mesma cor lêem como um defeito de render, não como duas referências. */
+.ic-margin-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  color: var(--ic-accent);
+}
+
 .ic-snap-guide {
   position: absolute;
   pointer-events: none;

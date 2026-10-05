@@ -16,6 +16,7 @@ const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
 import { VariantPanel } from './VariantPanel';
 import { KeylineOverlay } from './KeylineOverlay';
+import { MarginOverlay } from './MarginOverlay';
 import { LayerContextMenu } from './LayerContextMenu';
 
 type DragMode = 'move' | 'scale' | 'rotate';
@@ -370,6 +371,12 @@ export const PreviewCanvas = () => {
             )}
             {state.showGrid && <div className="ic-canvas-grid" />}
             {state.showKeylines && <KeylineOverlay />}
+            {/*
+                A máscara da margem fica **sobre** a keyline e não sob ela: as duas
+                falariam da mesma caixa (a área da arte e a safe area), e a de cima é a
+                que responde ao controle que a pessoa acabou de mexer.
+            */}
+            <MarginOverlay />
             {layers.filter((baseLayer) => baseLayer.role !== 'background').map((baseLayer) => {
               const layer = resolveLayerVariant(baseLayer, state.activeVariant);
               if (!layer.visible) return null;

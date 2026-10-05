@@ -208,6 +208,17 @@ export const LayerInspector = () => {
               }
               onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
             />
+            {/*
+                O toggle da visualização, e não a margem do componente.
+                `state.showKeylines` **não** serve aqui: a máscara e uma informação
+                diferente da guia de plataforma, e compartilhar o flag faria o
+                `Cmd/Ctrl+G` na barra de baixo (que é da keyline) apagar a margem.
+            */}
+            <Switch
+              label="Show margin on canvas"
+              checked={state.showMarginOverlay}
+              onChange={() => dispatch({ type: 'TOGGLE_MARGIN_OVERLAY' })}
+            />
           </Section>
 
           <Section
