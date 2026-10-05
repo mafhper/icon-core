@@ -56,6 +56,20 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
     <input
       ref={ref}
       type="range"
+      /**
+       * The `inline` variant prints the label as a **plain `<span>`**, so nothing
+       * associated the text with the control: the range had **no accessible name**,
+       * and `getByLabel('Radius')` could not find it.
+       *
+       * A `<span>` next to an input is not a label. This is the fix, and it is also
+       * what makes the control addressable by name in a test — which is what caught
+       * it, because a probe by index had been quietly dragging a different slider.
+       *
+       * `aria-label` rather than `<label for>`: the two consumers render either a
+       * label row with no `id`, or the label visually hidden, and threading a generated
+       * `id` through both layouts would be a bigger change than the bug needs.
+       */
+      aria-label={label}
       className={cn('w-full', className)}
       onPointerUp={(event) => {
         onPointerUp?.(event);
