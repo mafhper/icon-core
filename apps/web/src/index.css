@@ -200,6 +200,7 @@ input[type='range'] {
   font-size: 0.82rem;
   font-weight: 740;
   transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), border-color 0.18s cubic-bezier(0.2, 0, 0, 1), background 0.18s cubic-bezier(0.2, 0, 0, 1);
+  margin-top: auto;
 }
 
 .ic-link-button:hover {
@@ -223,10 +224,6 @@ input[type='range'] {
 
 /* Groups a heading + controls inside the inspector without breaking the
    .ic-field-stack direct-child separators. */
-
-.ic-link-button {
-  margin-top: auto;
-}
 
 /* Welcome — presented as a modal over the editor window */
 .ic-modal-overlay {
@@ -417,6 +414,8 @@ input[type='range'] {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1 1 auto;
+  background: var(--ic-bg);
 }
 
 /* ---- Composer AppShell (PR-05/PR-06) ---- */
@@ -590,11 +589,6 @@ input[type='range'] {
   }
 }
 
-.ic-preview-panel {
-  flex: 1 1 auto;
-  background: var(--ic-bg);
-}
-
 .ic-canvas-toolbar {
   flex: 0 0 auto;
   min-width: 0;
@@ -712,9 +706,6 @@ input[type='range'] {
   display: block;
   pointer-events: none;
   user-select: none;
-}
-
-.ic-canvas-ghost {
   opacity: 0.42;
 }
 
@@ -1704,10 +1695,19 @@ textarea:focus-visible,
   font-size: 12px;
   color: var(--ic-text-muted);
 }
-.ic-export-preview-grid {
+/* O size ramp em coluna, do maior para o menor. O porque esta no docblock de
+ * ExportPreview.tsx; aqui so o que o CSS precisa dizer.
+ *
+ * `align-items: end` porque um icone pequeno alinhado ao topo parece flutuar: na base,
+ * ele senta na mesma linha dos outros, e o olho compara tamanho pela base. */
+.ic-export-preview-ramp {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
+  align-items: end;
+  justify-items: center;
 }
 .ic-export-preview-cell {
   margin: 0;
@@ -1715,30 +1715,31 @@ textarea:focus-visible,
   gap: 6px;
   justify-items: center;
 }
+/* O split (claro/escuro) esta no `background`; a imagem preenche os dois lados da
+ * mesma, e por isso que um so contorno de mascara cabe. Ver o porque em ExportPreview.tsx. */
 .ic-export-preview-frame {
-  width: 100%;
-  border: 1px solid var(--ic-border-soft);
-  border-radius: 10px;
+  position: relative;
+  display: grid;
   overflow: hidden;
-  display: grid;
+  background: linear-gradient(#ffffff 0 50%, #101114 50% 100%);
 }
-/* Two backgrounds per size: the same file is judged on both, which is where a
-   transparent or low-contrast icon gives itself away. */
-.ic-export-preview-bg {
-  display: grid;
-  place-items: center;
-  padding: 10px 6px;
-  min-height: 72px;
-}
-.ic-export-preview-bg.is-light { background: #ffffff; }
-.ic-export-preview-bg.is-dark { background: #101114; }
-.ic-export-preview-bg img {
+.ic-export-preview-frame img {
   display: block;
-  image-rendering: auto;
+  width: 100%;
+  height: 100%;
+}
+/* `box-shadow`, e nao `border`: a borda encolheria a imagem 1px de cada lado, e quem
+ * julga "a arte tocou a borda" nao pode ter a borda mexendo no desenho. */
+.ic-export-preview-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--ic-border-strong);
 }
 .ic-export-preview-cell figcaption {
   font-size: 11px;
-  color: var(--ic-text-faint);
+  color: var(--ic-text-muted);
+  text-align: center;
 }
 .ic-export-preview-pending,
 .ic-export-preview-empty {

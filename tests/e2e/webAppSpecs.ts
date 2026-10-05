@@ -39,7 +39,8 @@ export const WEB_APP_SPECS = [
   'margin-overlay',
   'grid-config',
   'keyline-config',
-  'layer-reorder'
+  'layer-reorder',
+  'export-preview'
 ] as const;
 
 /**
