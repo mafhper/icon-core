@@ -5,6 +5,7 @@ import { defaultMaskRadius } from '@iconcore/shared';
 import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { RADIUS_MARKS, radiusMarkValue } from '../utils/radiusMarks';
 import { resolveWorkAreaColor } from '../utils/workArea';
+import { MAX_DIVISIONS, MIN_DIVISIONS } from '../utils/gridConfig';
 import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
@@ -219,6 +220,66 @@ export const LayerInspector = () => {
               checked={state.showMarginOverlay}
               onChange={() => dispatch({ type: 'TOGGLE_MARGIN_OVERLAY' })}
             />
+          </Section>
+
+          {/*
+              A **configuração** do grid, e não o toggle.
+
+              O toggle continua na barra de ação inferior (`Ctrl/Ctrl+G`), que é onde a
+              pessoa o procura — o dono foi explícito: "a ativacao/ ciclo deles continua
+              como atalho la". O que vem para o Edit Space é só o ajuste, para o grid não
+              ser um botão de liga/desliga sem nenhum ajuste.
+
+              Aparece junto do `Toggle grid` e some com ele desligado, para não oferecer
+              ajuste de algo que não está na tela.
+          */}
+          <Section
+            title="Grid"
+            hint="Divisions of the canvas, per axis. The toggle stays on the action bar."
+          >
+            <Switch
+              label="Show grid"
+              checked={state.showGrid}
+              onChange={() => dispatch({ type: 'TOGGLE_GRID' })}
+            />
+            {state.showGrid && (
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField
+                  label="Columns"
+                  min={MIN_DIVISIONS}
+                  max={MAX_DIVISIONS}
+                  step={1}
+                  value={state.gridColumns}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'SET_GRID_DIVISIONS',
+                      payload: { columns: Number(event.target.value), rows: state.gridRows }
+                    })
+                  }
+                  onBlur={() => dispatch({ type: 'COMMIT_HISTORY' })}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') dispatch({ type: 'COMMIT_HISTORY' });
+                  }}
+                />
+                <NumberField
+                  label="Rows"
+                  min={MIN_DIVISIONS}
+                  max={MAX_DIVISIONS}
+                  step={1}
+                  value={state.gridRows}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'SET_GRID_DIVISIONS',
+                      payload: { columns: state.gridColumns, rows: Number(event.target.value) }
+                    })
+                  }
+                  onBlur={() => dispatch({ type: 'COMMIT_HISTORY' })}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') dispatch({ type: 'COMMIT_HISTORY' });
+                  }}
+                />
+              </div>
+            )}
           </Section>
 
           <Section

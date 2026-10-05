@@ -722,10 +722,13 @@ input[type='range'] {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* O `background-size` **nao** esta aqui: vem inline de `gridBackgroundSize`, que
+     deriva a porcentagem das divisões escolhidas (ver `utils/gridConfig.ts`). O
+     `rgba(127,127,127)` fixo foi trocado por `color-mix` com `--ic-text`: um cinza
+     literal não acompanha o tema, e o grid sumia no tema claro. */
   background-image:
-    linear-gradient(to right, rgba(127, 127, 127, 0.16) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(127, 127, 127, 0.16) 1px, transparent 1px);
-  background-size: 12.5% 12.5%;
+    linear-gradient(to right, color-mix(in srgb, var(--ic-text) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ic-text) 16%, transparent) 1px, transparent 1px);
 }
 
 .ic-keyline-overlay {

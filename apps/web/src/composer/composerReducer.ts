@@ -9,6 +9,7 @@ import type {
 } from '@iconcore/shared';
 import type { FileLayerAsset } from './utils/fileLayers';
 import { clampZoom } from './constants';
+import { DEFAULT_DIVISIONS, clampDivisions } from './utils/gridConfig';
 import type { WorkAreaColor } from './utils/workArea';
 import { generateVariantPreset, isGeneratableVariant } from './utils/variantPresets';
 import {
@@ -71,6 +72,17 @@ export interface ComposerState {
    */
   showMarginOverlay: boolean;
   showSnapping: boolean;
+  /**
+   * Divisões do grid, por eixo. `8` reproduz o `background-size: 12.5%` fixo de antes.
+   *
+   * São **divisões**, não pixels: a pessoa quer "divida em 8", não "linha a cada 24px" —
+   * e com divisões a mesma conta serve a 512 e a 1024. Ver `utils/gridConfig.ts`.
+   *
+   * Configuração do grid e **estado de editor**, não documento: o `IC-N7` (digest) não
+   * pode acusar arte nova porque a pessoa ajustou a grade da bancada.
+   */
+  gridColumns: number;
+  gridRows: number;
   /**
  * A cor da bancada em volta do ícone.
  *
@@ -160,6 +172,7 @@ export type ComposerAction =
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_KEYLINES' }
   | { type: 'TOGGLE_MARGIN_OVERLAY' }
+  | { type: 'SET_GRID_DIVISIONS'; payload: { columns: number; rows: number } }
   | { type: 'TOGGLE_SNAPPING' }
   | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' }
   /**
@@ -182,13 +195,15 @@ export const initialState: ComposerState = {
   enabledTargets: new Set(['web-favicon', 'pwa']),
   isDirty: false,
   zoom: 1,
-  showGrid: true,
+  showGrid: false,
   maskShape: 'rounded-rectangle',
   workAreaColor: null,
   compareDefault: false,
   showKeylines: false,
   showMarginOverlay: true,
   showSnapping: true,
+  gridColumns: DEFAULT_DIVISIONS,
+  gridRows: DEFAULT_DIVISIONS,
   history: [],
   historyIndex: -1
 };
@@ -734,6 +749,16 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'TOGGLE_GRID':
       return { ...state, showGrid: !state.showGrid };
+
+    case 'SET_GRID_DIVISIONS':
+      // Clamp no proprio reducer, e nao no controle: o `NumberField` entrega string, o
+      // slider entrega numero, e um `NaN` chegando aqui viraria `background-size:
+      // NaN%` — que o browser ignora em silencio e o grid simplesmente some.
+      return {
+        ...state,
+        gridColumns: clampDivisions(action.payload.columns),
+        gridRows: clampDivisions(action.payload.rows)
+      };
 
     case 'TOGGLE_MARGIN_OVERLAY':
       // Sem `isDirty`: ver a nota de `SET_WORK_AREA_COLOR` — a bancada e a referencia

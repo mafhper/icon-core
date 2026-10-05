@@ -9,6 +9,7 @@ import { useLayerImport } from '../hooks/useLayerImport';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { workAreaToCss } from '../utils/workArea';
+import { gridBackgroundSize } from '../utils/gridConfig';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
 import { layerSize } from '../utils/layerStyle';
 
@@ -369,7 +370,15 @@ export const PreviewCanvas = () => {
             {ghostUrl && (
               <img className="ic-canvas-ghost" src={ghostUrl} alt="" draggable={false} style={{ width: displaySize, height: displaySize }} />
             )}
-            {state.showGrid && <div className="ic-canvas-grid" />}
+            {/*
+                O `background-size` vem inline das divisões: em CSS fixo era
+                `12.5%` (8 divisões) e não havia como mudar. `100/n` em porcentagem é
+                o que faz a mesma conta servir a 512 e a 1024 — um `gap` em px não
+                sobrevive a outro tamanho de canvas.
+            */}
+            {state.showGrid && (
+              <div className="ic-canvas-grid" style={{ backgroundSize: gridBackgroundSize(state.gridColumns, state.gridRows) }} />
+            )}
             {state.showKeylines && <KeylineOverlay />}
             {/*
                 A máscara da margem fica **sobre** a keyline e não sob ela: as duas
