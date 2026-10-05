@@ -74,12 +74,34 @@ describe('o que existe', () => {
 });
 
 describe('o que o export pode entregar', () => {
-  it('o default e independente de fonte', () => {
-    // O teste que importa. O default e o que ninguem escolheu: se ele deixar de ser
-    // independente, todo icone novo nasce com uma promessa que o SVG nao cumpre.
-    expect(fontStackIsFontIndependent(DEFAULT_FONT_STACK)).toBe(true);
-    expect(DEFAULT_FONT_ID).toBe('system-ui');
+  it('o default e a fonte embarcada, e a pilha tem fallback', () => {
+    expect(DEFAULT_FONT_ID).toBe("'Cal Sans'");
+    expect(DEFAULT_FONT_STACK).toBe("'Cal Sans', system-ui, sans-serif");
     expect(DEFAULT_FONT_STACK.startsWith(DEFAULT_FONT_ID)).toBe(true);
+
+    // O fallback e o que impede o pior desfecho: sem ele, uma maquina sem a fonte
+    // embarcada resolveria no Times e o icone sairia serifado — e nao avisado.
+    expect(fontStackRendersEverywhere(DEFAULT_FONT_STACK)).toBe(true);
+  });
+
+  it('o default NAO e independente de fonte — e o validador avisa por isso', () => {
+    // Esta e a consequencia de usar uma fonte embarcada como default, e e o que o
+    // `TEXT_FONT_NOT_EMBEDDED` existe para dizer. Um default invisivel e "correto" no SVG
+    // seria trocar um defeito mensuravel por um invisivel.
+    expect(fontStackIsFontIndependent(DEFAULT_FONT_STACK)).toBe(false);
+
+    // E a familia generica continua disponivel para quem quer o SVG resolvendo em qualquer
+    // maquina: e a resposta certa para esse caso, e nao uma opcao esquecida.
+    expect(fontStackIsFontIndependent('system-ui, sans-serif')).toBe(true);
+  });
+
+  it('a fonte embarcada esta declarada com arquivo, e ele existe', () => {
+    // O default aponta para uma fonte que este projeto **embarcou**. Se o arquivo sumir, o
+    // default vira um nome de fonte que ninguem tem — e o preview volta ao fallback sem
+    // aviso, que e o mesmo modo de falha que a fonte remota tinha.
+    const cal = BUNDLED_FONTS.find((f) => f.label === 'Cal Sans');
+    expect(cal).toBeDefined();
+    expect(hasBundledFile(cal!, existeNaRaiz)).toBe(true);
   });
 
   it('toda familia generica e independente de fonte, e renderiza em qualquer maquina', () => {

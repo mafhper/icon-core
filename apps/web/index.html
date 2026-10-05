@@ -11,7 +11,17 @@
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%branding/logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!--
+      Só o **mono** vem de CDN, e ele é usado nos valores numéricos e nos rótulos curtos.
+      O `Sora` saiu daqui: a tipografia da interface e das camadas de texto agora é a
+      **Cal Sans, embarcada** (`assets/fonts/`, declarada no `index.css`), que resolve sem
+      rede — num app que se anuncia como *offline*, e que roda dentro do Tauri.
+
+      Uma fonte de CDN numa ferramenta offline não é detalhe: sem internet ela some e tudo
+      cai no fallback, e o desenho que a pessoa ajustou muda de Metrics. A Cal Sans é o mesmo
+      desenho em qualquer maquina.
+    -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <!--
       No og:image, twitter:image, apple-touch-icon or web app manifest: the 60 generated
       files that lived under public/branding/icons/ are gone, and the tool now produces

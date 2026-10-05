@@ -241,7 +241,71 @@ test('fontes: nenhuma familia conhecida aparece como "not installed"', async ({ 
   // E o valor selecionado e uma opcao **de verdade**, nao a sentinela.
   const valor = await seletor.evaluate((el: HTMLSelectElement) => el.value);
   expect(valor).not.toMatch(/^__outra__/);
-  expect(valor).toBe('system-ui');
+  expect(valor).toBe("'Cal Sans'");
+});
+
+test('fontes: a Cal Sans e o default, e o default carrega', async ({ page }) => {
+  await abrirComTexto(page);
+
+  /**
+   * As tres condicoes que o default tem de cumprir, e por que uma so nao basta.
+   *
+   * A afirmacao de que a fonte do projeto "nao existia" estava **errada**: o `Sora` vinha de
+   * `fonts.googleapis.com` por um `link`, entao carregava. O defeito real e ser **remota** num
+   * app que se anuncia como offline e que roda dentro do Tauri.
+   *
+   * Entao trocar o default so resolve se as tres valerem:
+   *
+   * 1. a fonte **carrega** — e o que garante que o preview mostra o desenho certo;
+   * 2. o default **e** a Cal Sans, e o seletor abre nela — e o que garante que ninguem
+   *    precise escolher nada para ter a fonte que o projeto assume;
+   * 3. a **interface** usa a mesma fonte — sem isso, a fonte embarcada fica disponivel
+   *    enquanto a tela continua pedindo a remota: o defeito trocado de lugar.
+   */
+
+  // --- 1) carrega ---
+  const carregada = await carregarCalSans(page);
+  expect(carregada.motivo, `a Cal Sans nao carregou: ${carregada.motivo}`).toBe('');
+  expect(carregada.status, 'a face da Cal Sans nao chegou a "loaded"').toBe('loaded');
+
+  // --- 2) e o default de uma camada nova ---
+  const seletor = page.getByRole('combobox', { name: 'Font' });
+  await expect(seletor).toBeVisible();
+  const valor = await seletor.evaluate((el: HTMLSelectElement) => el.value);
+  expect(valor, `o seletor abriu em "${valor}" e nao na Cal Sans`).toBe("'Cal Sans'");
+
+  await expect(
+    seletor.locator('option', { hasText: 'not installed' }),
+    'o default aparece como "not installed"'
+  ).toHaveCount(0);
+
+  // E o que a pessoa ve e o rotulo, e nao a familia com aspas.
+  const rotulo = await seletor.evaluate(
+    (el: HTMLSelectElement) => el.selectedOptions[0]?.textContent?.trim() ?? ''
+  );
+  expect(rotulo).toBe('Cal Sans');
+
+  // --- 3) a interface usa a mesma fonte ---
+  const chrome = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).fontFamily,
+    theme: getComputedStyle(document.documentElement)
+      .getPropertyValue('--font-display')
+      .trim()
+  }));
+  expect(chrome.body, `o body computa ${chrome.body}`).toContain('Cal Sans');
+  expect(chrome.theme, `o --font-display e "${chrome.theme}"`).toContain('Cal Sans');
+
+  // E o `Sora` saiu do pedido remoto. Nao por Clearance: ele nao era mais usado, e um
+  // `link` para CDN que o app parou de usar e uma dependencia de rede esperando o dia em
+  // que alguem volta a usa-lo.
+  const links = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('link[href*="fonts.googleapis"]')).map((l) =>
+      (l.getAttribute('href') || '').slice(0, 200)
+    )
+  );
+  for (const href of links) {
+    expect(href, 'o index.html ainda pede Sora do Google Fonts').not.toContain('Sora');
+  }
 });
 
 test('fontes: o botao de fontes do sistema so existe onde a API existe', async ({ page }) => {

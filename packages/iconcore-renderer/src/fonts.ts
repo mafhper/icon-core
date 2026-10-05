@@ -116,11 +116,30 @@ export const GENERIC_FONTS: readonly IconFont[] = GENERIC_FONT_FAMILIES.map((id)
   svgFidelity: 'as-designed-anywhere' as const
 }));
 
-/** O default. Uma familia generica: resolve no editor, no PNG e no SVG, em qualquer maquina. */
-export const DEFAULT_FONT_ID = 'system-ui';
+/**
+ * O default. A fonte **embarcada**.
+ *
+ * ## Por que Cal Sans e nao uma familia generica
+ *
+ * Havia um argumento forte para o contrario: uma familia generica (`system-ui`) e a unica que
+ * resolve no editor, no PNG **e** no SVG, em qualquer maquina — inclusive onde a fonte
+ * embarcada nao esta. Deixar o default nela significaria um projeto novo que nuncaxx.
+ *
+ * E o dono pediu Cal Sans, e ele esta **servida** — o arquivo e do projeto, o build hasheia
+ * e o preview e o export rasterizado mostram exatamente a mesma coisa. O que a embarcada nao
+ * garante e so o **SVG**, e esse caso ja tem portao: `TEXT_FONT_NOT_EMBEDDED` no validador.
+ *
+ * Ou seja: o default e a fonte que a pessoa pode **ver** funcionando, e o unico formato que
+ * nao acompanha tem um aviso. O oposto — um default invisivel que ninguem perceives correto —
+ * seria trocar um defeito mensuravel por um invisivel.
+ *
+ * O `system-ui` continua na lista, como fallback e como opcao: ele ainda e a resposta certa
+ * para quem quer um SVG que resolve em qualquer maquina.
+ */
+export const DEFAULT_FONT_ID = "'Cal Sans'";
 
 /** A pilha de fallback gravada em `text.fontFamily`. */
-export const DEFAULT_FONT_STACK = 'system-ui, sans-serif';
+export const DEFAULT_FONT_STACK = "'Cal Sans', system-ui, sans-serif";
 
 /**
  * A lista do seletor: embarcadas primeiro, depois as genericas.
