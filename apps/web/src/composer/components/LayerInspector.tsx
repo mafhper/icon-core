@@ -109,9 +109,6 @@ export const LayerInspector = () => {
             <h2>Background</h2>
           </div>
         </div>
-        <p className="ic-variant-scope-note">
-          The <strong>Background</strong> layer is the handle of the exported image background. The editor backdrop is a separate setting (Work area).
-        </p>
         <div className="ic-field-stack">
           <BackgroundFillSection
             background={state.project.canvas.background}
@@ -177,13 +174,9 @@ export const LayerInspector = () => {
             <h2>Canvas</h2>
           </div>
         </div>
-        <p className="ic-variant-scope-note">
-          Select the <strong>Background</strong> layer to edit the image background — or another layer to edit it.
-        </p>
         <div className="ic-field-stack">
           <Section
             title="Work area"
-            hint="The desk around the icon — never exported, and distinct from the image background. Unset, it follows the theme."
           >
             <ColorField
               label="Work area color"
@@ -207,7 +200,6 @@ export const LayerInspector = () => {
 
           <Section
             title="Import margin"
-            hint="Breathing room left around a freshly imported asset, as a share of the canvas. Zero lets the artwork fill it; the margin applies to the next import, not to layers you already have."
           >
             <Slider
               variant="inline"
@@ -250,7 +242,6 @@ export const LayerInspector = () => {
           */}
           <Section
             title="Grid"
-            hint="Divisions of the canvas, per axis. The toggle stays on the action bar."
           >
             <Switch
               label="Show grid"
@@ -304,7 +295,6 @@ export const LayerInspector = () => {
           */}
           <Section
             title="Keyline"
-            hint="Guides for composing against a platform. The toggle stays on the action bar."
           >
             <Switch
               label="Show keyline"
@@ -363,7 +353,6 @@ export const LayerInspector = () => {
 
           <Section
             title="Frame radius"
-            hint="How much the work area rounds its corners. Applies to the canvas frame and the background — the export stays full bleed, because the platform applies its own mask when it displays the icon."
           >
             <Slider
               variant="inline"
@@ -476,7 +465,7 @@ export const LayerInspector = () => {
 
       <div className="ic-field-stack">
         {layer.kind === 'text' && (
-          <Section title="Text" hint="On a text layer, content and typography come first.">
+          <Section title="Text">
             <TextField
               label="Text"
               value={layer.text?.content ?? ''}

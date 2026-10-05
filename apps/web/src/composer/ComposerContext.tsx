@@ -7,7 +7,13 @@ import {
   type ComposerAction,
   type ComposerView
 } from './composerReducer';
-import { describeSaveOutcome } from './utils/projectStorage';
+import { describeSaveOutcome, downloadProject, projectFileName } from './utils/projectStorage';
+import {
+  openWithFileSystemAccess,
+  saveProjectInPlace,
+  saveProjectWithFileSystemAccess
+} from './utils/projectFiles';
+import { parseProjectFile } from './utils/projectGuard';
 import {
   openProjectStore,
   readPointer,
@@ -59,6 +65,43 @@ interface ComposerContextValue {
   removeStoredProject: (id: string) => Promise<void>;
   /** Renames in the stored document, not just in the list. */
   renameStoredProject: (id: string, name: string) => Promise<boolean>;
+  /**
+   * O handle do arquivo aberto, e `true` enquanto houver um.
+   *
+   * Vive aqui e nao no `Topbar` porque **precisa sobreviver a fechar e reabrir a aba**:
+   * o handle e *structured-cloneable*, entao o store o guarda no IndexedDB e o `Salvar`
+   * volta a gravar no arquivo certo sem a pessoa escolher de novo. Em `useRef` do
+   * `Topbar` ele viveria enquanto a aba vivesse, e o "salvar no lugar" viraria "salvar
+   * como" silenciosamente na sessao seguinte.
+   */
+  fileHandle: FileSystemFileHandle | null;
+  /**
+   * Guarda (ou limpa) o handle do projeto `id`. `null` desliga — usado quando o projeto
+   * foi aberto por `<input type="file">`, que nao devolve handle.
+   *
+   * Devolve `false` quando o store nao aceitou (o `localStorage` de reserva nao guarda
+   * handle, e engines que nao tratam objetos de plataforma recusam o clone). O chamador
+   * **nao** trata isso como erro: e o mesmo estado de um projeto sem arquivo, e o item
+   * do menu avisa.
+   */
+  attachFileHandle: (id: string, handle: FileSystemFileHandle | null) => Promise<boolean>;
+  /**
+   * `Salvar`: grava no arquivo **aberto**.
+   *
+   * Sem handle, cai para `saveProjectAs` e **avisa** — porque "Salvar" virando "Salvar
+   * como" em silencio faria a pessoa criar um segundo arquivo sem perceber e continuar
+   * editando o primeiro.
+   */
+  saveProject: () => Promise<void>;
+  /**
+   * `Salvar como`: **oferece** o seletor de destino.
+   *
+   * Sem File System Access (Firefox, ou contexto nao seguro), cai para o download e avisa
+   * — download e um caminho de reserva, nao o que o rotulo promete.
+   */
+  saveProjectAs: () => Promise<void>;
+  /** Abre um projeto, preferindo o FSA para poder gravar nele depois. */
+  openProjectFile: () => Promise<void>;
 }
 
 const ComposerContext = createContext<ComposerContextValue | null>(null);
@@ -275,6 +318,156 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
     [navigate]
   );
 
+  /**
+ * O handle do arquivo aberto, em `state` e nao em ref.
+ *
+ * Ele precisa **re-renderizar** quem mostra o estado do `Salvar` — e um ref nao faria.
+ * O objeto em si e um handle de plataforma (barato de guardar); o re-render so acontece
+ * em "Abrir" e em "Salvar como", que sao acoes raras.
+ */
+const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
+
+const attachFileHandle = useCallback(
+    async (id: string, handle: FileSystemFileHandle | null) => {
+      setFileHandle(handle);
+      const store = storeRef.current;
+      // Sem store aberto nao ha onde guardar; o estado da sessao continua valendo, entao
+      // isto **nao** e erro.
+      if (!store) return false;
+      return store.setHandle(id, handle);
+    },
+    []
+  );
+
+  const saveProject = useCallback(async () => {
+    if (!state.project) return;
+    if (!fileHandle) {
+      await saveProjectAsRef.current?.();
+      return;
+    }
+    // `requestPermission` **exige gesto do usuario** — e um clique no menu ou um
+    // `Ctrl+S` e um gesto. E por isso que o autosave nunca chega aqui: ele nao tem
+    // gesto, e por isso continua no IndexedDB.
+    const r = await saveProjectInPlace(state.project, fileHandle);
+    if (r.kind === 'saved') {
+      dispatch({ type: 'SET_DIRTY', payload: false });
+      toast.success(`Saved to ${r.fileName}`);
+      return;
+    }
+    if (r.kind === 'needs-permission') {
+      const pedido = fileHandle as unknown as {
+        requestPermission?: (o: { mode: string }) => Promise<PermissionState>;
+      };
+      if ((await pedido.requestPermission?.({ mode: 'readwrite' })) !== 'granted') {
+        toast.error('Icon Core needs permission to write to that file.');
+        return;
+      }
+      const segunda = await saveProjectInPlace(state.project, fileHandle);
+      if (segunda.kind === 'saved') {
+        dispatch({ type: 'SET_DIRTY', payload: false });
+        toast.success(`Saved to ${segunda.fileName}`);
+      } else {
+        toast.error('Could not write to the file.');
+      }
+      return;
+    }
+    if (r.kind === 'failed') {
+      toast.error(`Could not write to ${r.fileName}.`);
+      return;
+    }
+    toast.error('Nothing was written.');
+  }, [state.project, fileHandle, toast, dispatch]);
+
+  /**
+   * `saveProject` precisa chamar `saveProjectAs`, e os dois nao podem se declarar
+   * juntos: um chamaria o outro antes de existir. O ref quebra o ciclo sem duplicar o
+   * corpo — e a alternativa (duplicar) e exatamente o defeito que o `Salvar como`
+   * sofreu.
+   */
+  const saveProjectAsRef = useRef<(() => Promise<void>) | null>(null);
+
+  const saveProjectAs = useCallback(async () => {
+    if (!state.project) return;
+    const nome = projectFileName(state.project.metadata.name);
+    const r = await saveProjectWithFileSystemAccess(state.project, nome);
+    if (r.kind === 'saved') {
+      // A partir daqui o handle **novo** e o que o `Salvar` usa: e este ciclo que faz
+      // "Salvar como" valer para as gravacoes seguintes.
+      if (state.projectId) await attachFileHandle(state.projectId, r.handle as FileSystemFileHandle);
+      dispatch({ type: 'SET_DIRTY', payload: false });
+      toast.success(`Saved to ${r.fileName}`);
+      return;
+    }
+    if (r.kind === 'cancelled') return;
+    if (r.kind === 'unsupported') {
+      const baixado = downloadProject(state.project);
+      if (baixado.kind === 'downloaded') {
+        dispatch({ type: 'SET_DIRTY', payload: false });
+        toast.info('This browser cannot choose a location — the file was downloaded instead.');
+      }
+      return;
+    }
+    toast.error(`Could not save: ${r.reason}`);
+  }, [state.project, state.projectId, attachFileHandle, toast, dispatch]);
+
+  saveProjectAsRef.current = saveProjectAs;
+
+  /**
+   * Abrir, preferindo o FSA.
+   *
+   * O `<input type="file">` da reserva devolve um `File`, que e uma **copia** e nao tem
+   * `createWritable` — abrir por ele torna o "Salvar no lugar" impossivel por
+   * construcao. O `showOpenFilePicker` devolve o handle.
+   */
+  /**
+   * A reserva sem File System Access: `<input type="file">`.
+   *
+   * Num `useCallback` porque `openProjectFile` a chama, e um `const` recreated a cada
+   * render seria uma dependencia instavel de um `useCallback`.
+   *
+   * O preco desta via esta escrito no proprio fluxo: um `File` e uma **copia**, sem
+   * `createWritable`, entao um projeto aberto assim **nao tem** "Salvar no lugar" — e o
+   * item do menu passa a dizer "Save (as a new file)".
+   */
+  const abrirPorInput = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.iconcore.json,.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const project = parseProjectFile(await file.text());
+      if (!project) {
+        toast.error(`"${file.name}" is not a valid Icon Core project file.`);
+        return;
+      }
+      // Sem handle: este projeto **nao** tem "Salvar no lugar", e o item do menu avisa.
+      if (state.projectId) void attachFileHandle(state.projectId, null);
+      dispatch({ type: 'LOAD_PROJECT', payload: project });
+      toast.success(`Opened ${project.metadata.name}`);
+    };
+    input.click();
+  }, [state.projectId, attachFileHandle, toast, dispatch]);
+
+  const openProjectFile = useCallback(async () => {
+    const abriu = await openWithFileSystemAccess(parseProjectFile);
+    if (abriu.kind === 'cancelled') return;
+    if (abriu.kind === 'unsupported') {
+      abrirPorInput();
+      return;
+    }
+    if (abriu.kind === 'invalid') {
+      toast.error(`"${abriu.fileName}" is not a valid Icon Core project file.`);
+      return;
+    }
+    if (state.projectId) {
+      await attachFileHandle(state.projectId, abriu.handle as FileSystemFileHandle);
+    }
+    dispatch({ type: 'LOAD_PROJECT', payload: abriu.project as never });
+    const nome = (abriu.project as { metadata: { name: string } }).metadata.name;
+    toast.success(`Opened ${nome}`);
+  }, [state.projectId, attachFileHandle, toast, dispatch, abrirPorInput]);
+
   const removeStoredProject = useCallback(async (id: string) => {
     const store = storeRef.current;
     if (!store) return;
@@ -326,7 +519,12 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
         refreshProjects,
         openStoredProject,
         removeStoredProject,
-        renameStoredProject
+        renameStoredProject,
+        fileHandle,
+        attachFileHandle,
+        saveProject,
+        saveProjectAs,
+        openProjectFile
       }}
     >
       {/* Announced, not decorative: this is the one moment the app is deliberately

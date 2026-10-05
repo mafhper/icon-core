@@ -2,8 +2,6 @@ import { Info, Search } from 'lucide-react';
 import { ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useState } from 'react';
 import { useComposer } from '../ComposerContext';
-import { useToast } from '../toast/ToastContext';
-import { parseProjectFile } from '../utils/projectGuard';
 import { openCommandPalette } from '../utils/commandPalette';
 import { modKey } from '../utils/platform';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
@@ -32,27 +30,8 @@ import { AppMenu } from './AppMenu';
  */
 
 export const Topbar = () => {
-  const { dispatch, navigate } = useComposer();
-  const toast = useToast();
+  const { navigate, saveProject, saveProjectAs, openProjectFile, fileHandle } = useComposer();
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-
-  const handleOpen = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.iconcore.json,.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const project = parseProjectFile(await file.text());
-      if (!project) {
-        toast.error(`"${file.name}" is not a valid Icon Core project file.`);
-        return;
-      }
-      dispatch({ type: 'LOAD_PROJECT', payload: project });
-      toast.success(`Opened ${project.metadata.name}`);
-    };
-    input.click();
-  };
 
   return (
     <header className="sticky top-0 z-20 flex-none border-b border-ic-border bg-ic-bg/88 backdrop-blur-[18px]">
@@ -68,7 +47,13 @@ export const Topbar = () => {
             <AnimatedIconCoreLogo className="block h-[22px] w-[22px]" animated={false} />
           </button>
 
-          <AppMenu onOpenProject={handleOpen} onAbout={() => setIsAboutOpen(true)} />
+          <AppMenu
+            onOpenProject={() => void openProjectFile()}
+            onAbout={() => setIsAboutOpen(true)}
+            onSave={saveProject}
+            onSaveAs={saveProjectAs}
+            canSaveInPlace={fileHandle != null}
+          />
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-2">

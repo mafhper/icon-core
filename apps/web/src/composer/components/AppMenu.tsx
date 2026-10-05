@@ -1,5 +1,6 @@
 import {
   Copy,
+  CopyPlus,
   Download,
   FolderOpen,
   Layers,
@@ -13,7 +14,6 @@ import {
 import { Menu, MenuItem, MenuSeparator } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { modKey } from '../utils/platform';
-import { downloadProject } from '../utils/projectStorage';
 
 /**
  * Menu de aplicação: Arquivo, Editar, Exportar, Gerenciar.
@@ -62,9 +62,27 @@ import { downloadProject } from '../utils/projectStorage';
 export interface AppMenuProps {
   onOpenProject: () => void;
   onAbout: () => void;
+  /**
+   * `Salvar` e `Salvar como` ficam no `Topbar`.
+   *
+   * São **efeitos de browser**: gravam em disco, pedem permissão e abrem diálogo nativo.
+   * Uma action no reducer seria a forma errada — e foi exatamente aí que o defeito
+   * nasceu: com o `Salvar` e o `Salvar como` no mesmo componente, o segundo herdou o
+   * comportamento do primeiro (baixar) sem que ninguém reparasse.
+   */
+  onSave: () => Promise<void>;
+  onSaveAs: () => Promise<void>;
+  /** `true` quando há handle do arquivo aberto, e `Salvar` pode gravar nele. */
+  canSaveInPlace: boolean;
 }
 
-export const AppMenu = ({ onOpenProject, onAbout }: AppMenuProps) => {
+export const AppMenu = ({
+  onOpenProject,
+  onAbout,
+  onSave,
+  onSaveAs,
+  canSaveInPlace
+}: AppMenuProps) => {
   const { state, dispatch, navigate } = useComposer();
   const hasProject = Boolean(state.project);
 
@@ -72,15 +90,6 @@ export const AppMenu = ({ onOpenProject, onAbout }: AppMenuProps) => {
   // um item desabilitado que nao esta desabilitado e pior que nenhum item.
   const canUndo = state.historyIndex > 0;
   const canRedo = state.historyIndex < state.history.length - 1;
-
-  const handleSave = () => {
-    const outcome = downloadProject(state.project);
-    // **Só** um download de fato limpa o dirty. Este era o bug: o `SET_DIRTY(false)`
-    // rodava incondicionalmente, entao um projeto nunca salvo aparecia como salvo.
-    if (outcome.kind === 'downloaded') {
-      dispatch({ type: 'SET_DIRTY', payload: false });
-    }
-  };
 
   const trigger = (label: string) => (
     <button
@@ -106,12 +115,31 @@ export const AppMenu = ({ onOpenProject, onAbout }: AppMenuProps) => {
           onSelect={onOpenProject}
         />
         <MenuSeparator />
+        {/*
+            Os **dois** comportamentos, e o atalho fica no `Save`.
+
+            A versão anterior tinha um item só, "Save as…", com `Ctrl+S`, chamando
+            `downloadProject` — que **baixa**. O rótulo prometia uma escolha de lugar e
+            o comportamento era um arquivo a mais na pasta de downloads, sem tocar no
+            original e sem dizer nada. Um botão que promete e não cumpre é pior que um
+            botão que não existe: a pessoa conclui que o app perdeu o trabalho.
+
+            `Save` grava no arquivo **aberto** — e o atalho `Ctrl+S` é dele, porque é o
+            gesto que "salvar o que estou editando" quer dizer. `Save as` é a escolha de
+            onde, e por isso é um item separado e sem atalho.
+        */}
         <MenuItem
           icon={<Save size={15} />}
-          label="Save as…"
+          label={canSaveInPlace ? 'Save' : 'Save (as a new file)'}
           shortcut={`${modKey()}+S`}
           disabled={!hasProject}
-          onSelect={handleSave}
+          onSelect={() => void onSave()}
+        />
+        <MenuItem
+          icon={<CopyPlus size={15} />}
+          label="Save as…"
+          disabled={!hasProject}
+          onSelect={() => void onSaveAs()}
         />
       </Menu>
 
