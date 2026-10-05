@@ -6,15 +6,33 @@ export interface Toast {
   id: number;
   variant: ToastVariant;
   message: string;
+  /**
+   * `true` quando o toast **nao** some sozinho.
+   *
+   * ## Por que existe
+   *
+   * Porque um toast de 4,5 s e o formato errado para um fato **permanente** da sessao.
+   * O caso real: "este browser nao escreve no lugar, os arquivos sao baixados" — e isso
+   * continua verdade depois de 4,5 s, e a pessoa vai descobrir de novo no proximo
+   * `Ctrl+S`. O `exploracao-openpencil` resolve isso com um **banner** persistente
+   * (`FileApiBanner.vue`); aqui e um toast que nao expira, porque um banner novo seria
+   * uma surface nova e uma linha de CSS — e o orcamento de CSS tem 5 linhas de folga.
+   *
+   * O que **nao** muda: o toast continua sendo dispensavel a mao. "Persistente" aqui
+   * quer dizer "nao some sem a pessoa pedir", e nao "nao pode sair".
+   */
+  sticky?: boolean;
 }
 
 interface ToastApi {
   toasts: Toast[];
   dismiss: (id: number) => void;
-  show: (message: string, variant?: ToastVariant) => void;
+  show: (message: string, variant?: ToastVariant, options?: { sticky?: boolean }) => void;
   success: (message: string) => void;
   error: (message: string) => void;
   info: (message: string) => void;
+  /** Um aviso que **nao** expira. Ver {@link Toast.sticky}. */
+  sticky: (message: string, variant?: ToastVariant) => void;
 }
 
 const ToastContext = createContext<ToastApi | null>(null);
@@ -35,11 +53,18 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const show = useCallback((message: string, variant: ToastVariant = 'info') => {
-    const id = nextId.current++;
-    setToasts((prev) => [...prev, { id, variant, message }]);
-    timers.current.set(id, setTimeout(() => dismiss(id), AUTO_DISMISS_MS));
-  }, [dismiss]);
+  const show = useCallback(
+    (message: string, variant: ToastVariant = 'info', options: { sticky?: boolean } = {}) => {
+      const id = nextId.current++;
+      setToasts((prev) => [...prev, { id, variant, message, sticky: options.sticky }]);
+      // Um toast sticky nao ganha timer. E o timer que faz ele sumir, entao a ausencia
+      // dele **e** o comportamento — e nao um `if` no meio do `setTimeout`.
+      if (!options.sticky) {
+        timers.current.set(id, setTimeout(() => dismiss(id), AUTO_DISMISS_MS));
+      }
+    },
+    [dismiss]
+  );
 
   const api = useMemo<ToastApi>(() => ({
     toasts,
@@ -47,7 +72,8 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     show,
     success: (message: string) => show(message, 'success'),
     error: (message: string) => show(message, 'error'),
-    info: (message: string) => show(message, 'info')
+    info: (message: string) => show(message, 'info'),
+    sticky: (message: string, variant: ToastVariant = 'info') => show(message, variant, { sticky: true })
   }), [toasts, dismiss, show]);
 
   return <ToastContext.Provider value={api}>{children}</ToastContext.Provider>;

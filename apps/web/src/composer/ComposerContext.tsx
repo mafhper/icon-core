@@ -146,6 +146,16 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
   const [storedProjects, setStoredProjects] = useState<ProjectPointer[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
 
+  /**
+ * O handle do arquivo aberto, em `state` e nao em ref.
+ *
+ * Ele precisa **re-renderizar** quem mostra o estado do `Salvar` — e um ref nao faria.
+ * O objeto em si e um handle de plataforma (barato de guardar); o re-render so acontece
+ * em "Abrir" e em "Salvar como", que sao acoes raras.
+ */
+const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
+
+
   useEffect(() => {
     let vivo = true;
 
@@ -194,6 +204,19 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
             return;
           }
           dispatch({ type: 'LOAD_PROJECT', payload: { project: found.project, projectId: found.id } });
+          /**
+           * O handle **volta** para o estado, e esta linha e o que separa "Salvar" de
+           * "Salvar como".
+           *
+           * Sem ela, o handle fica guardado no store e nunca e lido: `fileHandle`
+           * ficava `null` depois de qualquer reload, e o `Salvar` caia no
+           * `saveProjectAs` — os dois botoos abriam o mesmo seletor. Foi exatamente
+           * isso que o dono reportou: "Salvar e Salvar as esta fazendo a mesma coisa".
+           *
+           * `found.handle` vem do proprio `store.read`, que ja sabe clonar handle de
+           * plataforma; nao ha nada a pedir aqui alem de **usar**.
+           */
+          if (found.handle) setFileHandle(found.handle);
           setRestoring(false);
         });
       })
@@ -224,7 +247,18 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
       const seq = ++writeSeqRef.current;
       const name = project.metadata.name;
 
-      void store.write({ id, name, project }).then((outcome) => {
+      /**
+   * O `write` do store e um **`put`**: o registro e substituido inteiro.
+   *
+   * Passar `{ id, name, project }` sem o handle **apaga o vinculo com o arquivo** a cada
+   * autosave — e o autosave dispara dois segundos apos qualquer edicao. O efeito era:
+   * abrir um projeto pelo File System Access, esperar o autosave, e o "Salvar no lugar"
+   * ja tinha virado "Salvar como". Sem erro, sem aviso, e com o handle no disco.
+   *
+   * Por isso o `fileHandle` entra no payload. O `write` continua substituting o registro
+   * (nao virou read-modify-write), e quem decide o que vai no registro e quem o tem.
+   */
+  void store.write({ id, name, project, handle: fileHandle ?? undefined }).then((outcome) => {
         if (seq !== writeSeqRef.current) return; // a newer write already answered
 
         if (outcome.kind === 'saved') {
@@ -245,11 +279,15 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
     }, 2000);
 
     return () => clearTimeout(timer);
-    // `state.projectId` is a real dependency, not a formality: a new project keeps a
+// `state.projectId` is a real dependency, not a formality: a new project keeps a
     // new id, and if the effect ignored it a replacement that arrived already dirty
-    // would be written under the **previous** project's key — the same silent
+    // would be written under the **previous** project's key - the same silent
     // overwrite, one effect later.
-  }, [state.project, state.projectId, state.isDirty, restoring, toast]);
+    //
+    // `fileHandle` e dependencia pelo mesmo motivo e mais forte: o `write` substitui o
+    // registro, entao um handle trocado (por um "Salvar como") precisa entrar no payload
+    // do proximo autosave, ou o vinculo com o arquivo volta a ser o antigo.
+  }, [state.project, state.projectId, state.isDirty, restoring, toast, fileHandle]);
 
   // The autosave keeps failing after the first notice, so the flag is what keeps
   // one full project from producing a toast on every keystroke. It clears when the
@@ -257,6 +295,38 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!state.isDirty) quotaAvisadaRef.current = false;
   }, [state.isDirty]);
+
+  /**
+   * `beforeunload`: fechar ou recarregar com trabalho nao salvo.
+   *
+   * ## Por que este hook existe
+   *
+   * O IndexedDB guarda o projeto a cada 2 s, entao recarregar **nao perde** o desenho —
+   * e essa e exatamente a razao pela qual o aviso e necessario e nao opcional: sem ele,
+   * fechar a aba parece seguro e a pessoa nao sabe que o que reopen e um *recover*,
+   * nao o arquivo. O `exploracao-openpencil` (`tests/e2e/app/unsaved-changes.spec.ts`,
+   * "browser reload warns about unsaved work") tem o mesmo hook, pelo mesmo motivo.
+   *
+   * ## Por que `event.preventDefault()` e nao `event.returnValue`
+   *
+   * Porque `returnValue` e o caminho legado e dispara aviso de deprecacao no Chromium;
+   * `preventDefault` e a forma moderna e produz o mesmo dialogo. Firefox exige
+   * `returnValue` — por isso os dois, e e o unico lugar onde isso e justificavel.
+   *
+   * ## Por que so quando ha projeto **e** dirty
+   *
+   * Um aviso de "tem trabalho nao salvo" num app aberto sem projeto ensinaria a pessoa a
+   * clicar em "Sair" sem ler. O aviso que aparece sempre deixa de aparecer.
+   */
+  useEffect(() => {
+    if (!state.project || !state.isDirty) return;
+    const aoSair = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', aoSair);
+    return () => window.removeEventListener('beforeunload', aoSair);
+  }, [state.project, state.isDirty]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -312,22 +382,16 @@ export const ComposerProvider = ({ children }: { children: ReactNode }) => {
       // The record's own id, so the autosave writes back to the record it came from
       // instead of minting a second copy of the project the user just opened.
       dispatch({ type: 'LOAD_PROJECT', payload: { project: found.project, projectId: found.id } });
+      // Mesmo ponto do restore-on-mount: sem repor o handle, "Salvar" e "Salvar como"
+      // continuam sendo o mesmo botao para quem abriu o projeto pela lista.
+      if (found.handle) setFileHandle(found.handle);
       navigate('edit-space');
       return true;
     },
     [navigate]
   );
 
-  /**
- * O handle do arquivo aberto, em `state` e nao em ref.
- *
- * Ele precisa **re-renderizar** quem mostra o estado do `Salvar` — e um ref nao faria.
- * O objeto em si e um handle de plataforma (barato de guardar); o re-render so acontece
- * em "Abrir" e em "Salvar como", que sao acoes raras.
- */
-const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
-
-const attachFileHandle = useCallback(
+  const attachFileHandle = useCallback(
     async (id: string, handle: FileSystemFileHandle | null) => {
       setFileHandle(handle);
       const store = storeRef.current;
@@ -403,7 +467,19 @@ const attachFileHandle = useCallback(
       const baixado = downloadProject(state.project);
       if (baixado.kind === 'downloaded') {
         dispatch({ type: 'SET_DIRTY', payload: false });
-        toast.info('This browser cannot choose a location — the file was downloaded instead.');
+        /**
+         * **Sticky**, e nao `toast.info`.
+         *
+         * "Este browser nao escreve no lugar, os arquivos sao baixados" continua verdade
+         * depois de 4,5 s — e a pessoa vai descobrir de novo no proximo `Ctrl+S`. Um
+         * aviso que expira e um aviso que a pessoa perde.
+         *
+         * O `exploracao-openpencil` resolve o mesmo fato com um banner persistente
+         * (`FileApiBanner.vue`, que mostra a capacidade do browser em vez do resultado
+         * de uma acao). Aqui o aviso nasce do **resultado** — que e quando a pessoa
+         * pode agir sobre ele — e fica ate ela dispensar.
+         */
+        toast.sticky('This browser cannot save in place — files are downloaded instead.');
       }
       return;
     }
