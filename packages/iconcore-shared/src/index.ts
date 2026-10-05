@@ -180,6 +180,52 @@ export interface LayerSource {
   shape?: ShapeDefinition;
 }
 
+/**
+ * `project.json` — o vínculo entre uma pasta e o que há nela.
+ *
+ * ## Por que um arquivo separado, e não um campo no `.iconcore.json`
+ *
+ * Uma pasta é um projeto e **cada canvas é um `.iconcore.json` dentro dela**
+ * (`ADR-020`). Então "qual é o logo do projeto" é uma pergunta **sobre a pasta**, e
+ * nenhum dos documentos nela pode responder sozinho: o que responde depende de todos os
+ * outros, e mudar a resposta não pode reescrever nenhum deles.
+ *
+ * A alternativa — `role: 'logo'` dentro de cada documento — põe a resposta onde a pergunta
+ * não mora, e faz o logo mudar de arquivo exigindo editar o documento antigo.
+ *
+ * ## Nomes de pasta, não caminhos absolutos
+ *
+ * Tudo aqui é **relativo à raiz do projeto**. Um caminho absoluto no manifesto quebra ao
+ * mover a pasta, e a portabilidade é justamente o que o registro tem a oferecer.
+ */
+export interface ProjectManifest {
+  schemaVersion: 1;
+  /** Nome de projeto. Ausente = o nome da pasta. */
+  name?: string;
+  /**
+   * O canvas que **é** o logo, relativo à raiz, ex.: `icone.iconcore.json`.
+   *
+   * É este campo que os outros assets referenciam (ver `LayerSource`, tipo `'document'`).
+   * Ausente = nenhum vínculo, e a análise propõe um candidato sem gravar nada.
+   */
+  logo?: string;
+  /**
+   * Pastas nomeadas, relativas à raiz. Ausente = a própria raiz.
+   *
+   * São convenções de organização, não buscas: mudar `promo` para
+   * `assets/promo` reorganiza onde o app **sugere** gravar, e nada mais.
+   */
+  folders?: {
+    icons?: string;
+    promo?: string;
+  };
+  /**
+   * Subpastas a ignorar na análise, além das padrão (`node_modules`, `.git`, `dist`).
+   * Globs não são suportados de propósito: a lista é curta e explícita é mais honesta.
+   */
+  ignore?: string[];
+}
+
 /** Color adjustments for image/svg layers. Percentages are CSS-filter style (100 = unchanged). */
 export interface ImageFilter {
   hue?: number;        // degrees, -180..180
