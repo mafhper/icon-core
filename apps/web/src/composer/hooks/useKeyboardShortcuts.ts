@@ -3,6 +3,7 @@ import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
+import { downloadProject } from '../utils/projectStorage';
 
 export const useKeyboardShortcuts = () => {
   const { state, dispatch, navigate } = useComposer();
@@ -33,16 +34,13 @@ export const useKeyboardShortcuts = () => {
 
       if (isMod && e.key === 's') {
         e.preventDefault();
-        if (!state.project) return;
-        const json = JSON.stringify(state.project, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${state.project.metadata.name.toLowerCase().replace(/\s+/g, '-')}.iconcore.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        dispatch({ type: 'SET_DIRTY', payload: false });
+        // Uma cópia só do download: `downloadProject` mora em `projectStorage`, e o
+        // dirty só é limpo quando o download **sai**. Antes, este bloco e o do
+        // `Topbar` eram 13 linhas iguais com `SET_DIRTY(false)` incondicional — e o
+        // bug aparecia nos dois: projeto nunca salvo marcado como salvo.
+        if (downloadProject(state.project).kind === 'downloaded') {
+          dispatch({ type: 'SET_DIRTY', payload: false });
+        }
         return;
       }
 

@@ -3,6 +3,7 @@ import { Topbar } from './Topbar';
 import { ToolRail } from './ToolRail';
 import { ActionBar } from './ActionBar';
 import { LayerList } from './LayerList';
+import { ProjectTitle } from './ProjectTitle';
 import { LayerInspector } from './LayerInspector';
 import { PreviewCanvas } from './PreviewCanvas';
 import { PanelResizer } from './PanelResizer';
@@ -53,6 +54,10 @@ export const AppShell = () => {
           aria-label="Layers panel"
           data-open={leftOpen ? '' : undefined}
         >
+          {/* The project title lives here, not in the Topbar: there it sat between
+              the logo and the menu and grew, pushing the whole bar right on every
+              character typed. Here it owns the panel width. */}
+          <ProjectTitle />
           <LayerList />
         </section>
         <div className="ic-app-main">

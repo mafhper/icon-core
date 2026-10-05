@@ -19,7 +19,13 @@ export { Slider, type SliderProps } from './components/Slider';
 export { ColorField, type ColorFieldProps, type ColorValue, type ColorFormat } from './components/ColorField';
 export { InlineField, ControlRow, type InlineFieldProps, type ControlRowProps } from './components/InlineField';
 export { SegmentedControl, type SegmentedControlProps, type SegmentedOption } from './components/SegmentedControl';
-export { Menu, MenuItem, type MenuProps, type MenuItemProps } from './components/Menu';
+export {
+  Menu,
+  MenuItem,
+  MenuSeparator,
+  type MenuProps,
+  type MenuItemProps
+} from './components/Menu';
 export { Popover, type PopoverProps } from './components/Popover';
 export {
   COLOR_LIBRARY,

@@ -524,12 +524,20 @@ test.describe('o id do projeto muda quando o projeto muda', () => {
     expect(depoisDoPrimeiro).toHaveLength(1);
     const idDoPrimeiro = depoisDoPrimeiro[0].id;
 
-    // A fresh project, the way the welcome does it — and with **the same name on
-    // purpose**, so the assertion below is about identity rather than about two
-    // differently-named things. Two records called "Meu Icone" can only be told apart
-    // by their id.
-    await page.getByRole('button', { name: 'Meu Icone' }).first().click();
-    await page.getByLabel('Project name').fill('Meu Icone');
+    // A fresh project, through the logo: **Home first**, then the welcome - and with
+    // **the same name on purpose**, so the assertion below is about identity rather
+    // than about two differently-named things. Two records called "Meu Icone" can
+    // only be told apart by their id.
+    //
+    // Este rascunho preenchia o nome **antes** de o dialogo existir, e funcionava por
+    // acaso: o campo nao existia ate o dialogo aparecer, e o clique abaixo abria o
+    // dialogo enquanto o Playwright ainda esperava o `fill`. Agora o dialogo ja esta
+    // no ar e o `fill` estoura 30 s sem nada para clicar.
+    // The logo is the shortcut that stays, and its accessible name is fixed — it does
+    // not change with the project, which is why it is the stable target.
+    await page.getByRole('button', { name: 'Go to workspaces' }).click();
+    await page.getByRole('dialog').waitFor();
+    await page.getByRole('dialog').getByLabel('Project name').fill('Meu Icone');
 
     // #198: with a project open, creating another is destructive and asks first.
     await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -575,9 +583,38 @@ test.describe('a lista de projetos', () => {
    * "Icon Core" while a project was open and found nothing, and once it forgot
    * `exact: true` and matched "About Icon Core" as well.
    */
-  const irParaHome = async (page: import('@playwright/test').Page, projetoAberto: string) => {
-    await page.getByRole('button', { name: projetoAberto, exact: true }).first().click();
+/**
+ * Go Home by the **logo**, which is the shortcut that stays.
+ *
+ * Isto usava clicar pelo **nome do projeto**, que morava na faixa superior ao lado do
+ * logo — e o nome foi para o painel esquerdo, agora com o sufixo "unsaved changes"
+ * no nome acessível. Um seletor por nome de projeto não sobrevive à mudança, e o
+ * teste falhou com timeout em `locator.click` sem dizer por quê: o botão com esse
+ * nome simplesmente não existe mais no topo.
+ *
+ * O logo é `Go to workspaces`, e é o alvo estável — ele é elemento **decorativo** com
+ * função, então o nome acessível é fixo e não varia com o projeto.
+ */
+  const irParaHome = async (page: import('@playwright/test').Page, _projetoAberto: string) => {
+    await page.getByRole('button', { name: 'Go to workspaces' }).click();
   };
+
+  /**
+   * O `input` de renomear, em modo de **edição**.
+   *
+   * `getByLabel('Project name')` agora casa **dois** elementos: o campo do welcome e o
+   * título do painel esquerdo, que abriu com o mesmo rótulo acessível. `strict mode`
+   * do Playwright transforma isso em erro — e o primeiro teste a falhar foi
+   * `o id do projeto muda`, que nem passa por rename.
+   *
+   * Os dois campos de nome ficam separados pelo papel: o do welcome vive num `dialog`,
+   * e o do painel esquerdo é um `textbox` dentro da `region` das layers.
+   */
+  const campoNomeWelcome = (page: import('@playwright/test').Page) =>
+    page.getByRole('dialog', { name: 'Start a new icon' }).getByLabel('Project name');
+
+  const campoNomeTitulo = (page: import('@playwright/test').Page) =>
+    page.getByRole('region', { name: 'Layers panel' }).getByRole('textbox', { name: 'Project name' });
 
   /**
    * Open the welcome, whether or not it is already up.
@@ -596,7 +633,7 @@ test.describe('a lista de projetos', () => {
 
   const criar = async (page: import('@playwright/test').Page, nome: string, projetoAberto: string) => {
     await abrirWelcome(page, projetoAberto);
-    await page.getByLabel('Project name').fill(nome);
+    await campoNomeWelcome(page).fill(nome);
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     // #198 warns when there is something to lose, and by this point there is.
     const dialogo = page.getByRole('alertdialog');
@@ -718,8 +755,45 @@ test.describe('a lista de projetos', () => {
     await irParaHome(page, 'Segundo');
     await lista(page).getByRole('button', { name: 'Continue Primeiro' }).click();
 
-    // The header renders the open project's name.
-    await expect(page.getByRole('button', { name: 'Primeiro', exact: true }).first()).toBeVisible();
+    // The **left panel** renders the open project's name: it moved out of the
+    // header, where it grew and pushed the app menu sideways on every character.
+    // The accessible name carries "unsaved changes", hence the prefix match.
+    await expect(page.getByRole('button', { name: /^Primeiro\./ }).first()).toBeVisible();
+  });
+
+  test('renomear pelo titulo da lateral, e o dirty fica honesto', async ({ page }) => {
+    await recomecar(page);
+    await criar(page, 'Primeiro', 'Icon Core');
+
+    // The title is the rename affordance, so this is the owner's "mesma opcao de
+    // clicar para renomear" — and `SET_PROJECT_NAME` existed since #203, unreachable.
+    const titulo = page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: /^Primeiro\./ });
+    await titulo.click();
+    await campoNomeTitulo(page).fill('Renomeado');
+    await campoNomeTitulo(page).press('Enter');
+
+    await expect(page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: /^Renomeado\./ })).toBeVisible();
+
+    // **Escape must not rename.** A commit-on-blur alone would apply the draft when the
+    // person tabs away, and cancelling would need a second path.
+    await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: /^Renomeado\./ }).click();
+    await campoNomeTitulo(page).fill('Descartado');
+    await campoNomeTitulo(page).press('Escape');
+    await expect(page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: /^Renomeado\./ })).toBeVisible();
+
+    // The store carries the new name: renaming only the label would be a lie on reload.
+    const registros = await page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((res, rej) => {
+        const r = indexedDB.open('iconcore-projects');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+      return await new Promise<{ project: { metadata: { name: string } } }[]>((res) => {
+        const tx = db.transaction('projects', 'readonly').objectStore('projects').getAll();
+        tx.onsuccess = () => res(tx.result);
+      });
+    });
+    expect(registros.some((r) => r.project.metadata.name === 'Renomeado')).toBe(true);
   });
 
   test('apagar pede confirmacao e remove da lista', async ({ page }) => {
