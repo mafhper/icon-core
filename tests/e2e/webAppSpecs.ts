@@ -38,7 +38,8 @@ export const WEB_APP_SPECS = [
   'radius-marks',
   'margin-overlay',
   'grid-config',
-  'keyline-config'
+  'keyline-config',
+  'layer-reorder'
 ] as const;
 
 /**

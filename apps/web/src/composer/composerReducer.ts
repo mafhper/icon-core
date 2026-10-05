@@ -360,6 +360,27 @@ const reorderLayers = (layers: IconLayer[]): IconLayer[] => {
   return [...backgrounds.map((layer) => ({ ...layer, zIndex: -1 })), ...renumbered];
 };
 
+/**
+ * Move uma camada na ordem de composição.
+ *
+ * ## O bug que este comentario documenta
+ *
+ * A versão anterior fazia `splice` no **array** e depois chamava `reorderLayers`. E
+ * `reorderLayers` **ordena por `zIndex`** antes de renumerar — então o splice movia a
+ * camada no array e a ordenação a devolvia ao lugar: **nenhuma das quatro direções fazia
+ * nada**. Só `direction: 'back'` tinha teste, e por acaso passava.
+ *
+ * A correção é renumerar **pela ordem do array**, não pelo `zIndex` antigo. As duas coisas
+ * concordam quando ninguém mexeu; a primeira vez que alguém mexe, só a ordem do array
+ * sabe a intenção.
+ *
+ * ## Por que `zIndex`, e não a posição no array
+ *
+ * Porque `zIndex` é a **verdade da composição** (`composeLayers` pinta por ele), e a
+ * posição no array é uma convenção de armazenamento. Um `splice` no array sem renumerar
+ * deixa os dois discordando — e é o que fazia o `IC66`: o Background subia na lista
+ * sem mudar nada no canvas.
+ */
 const moveLayer = (layers: IconLayer[], id: string, direction: 'forward' | 'backward' | 'front' | 'back'): IconLayer[] => {
   const sorted = [...layers].sort((a, b) => a.zIndex - b.zIndex);
   const index = sorted.findIndex((layer) => layer.id === id);
@@ -371,7 +392,10 @@ const moveLayer = (layers: IconLayer[], id: string, direction: 'forward' | 'back
   if (direction === 'forward') sorted.splice(Math.min(sorted.length, index + 1), 0, layer);
   if (direction === 'backward') sorted.splice(Math.max(0, index - 1), 0, layer);
 
-  return reorderLayers(sorted);
+  // Renumera pela ordem do array, ignorando o `zIndex` que veio: e a **ordem do splice**
+  // que expressa a intenção do comando.
+  const renumbered = sorted.map((l, i) => ({ ...l, zIndex: i }));
+  return reorderLayers(renumbered);
 };
 
 export const composerReducer = (state: ComposerState, action: ComposerAction): ComposerState => {
