@@ -6,6 +6,12 @@ import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Sli
 import { RADIUS_MARKS, radiusMarkValue } from '../utils/radiusMarks';
 import { resolveWorkAreaColor } from '../utils/workArea';
 import { MAX_DIVISIONS, MIN_DIVISIONS } from '../utils/gridConfig';
+import {
+  KEYLINE_PART_LABELS,
+  KEYLINE_STANDARDS,
+  availableParts,
+  type KeylineStandard
+} from '../utils/keylineConfig';
 import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
@@ -154,6 +160,15 @@ export const LayerInspector = () => {
     }));
     const formaPor = new Map(RADIUS_MARKS.map((m) => [m.description, m.shape]));
 
+    /**
+     * As partes de keyline que o **documento** sustenta.
+     *
+     * A `safe-area` depende de `canvas.safeArea` existir. Sem ele, o tracejado seria
+     * uma caixa inventada no lugar onde a plataforma recorta, e a pessoa ajustaria a
+     * arte a uma margem que não existe — o switch liga, a guia aparece, e é mentira.
+     */
+    const partesDisponiveis = availableParts(Boolean(state.project.canvas.safeArea));
+
     return (
       <aside className="ic-inspector">
         <div className="ic-inspector-head">
@@ -222,7 +237,7 @@ export const LayerInspector = () => {
             />
           </Section>
 
-          {/*
+{/*
               A **configuração** do grid, e não o toggle.
 
               O toggle continua na barra de ação inferior (`Ctrl/Ctrl+G`), que é onde a
@@ -279,6 +294,70 @@ export const LayerInspector = () => {
                   }}
                 />
               </div>
+            )}
+          </Section>
+
+          {/*
+              A **configuração** da keyline. O toggle continua na barra inferior
+              (`Ctrl/Ctrl+K`), que é onde a pessoa o procura — o dono foi explícito:
+              "a ativacao/ ciclo deles continua como atalho la".
+          */}
+          <Section
+            title="Keyline"
+            hint="Guides for composing against a platform. The toggle stays on the action bar."
+          >
+            <Switch
+              label="Show keyline"
+              checked={state.showKeylines}
+              onChange={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
+            />
+            {state.showKeylines && (
+              <>
+                <Select
+                  label="Platform"
+                  value={state.keylineStandard}
+                  onChange={(event) =>
+                    dispatch({ type: 'SET_KEYLINE_STANDARD', payload: event.target.value as KeylineStandard })
+                  }
+                >
+                  {Object.entries(KEYLINE_STANDARDS).map(([value, info]) => (
+                    <option key={value} value={value}>
+                      {info.label}
+                    </option>
+                  ))}
+                </Select>
+                <div className="grid grid-cols-1 gap-2">
+                  {partesDisponiveis.map((part) => (
+                    <Switch
+                      key={part}
+                      label={KEYLINE_PART_LABELS[part]}
+                      checked={state.keylineParts.has(part)}
+                      onChange={() => dispatch({ type: 'TOGGLE_KEYLINE_PART', payload: part })}
+                    />
+                  ))}
+                </div>
+                {/*
+                    As recomendadas da plataforma, acionadas em um clique. Trocar o tipo
+                    **nao** mexe nas partes (a pessoa escolheu), e este botao existe
+                    para quem quer o conjunto sem ligar cinco switches — que e o uso
+                                    comum depois de escolher a plataforma.
+                */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="text-[0.7rem] text-ic-text-muted hover:text-ic-accent-text hover:underline"
+                    onClick={() => {
+                      for (const part of KEYLINE_STANDARDS[state.keylineStandard].suggestedParts) {
+                        if (!state.keylineParts.has(part)) {
+                          dispatch({ type: 'TOGGLE_KEYLINE_PART', payload: part });
+                        }
+                      }
+                    }}
+                  >
+                    Use {KEYLINE_STANDARDS[state.keylineStandard].label} guides
+                  </button>
+                </div>
+              </>
             )}
           </Section>
 

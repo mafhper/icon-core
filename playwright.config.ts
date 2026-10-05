@@ -1,16 +1,22 @@
 import { defineConfig } from '@playwright/test';
+import { webAppTestIgnore } from './tests/e2e/webAppSpecs';
 
 export default defineConfig({
   testDir: './tests/e2e',
-  // The gallery captures, the inspector layout contract and the IndexedDB store
-  // belong to `ui:shots` (playwright.ui.config.ts, web server) - they must not run
-  // against the promo server here, where the app does not exist.
-  //
-  // `project-store` joined that list when it was added, and CI caught the omission:
-  // it passed locally because the right config was passed by hand, and failed on the
-  // first CI run because `npm run test:e2e` uses this file. A spec that only passes
-  // when you remember to name its config is a spec that runs in the wrong place.
-  testIgnore: /(ui-gallery|inspector-layout|polish|project-store)\.spec\.ts/,
+  /**
+   * Os specs do **app** nao rodam aqui — este config sobe a landing page, onde o
+   * Composer nao existe.
+   *
+   * A lista vem de `webAppSpecs.ts`, e antes vivia **duplicada** neste arquivo e no
+   * `playwright.ui.config.ts`. Duplicada e o mesmo que repetido: o `project-store`
+   * entrou num lado, esquecido no outro, passou localmente (porque o config certo foi
+   * passado a mao) e quebrou no primeiro CI. Um spec so passa quando a pessoa lembra
+   * de nomear o config — e isso e um spec rodando no lugar errado.
+   *
+   * Este e o **mesmo episodio, de novo**, com cinco specs novos. Um guard nao teria
+   * pego: a lista e um regex, e nao um invariant. A correcao estrutural e a lista unica.
+   */
+  testIgnore: webAppTestIgnore,
   webServer: {
     command: process.env.CI
       ? 'npm run preview --workspace=@iconcore/promo -- --host 127.0.0.1 --port 4181'

@@ -10,6 +10,7 @@ import type {
 import type { FileLayerAsset } from './utils/fileLayers';
 import { clampZoom } from './constants';
 import { DEFAULT_DIVISIONS, clampDivisions } from './utils/gridConfig';
+import { type KeylinePart, type KeylineStandard } from './utils/keylineConfig';
 import type { WorkAreaColor } from './utils/workArea';
 import { generateVariantPreset, isGeneratableVariant } from './utils/variantPresets';
 import {
@@ -57,6 +58,22 @@ export interface ComposerState {
   maskShape: 'square' | 'circle' | 'rounded-rectangle' | 'squircle';
   compareDefault: boolean;
   showKeylines: boolean;
+  /**
+   * As partes da keyline que estão ligadas.
+   *
+   * Um `Set`, e não um array de booleanos: o `KeylineOverlay` faz `parts.has(...)` por
+   * parte, e um array exigiria `includes` a cada um — e um array de booleanos
+   * paralelos (`[frame, grid, circle, circle, safeArea]`) permite a combinação
+   * impossível "duas vezes circle, nenhuma vez grid".
+   */
+  keylineParts: Set<KeylinePart>;
+  /**
+   * Qual plataforma a keyline descreve. **Não** é a mesma coisa que `maskShape`: essa
+   * é a forma que o ícone tem; esta é a referência contra a qual a composição está
+   * sendo medida. Um ícone circular é medido contra a grade do Android sem parar de ser
+   * circular.
+   */
+  keylineStandard: KeylineStandard;
   /**
    * A máscara da `import margin`, sobre o ícone.
    *
@@ -171,6 +188,8 @@ export type ComposerAction =
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_KEYLINES' }
+  | { type: 'TOGGLE_KEYLINE_PART'; payload: KeylinePart }
+  | { type: 'SET_KEYLINE_STANDARD'; payload: KeylineStandard }
   | { type: 'TOGGLE_MARGIN_OVERLAY' }
   | { type: 'SET_GRID_DIVISIONS'; payload: { columns: number; rows: number } }
   | { type: 'TOGGLE_SNAPPING' }
@@ -200,6 +219,8 @@ export const initialState: ComposerState = {
   workAreaColor: null,
   compareDefault: false,
   showKeylines: false,
+  keylineParts: new Set<KeylinePart>(['frame', 'grid', 'squircle', 'safe-area']),
+  keylineStandard: 'generic',
   showMarginOverlay: true,
   showSnapping: true,
   gridColumns: DEFAULT_DIVISIONS,
@@ -766,6 +787,18 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       return { ...state, showMarginOverlay: !state.showMarginOverlay };
 
     case 'TOGGLE_KEYLINES':
+      /**
+       * O toggle da barra liga e desliga as guias, mas **nao** esvazia o conjunto de
+       * partes.
+       *
+       * Sem isto, `Ctrl/Ctrl+K` duas vezes deixaria a keyline com zero partes e o
+       * painel de configuracao mostraria tudo desligado — a pessoa teria de religar
+       * parte por parte para voltar ao que tinha. O conjunto e a **preferencia**; o
+       * toggle e a exibicao. São coisas diferentes e foi o que mantive assim.
+       *
+       * Regressão de estado: desligar a keyline **mantém** `showKeylines` falso e as
+       * partes intactas; o `KeylineOverlay` some porque `showKeylines` é falso.
+       */
       return { ...state, showKeylines: !state.showKeylines };
 
     case 'TOGGLE_SNAPPING':
@@ -792,6 +825,18 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       // Sem `commitProject` e sem `isDirty`: ver a nota da acao. A bancada nao e arte,
       // e `IC-N7` (digest) nao pode acusar mudanca aqui.
       return { ...state, workAreaColor: action.payload };
+
+    case 'TOGGLE_KEYLINE_PART': {
+      // Cria um `Set` novo em vez de mutar: o `state` anterior pode estar num memo de
+      // outro componente, e mutar in-place faria o React nao re-renderizar.
+      const next = new Set(state.keylineParts);
+      if (next.has(action.payload)) next.delete(action.payload);
+      else next.add(action.payload);
+      return { ...state, keylineParts: next, showKeylines: next.size > 0 };
+    }
+
+    case 'SET_KEYLINE_STANDARD':
+      return { ...state, keylineStandard: action.payload };
 
     default:
       return state;
