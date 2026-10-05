@@ -1,4 +1,5 @@
 import type { IconCoreProject } from '@iconcore/shared';
+import { exportsSvg, fontStackIsFontIndependent } from '@iconcore/shared';
 
 export interface ValidationIssue {
   severity: 'error' | 'warning' | 'info';
@@ -122,6 +123,32 @@ const checkText = (project: IconCoreProject): ValidationIssue[] => {
         message: `Layer "${layer.name}" is text. Apple's guidelines recommend avoiding text in app icons — it is hard to read at small sizes.`,
         layerId: layer.id
       });
+
+      /**
+       * A fonte que o SVG nao carrega.
+       *
+       * O `renderToSvg` emite `<text font-family="...">`, e um SVG carrega o **nome** da
+       * familia, nao o arquivo. Quem abre resolve na maquina dele.
+       *
+       * O aviso e sobre **independencia de fonte**, e nao sobre "renderiza": uma pilha
+       * `Inter, system-ui, sans-serif` renderiza em qualquer maquina (o `system-ui` e o
+       * fallback garantido), mas renderiza **em outra cara** — e um texto com quebra diferente
+       * da que a pessoa ajustou. Um aviso que falasse aqui estaria dizendo "sai um Times",
+       * que e falso.
+       *
+       * E aviso, e nao erro, porque o PNG, o ICO e o Tauri sao rasterizados no agente de
+       * usuario e ficam corretos: o alcance do problema e o SVG. E so aparece quando o
+       * projeto **realmente exporta SVG** — avisar sobre um formato que a pessoa nao
+       * exporta e ruido, e um aviso que aparece sempre treina a pessoa a ignorar.
+       */
+      if (exportsSvg(project) && !fontStackIsFontIndependent(layer.text?.fontFamily ?? '')) {
+        issues.push({
+          severity: 'warning',
+          code: 'TEXT_FONT_NOT_EMBEDDED',
+          message: `Layer "${layer.name}" uses "${layer.text?.fontFamily}", and the SVG export carries the family NAME, not the font. Without it installed the text falls back and breaks differently. Embed the font as paths before shipping the SVG, or export a raster target instead.`,
+          layerId: layer.id
+        });
+      }
     }
   }
 

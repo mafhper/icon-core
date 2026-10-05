@@ -73,7 +73,17 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
-const FONTE = path.join(rootDir, 'assets', 'brand');
+/**
+ * O caminho da fonte de um derivado: arte em `assets/brand/`, fonte em `assets/fonts/`.
+ *
+ * Uma funcao e nao uma constante porque sao **duas** pastas de fonte. Deixar uma constante
+ * `FONTE = assets/brand` seria ler as fontes do lugar errado — e o portao acusaria "fonte
+ * ausente" para um arquivo que existe.
+ */
+const fonteDe = (nome) =>
+  path.join(rootDir, nome.endsWith('.woff2') ? 'assets/fonts' : 'assets/brand', nome);
+
+const fonteExiste = (nome) => fs.existsSync(fonteDe(nome));
 
 /**
  * A fonte, e onde cada arquivo vai.
@@ -83,17 +93,46 @@ const FONTE = path.join(rootDir, 'assets', 'brand');
  * `release-new.webp`), e nome duplicado éxxx custo até alguém usar o errado — que foi
  * o que a release fez.
  */
+/**
+ * As fontes: mesma regra, outra fonte. Fonte em `assets/fonts/`, derivados dentro do `src/`
+ * de cada app, e o mesmo portao comparando por SHA-256.
+ *
+ * Por que o derivado vai para dentro de `src/`, e nao para `public/` — porque e isso que faz
+ * o Vite funcionar, e as duas alternativas **falham em silencio**:
+ *
+ * - `url('../../assets/fonts/...')` a partir de `apps/web/src/index.css` sai da raiz do
+ *   projeto Vite. O build avisa "didn't resolve at build time" e emite o caminho literal no
+ *   CSS; do `dist/assets/`, esse caminho relativo da 404. O `@font-face` fica no CSS e a
+ *   fonte nunca carrega.
+ * - `public/` tambem nao serve: o app e servido em `/icon-core/app/`, e um `/fonts/...`
+ *   absoluto nao respeita a base.
+ *
+ * Dentro de `src/` o Vite resolve, hasheia e respeita `base`. E o build emite
+ * `dist/assets/CalSans-Regular-Dm1Envc1.woff2`, que e o que a pagina precisa.
+ *
+ * A letra `w` de `woff2` e o que separa as duas tabelas: a fonte mora em `assets/fonts/`, e
+ * a arte em `assets/brand/`. Um mapa so, porque duas tabelas divergem na primeira fonte nova.
+ */
+const FONTES = {
+  'CalSans-Regular.woff2': ['apps/web/src/fonts/CalSans-Regular.woff2'],
+  'CalSans-Bold.woff2': ['apps/web/src/fonts/CalSans-Bold.woff2']
+};
+
+/** Todas as derivadas: arte e fonte, com o mesmo contrato de SHA-256. */
 const DERIVADOS = {
-  'logo.svg': [
-    'apps/promo/public/branding/logo.svg',
-    'apps/web/public/branding/logo.svg'
-  ],
-  'release.webp': [
-    'apps/promo/public/branding/release.webp',
-    'apps/web/public/branding/release.webp',
-    // Consumido por `.github/release.config.json` → a imagem da release no GitHub.
-    'docs/images/releases/release.webp'
-  ]
+  ...{
+    'logo.svg': [
+      'apps/promo/public/branding/logo.svg',
+      'apps/web/public/branding/logo.svg'
+    ],
+    'release.webp': [
+      'apps/promo/public/branding/release.webp',
+      'apps/web/public/branding/release.webp',
+      // Consumido por `.github/release.config.json` -> a imagem da release no GitHub.
+      'docs/images/releases/release.webp'
+    ]
+  },
+  ...FONTES
 };
 
 /** Arquivos que **eram** duplicatas e nao devem voltar. */
@@ -109,13 +148,11 @@ const sha256 = (rel) =>
 const failures = [];
 const notes = [];
 
-const fonteExiste = (nome) => fs.existsSync(path.join(FONTE, nome));
-
 for (const [nome, destinos] of Object.entries(DERIVADOS)) {
-  const fonteRel = path.join('assets', 'brand', nome).split(path.sep).join('/');
+  const fonteRel = path.relative(rootDir, fonteDe(nome)).split(path.sep).join('/');
 
   if (!fonteExiste(nome)) {
-    failures.push(`fonte ausente: assets/brand/${nome}`);
+    failures.push(`fonte ausente: ${path.relative(rootDir, fonteDe(nome)).split(path.sep).join('/')}`);
     continue;
   }
   const hashFonte = sha256(fonteRel);
@@ -129,13 +166,13 @@ for (const [nome, destinos] of Object.entries(DERIVADOS)) {
     const hashDest = sha256(dest);
     if (hashDest !== hashFonte) {
       failures.push(
-        `${dest}: DIVERGE da fonte assets/brand/${nome}\n` +
+        `${dest}: DIVERGE da fonte ${fonteRel}\n` +
           `          fonte     ${hashFonte.slice(0, 12)}\n` +
           `          derivado  ${hashDest.slice(0, 12)}\n` +
           `          rode "node scripts/build-brand.mjs"`
       );
     } else {
-      notes.push(`OK   ${dest} == assets/brand/${nome} (${hashFonte.slice(0, 12)})`);
+      notes.push(`OK   ${dest} == ${fonteRel} (${hashFonte.slice(0, 12)})`);
     }
   }
 }

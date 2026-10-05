@@ -37,6 +37,26 @@ export { applyMask } from './masks/applyMask';
 export { layerBaseRect, containSize } from './geometry';
 export type { LayerRect } from './geometry';
 export { parseSvgIntrinsicSize, setSvgViewport } from './svgSize';
+/**
+ * `fonts.ts` — as fontes que o app oferece, e de onde cada uma vem.
+ *
+ * Exportado do renderer, e nao do app, porque a **fonte e parte da renderizacao**: e o
+ * renderer que decide o que o SVG e o canvas conseguem prometer sobre ela, e um seletor no
+ * app com a lista propria divergiria do que a exportacao faz na primeira mudanca.
+ */
+export {
+  BUNDLED_FONTS,
+  GENERIC_FONTS,
+  SELECTABLE_FONTS,
+  DEFAULT_FONT_ID,
+  DEFAULT_FONT_STACK,
+  fontById,
+  svgFidelityOf,
+  hasBundledFile
+} from './fonts';
+export type { IconFont, FontOrigin } from './fonts';
+export { cssFontFamily, canvasFontShorthand, isItalic, resolveTextPlacement, textBox } from './textLayout';
+export type { CanvasFontInput, FontStyle, TextAlign } from './textLayout';
 export type {
   RenderBackend,
   RenderBackground,

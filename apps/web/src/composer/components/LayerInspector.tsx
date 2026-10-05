@@ -13,6 +13,8 @@ import {
   type KeylineStandard
 } from '../utils/keylineConfig';
 import { useComposer } from '../ComposerContext';
+import { FontPicker } from './FontPicker';
+import { DEFAULT_FONT_STACK } from '@iconcore/renderer';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
 import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
@@ -495,6 +497,20 @@ export const LayerInspector = () => {
                 onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
               />
             </div>
+
+            {/**
+             * A fonte, antes do tamanho.
+             *
+             * `IC63/3`. A ordem e o argumento: quem escolhe a fonte e quem descobre o
+             * tamanho que preenche o canvas, entao a fonte vem primeiro. E o seletor
+             * grava a **pilha** (`'Cal Sans', system-ui, sans-serif`), nao so a familia —
+             * sem o fallback, uma maquina sem a fonte embarcada resolveria no Times e o
+             * icone sairia serifado.
+             */}
+            <FontPicker
+              value={layer.text?.fontFamily ?? DEFAULT_FONT_STACK}
+              onChange={(fontFamily) => updateLayer({ text: { ...layer.text, fontFamily } as IconLayer['text'] })}
+            />
 
             {/*
               `IC63/2` — itálico e alinhamento.

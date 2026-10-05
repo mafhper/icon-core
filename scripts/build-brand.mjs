@@ -36,7 +36,18 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
-const FONTE = path.join(rootDir, 'assets', 'brand');
+/**
+ * As fontes: mesma regra, outra fonte. `assets/fonts/` e o fonte; `apps/web/src/fonts/` e o
+ * derivado, porque e dentro de `src/` que o Vite resolve e hasheia o `url()`.
+ *
+ * O porque de `src/` e nao `public/` esta no comentario longo de `check-brand.mjs`: as duas
+ * alternativas falham em silencio — o `url()` relativo sai da raiz do Vite e da 404, e um
+ * caminho absoluto em `public/` nao respeita a base `/icon-core/app/`.
+ */
+const FONTES = {
+  'CalSans-Regular.woff2': ['apps/web/src/fonts/CalSans-Regular.woff2'],
+  'CalSans-Bold.woff2': ['apps/web/src/fonts/CalSans-Bold.woff2']
+};
 
 const DERIVADOS = {
   'logo.svg': [
@@ -47,24 +58,22 @@ const DERIVADOS = {
     'apps/promo/public/branding/release.webp',
     'apps/web/public/branding/release.webp',
     'docs/images/releases/release.webp'
-  ]
+  ],
+  ...FONTES
 };
 
 const CHECK_ONLY = process.argv.includes('--check');
 const sha256 = (abs) => crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
 
-const faltando = Object.keys(DERIVADOS).filter(
-  (n) => !fs.existsSync(path.join(FONTE, n))
-);
+/** O caminho absoluto da fonte de um derivado: arte em `assets/brand/`, fonte em `assets/fonts/`. */
+const fonteDe = (nome) =>
+  path.join(rootDir, nome.endsWith('.woff2') ? 'assets/fonts' : 'assets/brand', nome);
+
+const faltando = Object.keys(DERIVADOS).filter((n) => !fs.existsSync(fonteDe(n)));
 if (faltando.length) {
   console.error(
-    `Brand source incomplete. Missing in assets/brand/:\n${faltando.map((n) => `  - ${n}`).join('\n')}`
+    `Brand source incomplete:\n${faltando.map((n) => `  - ${fonteDe(n).replace(rootDir + path.sep, '')}`).join('\n')}`
   );
-  process.exit(1);
-}
-
-if (!fs.existsSync(FONTE)) {
-  console.error(`Brand source directory not found: ${path.relative(rootDir, FONTE)}`);
   process.exit(1);
 }
 
@@ -72,7 +81,7 @@ const copiados = [];
 const igualados = [];
 
 for (const [nome, destinos] of Object.entries(DERIVADOS)) {
-  const abs = path.join(FONTE, nome);
+  const abs = fonteDe(nome);
   const hash = sha256(abs);
   for (const dest of destinos) {
     const destAbs = path.join(rootDir, dest);

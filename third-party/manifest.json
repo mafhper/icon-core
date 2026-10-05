@@ -21,6 +21,21 @@
       "attribution": "NOTICE",
       "files": [],
       "notes": "App chrome icons via npm lucide-react; distributed inside the web bundle."
+    },
+    {
+      "id": "cal-sans",
+      "name": "Cal Sans",
+      "source": "https://github.com/calcom/sans",
+      "license": "OFL-1.1",
+      "licenseFile": "LICENSES/cal-sans-OFL.txt",
+      "attribution": "NOTICE",
+      "files": [
+        "assets/fonts/CalSans-Regular.woff2",
+        "assets/fonts/CalSans-Bold.woff2",
+        "apps/web/src/fonts/CalSans-Regular.woff2",
+        "apps/web/src/fonts/CalSans-Bold.woff2"
+      ],
+      "notes": "REDISTRIBUTED. Two static weights (400, 700) as WOFF2, from fonts/calsans-static-base. Bundled because a text layer rendered on canvas falls back to whatever the machine has: the editor preview and the PNG export disagreed with the SVG, which carries the family NAME and resolves it on the viewer's machine. WOFF2 rather than TTF is 3x smaller for the same outlines (69 KB vs 226 KB per weight). The apps/web/src/fonts/ copies are DERIVED by scripts/build-brand.mjs and compared by SHA-256 in scripts/check-brand.mjs - they live inside src/ because that is where Vite resolves and hashes the url(); public/ would not respect the /icon-core/app/ base. The OFL permits embedding and redistribution; the full text is under LICENSES/. See assets/fonts/README.md."
     }
   ]
 }

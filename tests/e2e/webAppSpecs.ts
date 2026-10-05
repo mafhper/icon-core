@@ -40,7 +40,9 @@ export const WEB_APP_SPECS = [
   'grid-config',
   'keyline-config',
   'layer-reorder',
-  'export-preview'
+  'export-preview',
+  'font-picker',
+  'preview-fidelity'
 ] as const;
 
 /**
