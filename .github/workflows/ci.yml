@@ -44,6 +44,12 @@ jobs:
       - name: UI contrast guard
         run: node scripts/check-ui-contrast.mjs
 
+      # Ja houve tres copias do download do projeto (Topbar, Ctrl+S, CommandPalette),
+      # cada uma carregando o dirty indevido e o revoke no mesmo tick. Duas e uma
+      # decisao; tres e um sintoma.
+      - name: Project download guard
+        run: node scripts/check-project-download.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
