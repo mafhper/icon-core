@@ -65,10 +65,40 @@ describe('KEYLINE_STANDARDS', () => {
     expect(new Set(labels).size).toBe(labels.length);
   });
 
-  it('iOS recomenda a superellipse e a safe area — as duas que so importam no iOS', () => {
-    const ios = KEYLINE_STANDARDS.ios.suggestedParts;
-    expect(ios).toContain('squircle');
-    expect(ios).toContain('safe-area');
+  it('iOS nao recomenda zona duplicada — mas liga a safe area', () => {
+    /**
+     * Este teste **mudou de opiniao**, e o motivo e o dado.
+     *
+     * Ele afirmava que o iOS recomenda a superellipse e a safe area, "as duas que so
+     * importam no iOS". As duas premises eram falsas:
+     *
+     * 1. A superellipse **e** a mascara do iOS — 22,37% de `defaultMaskRadius('squircle')`.
+     *    O `frame` ja a desenha, com o raio certo. Uma segunda parte desenhando a mesma
+     *    forma seria uma duplicata com outro nome.
+     * 2. A `safe-area` nao e do iOS: vem de `canvas.safeArea`, que e do **documento**, e
+     *    por isso ela e filtrada por `availableParts`, nao por plataforma.
+     *
+     * O que o iOS ganha de especial agora e a **geometria do frame** (a superellipse
+     * real), e e o que a complaint "o iOS e os outros parecem iguais" pedia: o iOS e
+     * especial no **numero**, nao na **lista de partes**.
+     */
+    expect(KEYLINE_STANDARDS.ios.suggestedParts).toEqual(['frame', 'safe-area']);
+  });
+
+  it('Android e o unico que recomenda a zona da plataforma', () => {
+    // E o unico deste conjunto com uma zona segura medida no repositorio: o circulo de
+    // 66/108 do adaptive icon.
+    const comZona = Object.entries(KEYLINE_STANDARDS)
+      .filter(([, info]) => info.suggestedParts.includes('squircle'))
+      .map(([nome]) => nome);
+    expect(comZona).toEqual(['android']);
+  });
+
+  it('o iOS e o Android **nao** sugerem as mesmas partes', () => {
+    // A pergunta do dono, com a resposta em codigo.
+    expect(KEYLINE_STANDARDS.ios.suggestedParts).not.toEqual(
+      KEYLINE_STANDARDS.android.suggestedParts
+    );
   });
 
   it('o generico nao sekou a nenhuma plataforma', () => {

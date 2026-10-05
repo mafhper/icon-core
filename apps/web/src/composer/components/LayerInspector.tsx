@@ -162,9 +162,17 @@ export const LayerInspector = () => {
      *
      * A `safe-area` depende de `canvas.safeArea` existir. Sem ele, o tracejado seria
      * uma caixa inventada no lugar onde a plataforma recorta, e a pessoa ajustaria a
-     * arte a uma margem que não existe — o switch liga, a guia aparece, e é mentira.
+     * arte a uma margem que não existe - o switch liga, a guia aparece, e é mentira.
+     *
+     * A plataforma entra aqui pelo mesmo motivo: a zona so existe onde ha **numero
+     * medido**, e hoje o unico e o Android (66/108). Sem o segundo argumento, o switch da
+     * zona aparecia no iOS ligando uma caixa de 2/3 que nao e de ninguem — que e como o
+     * dono chegou a concluir que os presets eram iguais.
      */
-    const partesDisponiveis = availableParts(Boolean(state.project.canvas.safeArea));
+    const partesDisponiveis = availableParts(
+      Boolean(state.project.canvas.safeArea),
+      state.keylineStandard
+    );
 
     return (
       <aside className="ic-inspector">
