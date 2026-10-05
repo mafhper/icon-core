@@ -3,6 +3,7 @@ import { Eraser, Ratio } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
 import { defaultMaskRadius } from '@iconcore/shared';
 import { Button, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import { RADIUS_MARKS, radiusMarkValue } from '../utils/radiusMarks';
 import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
@@ -121,6 +122,27 @@ export const LayerInspector = () => {
   }
 
   if (!layer || !baseLayer) {
+    const size = state.project.canvas.size;
+    const raioMaximo = Math.round(size / 2);
+    const raioAtual = Math.round(
+      state.project.canvas.maskRadius ?? defaultMaskRadius(state.maskShape, size)
+    );
+    /**
+     * As marcas do slider, e o mapa que devolve a **forma** de uma marca.
+     *
+     * O `Slider` é domain-free — `check-ui-boundary` cobra isso, e com razão: ele não
+     * pode saber o que é `maskShape`. Então o kit devolve a marca e o app traduz. A
+     * tradução é por `description`, e ela só é segura porque `RADIUS_MARKS` tem
+     * descrições **unicas** — o que um teste garante, porque um `Map` com chave
+     * duplicada devolveria a forma errada em silêncio.
+     */
+    const marcasRaio = RADIUS_MARKS.map((m) => ({
+      px: radiusMarkValue(m.shape, size, raioMaximo),
+      label: m.label,
+      description: m.description
+    }));
+    const formaPor = new Map(RADIUS_MARKS.map((m) => [m.description, m.shape]));
+
     return (
       <aside className="ic-inspector">
         <div className="ic-inspector-head">
@@ -175,11 +197,27 @@ export const LayerInspector = () => {
               label="Radius"
               unit="px"
               min="0"
-              max={Math.round(state.project.canvas.size / 2)}
-              value={Math.round(
-                state.project.canvas.maskRadius ??
-                  defaultMaskRadius(state.maskShape, state.project.canvas.size)
-              )}
+              max={raioMaximo}
+              value={raioAtual}
+              marks={marcasRaio}
+              onMark={(marca) => {
+                const forma = formaPor.get(marca.description);
+                if (!forma) return;
+                /**
+                 * A marca muda **a forma**, e zera o raio declarado.
+                 *
+                 * A primeira versao tambem gravava `radius: marca.px`. Foi um e2e que
+                 * pegou o efeito: ao declarar o raio, `maskRadius` deixava de estar
+                 * ausente e passava a ganhar do padrao da forma — entao clicar em
+                 * "Circle" e depois girar o platform toggle **nao mexia em nada**. A
+                 * marca e um atalho para "use a forma desta", e nao para "use este
+                 * numero"; `radius: null` e o que devolve o valor ao contrato de
+                 * "ausente = siga a forma".
+                 */
+                dispatch({ type: 'SET_CANVAS_MASK_RADIUS', payload: { radius: null } });
+                dispatch({ type: 'SET_MASK_SHAPE', payload: forma });
+                dispatch({ type: 'COMMIT_HISTORY' });
+              }}
               onChange={(event) =>
                 dispatch({
                   type: 'SET_CANVAS_MASK_RADIUS',

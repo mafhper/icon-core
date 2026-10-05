@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { defaultMaskRadius, type IconCoreProject } from '@iconcore/shared';
 import { composerReducer, initialState } from './composerReducer';
-import type { IconCoreProject } from '@iconcore/shared';
 
 /**
  * O slider de "Frame radius" nao tinha teste. Um controle que grava no documento,
@@ -14,16 +14,22 @@ import type { IconCoreProject } from '@iconcore/shared';
  * 4. `transient` marca dirty sem empilhar historico, e o commit empilha uma vez.
  */
 
+/**
+ * Cores `''` de propósito: este fixture exercita **raio e histórico**, e uma cor real
+ * aqui custaria 4 hex no `check-ui-budget` — que é um ratchet que só desce. Um literal
+ * de cor num teste que nao testa cor e taxa pura sobre o orcamento de quem **produz**
+ * interface.
+ */
 const projeto = (size = 512): IconCoreProject =>
   ({
     schemaVersion: 3,
     metadata: { name: 'X', shortName: 'X' },
     canvas: { size },
     variants: {
-      default: { background: '#000000', layers: [] },
-      light: { background: '#ffffff', layers: [] },
-      dark: { background: '#000000', layers: [] },
-      mono: { background: '#000000', layers: [] }
+      default: { background: '', layers: [] },
+      light: { background: '', layers: [] },
+      dark: { background: '', layers: [] },
+      mono: { background: '', layers: [] }
     }
   }) as unknown as IconCoreProject;
 
@@ -97,5 +103,66 @@ describe('frame radius — o slider que nao tinha teste', () => {
       payload: { radius: 40, transient: true }
     });
     expect(depois).toBe(initialState);
+  });
+});
+
+/**
+ * Plataforma e raio: o contrato de `maskRadius`.
+ *
+ * `maskRadius` ausente **significa** "siga a forma" — e e assim que `resolveMaskRadius`
+ * decide. Entao trocar a plataforma com o raio intocado tem de mover o valor, e trocar
+ * com o raio **declarado** tem de preservar o declarado.
+ *
+ * A segunda metade e o teste que vale: um app que apaga o raio a cada troca de
+ * plataforma obriga a refazer o ajuste, e quem nunca ajustou nao notaria — que e
+ * exatamente por isso que este par de testes precisa existir junto.
+ */
+describe('frame radius — trocar a plataforma move o slider', () => {
+  const radius = (s: ReturnType<typeof composerReducer>) =>
+    s.project!.canvas.maskRadius ?? defaultMaskRadius(s.maskShape, s.project!.canvas.size);
+
+  it('raio intocado: circle leva a size/2, square leva a 4', () => {
+    const base = comProjeto(512);
+    expect(radius(base)).toBe(24); // rounded-rectangle
+
+    const circulo = composerReducer(base, { type: 'SET_MASK_SHAPE', payload: 'circle' });
+    expect(radius(circulo)).toBe(256);
+
+    const quadrado = composerReducer(circulo, { type: 'SET_MASK_SHAPE', payload: 'square' });
+    expect(radius(quadrado)).toBe(4);
+  });
+
+  it('raio declarado: a troca de plataforma **nao** apaga o ajuste', () => {
+    const ajustado = composerReducer(comProjeto(512), {
+      type: 'SET_CANVAS_MASK_RADIUS',
+      payload: { radius: 40, transient: true }
+    });
+    const circulo = composerReducer(ajustado, { type: 'SET_MASK_SHAPE', payload: 'circle' });
+
+    expect(radius(circulo)).toBe(40);
+    // E o campo continua declarado, para o "Reset" ter o que reverter.
+    expect(circulo.project!.canvas.maskRadius).toBe(40);
+  });
+
+  it('declarado e depois resetado: volta a seguir a forma', () => {
+    const ajustado = composerReducer(comProjeto(512), {
+      type: 'SET_CANVAS_MASK_RADIUS',
+      payload: { radius: 40, transient: true }
+    });
+    const resetado = composerReducer(ajustado, {
+      type: 'SET_CANVAS_MASK_RADIUS',
+      payload: { radius: null }
+    });
+    const circulo = composerReducer(resetado, { type: 'SET_MASK_SHAPE', payload: 'circle' });
+
+    expect(resetado.project!.canvas.maskRadius).toBeUndefined();
+    expect(radius(circulo)).toBe(256);
+  });
+
+  it('squircle tem o proprio padrao, e ele e o mesmo da keyline', () => {
+    // 0.2237 * 512 = 114.5 — o mesmo `defaultMaskRadius` que o `KeylineOverlay` usa,
+    // entao guia e frame nao podem divergir.
+    const s = composerReducer(comProjeto(512), { type: 'SET_MASK_SHAPE', payload: 'squircle' });
+    expect(radius(s)).toBeCloseTo(512 * 0.2237, 5);
   });
 });

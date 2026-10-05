@@ -18,7 +18,7 @@ export default defineConfig({
   // IndexedDB in a real engine — a round trip, a payload past the 5.101 KB
   // `localStorage` ceiling, and survival across a closed tab — and none of that
   // exists on the promo site.
-  testMatch: /(ui-gallery|inspector-layout|polish|project-store|mask-radius)\.spec\.ts/,
+  testMatch: /(ui-gallery|inspector-layout|polish|project-store|mask-radius|radius-marks)\.spec\.ts/,
   webServer: {
     command: process.env.CI
       ? 'npm run preview --workspace=@iconcore/web -- --host 127.0.0.1 --port 4182'

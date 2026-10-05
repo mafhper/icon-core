@@ -15,7 +15,7 @@ export { TextField, type TextFieldProps } from './components/TextField';
 export { NumberField, type NumberFieldProps } from './components/NumberField';
 export { Select, type SelectProps } from './components/Select';
 export { Switch, type SwitchProps } from './components/Switch';
-export { Slider, type SliderProps } from './components/Slider';
+export { Slider, type SliderProps, type SliderMark } from './components/Slider';
 export { ColorField, type ColorFieldProps, type ColorValue, type ColorFormat } from './components/ColorField';
 export { InlineField, ControlRow, type InlineFieldProps, type ControlRowProps } from './components/InlineField';
 export { SegmentedControl, type SegmentedControlProps, type SegmentedOption } from './components/SegmentedControl';
