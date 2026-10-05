@@ -8,6 +8,7 @@ import { useComposer } from '../ComposerContext';
 import { useLayerImport } from '../hooks/useLayerImport';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
+import { workAreaToCss } from '../utils/workArea';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
 import { layerSize } from '../utils/layerStyle';
 
@@ -321,7 +322,15 @@ export const PreviewCanvas = () => {
       </div>
       <div
         className="ic-edit-stage"
-        data-editor-backdrop={state.editorBackdrop}
+        /**
+         * A cor vai **inline**, e nao por atributo de dados.
+         *
+         * O `data-editor-backdrop` com tres regras CSS era o que impedia isto de ser uma
+         * cor: o valor tinha de estar na folha, e por isso o `plain` — que ja era uma cor
+         * — carregava um literal `#e6ecf5` dentro do `color-mix`. Inline, o fallback
+         * continua sendo `var(--ic-bg)` e nenhum literal existe.
+         */
+        style={{ backgroundColor: workAreaToCss(state.workAreaColor) }}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}

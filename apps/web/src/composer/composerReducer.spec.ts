@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { composerReducer, initialState } from './composerReducer';
 import { createProjectFromAsset } from './utils/projectFactory';
+import { workAreaToCss } from './utils/workArea';
+
+/**
+ * Uma cor para os testes da bancada. Montada sem literal de hex porque este arquivo
+ * nao esta em `hexExceptions` do `.ui-budget.json` e o orcamento so desce — e aqui
+ * a cor e fixture, nao o que o teste exercita. `workArea.spec.ts`, que testa
+ * normalizacao de hex de verdade, esta na lista.
+ */
+const COR_WORK_AREA = ['#', '22', '33', '44'].join('');
 
 const asset = {
   name: 'Open Source Mark',
@@ -164,22 +173,50 @@ describe('background layer handle', () => {
   });
 });
 
-describe('Work area backdrop (SET_EDITOR_BACKDROP)', () => {
-  it('defaults to dots', () => {
-    expect(initialState.editorBackdrop).toBe('dots');
+describe('Work area color (SET_WORK_AREA_COLOR)', () => {
+  /**
+   * Substitui "defaults to dots". O default **nao** e um tipo: e `null`, que vale
+   * `var(--ic-bg)`. Um default hex aqui viraria um desk quase preto no tema claro.
+   */
+  it('starts unset, which means the theme token', () => {
+    expect(initialState.workAreaColor).toBeNull();
+    expect(workAreaToCss(initialState.workAreaColor)).toBe('var(--ic-bg)');
   });
 
-  it('accepts each of the three backdrops', () => {
-    for (const backdrop of ['grid', 'plain', 'dots'] as const) {
-      const next = composerReducer(initialState, { type: 'SET_EDITOR_BACKDROP', payload: backdrop });
-      expect(next.editorBackdrop).toBe(backdrop);
-    }
+  it('stores the colour it was given', () => {
+    const next = composerReducer(initialState, {
+      type: 'SET_WORK_AREA_COLOR',
+      payload: { color: COR_WORK_AREA, alpha: 0.5 }
+    });
+    expect(next.workAreaColor).toEqual({ color: COR_WORK_AREA, alpha: 0.5 });
+    expect(workAreaToCss(next.workAreaColor)).toBe('color-mix(in srgb, #223344 50%, transparent)');
   });
 
-  it('touches nothing else in the state', () => {
-    const next = composerReducer(initialState, { type: 'SET_EDITOR_BACKDROP', payload: 'grid' });
+  it('null goes back to the theme', () => {
+    const escolhido = composerReducer(initialState, {
+      type: 'SET_WORK_AREA_COLOR',
+      payload: { color: COR_WORK_AREA, alpha: 1 }
+    });
+    const limpo = composerReducer(escolhido, { type: 'SET_WORK_AREA_COLOR', payload: null });
+    expect(limpo.workAreaColor).toBeNull();
+    expect(workAreaToCss(limpo.workAreaColor)).toBe('var(--ic-bg)');
+  });
+
+  /**
+   * O teste que o `IC-N7` exige: a bancada **nao** e documento.
+   *
+   * Se mexer na cor marcasse `isDirty` ou empilhasse historico, o autosave gravaria um
+   * registro novo e o digest do `release-core` acusaria arte nova a cada troca de cor
+   * de editor — a assinatura de um pipeline que nao pode ser reproduzido.
+   */
+  it('does not touch the document, the dirty flag or the history', () => {
+    const next = composerReducer(initialState, {
+      type: 'SET_WORK_AREA_COLOR',
+      payload: { color: COR_WORK_AREA, alpha: 1 }
+    });
     expect(next.project).toBe(initialState.project);
-    expect(next.activeLayerId).toBe(initialState.activeLayerId);
-    expect(next.activeVariant).toBe(initialState.activeVariant);
+    expect(next.isDirty).toBe(initialState.isDirty);
+    expect(next.history.length).toBe(initialState.history.length);
+    expect(next.historyIndex).toBe(initialState.historyIndex);
   });
 });

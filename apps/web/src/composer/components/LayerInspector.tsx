@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { Eraser, Ratio } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
 import { defaultMaskRadius } from '@iconcore/shared';
-import { Button, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { RADIUS_MARKS, radiusMarkValue } from '../utils/radiusMarks';
+import { resolveWorkAreaColor } from '../utils/workArea';
 import { useComposer } from '../ComposerContext';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
@@ -16,12 +17,6 @@ import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
 const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'squircle', 'triangle', 'line', 'star'];
-
-const BACKDROP_OPTIONS = [
-  { value: 'dots', label: 'Dots' },
-  { value: 'grid', label: 'Grid' },
-  { value: 'plain', label: 'Plain' }
-] as const;
 
 /**
  * Alinhamento do texto, em rótulos que dizem o que cada botão faz.
@@ -123,6 +118,21 @@ export const LayerInspector = () => {
 
   if (!layer || !baseLayer) {
     const size = state.project.canvas.size;
+    /**
+     * A cor **calculada** de `--ic-bg`, para a amostra do `ColorField`.
+     *
+     * Ler o token e nao usar um hex fixo porque a amostra tem de ser a cor que a
+     * bancada esta de fato: um valor fixo mentiria no outro tema. E `try/catch`
+     * porque `getComputedStyle` pode lancar num iframe sem origem — sem isto o
+     * inspetor inteiro nao renderiza por causa de uma amostra.
+     */
+    const themeBg = (() => {
+      try {
+        return getComputedStyle(document.documentElement).getPropertyValue('--ic-bg').trim();
+      } catch {
+        return '';
+      }
+    })();
     const raioMaximo = Math.round(size / 2);
     const raioAtual = Math.round(
       state.project.canvas.maskRadius ?? defaultMaskRadius(state.maskShape, size)
@@ -157,14 +167,26 @@ export const LayerInspector = () => {
         <div className="ic-field-stack">
           <Section
             title="Work area"
-            hint="Editor backdrop around the icon — never exported, and distinct from the image background."
+            hint="The desk around the icon — never exported, and distinct from the image background. Unset, it follows the theme."
           >
-            <SegmentedControl
-              aria-label="Work area backdrop"
-              options={BACKDROP_OPTIONS}
-              value={state.editorBackdrop}
-              onChange={(backdrop) => dispatch({ type: 'SET_EDITOR_BACKDROP', payload: backdrop })}
+            <ColorField
+              label="Work area color"
+              value={resolveWorkAreaColor(state.workAreaColor, themeBg)}
+              onChange={(next) =>
+                dispatch({ type: 'SET_WORK_AREA_COLOR', payload: { color: next.color, alpha: next.alpha } })
+              }
             />
+            {state.workAreaColor != null && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="text-[0.7rem] text-ic-text-muted hover:text-ic-accent-text hover:underline"
+                  onClick={() => dispatch({ type: 'SET_WORK_AREA_COLOR', payload: null })}
+                >
+                  Follow the theme
+                </button>
+              </div>
+            )}
           </Section>
 
           <Section

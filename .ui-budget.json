@@ -11,6 +11,7 @@
     "apps/web/src/composer/constants.ts",
     "apps/web/src/composer/components/GradientEditor.tsx",
     "apps/web/src/composer/utils/fill.spec.ts",
+    "apps/web/src/composer/utils/workArea.spec.ts",
     "apps/web/src/composer/components/FillEditor.spec.tsx",
     "apps/web/src/composer/components/SvgPaintEditor.spec.tsx",
     "apps/web/src/composer/views/UiLabFixtures.tsx",

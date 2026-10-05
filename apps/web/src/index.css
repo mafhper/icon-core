@@ -661,32 +661,12 @@ input[type='range'] {
   background: var(--ic-bg);
 }
 
-/* Work area backdrop — pleasant, subtle, and clearly DISTINCT from the icon
-   image so the desk always reads as the desk. User-customizable via the
-   Sidebar → Canvas inspector (SET_EDITOR_BACKDROP). */
-.ic-edit-stage[data-editor-backdrop='dots'] {
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    color-mix(in srgb, var(--ic-text) 26%, transparent) 1px,
-    transparent 1.5px
-  );
-  background-size: 22px 22px;
-}
-
-.ic-edit-stage[data-editor-backdrop='grid'] {
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--ic-text) 16%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--ic-text) 16%, transparent) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.ic-edit-stage[data-editor-backdrop='plain'] {
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--ic-bg) 92%, #e6ecf5 8%),
-    color-mix(in srgb, var(--ic-bg) 84%, #e6ecf5 16%)
-  );
-}
+/* A work area e uma **cor**, e vai inline no `style` do stage
+   (`workAreaToCss`). Antes eram tres tipos por atributo de dados — `dots`, `grid` e
+   `plain` — e o `plain` ja era uma cor escrita como se fosse tipo: um gradiente fixo
+   de duas misturas de `--ic-bg` com um literal `#e6ecf5` dentro do `color-mix`. Um
+   literal fixo nao segue o tema, entao o desk ficava errado ao trocar de tema.
+   Remover as tres regras devolve ~28 linhas ao orcamento de CSS. */
 
 .ic-drop-zone {
   width: min(100%, 420px);

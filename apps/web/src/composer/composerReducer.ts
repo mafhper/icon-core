@@ -9,6 +9,7 @@ import type {
 } from '@iconcore/shared';
 import type { FileLayerAsset } from './utils/fileLayers';
 import { clampZoom } from './constants';
+import type { WorkAreaColor } from './utils/workArea';
 import { generateVariantPreset, isGeneratableVariant } from './utils/variantPresets';
 import {
   createBackgroundLayer,
@@ -56,8 +57,18 @@ export interface ComposerState {
   compareDefault: boolean;
   showKeylines: boolean;
   showSnapping: boolean;
-  /** Visual backdrop of the editing stage (work area), distinct from the exported icon image. */
-  editorBackdrop: 'dots' | 'grid' | 'plain';
+  /**
+ * A cor da bancada em volta do ícone.
+ *
+ * **Troca de forma**: era `'dots' | 'grid' | 'plain'`, e virou cor. O motivo não é
+ * só gosto — `plain` já **era** uma cor escrita como se fosse um tipo (um gradiente
+ * fixo de duas misturas de `--ic-bg` com um literal), e `dots`/`grid` eram texturas que
+ * ninguém ia usar num editor de ícone. Ver `utils/workArea.ts` para o porque do
+ * `color-mix` e do fallback no token.
+ *
+ * `null` = "ainda não escolhido", e vale `--ic-bg`. Ver `workAreaToCss`.
+ */
+  workAreaColor: WorkAreaColor | null;
   history: IconCoreProject[];
   historyIndex: number;
 }
@@ -136,7 +147,14 @@ export type ComposerAction =
   | { type: 'TOGGLE_KEYLINES' }
   | { type: 'TOGGLE_SNAPPING' }
   | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' }
-  | { type: 'SET_EDITOR_BACKDROP'; payload: ComposerState['editorBackdrop'] };
+  /**
+   * Troca a cor da bancada. `null` volta ao token do tema.
+   *
+   * `transient` nao existe aqui, e e proposital: a bancada **nao** e documento, entao
+   * mexer nela nao pode criar entrada de historico — desfazer um ajuste de cor de
+   * editorUndoando o desenho seria um "por que minha forma sumiu" sem resposta.
+   */
+  | { type: 'SET_WORK_AREA_COLOR'; payload: WorkAreaColor | null };
 
 export const initialState: ComposerState = {
   view: 'workspaces',
@@ -151,7 +169,7 @@ export const initialState: ComposerState = {
   zoom: 1,
   showGrid: true,
   maskShape: 'rounded-rectangle',
-  editorBackdrop: 'dots',
+  workAreaColor: null,
   compareDefault: false,
   showKeylines: false,
   showSnapping: true,
@@ -724,8 +742,10 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       return { ...base, maskShape: action.payload };
     }
 
-    case 'SET_EDITOR_BACKDROP':
-      return { ...state, editorBackdrop: action.payload };
+    case 'SET_WORK_AREA_COLOR':
+      // Sem `commitProject` e sem `isDirty`: ver a nota da acao. A bancada nao e arte,
+      // e `IC-N7` (digest) nao pode acusar mudanca aqui.
+      return { ...state, workAreaColor: action.payload };
 
     default:
       return state;
