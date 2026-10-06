@@ -44,7 +44,8 @@ export const WEB_APP_SPECS = [
   'font-picker',
   'preview-fidelity',
   'layer-drag',
-  'text-panel'
+  'text-panel',
+  'foreignobject-regression'
 ] as const;
 
 /**

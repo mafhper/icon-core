@@ -119,6 +119,23 @@ const paintDiamond = (
 };
 
 
+/** `Blob` -> base64, sem `FileReader`: o corpo ja esta em memoria. */
+const blobToBase64 = async (blob: Blob): Promise<string> => {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let bin = '';
+  // Concatenar em pedacos: `String.fromCharCode(...bytes)` estoura o stack em arquivo grande.
+  const PEDACO = 0x8000;
+  for (let i = 0; i < bytes.length; i += PEDACO) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + PEDACO));
+  }
+  return btoa(bin);
+};
+
+/**
+ * Carrega uma imagem no browser.
+ *
+ * ## SVG vai por data URL, e a razao esta medida — veja o comentario no corpo.
+ */
 const loadImageBrowser = async (source: string | Blob): Promise<ImageHandle> => {
   if (typeof source === 'string') {
     const img = new Image();
@@ -129,23 +146,65 @@ const loadImageBrowser = async (source: string | Blob): Promise<ImageHandle> => 
     });
   }
 
+  const viaElement = (url: string, revoke: () => void, what: string) =>
+    new Promise<ImageHandle>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        revoke();
+        resolve({ width: img.naturalWidth, height: img.naturalHeight, native: img });
+      };
+      img.onerror = () => {
+        revoke();
+        reject(new Error(`Failed to load image ${what}`));
+      };
+      img.src = url;
+    });
+
+  /**
+   * **SVG por data URL, nunca por blob URL.**
+   *
+   * Medido em `foreignobject-matrix` e `diag-url-scheme`, com o `toBlob` como funcao de
+   * teste porque e ele que estoura:
+   *
+   * | origem | `<foreignObject>` | `toBlob` |
+   * |---|---|---|
+   * | data URL | sim | **ok**, pinta 78,9% |
+   * | blob URL | sim | **`SecurityError`** |
+   * | data URL | nao | ok |
+   * | blob URL | nao | ok |
+   *
+   * So a combinacao **blob URL + `foreignObject`** contamina. O arquivo e identico nas quatro
+   * celulas, e a API e a mesma: muda so o esquema da URL. Um SVG com `<foreignObject>` servido
+   * por blob URL e tratado como origem externa, e um canvas contaminado nao gera blob — o
+   * preview ficava vazio com `SecurityError` numa layer que aparecia perfeitamente na barra
+   * lateral.
+   *
+   * `<foreignObject>` e como o Figma escreve **gradiente angular**: um `<div>` com
+   * `background:conic-gradient(...)` dentro do SVG. Como a data URL **desenha** esse
+   * gradiente (78,9% dos pixels), nao ha nada a corrigir na arte — e por isso aqui nao ha
+   * saneador: seria reescrever um arquivo que ja renderiza certo, e trocar fidelidade por
+   * fidelidade.
+   *
+   * O custo e base64, que cresce 33%. Para um icone e irrelevante, e e o mesmo preco que
+   * `renderToSvg` ja paga ao embutir raster em `data:` URI.
+   *
+   * Raster continua por `createImageBitmap`, que e o caminho rapido e nao contamina.
+   */
+  if (source.type === 'image/svg+xml') {
+    try {
+      const base64 = await blobToBase64(source);
+      return viaElement(`data:image/svg+xml;base64,${base64}`, () => {}, 'from SVG data URL');
+    } catch {
+      // Cai no caminho de blob URL abaixo: e pior, mas melhor que nao carregar.
+    }
+  }
+
   try {
     const bitmap = await createImageBitmap(source);
     return { width: bitmap.width, height: bitmap.height, native: bitmap };
   } catch {
     const url = URL.createObjectURL(source);
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve({ width: img.naturalWidth, height: img.naturalHeight, native: img });
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error('Failed to load image from blob'));
-      };
-      img.src = url;
-    });
+    return viaElement(url, () => URL.revokeObjectURL(url), 'from blob');
   }
 };
 
