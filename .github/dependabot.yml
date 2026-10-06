@@ -36,3 +36,11 @@ updates:
     cooldown:
       default-days: 5
     open-pull-requests-limit: 10
+    # init e analyze precisam andar juntos: o CodeQL recusa quando um esta em
+    # 4.38.0 e o outro em 4.38.2 ("configuration file for version X, but running
+    # version Y"). Sem o grupo o Dependabot abre um PR por linha de `uses:` e
+    # cada um sozinho reprova o check Analyze.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action/*"
