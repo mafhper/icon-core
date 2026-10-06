@@ -21,7 +21,7 @@
     "@neplex/vectorizer": "0.1.0"
   },
   "devDependencies": {
-    "@types/node": "26.6.2",
+    "@types/node": "26.6.4",
     "typescript": "^5.9.2",
     "vitest": "^4.1.11"
   }
