@@ -148,15 +148,27 @@ jobs:
       # enquanto o binário aceita os comandos da nova. Aconteceu no PR #231 — o tauri
       # 2.12.1 acrescentou `core:app:exit` e `core:window:set_fullscreen_on_monitor`,
       # e os PRs do Dependabot não podiam trazer a regeneração porque ele não builda.
-      # O custo aqui é zero: este job já paga o build de Rust.
+      #
+      # Compara **conteúdo**, ignorando `CR` no fim de linha: o Rust escreve `\n`
+      # sempre e o checkout no Windows entrega CRLF, então sem isso o step acusaria
+      # diferença de fim de linha como se fosse schema velho — foi o que aconteceu na
+      # primeira execução dele (o `.gitattributes` corrige a origem; isto cobre o resto).
       - name: Schemas do Tauri em dia
         shell: bash
         run: |
-          sujo="$(git status --porcelain -- apps/desktop/src-tauri/gen/schemas/)"
-          if [ -n "$sujo" ]; then
+          falhou=""
+          if ! git diff --ignore-cr-at-eol --quiet -- apps/desktop/src-tauri/gen/schemas/; then
+            falhou="conteudo"
+          fi
+          novos="$(git ls-files --others --exclude-standard -- apps/desktop/src-tauri/gen/schemas/)"
+
+          if [ -n "$falhou" ] || [ -n "$novos" ]; then
             echo "::error::gen/schemas/ mudou depois do build. Rode 'npm run desktop:smoke' e commite os schemas regerados junto com o bump do tauri."
-            printf '%s\n' "$sujo"
-            git diff -- apps/desktop/src-tauri/gen/schemas/
+            git diff --ignore-cr-at-eol -- apps/desktop/src-tauri/gen/schemas/
+            if [ -n "$novos" ]; then
+              echo "arquivo(s) novo(s) sem commit:"
+              printf '%s\n' "$novos"
+            fi
             exit 1
           fi
           echo "gen/schemas/ em dia com o tauri compilado."

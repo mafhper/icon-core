@@ -1,0 +1,22 @@
+# ## Por que este arquivo existe
+#
+# Os schemas gerados pelo build do Tauri sao escritos com **LF** — o Rust escreve
+# `\n` independentemente da plataforma. Sem uma regra explicita, um checkout no
+# Windows (`core.autocrlf=true`, que e o default dos runners do GitHub) entrega
+# **CRLF**, o build reescreve com LF, e o git enxerga o arquivo como modificado
+# **sem nenhuma mudanca de conteudo**.
+#
+# Nao e hipotese: foi o falso positivo que o gate `Schemas do Tauri em dia` pegou
+# no PR #237, na primeira vez que rodou. A mensagem do git entrega o diagnostico:
+#
+#   warning: in the working copy of '.../desktop-schema.json',
+#   LF will be replaced by CRLF the next time Git touches it
+#
+# Com `eol=lf` o checkout entrega LF, o build devolve LF, e os dois concordam.
+# Isto tambem poupa o desenvolvedor no Windows de ver os schemas como "sujos"
+# toda vez que roda `npm run desktop:smoke`.
+#
+# O escopo e estreito de proposito: so os JSON gerados em `gen/schemas/`. Aplicar
+# a regra ao repositorio inteiro seria uma mudanca de convencao, e esta aqui e a
+# correcao de um defeito medido.
+apps/desktop/src-tauri/gen/schemas/*.json text eol=lf
