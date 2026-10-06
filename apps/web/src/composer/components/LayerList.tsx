@@ -32,22 +32,35 @@ export const LayerList = () => {
     setDragOverId(null);
   };
 
+  /**
+   * Arrastar uma camada para outra posicao.
+   *
+   * ## A conta e no frame **ascendente**, e precisa ser
+   *
+   * A lista na tela e descendente (frente em cima) e o array do reducer e ascendente
+   * (`zIndex` crescendo). Sao o mesmo conjunto em ordem inversa, com o handle de Background
+   * em posicoes opostas: no fim da lista, no inicio do array.
+   *
+   * A versao anterior fazia a conta na lista e refletia no fim
+   * (`next.length - 1 - next.indexOf(...)`). Sem o handle de Background os dois frames tem
+   * o mesmo tamanho e a reflexao acerta por acaso; **com** o handle, os espacos de indices
+   * nao coincidem e o arrasto para baixo errava um degrau.
+   *
+   * E o `newIndex` e uma posicao no array **depois** da remocao — e o que `splice` faz.
+   */
   const reorder = (draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
-    const order = layers.map((layer) => layer.id);
-    const from = order.indexOf(draggedId);
-    const to = order.indexOf(targetId);
+    const asc = [...layers].sort((a, b) => a.zIndex - b.zIndex);
+    const from = asc.findIndex((layer) => layer.id === draggedId);
+    const to = asc.findIndex((layer) => layer.id === targetId);
     if (from === -1 || to === -1) return;
 
-    const next = [...order];
+    const next = asc.map((layer) => layer.id);
     next.splice(from, 1);
-    const targetIndex = next.indexOf(targetId);
-    // Dragging downward drops after the target; upward drops before it.
-    next.splice(from < to ? targetIndex + 1 : targetIndex, 0, draggedId);
+    // Dragging down the screen list = later in the ascending array = drops after the target.
+    next.splice(from < to ? to + 1 : to, 0, draggedId);
 
-    // The list is descending, REORDER_LAYER expects an ascending zIndex slot.
-    const newIndex = next.length - 1 - next.indexOf(draggedId);
-    dispatch({ type: 'REORDER_LAYER', payload: { id: draggedId, newIndex } });
+    dispatch({ type: 'REORDER_LAYER', payload: { id: draggedId, newIndex: next.indexOf(draggedId) } });
   };
 
   const commitRename = (id: string, value: string) => {

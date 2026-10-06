@@ -361,6 +361,34 @@ const reorderLayers = (layers: IconLayer[]): IconLayer[] => {
 };
 
 /**
+ * Renumera `zIndex` pela **posicao no array**, que e a ordem que o array ja esta.
+ *
+ * ## Por que esta funcao existe, e nao e a mesma coisa que `reorderLayers`
+ *
+ * `reorderLayers` ordena por `zIndex` **antes** de renumerar. Isso e o comportamento certo
+ * quando o array nao tem opiniao — ao adicionar, remover ou carregar uma camada, a verdade e
+ * o `zIndex` que cada uma ja tinha.
+ *
+ * Mas depois de um `REORDER_LAYER` o array **e** a opiniao: o splice acabou de dizer em que
+ * ordem a pessoa quer as camadas. Ordenar de novo por `zIndex` **descarta essa opiniao**, e
+ * a acao vira um no-op: o array embaralha, a renumeracao devolve os mesmos numeros, e a
+ * lista nao muda.
+ *
+ * Foi exatamente o que aconteceu, e o dono reportou: *"a ordenação acontece se eu fizer pelo
+ * botão direito e enviar para baixo ou cima. Não dá certo se eu clicar e arrastar na camada."*
+ * O menu usa `MOVE_LAYER`, que renumera; o arrasto usa `REORDER_LAYER`, que nao renumerava
+ * em nada. Duas acoes, um defeito so em uma delas, e um caminho de teste que so exercitava
+ * a que funcionava.
+ *
+ * O Background continua preso em -1 e no fim do array: e um handle de UI, nunca pinta.
+ */
+const renumberInPlace = (layers: IconLayer[]): IconLayer[] => {
+  const content = layers.filter((layer) => layer.role !== 'background');
+  const backgrounds = layers.filter((layer) => layer.role === 'background');
+  const renumbered = content.map((layer, index) => ({ ...layer, zIndex: index }));
+  return [...backgrounds.map((layer) => ({ ...layer, zIndex: -1 })), ...renumbered];
+};
+/**
  * Move uma camada na ordem de composição.
  *
  * ## O bug que este comentario documenta
@@ -540,12 +568,18 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'REORDER_LAYER': {
       if (!state.project) return state;
+      // Ascending, because `newIndex` is a slot in that frame (see LayerList.reorder).
       const layers = [...state.project.layers].sort((a, b) => a.zIndex - b.zIndex);
       const currentIndex = layers.findIndex((layer) => layer.id === action.payload.id);
       if (currentIndex === -1) return state;
       const [layer] = layers.splice(currentIndex, 1);
-      layers.splice(action.payload.newIndex, 0, layer);
-      return commitProject(state, { ...state.project, layers: reorderLayers(layers) });
+      // Clamped: `newIndex` is a slot in the array **after** the removal, and a slot past
+      // the end has to land at the end rather than being an argument `splice` ignores.
+      const slot = Math.max(0, Math.min(action.payload.newIndex, layers.length));
+      layers.splice(slot, 0, layer);
+      // `renumberInPlace`, NOT `reorderLayers`: this action just established the order in
+      // the array, and `reorderLayers` would sort by the old `zIndex` and throw it away.
+      return commitProject(state, { ...state.project, layers: renumberInPlace(layers) });
     }
 
     case 'MOVE_LAYER': {

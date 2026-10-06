@@ -43,6 +43,7 @@ export const WEB_APP_SPECS = [
   'export-preview',
   'font-picker',
   'preview-fidelity',
+  'layer-drag',
   'text-panel'
 ] as const;
 
