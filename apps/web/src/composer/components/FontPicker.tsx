@@ -1,4 +1,4 @@
-import { Select } from '@iconcore/ui';
+import { Button, Select } from '@iconcore/ui';
 import { SELECTABLE_FONTS, type IconFont } from '@iconcore/renderer';
 import { nominalFamily, useSystemFonts } from './useSystemFonts';
 
@@ -138,18 +138,21 @@ export const FontPicker = ({ value, onChange }: FontPickerProps) => {
       </Select>
 
       {/**
-       * O botao so existe onde a API existe, e o texto diz o que ele faz. Um botao de "usar
-       * fontes do sistema" que falha ao ser clicado e pior que um botao ausente.
+       * O botão só existe onde a API existe, e o texto diz o que ele faz.
        *
-       * Sem `aria-label` no `Select` acima, de proposito: o `Select` do kit escreve
-       * `aria-label` **antes** do `{...rest}`, entao um rotulo passado aqui sobrescreve o
-       * `<label htmlFor>` e o nome acessivel passa a discordar do texto visivel ("Font family"
-       * contra "Font"). Quem fala "clicar em Font" nao acerta o campo.
+       * `Button variant="ghost"` do kit, e nao um `<button className="ic-link-button">`.
+       * `ic-link-button` e o CTA grande do modal de boas-vindas — 42px de altura, borda e
+       * fundo — e dentro do painel ele ocupava a largura inteira e empurrava o alinhamento e
+       * o estilo para baixo. O dono reclamou do painel parecer irregular, e um botao de CTA
+       * no meio dos ajustes e uma das coisas que o torna irregular.
+       *
+       * `variant="ghost"` nao adiciona CSS: e uma classe Tailwind que ja estava no kit, e o
+       * ratchet de `index.css` tem uma linha de folga.
        */}
       {sistema.state === 'idle' && (
-        <button type="button" className="ic-link-button" onClick={sistema.reveal}>
+        <Button variant="ghost" className="justify-start px-0" onClick={sistema.reveal}>
           Read fonts from this computer
-        </button>
+        </Button>
       )}
     </>
   );

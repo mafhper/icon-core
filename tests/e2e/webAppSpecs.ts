@@ -42,7 +42,8 @@ export const WEB_APP_SPECS = [
   'layer-reorder',
   'export-preview',
   'font-picker',
-  'preview-fidelity'
+  'preview-fidelity',
+  'text-panel'
 ] as const;
 
 /**

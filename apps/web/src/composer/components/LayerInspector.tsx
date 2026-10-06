@@ -476,88 +476,115 @@ export const LayerInspector = () => {
       <div className="ic-field-stack">
         {layer.kind === 'text' && (
           <Section title="Text">
+            {/**
+             * A ordem é um argumento, não preferência: **fonte, tamanho, estilo, alinhamento**.
+             *
+             * Quem escolhe a fonte só depois descobre o tamanho que preenche o canvas; e o
+             * estilo (negrito, itálico) altera a largura do texto, então vem depois do tamanho
+             * — mexer no peso depois do tamanho muda a quebra, e a pessoa ajusta o tamanho
+             * duas vezes. O alinhamento vem por último porque age sobre o que já está medido.
+             *
+             * A versão anterior punha Size e Weight **antes** da fonte, e o itálico solto no
+             * fim, depois do alinhamento: três controles em ordem que não corresponde a
+             * nenhuma.
+             */}
             <TextField
               label="Text"
               value={layer.text?.content ?? ''}
               onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
             />
-            <div className="grid grid-cols-2 gap-2.5">
-              <NumberField
-                label="Size"
-                min="8"
-                value={layer.text?.fontSize ?? 64}
-                onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
-              />
-              <NumberField
-                label="Weight"
-                min="100"
-                max="900"
-                step="100"
-                value={layer.text?.fontWeight ?? 700}
-                onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
-              />
-            </div>
 
-            {/**
-             * A fonte, antes do tamanho.
-             *
-             * `IC63/3`. A ordem e o argumento: quem escolhe a fonte e quem descobre o
-             * tamanho que preenche o canvas, entao a fonte vem primeiro. E o seletor
-             * grava a **pilha** (`'Cal Sans', system-ui, sans-serif`), nao so a familia —
-             * sem o fallback, uma maquina sem a fonte embarcada resolveria no Times e o
-             * icone sairia serifado.
-             */}
             <FontPicker
               value={layer.text?.fontFamily ?? DEFAULT_FONT_STACK}
               onChange={(fontFamily) => updateLayer({ text: { ...layer.text, fontFamily } as IconLayer['text'] })}
             />
 
-            {/*
-              `IC63/2` — itálico e alinhamento.
-
-              A caixa do alinhamento é o **shape da layer** (58% da largura do canvas,
-              `createTextLayer`), não o canvas inteiro: ancorar à esquerda no meio do
-              canvas faria o texto crescer para a direita a partir do centro, que é o
-              oposto de "esquerda". A geometria mora em `textLayout.ts` e os dois
-              pipelines consomem a mesma função.
-
-              O alinhamento vem **primeiro** na UI e não como um campo numérico solto:
-              três botões em texto (`Left / Center / Right`) dizem o que cada um faz, e
-              nenhum número de 0 a 2 seria adivinhável. É a mesma escolha da
-              `VariantBar`, e pela mesma razão — o valor é curto e o nome é o
-              significado.
-
-              Sem CSS novo: o budget de `index.css` tem 5 linhas de folga e a política é
-              que budget não sobe.
-            */}
-            <SegmentedControl
-              aria-label="Text alignment"
-              options={TEXT_ALIGN_OPTIONS}
-              value={layer.text?.textAlign ?? 'center'}
-              onChange={(textAlign) =>
-                updateLayer({ text: { ...layer.text, textAlign } as IconLayer['text'] })
-              }
+            <NumberField
+              label="Size"
+              min="8"
+              value={layer.text?.fontSize ?? 64}
+              onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
             />
 
-            {/*
-              `IC63/2` — o itálico é o único controle de "estilo" que entra aqui.
+            {/**
+             * Negrito e itálico, lado a lado, como pares.
+             *
+             * O peso saiu de um `NumberField` 100..900 para um switch, e a razão é a Cal Sans
+             * embarca **dois** pesos (400 e 700): oferecer seis que a fonte não tem é deixar
+             * o navegador escolher o mais próximo — um controle que promete precisão que não
+             * existe. O switch mapeia 700 para 400 e vice-versa, que é o que os dois pesos
+             * fazem.
+             *
+             * A perda de capacidade é real e fica registrada: quem precisar de 500 ou 600
+             * precisa de um `Select` de peso **por fonte**, o que exige metadata de peso em
+             * `fonts.ts` e saber os pesos de uma família instalada — que a Local Font Access
+             * API não devolve. Fica para quando alguém precisar num logo.
+             *
+             * Os dois ficam na mesma linha porque são **pares**: as duas coisas que
+             * inclinam ou engrossam o mesmo glifo. O itálico solto no fim do painel, como
+             * estava, não era par de nada.
+             */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <Switch
+                label="Bold"
+                checked={(layer.text?.fontWeight ?? 700) >= 600}
+                onChange={(event) =>
+                  updateLayer({
+                    text: { ...layer.text, fontWeight: event.target.checked ? 700 : 400 } as IconLayer['text']
+                  })
+                }
+              />
+              <Switch
+                label="Italic"
+                checked={layer.text?.fontStyle === 'italic'}
+                onChange={(event) =>
+                  updateLayer({
+                    text: {
+                      ...layer.text,
+                      fontStyle: event.target.checked ? 'italic' : 'normal'
+                    } as IconLayer['text']
+                  })
+                }
+              />
+            </div>
 
-              `letterSpacing` ficou de fora de propósito: ele exigiria um campo novo no
-              modelo **e** nos dois renderers, e é exatamente o tipo de adição que entra
-              "já que a caixa está aberta" e sai sem medição. Fica para quando alguém
-              precisar dele num logo, e não como Keys.
-            */}
-            <Switch
-              label="Italic"
-              checked={layer.text?.fontStyle === 'italic'}
-              onChange={(event) =>
-                updateLayer({
-                  text: { ...layer.text, fontStyle: event.target.checked ? 'italic' : 'normal' } as IconLayer['text']
-                })
-              }
-            />
+            {/**
+             * O alinhamento com rótulo **visível**.
+             *
+             * O `SegmentedControl` do kit só aceita `aria-label`, então o rótulo visível é um
+             * `span` com as mesmas classes que o `Field` usa no rótulo dele — é o que faz o
+             * texto ter a mesma altura e cor de todos os outros rótulos do painel. Sem ele, a
+             * tela mostrava "Left Center Right" sem dizer do que se tratava.
+             *
+             * Não é um `<label>`: o controle é um grupo de botões, não um elemento rotulável,
+             * e um `<label>` em volta enviaria o clique para o primeiro botão rotulável — o
+             * clique em "esquerda" marcaria "centro".
+             *
+             * A caixa do alinhamento é o **shape da layer** (58% da largura do canvas,
+             * `createTextLayer`), não o canvas inteiro: ancorar à esquerda no meio do canvas
+             * faria o texto crescer para a direita a partir do centro, que é o oposto de
+             * "esquerda". A geometria mora em `textLayout.ts` e os dois pipelines consomem a
+             * mesma função.
+             *
+             * `Left / Center / Right` em texto, e não 0/1/2: o valor é curto e o nome **é** o
+             * significado — a mesma escolha da `VariantBar`.
+             */}
+            <div className="grid gap-1.5">
+              <span className="truncate text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
+                Alignment
+              </span>
+              <SegmentedControl
+                aria-label="Text alignment"
+                options={TEXT_ALIGN_OPTIONS}
+                value={layer.text?.textAlign ?? 'center'}
+                onChange={(textAlign) =>
+                  updateLayer({ text: { ...layer.text, textAlign } as IconLayer['text'] })
+                }
+              />
+            </div>
           </Section>
         )}
+
 
         <Section title="Layer">
           <TextField
