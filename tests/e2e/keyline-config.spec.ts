@@ -13,6 +13,22 @@ const contarGuias = async (page: import('@playwright/test').Page): Promise<numbe
 test('keyline: partes ligaveis, uma a uma', async ({ page }) => {
   await page.goto('/icon-core/app/?theme=dark');
 
+  /**
+   * Limpa o storage antes de o app montar. O contexto sobrevive ao `goto`, entao o
+   * storage tambem: com um projeto salvo, a dialog mostra a **lista** em vez do botao
+   * "Create", e o clique estoura em 30s esperando algo que nao aparece. Ver
+   * `foreignobject-regression`, o primeiro spec a fazer **dois** `goto` no mesmo teste.
+   */
+  await page.addInitScript(() => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {
+      // Storage bloqueado: o app cria o projeto normal.
+    }
+  });
+  await page.context().clearCookies();
+
   const welcome = page.getByRole('dialog');
   if (await welcome.isVisible().catch(() => false)) {
     await page.getByRole('button', { name: /^Create$/i }).first().click();

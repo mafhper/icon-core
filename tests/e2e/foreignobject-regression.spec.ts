@@ -44,22 +44,26 @@ interface Medida {
 
 const medir = async (page: Page, arquivo: string): Promise<Medida> => {
   /**
-   * O estado do app vive em storage do navegador, e um contexto novo **nao** limpa o storage
-   * quando o `goto` acontece dentro do mesmo teste. Com um projeto ja salvo, a dialog de
-   * boas-vindas mostra a **lista** de projetos e o botao "Create" nao existe — o teste
-   * estourava em 30s esperando um botao que jamais apareceria.
+   * Limpa o storage antes de o app montar. O contexto sobrevive ao `goto`, entao o
+   * storage tambem: com um projeto salvo, a dialog mostra a **lista** em vez do botao
+   * "Create", e o clique estoura em 30s esperando algo que nao aparece.
    *
-   * E por isso que os outros 20 specs passam com o mesmo bloco: cada um faz **um** `goto`.
-   * Aqui a segunda medicao acontece no mesmo teste, entao a limpeza e obrigatoria.
+   * Este e o primeiro spec a fazer **dois** `goto` no mesmo teste — e por isso que a limpeza
+   * foi propagada para os demais, em vez de ficar so aqui.
    */
-  await page.goto('/icon-core/app/?theme=dark');
-  await page.evaluate(async () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    const bancos = (await indexedDB.databases?.()) ?? [];
-    for (const b of bancos) if (b.name) indexedDB.deleteDatabase(b.name);
+  await page.addInitScript(() => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {
+      // Storage bloqueado: o app cria o projeto normal.
+    }
   });
-  await page.reload();
+  await page.context().clearCookies();
+
+  // Apos registrar o `addInitScript`: ele roda na navegacao, entao o `goto` tem que vir
+  // depois — registrar depois nao limpou nada na primeira carga.
+  await page.goto('/icon-core/app/?theme=dark');
 
   const dialog = page.getByRole('dialog');
   if (await dialog.isVisible().catch(() => false)) {

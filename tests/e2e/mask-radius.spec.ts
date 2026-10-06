@@ -18,6 +18,22 @@ test('frame radius: o raio computado muda quando o slider muda', async ({ page }
   // Um projeto **com uma camada**: um projeto novo mostra o `DropZone`, que nao tem
   // `.ic-canvas-frame` — o frame so existe quando ha algo para compor. A primeira versao
   // deste teste parou aqui e o dono nunca veria o slider do mesmo jeito.
+  /**
+   * Limpa o storage antes de o app montar. O contexto sobrevive ao `goto`, entao o
+   * storage tambem: com um projeto salvo, a dialog mostra a **lista** em vez do botao
+   * "Create", e o clique estoura em 30s esperando algo que nao aparece. Ver
+   * `foreignobject-regression`, o primeiro spec a fazer **dois** `goto` no mesmo teste.
+   */
+  await page.addInitScript(() => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {
+      // Storage bloqueado: o app cria o projeto normal.
+    }
+  });
+  await page.context().clearCookies();
+
   const welcome = page.getByRole('dialog');
   if (await welcome.isVisible().catch(() => false)) {
     await page.getByRole('button', { name: /^Create$/i }).first().click();

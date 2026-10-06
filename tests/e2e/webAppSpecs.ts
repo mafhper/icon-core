@@ -45,7 +45,8 @@ export const WEB_APP_SPECS = [
   'preview-fidelity',
   'layer-drag',
   'text-panel',
-  'foreignobject-regression'
+  'foreignobject-regression',
+  'storage-isolation'
 ] as const;
 
 /**

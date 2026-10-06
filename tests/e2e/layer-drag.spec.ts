@@ -25,6 +25,22 @@ import { expect, test, type Page } from '@playwright/test';
 /** Abre o app com um projeto novo, e diz se o modal de boas-vindas apareceu. */
 const abrir = async (page: Page) => {
   await page.goto('/icon-core/app/?theme=dark');
+  /**
+   * Limpa o storage antes de o app montar. O contexto sobrevive ao `goto`, entao o
+   * storage tambem: com um projeto salvo, a dialog mostra a **lista** em vez do botao
+   * "Create", e o clique estoura em 30s esperando algo que nao aparece. Ver
+   * `foreignobject-regression`, o primeiro spec a fazer **dois** `goto` no mesmo teste.
+   */
+  await page.addInitScript(() => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {
+      // Storage bloqueado: o app cria o projeto normal.
+    }
+  });
+  await page.context().clearCookies();
+
   const dialog = page.getByRole('dialog');
   if (await dialog.isVisible().catch(() => false)) {
     await page.getByRole('button', { name: /^Create$/i }).first().click();
