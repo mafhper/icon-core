@@ -18,6 +18,95 @@ export type IconTarget =
   | 'desktop-generic'
   | 'marketing';
 
+/**
+ * Os alvos cujo preset emite **SVG**.
+ *
+ * Vive aqui, e nao em `@iconcore/exporters`, porque e o **renderizador** que sabe o que cada
+ * preset emite — e o validador, que precisa avisar "esse icone carrega o *nome* de uma
+ * fonte, nao a fonte", nao pode importar de exporters: exporters ja depende do validador, e
+ * seria um ciclo.
+ *
+ * Sao dois: `web-svg` (favicon.svg) e `electron-svg` (icon.svg). Todos os outros alvos sao
+ * rasterizados no agente de usuario, onde o texto sai correto.
+ *
+ * **Esta lista nao e a fonte da verdade: e uma copia declarada, com um teste que a amarra.**
+ * `packages/iconcore-exporters/tests/svgTargets.spec.ts` percorre o preset registry e falha
+ * se as duas divergirem. Uma copia sem teste e a mesma divergencia silenciosa que
+ * `assets/brand/` veio eliminar — a segunda fonte de verdade voltaria pela porta do tras.
+ */
+export const SVG_EMITTING_TARGETS: readonly IconTarget[] = ['web-favicon', 'electron'];
+
+/** Este projeto exporta SVG? Qualquer alvo habilitado da lista acima. */
+export const exportsSvg = (project: { targets: Array<{ target: IconTarget; enabled: boolean }> }): boolean =>
+  project.targets.some((t) => t.enabled && SVG_EMITTING_TARGETS.includes(t.target));
+
+/**
+ * As familias **genericas** de CSS: as unicas que resolvem em qualquer maquina.
+ *
+ * Nao sao fontes — sao aliases que o agente de usuario resolve para a sua fonte padrao. Por
+ * isso um SVG que as nomeia funciona em qualquer maquina, enquanto um SVG que nomeia uma
+ * fonte concreta depende de quem abre.
+ *
+ * A lista mora no `shared` e nao em `@iconcore/renderer` porque o **validador** precisa dela
+ * para avisar "esse icone carrega o nome de uma fonte" — e o validador nao pode depender do
+ * renderer. `packages/iconcore-renderer/src/fonts.ts` importa esta lista, entao ha uma
+ * fonte so.
+ */
+export const GENERIC_FONT_FAMILIES = [
+  'system-ui',
+  'sans-serif',
+  'serif',
+  'monospace',
+  'cursive',
+  'fantasy'
+] as const;
+
+export type GenericFontFamily = (typeof GENERIC_FONT_FAMILIES)[number];
+
+/**
+ * As familias de uma pilha, normalizadas: sem espaco, sem citacao, em caixa baixa.
+ *
+ * Uma funcao porque as duas perguntas acima precisam exatamente do mesmo corte, e duas
+ * versoes de `.replace(/^['"]|['"]$/g, '')` divergem na primeira familia com nome de espaco.
+ *
+ * Aceita as duas grafias de citacao porque a string e livre no schema e as duas aparecem
+ * em `.iconcore.json` escrito a mao.
+ */
+const familiaDe = (fontFamily: string): string[] =>
+  fontFamily
+    .split(',')
+    .map((p) => p.trim().replace(/^['"]|['"]$/g, '').toLowerCase())
+    .filter((f) => f.length > 0);
+
+/**
+ * Uma pilha de `fontFamily` e **independente de fonte**?
+ *
+ * Decide pela **primeira** familia: e ela que o agente de usuario tenta primeiro, e e dela
+ * que o desenho depende. `Inter, system-ui, sans-serif` tem um fallback que resolve em
+ * qualquer maquina, entao o SVG **renderiza** em qualquer lugar — mas renderiza em outra
+ * cara, e um texto com quebra diferente da que a pessoa ajustou.
+ *
+ * E por isso que esta funcao e diferente de `fontStackRendersEverywhere`: as duas medem
+ * coisas que costumam ser confundidas. "Renderiza" e "renderiza como voce desenhou" so
+ * coincidem quando a primeira familia e generica.
+ */
+export const fontStackIsFontIndependent = (fontFamily: string): boolean => {
+  const [primeira = ''] = familiaDe(fontFamily);
+  return (GENERIC_FONT_FAMILIES as readonly string[]).includes(primeira);
+};
+
+/**
+ * Uma pilha de `fontFamily` renderiza em qualquer maquina?
+ *
+ * Basta conter **uma** familia generica: e o fallback garantido, e sem ele o agente de
+ * usuario chega no fim da lista e usa a fonte padrao dele mesmo.
+ *
+ * O que muda entre maquinas, nesse caso, e **qual** fonte — nao se ha texto. E a diferenca
+ * entre as duas perguntas e o que o aviso do validador precisa dizer.
+ */
+export const fontStackRendersEverywhere = (fontFamily: string): boolean =>
+  familiaDe(fontFamily).some((f) => (GENERIC_FONT_FAMILIES as readonly string[]).includes(f));
+
 export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten';
 
 export type ShapeKind = 'circle' | 'rectangle' | 'rounded-rectangle' | 'squircle' | 'polygon' | 'triangle' | 'line' | 'star';
@@ -178,6 +267,52 @@ export interface LayerSource {
   data?: string;
   path?: string;
   shape?: ShapeDefinition;
+}
+
+/**
+ * `project.json` — o vínculo entre uma pasta e o que há nela.
+ *
+ * ## Por que um arquivo separado, e não um campo no `.iconcore.json`
+ *
+ * Uma pasta é um projeto e **cada canvas é um `.iconcore.json` dentro dela**
+ * (`ADR-020`). Então "qual é o logo do projeto" é uma pergunta **sobre a pasta**, e
+ * nenhum dos documentos nela pode responder sozinho: o que responde depende de todos os
+ * outros, e mudar a resposta não pode reescrever nenhum deles.
+ *
+ * A alternativa — `role: 'logo'` dentro de cada documento — põe a resposta onde a pergunta
+ * não mora, e faz o logo mudar de arquivo exigindo editar o documento antigo.
+ *
+ * ## Nomes de pasta, não caminhos absolutos
+ *
+ * Tudo aqui é **relativo à raiz do projeto**. Um caminho absoluto no manifesto quebra ao
+ * mover a pasta, e a portabilidade é justamente o que o registro tem a oferecer.
+ */
+export interface ProjectManifest {
+  schemaVersion: 1;
+  /** Nome de projeto. Ausente = o nome da pasta. */
+  name?: string;
+  /**
+   * O canvas que **é** o logo, relativo à raiz, ex.: `icone.iconcore.json`.
+   *
+   * É este campo que os outros assets referenciam (ver `LayerSource`, tipo `'document'`).
+   * Ausente = nenhum vínculo, e a análise propõe um candidato sem gravar nada.
+   */
+  logo?: string;
+  /**
+   * Pastas nomeadas, relativas à raiz. Ausente = a própria raiz.
+   *
+   * São convenções de organização, não buscas: mudar `promo` para
+   * `assets/promo` reorganiza onde o app **sugere** gravar, e nada mais.
+   */
+  folders?: {
+    icons?: string;
+    promo?: string;
+  };
+  /**
+   * Subpastas a ignorar na análise, além das padrão (`node_modules`, `.git`, `dist`).
+   * Globs não são suportados de propósito: a lista é curta e explícita é mais honesta.
+   */
+  ignore?: string[];
 }
 
 /** Color adjustments for image/svg layers. Percentages are CSS-filter style (100 = unchanged). */

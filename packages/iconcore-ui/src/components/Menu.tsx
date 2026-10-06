@@ -17,6 +17,21 @@ export interface MenuItemProps {
   icon?: ReactNode;
   /** Visible item label. */
   label: string;
+  /**
+   * Keyboard shortcut, right-aligned. **Display only** — it does not bind.
+   * A label that lies about a shortcut is worse than no label, so the app that
+   * shows one owns the binding; `Menu` never installs a listener.
+   */
+  shortcut?: string;
+  /**
+   * Dimmed and unselectable.
+   *
+   * The Radix item keeps focusability (`aria-disabled`, not `disabled`) so arrow
+   * keys still land on it and a screen reader can read *why*. That is why this is
+   * not the DOM `disabled`: a disabled node is skipped silently, and "Edit Path
+   * arrives in a later phase" is information the person needs.
+   */
+  disabled?: boolean;
   onSelect: () => void;
   className?: string;
 }
@@ -52,21 +67,42 @@ export const Menu = ({ trigger, label, children, className }: MenuProps) => {
 };
 
 export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(function MenuItem(
-  { icon, label, onSelect, className },
+  { icon, label, shortcut, disabled = false, onSelect, className },
   ref
 ) {
   return (
     <MenuPrimitive.Item
       ref={ref}
+      disabled={disabled}
       onSelect={onSelect}
       className={cn(
         'flex cursor-pointer items-center gap-2 rounded-ic-sm px-2 py-1.5 text-[13px] text-ic-text outline-none select-none',
         'data-[highlighted]:bg-ic-elevated',
+        // `aria-disabled` keeps the row focusable, so the dim has to be explicit
+        // rather than inherited from Radix's `data-disabled`.
+        'data-[disabled]:cursor-default data-[disabled]:text-ic-text-muted data-[disabled]:opacity-55',
         className
       )}
     >
       {icon != null && <span className="flex shrink-0 items-center text-ic-text-muted">{withIconStroke(icon)}</span>}
-      <span>{label}</span>
+      <span className="truncate">{label}</span>
+      {shortcut != null && (
+        <span className="ml-auto pl-4 text-[11px] tracking-tight text-ic-text-muted tabular-nums">
+          {shortcut}
+        </span>
+      )}
     </MenuPrimitive.Item>
   );
 });
+
+/**
+ * Divider between groups of items.
+ *
+ * `role="separator"` is what a screen reader announces when arrowing across it;
+ * a styled `<hr>` with the visual would be silent about the grouping.
+ */
+export const MenuSeparator = ({ className }: { className?: string }) => (
+  <MenuPrimitive.Separator
+    className={cn('my-1 h-px bg-ic-border', className)}
+  />
+);

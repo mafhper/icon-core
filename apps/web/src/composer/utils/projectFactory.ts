@@ -1,4 +1,5 @@
 import type { IconCoreProject, IconLayer, IconTarget } from '@iconcore/shared';
+import { DEFAULT_FONT_STACK } from '@iconcore/renderer';
 import type { FileLayerAsset } from './fileLayers';
 import { measureIntrinsicSize } from './fileLayers';
 import { brandGradientFill } from '../constants';
@@ -242,7 +243,19 @@ export const createTextLayer = (canvasSize: number, zIndex: number): IconLayer =
   fill: { kind: 'solid', color: '#111827' },
   text: {
     content: 'Icon',
-    fontFamily: 'Inter, Sora, system-ui, sans-serif',
+    /**
+     * `system-ui`, e nao uma familia de nome proprio.
+     *
+     * Antes era `'Inter, Sora, system-ui, sans-serif'` — e **nenhuma das duas primeiras
+     * estava no projeto**: nao havia um `.woff2` no repositorio. O editor caia no
+     * fallback, e o `favicon.svg` / `icon.svg` saiam com o nome de uma fonte que quem
+     * abrisse quase nao teria. O preview e o arquivo exportado eram coisas diferentes.
+     *
+     * O default tem de ser o que **nao falha**: uma familia generica resolve no editor, no
+     * PNG e no SVG, em qualquer maquina. Quem quiser desenho com personalidade escolhe Cal
+     * Sans no seletor — e ela vem com o app.
+     */
+    fontFamily: DEFAULT_FONT_STACK,
     fontSize: Math.round(canvasSize * 0.13),
     fontWeight: 700
   }

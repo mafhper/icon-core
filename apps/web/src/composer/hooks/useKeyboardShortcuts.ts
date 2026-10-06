@@ -5,7 +5,7 @@ import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 
 export const useKeyboardShortcuts = () => {
-  const { state, dispatch, navigate } = useComposer();
+  const { state, dispatch, navigate, saveProject } = useComposer();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -33,16 +33,19 @@ export const useKeyboardShortcuts = () => {
 
       if (isMod && e.key === 's') {
         e.preventDefault();
-        if (!state.project) return;
-        const json = JSON.stringify(state.project, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${state.project.metadata.name.toLowerCase().replace(/\s+/g, '-')}.iconcore.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        dispatch({ type: 'SET_DIRTY', payload: false });
+        /**
+         * `Ctrl/Ctrl+S` e o `Salvar` — e o `Salvar` grava no arquivo **aberto**.
+         *
+         * Ate aqui este bloco baixava um `.json`, que e o `Salvar como`. A diferenca
+         * importa: "salvar o que estou editando" e "criar uma copia nova" sao acoes
+         * distintas, e o atalho tem de ser a primeira.
+         *
+         * A implementacao mora no `ComposerContext` e nao aqui. Este hook nao alcanca o
+         * `Topbar`, e passar a funcao por prop criaria uma **terceira** copia do mesmo
+         * efeito de browser — a segunda vez que isso acontece nesta sessao, e a
+         * segunda foi o `Salvar como` herdando o `Salvar`.
+         */
+        void saveProject();
         return;
       }
 
@@ -142,5 +145,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state, dispatch, navigate]);
+  }, [state, dispatch, navigate, saveProject]);
 };

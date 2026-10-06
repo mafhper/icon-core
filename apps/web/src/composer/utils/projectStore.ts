@@ -67,6 +67,16 @@ export interface ProjectStore {
   read(id: string): Promise<StoredProject | null>;
   /** `updatedAt` defaults to now; pass one explicitly to keep a record stable. */
   write(record: Omit<StoredProject, 'updatedAt'> & { updatedAt?: number }): Promise<SaveOutcome>;
+  /**
+   * Anexa (ou troca) a ligacao com o arquivo em disco, **sem** reescrever o
+   * documento.
+   *
+   * Existe separado do `write` porque o handle e um **objeto de plataforma** e a
+   * permissao e uma questao separada do conteudo: um `Save` bem-sucedido muda o
+   * arquivo e nao muda o documento, e um `Save as` muda os dois. Juntar isso no
+   * `write` faria cada autosave andar com um handle que ele nao usa.
+   */
+  setHandle(id: string, handle: FileSystemFileHandle | null): Promise<boolean>;
   /** Newest first. The `D2` welcome renders exactly this. */
   list(): Promise<ProjectPointer[]>;
   /** Whether a record was there to remove. */
@@ -232,6 +242,30 @@ const idbStore = (db: IDBDatabase, now: () => number): ProjectStore => ({
     if (key === undefined) return false;
     await fromRequest(storeFor(db, 'readwrite').delete(id));
     return true;
+  },
+
+  async setHandle(id, handle) {
+    /**
+     * Read-modify-write, e nao um `put` do handle.
+     *
+     * O registro tem **duas** metades que nao podem perder: o `project` e o `handle`.
+     * Um `put({ id, handle })` resolveria o problema apagando o documento — e a
+     * medida aqui e justamente que ele nao se perde. Por isso o `get` primeiro, e o
+     * `handle` e substituido no registro existente.
+     */
+    try {
+      const atual = await fromRequest(storeFor(db, 'readonly').get(id));
+      if (!atual) return false;
+      await fromRequest(
+        storeFor(db, 'readwrite').put(handle ? { ...atual, handle } : { ...atual, handle: undefined })
+      );
+      return true;
+    } catch {
+      // Um handle que o engine recusa clonar (e um engine onde `structuredClone` nao
+      // trata objetos de plataforma) resolve para "a ligacao nao foi guardada". O
+      // projeto continua no store: e a `Save` que vai pedir o picker de novo.
+      return false;
+    }
   }
 });
 
@@ -296,6 +330,18 @@ const localStorageStore = (storage: Pick<Storage, 'getItem' | 'setItem' | 'remov
     }
     // Cannot be known, and the caller only uses it to word a confirmation.
     return true;
+  },
+
+  /**
+   * Este store e o pre-`D1`: um so slot, e o handle nao cabe em `localStorage`.
+   *
+   * `false` nao e falha — e a resposta honesta. `setHandle` devolve `false` para dizer
+   * "a ligacao nao foi guardada", e o `Save` trata isso do mesmo jeito que trata um
+   * handle ausente: pede o picker outra vez. Um `true` aqui seria uma promessa que o
+   * slot nao pode cumprir.
+   */
+  async setHandle() {
+    return false;
   }
 });
 

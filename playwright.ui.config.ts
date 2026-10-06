@@ -1,11 +1,15 @@
 import { defineConfig } from '@playwright/test';
+import { webAppSpecPattern } from './tests/e2e/webAppSpecs';
 
 /**
- * Visual-baseline config for the `#/ui` component gallery (A4).
+ * Visual-baseline and behaviour config for the **web app** (the `#/ui` gallery and
+ * the Composer).
  *
- * Separate from `playwright.config.ts` (which serves the promo site): this
- * serves the **web app** preview build and captures the gallery at
- * desktop/narrow widths × dark/light themes.
+ * Separate from `playwright.config.ts`, which serves the promo site: a spec that drives
+ * the Composer cannot pass there, because the Composer does not exist there.
+ *
+ * The spec list is shared with that config via `tests/e2e/webAppSpecs.ts` — see the
+ * comment there for why it is one list and not two.
  *
  * Usage: `npm run ui:shots`
  * Output: `tests/e2e/__screenshots__/` (gitignored; review the PNGs by hand
@@ -18,7 +22,7 @@ export default defineConfig({
   // IndexedDB in a real engine — a round trip, a payload past the 5.101 KB
   // `localStorage` ceiling, and survival across a closed tab — and none of that
   // exists on the promo site.
-  testMatch: /(ui-gallery|inspector-layout|polish|project-store)\.spec\.ts/,
+  testMatch: webAppSpecPattern,
   webServer: {
     command: process.env.CI
       ? 'npm run preview --workspace=@iconcore/web -- --host 127.0.0.1 --port 4182'

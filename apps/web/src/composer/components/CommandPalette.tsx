@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useComposer } from '../ComposerContext';
+import { downloadProject } from '../utils/projectStorage';
 import { useToast } from '../toast/ToastContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
 import { parseProjectFile } from '../utils/projectGuard';
@@ -67,17 +68,14 @@ export const CommandPalette = () => {
       shortcut: `${mod}+S`,
       category: 'navigation',
       action: () => {
-        if (!state.project) return;
-        const json = JSON.stringify(state.project, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${state.project.metadata.name.toLowerCase().replace(/\s+/g, '-')}.iconcore.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        dispatch({ type: 'SET_DIRTY', payload: false });
-        toast.success('Project saved');
+        // `downloadProject`, e nao uma copia. Esta era a **terceira** versao do mesmo
+        // bloco: `Topbar` e `useKeyboardShortcuts` ja tinham sido trocadas, e a paleta
+        // ficou para tras com o `SET_DIRTY(false)` incondicional e o
+        // `revokeObjectURL` no mesmo tick — que cancela o download no Firefox.
+        if (downloadProject(state.project).kind === 'downloaded') {
+          dispatch({ type: 'SET_DIRTY', payload: false });
+          toast.success('Project saved');
+        }
       }
     },
     {

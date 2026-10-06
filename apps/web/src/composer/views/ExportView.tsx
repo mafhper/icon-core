@@ -290,6 +290,9 @@ export const ExportView = () => {
               <ExportPreview
                 project={state.project}
                 variant={state.activeVariant}
+                // O painel mostra **o recorte**: sem a mascara, a pessoa julga um quadrado
+                // e exporta um icone cortado nos cantos.
+                maskShape={state.maskShape}
                 enabled={phase !== 'exporting'}
               />
             )}

@@ -9,6 +9,9 @@ import type {
 } from '@iconcore/shared';
 import type { FileLayerAsset } from './utils/fileLayers';
 import { clampZoom } from './constants';
+import { DEFAULT_DIVISIONS, clampDivisions } from './utils/gridConfig';
+import { type KeylinePart, type KeylineStandard } from './utils/keylineConfig';
+import type { WorkAreaColor } from './utils/workArea';
 import { generateVariantPreset, isGeneratableVariant } from './utils/variantPresets';
 import {
   createBackgroundLayer,
@@ -55,9 +58,60 @@ export interface ComposerState {
   maskShape: 'square' | 'circle' | 'rounded-rectangle' | 'squircle';
   compareDefault: boolean;
   showKeylines: boolean;
+  /**
+   * As partes da keyline que estão ligadas.
+   *
+   * Um `Set`, e não um array de booleanos: o `KeylineOverlay` faz `parts.has(...)` por
+   * parte, e um array exigiria `includes` a cada um — e um array de booleanos
+   * paralelos (`[frame, grid, circle, circle, safeArea]`) permite a combinação
+   * impossível "duas vezes circle, nenhuma vez grid".
+   */
+  keylineParts: Set<KeylinePart>;
+  /**
+   * Qual plataforma a keyline descreve. **Não** é a mesma coisa que `maskShape`: essa
+   * é a forma que o ícone tem; esta é a referência contra a qual a composição está
+   * sendo medida. Um ícone circular é medido contra a grade do Android sem parar de ser
+   * circular.
+   */
+  keylineStandard: KeylineStandard;
+  /**
+   * A máscara da `import margin`, sobre o ícone.
+   *
+   * **Ligada por padrão**, e o inverso do `showKeylines`. A razão é o que cada uma
+   * responde: a keyline é uma referência de plataforma que a pessoa liga quando quer,
+   * enquanto a margem só aparece quando o valor é **maior que zero** — e aí ela é a
+   * resposta visível a um controle que a pessoa acabou de mexer. Desligada por padrão,
+   * a máscara apareceria sozinha na primeira importação com margem, e o dono perdeu o
+   * controle sobre aparecer.
+   *
+   * Não compartilha o flag da keyline: `Cmd/Ctrl+G` é da keyline e não deve mexer na
+   * margem — são duas referências diferentes sobre a mesma caixa.
+   */
+  showMarginOverlay: boolean;
   showSnapping: boolean;
-  /** Visual backdrop of the editing stage (work area), distinct from the exported icon image. */
-  editorBackdrop: 'dots' | 'grid' | 'plain';
+  /**
+   * Divisões do grid, por eixo. `8` reproduz o `background-size: 12.5%` fixo de antes.
+   *
+   * São **divisões**, não pixels: a pessoa quer "divida em 8", não "linha a cada 24px" —
+   * e com divisões a mesma conta serve a 512 e a 1024. Ver `utils/gridConfig.ts`.
+   *
+   * Configuração do grid e **estado de editor**, não documento: o `IC-N7` (digest) não
+   * pode acusar arte nova porque a pessoa ajustou a grade da bancada.
+   */
+  gridColumns: number;
+  gridRows: number;
+  /**
+ * A cor da bancada em volta do ícone.
+ *
+ * **Troca de forma**: era `'dots' | 'grid' | 'plain'`, e virou cor. O motivo não é
+ * só gosto — `plain` já **era** uma cor escrita como se fosse um tipo (um gradiente
+ * fixo de duas misturas de `--ic-bg` com um literal), e `dots`/`grid` eram texturas que
+ * ninguém ia usar num editor de ícone. Ver `utils/workArea.ts` para o porque do
+ * `color-mix` e do fallback no token.
+ *
+ * `null` = "ainda não escolhido", e vale `--ic-bg`. Ver `workAreaToCss`.
+ */
+  workAreaColor: WorkAreaColor | null;
   history: IconCoreProject[];
   historyIndex: number;
 }
@@ -134,9 +188,20 @@ export type ComposerAction =
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'TOGGLE_GRID' }
   | { type: 'TOGGLE_KEYLINES' }
+  | { type: 'TOGGLE_KEYLINE_PART'; payload: KeylinePart }
+  | { type: 'SET_KEYLINE_STANDARD'; payload: KeylineStandard }
+  | { type: 'TOGGLE_MARGIN_OVERLAY' }
+  | { type: 'SET_GRID_DIVISIONS'; payload: { columns: number; rows: number } }
   | { type: 'TOGGLE_SNAPPING' }
   | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' }
-  | { type: 'SET_EDITOR_BACKDROP'; payload: ComposerState['editorBackdrop'] };
+  /**
+   * Troca a cor da bancada. `null` volta ao token do tema.
+   *
+   * `transient` nao existe aqui, e e proposital: a bancada **nao** e documento, entao
+   * mexer nela nao pode criar entrada de historico — desfazer um ajuste de cor de
+   * editorUndoando o desenho seria um "por que minha forma sumiu" sem resposta.
+   */
+  | { type: 'SET_WORK_AREA_COLOR'; payload: WorkAreaColor | null };
 
 export const initialState: ComposerState = {
   view: 'workspaces',
@@ -149,12 +214,17 @@ export const initialState: ComposerState = {
   enabledTargets: new Set(['web-favicon', 'pwa']),
   isDirty: false,
   zoom: 1,
-  showGrid: true,
+  showGrid: false,
   maskShape: 'rounded-rectangle',
-  editorBackdrop: 'dots',
+  workAreaColor: null,
   compareDefault: false,
   showKeylines: false,
+  keylineParts: new Set<KeylinePart>(['frame', 'grid', 'squircle', 'safe-area']),
+  keylineStandard: 'generic',
+  showMarginOverlay: true,
   showSnapping: true,
+  gridColumns: DEFAULT_DIVISIONS,
+  gridRows: DEFAULT_DIVISIONS,
   history: [],
   historyIndex: -1
 };
@@ -290,6 +360,55 @@ const reorderLayers = (layers: IconLayer[]): IconLayer[] => {
   return [...backgrounds.map((layer) => ({ ...layer, zIndex: -1 })), ...renumbered];
 };
 
+/**
+ * Renumera `zIndex` pela **posicao no array**, que e a ordem que o array ja esta.
+ *
+ * ## Por que esta funcao existe, e nao e a mesma coisa que `reorderLayers`
+ *
+ * `reorderLayers` ordena por `zIndex` **antes** de renumerar. Isso e o comportamento certo
+ * quando o array nao tem opiniao — ao adicionar, remover ou carregar uma camada, a verdade e
+ * o `zIndex` que cada uma ja tinha.
+ *
+ * Mas depois de um `REORDER_LAYER` o array **e** a opiniao: o splice acabou de dizer em que
+ * ordem a pessoa quer as camadas. Ordenar de novo por `zIndex` **descarta essa opiniao**, e
+ * a acao vira um no-op: o array embaralha, a renumeracao devolve os mesmos numeros, e a
+ * lista nao muda.
+ *
+ * Foi exatamente o que aconteceu, e o dono reportou: *"a ordenação acontece se eu fizer pelo
+ * botão direito e enviar para baixo ou cima. Não dá certo se eu clicar e arrastar na camada."*
+ * O menu usa `MOVE_LAYER`, que renumera; o arrasto usa `REORDER_LAYER`, que nao renumerava
+ * em nada. Duas acoes, um defeito so em uma delas, e um caminho de teste que so exercitava
+ * a que funcionava.
+ *
+ * O Background continua preso em -1 e no fim do array: e um handle de UI, nunca pinta.
+ */
+const renumberInPlace = (layers: IconLayer[]): IconLayer[] => {
+  const content = layers.filter((layer) => layer.role !== 'background');
+  const backgrounds = layers.filter((layer) => layer.role === 'background');
+  const renumbered = content.map((layer, index) => ({ ...layer, zIndex: index }));
+  return [...backgrounds.map((layer) => ({ ...layer, zIndex: -1 })), ...renumbered];
+};
+/**
+ * Move uma camada na ordem de composição.
+ *
+ * ## O bug que este comentario documenta
+ *
+ * A versão anterior fazia `splice` no **array** e depois chamava `reorderLayers`. E
+ * `reorderLayers` **ordena por `zIndex`** antes de renumerar — então o splice movia a
+ * camada no array e a ordenação a devolvia ao lugar: **nenhuma das quatro direções fazia
+ * nada**. Só `direction: 'back'` tinha teste, e por acaso passava.
+ *
+ * A correção é renumerar **pela ordem do array**, não pelo `zIndex` antigo. As duas coisas
+ * concordam quando ninguém mexeu; a primeira vez que alguém mexe, só a ordem do array
+ * sabe a intenção.
+ *
+ * ## Por que `zIndex`, e não a posição no array
+ *
+ * Porque `zIndex` é a **verdade da composição** (`composeLayers` pinta por ele), e a
+ * posição no array é uma convenção de armazenamento. Um `splice` no array sem renumerar
+ * deixa os dois discordando — e é o que fazia o `IC66`: o Background subia na lista
+ * sem mudar nada no canvas.
+ */
 const moveLayer = (layers: IconLayer[], id: string, direction: 'forward' | 'backward' | 'front' | 'back'): IconLayer[] => {
   const sorted = [...layers].sort((a, b) => a.zIndex - b.zIndex);
   const index = sorted.findIndex((layer) => layer.id === id);
@@ -301,7 +420,10 @@ const moveLayer = (layers: IconLayer[], id: string, direction: 'forward' | 'back
   if (direction === 'forward') sorted.splice(Math.min(sorted.length, index + 1), 0, layer);
   if (direction === 'backward') sorted.splice(Math.max(0, index - 1), 0, layer);
 
-  return reorderLayers(sorted);
+  // Renumera pela ordem do array, ignorando o `zIndex` que veio: e a **ordem do splice**
+  // que expressa a intenção do comando.
+  const renumbered = sorted.map((l, i) => ({ ...l, zIndex: i }));
+  return reorderLayers(renumbered);
 };
 
 export const composerReducer = (state: ComposerState, action: ComposerAction): ComposerState => {
@@ -446,12 +568,18 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'REORDER_LAYER': {
       if (!state.project) return state;
+      // Ascending, because `newIndex` is a slot in that frame (see LayerList.reorder).
       const layers = [...state.project.layers].sort((a, b) => a.zIndex - b.zIndex);
       const currentIndex = layers.findIndex((layer) => layer.id === action.payload.id);
       if (currentIndex === -1) return state;
       const [layer] = layers.splice(currentIndex, 1);
-      layers.splice(action.payload.newIndex, 0, layer);
-      return commitProject(state, { ...state.project, layers: reorderLayers(layers) });
+      // Clamped: `newIndex` is a slot in the array **after** the removal, and a slot past
+      // the end has to land at the end rather than being an argument `splice` ignores.
+      const slot = Math.max(0, Math.min(action.payload.newIndex, layers.length));
+      layers.splice(slot, 0, layer);
+      // `renumberInPlace`, NOT `reorderLayers`: this action just established the order in
+      // the array, and `reorderLayers` would sort by the old `zIndex` and throw it away.
+      return commitProject(state, { ...state.project, layers: renumberInPlace(layers) });
     }
 
     case 'MOVE_LAYER': {
@@ -701,7 +829,34 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
     case 'TOGGLE_GRID':
       return { ...state, showGrid: !state.showGrid };
 
+    case 'SET_GRID_DIVISIONS':
+      // Clamp no proprio reducer, e nao no controle: o `NumberField` entrega string, o
+      // slider entrega numero, e um `NaN` chegando aqui viraria `background-size:
+      // NaN%` — que o browser ignora em silencio e o grid simplesmente some.
+      return {
+        ...state,
+        gridColumns: clampDivisions(action.payload.columns),
+        gridRows: clampDivisions(action.payload.rows)
+      };
+
+    case 'TOGGLE_MARGIN_OVERLAY':
+      // Sem `isDirty`: ver a nota de `SET_WORK_AREA_COLOR` — a bancada e a referencia
+      // de trabalho, nao a arte. E `IC-N7` nao pode acusar mudanca aqui.
+      return { ...state, showMarginOverlay: !state.showMarginOverlay };
+
     case 'TOGGLE_KEYLINES':
+      /**
+       * O toggle da barra liga e desliga as guias, mas **nao** esvazia o conjunto de
+       * partes.
+       *
+       * Sem isto, `Ctrl/Ctrl+K` duas vezes deixaria a keyline com zero partes e o
+       * painel de configuracao mostraria tudo desligado — a pessoa teria de religar
+       * parte por parte para voltar ao que tinha. O conjunto e a **preferencia**; o
+       * toggle e a exibicao. São coisas diferentes e foi o que mantive assim.
+       *
+       * Regressão de estado: desligar a keyline **mantém** `showKeylines` falso e as
+       * partes intactas; o `KeylineOverlay` some porque `showKeylines` é falso.
+       */
       return { ...state, showKeylines: !state.showKeylines };
 
     case 'TOGGLE_SNAPPING':
@@ -724,8 +879,22 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
       return { ...base, maskShape: action.payload };
     }
 
-    case 'SET_EDITOR_BACKDROP':
-      return { ...state, editorBackdrop: action.payload };
+    case 'SET_WORK_AREA_COLOR':
+      // Sem `commitProject` e sem `isDirty`: ver a nota da acao. A bancada nao e arte,
+      // e `IC-N7` (digest) nao pode acusar mudanca aqui.
+      return { ...state, workAreaColor: action.payload };
+
+    case 'TOGGLE_KEYLINE_PART': {
+      // Cria um `Set` novo em vez de mutar: o `state` anterior pode estar num memo de
+      // outro componente, e mutar in-place faria o React nao re-renderizar.
+      const next = new Set(state.keylineParts);
+      if (next.has(action.payload)) next.delete(action.payload);
+      else next.add(action.payload);
+      return { ...state, keylineParts: next, showKeylines: next.size > 0 };
+    }
+
+    case 'SET_KEYLINE_STANDARD':
+      return { ...state, keylineStandard: action.payload };
 
     default:
       return state;

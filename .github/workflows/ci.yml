@@ -35,6 +35,9 @@ jobs:
       - name: Third-party asset guard
         run: node scripts/check-third-party-assets.mjs
 
+      - name: Brand guard (one source, derived copies)
+        run: node scripts/check-brand.mjs
+
       - name: UI boundary guard (G6)
         run: node scripts/check-ui-boundary.mjs
 
@@ -43,6 +46,12 @@ jobs:
 
       - name: UI contrast guard
         run: node scripts/check-ui-contrast.mjs
+
+      # Ja houve tres copias do download do projeto (Topbar, Ctrl+S, CommandPalette),
+      # cada uma carregando o dirty indevido e o revoke no mesmo tick. Duas e uma
+      # decisao; tres e um sintoma.
+      - name: Project download guard
+        run: node scripts/check-project-download.mjs
 
       - name: Typecheck
         run: npm run typecheck

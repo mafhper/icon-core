@@ -8,6 +8,8 @@ import { useComposer } from '../ComposerContext';
 import { useLayerImport } from '../hooks/useLayerImport';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
+import { workAreaToCss } from '../utils/workArea';
+import { gridBackgroundSize } from '../utils/gridConfig';
 import { computeSnap, type SnapGuide } from '../utils/snapping';
 import { layerSize } from '../utils/layerStyle';
 
@@ -15,6 +17,7 @@ const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
 import { VariantPanel } from './VariantPanel';
 import { KeylineOverlay } from './KeylineOverlay';
+import { MarginOverlay } from './MarginOverlay';
 import { LayerContextMenu } from './LayerContextMenu';
 
 type DragMode = 'move' | 'scale' | 'rotate';
@@ -321,7 +324,15 @@ export const PreviewCanvas = () => {
       </div>
       <div
         className="ic-edit-stage"
-        data-editor-backdrop={state.editorBackdrop}
+        /**
+         * A cor vai **inline**, e nao por atributo de dados.
+         *
+         * O `data-editor-backdrop` com tres regras CSS era o que impedia isto de ser uma
+         * cor: o valor tinha de estar na folha, e por isso o `plain` — que ja era uma cor
+         * — carregava um literal `#e6ecf5` dentro do `color-mix`. Inline, o fallback
+         * continua sendo `var(--ic-bg)` e nenhum literal existe.
+         */
+        style={{ backgroundColor: workAreaToCss(state.workAreaColor) }}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
@@ -359,8 +370,22 @@ export const PreviewCanvas = () => {
             {ghostUrl && (
               <img className="ic-canvas-ghost" src={ghostUrl} alt="" draggable={false} style={{ width: displaySize, height: displaySize }} />
             )}
-            {state.showGrid && <div className="ic-canvas-grid" />}
+            {/*
+                O `background-size` vem inline das divisões: em CSS fixo era
+                `12.5%` (8 divisões) e não havia como mudar. `100/n` em porcentagem é
+                o que faz a mesma conta servir a 512 e a 1024 — um `gap` em px não
+                sobrevive a outro tamanho de canvas.
+            */}
+            {state.showGrid && (
+              <div className="ic-canvas-grid" style={{ backgroundSize: gridBackgroundSize(state.gridColumns, state.gridRows) }} />
+            )}
             {state.showKeylines && <KeylineOverlay />}
+            {/*
+                A máscara da margem fica **sobre** a keyline e não sob ela: as duas
+                falariam da mesma caixa (a área da arte e a safe area), e a de cima é a
+                que responde ao controle que a pessoa acabou de mexer.
+            */}
+            <MarginOverlay />
             {layers.filter((baseLayer) => baseLayer.role !== 'background').map((baseLayer) => {
               const layer = resolveLayerVariant(baseLayer, state.activeVariant);
               if (!layer.visible) return null;

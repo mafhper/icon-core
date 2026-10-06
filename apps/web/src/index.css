@@ -2,6 +2,26 @@
 @import "@iconcore/ui/tokens.css";
 @source "../../../packages/iconcore-ui/src";
 
+/* Cal Sans embarcada. Fonte em `assets/fonts/`, conferida por `check-brand.mjs`; licenca
+ * OFL-1.1 em `LICENSES/`; historia em `assets/fonts/README.md`.
+ * `font-display: block` e deliberado: o canvas mede o texto e escreve em pixels, entao com
+ * `swap` mediria com uma substituta. So `normal`: a fonte nao tem italico, e declarar um
+ * impediria o navegador de sintetizar o obliquo. */
+@font-face {
+  font-family: 'Cal Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./fonts/CalSans-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cal Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('./fonts/CalSans-Bold.woff2') format('woff2');
+}
+
 @theme {
   --radius-ic-sm: var(--ic-radius-sm);
   --radius-ic-md: var(--ic-radius-md);
@@ -24,8 +44,11 @@
   --color-ic-warning: var(--ic-warning);
   --color-ic-danger: var(--ic-danger);
   --color-ic-gold: var(--ic-gold);
-  --font-display: "Sora", sans-serif;
-  --font-body: "Sora", sans-serif;
+  /* A Cal Sans e **embarcada** (fonte em `assets/fonts/`), e nao vem de CDN: o app
+   * se anuncia como offline e roda no Tauri, e uma fonte remota some sem rede. O raciocinio
+   * completo esta em `assets/fonts/README.md`. */
+  --font-display: "Cal Sans", system-ui, sans-serif;
+  --font-body: "Cal Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --shadow-panel: 0 20px 40px rgba(0, 0, 0, 0.32);
   /* Motion language (better-ui): one curve and one duration for utility
@@ -45,7 +68,7 @@ body {
   margin: 0;
   min-height: 100vh;
   min-width: 0;
-  font-family: 'Sora', sans-serif;
+  font-family: "Cal Sans", system-ui, sans-serif;
   color: var(--ic-text);
   background:
     radial-gradient(circle at 12% 8%, var(--ic-glow-1), transparent 30%),
@@ -200,6 +223,7 @@ input[type='range'] {
   font-size: 0.82rem;
   font-weight: 740;
   transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), border-color 0.18s cubic-bezier(0.2, 0, 0, 1), background 0.18s cubic-bezier(0.2, 0, 0, 1);
+  margin-top: auto;
 }
 
 .ic-link-button:hover {
@@ -224,22 +248,22 @@ input[type='range'] {
 /* Groups a heading + controls inside the inspector without breaking the
    .ic-field-stack direct-child separators. */
 
-.ic-link-button {
-  margin-top: auto;
-}
-
 /* Welcome — presented as a modal over the editor window */
+/* Duas definicoes viviam aqui: a segunda vencia por ordem, e o `z-index: 80`,
+ * `blur(10px)`, `padding: 24px` e o `color-mix` da primeira estavam MORTOS — quatro
+ * modais usam esta classe. Esta e a soma do que de fato se aplica; `animation` vem da
+ * primeira, que era a unica propriedade que a segunda nao sobrescrevia. */
 .ic-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: color-mix(in srgb, var(--ic-bg) 62%, transparent);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  animation: ic-modal-fade 0.18s cubic-bezier(0.2, 0, 0, 1);
+  position: fixed;;
+  inset: 0;;
+  z-index: 70;;
+  display: grid;;
+  place-items: center;;
+  padding: 20px;;
+  background: rgba(0, 0, 0, 0.5);;
+  -webkit-backdrop-filter: blur(4px);;
+  backdrop-filter: blur(4px);;
+  animation: ic-modal-fade 0.18s cubic-bezier(0.2, 0, 0, 1);;
 }
 
 @keyframes ic-modal-fade {
@@ -417,6 +441,8 @@ input[type='range'] {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1 1 auto;
+  background: var(--ic-bg);
 }
 
 /* ---- Composer AppShell (PR-05/PR-06) ---- */
@@ -590,11 +616,6 @@ input[type='range'] {
   }
 }
 
-.ic-preview-panel {
-  flex: 1 1 auto;
-  background: var(--ic-bg);
-}
-
 .ic-canvas-toolbar {
   flex: 0 0 auto;
   min-width: 0;
@@ -661,32 +682,12 @@ input[type='range'] {
   background: var(--ic-bg);
 }
 
-/* Work area backdrop — pleasant, subtle, and clearly DISTINCT from the icon
-   image so the desk always reads as the desk. User-customizable via the
-   Sidebar → Canvas inspector (SET_EDITOR_BACKDROP). */
-.ic-edit-stage[data-editor-backdrop='dots'] {
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    color-mix(in srgb, var(--ic-text) 26%, transparent) 1px,
-    transparent 1.5px
-  );
-  background-size: 22px 22px;
-}
-
-.ic-edit-stage[data-editor-backdrop='grid'] {
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--ic-text) 16%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--ic-text) 16%, transparent) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.ic-edit-stage[data-editor-backdrop='plain'] {
-  background-image: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--ic-bg) 92%, #e6ecf5 8%),
-    color-mix(in srgb, var(--ic-bg) 84%, #e6ecf5 16%)
-  );
-}
+/* A work area e uma **cor**, e vai inline no `style` do stage
+   (`workAreaToCss`). Antes eram tres tipos por atributo de dados — `dots`, `grid` e
+   `plain` — e o `plain` ja era uma cor escrita como se fosse tipo: um gradiente fixo
+   de duas misturas de `--ic-bg` com um literal `#e6ecf5` dentro do `color-mix`. Um
+   literal fixo nao segue o tema, entao o desk ficava errado ao trocar de tema.
+   Remover as tres regras devolve ~28 linhas ao orcamento de CSS. */
 
 .ic-drop-zone {
   width: min(100%, 420px);
@@ -724,7 +725,6 @@ input[type='range'] {
 /* The live preview is rendered through the same Canvas2D pipeline as export, so
    what you see here is pixel-identical to the exported asset. */
 .ic-canvas-render,
-
 .ic-canvas-ghost {
   position: absolute;
   left: 0;
@@ -734,6 +734,10 @@ input[type='range'] {
   user-select: none;
 }
 
+/* O `opacity` fica **aqui**, e nao no grupo de cima: o ghost do arraste pode ser
+ * translucido; o preview ao vivo nao. No grupo, ele escurece o icone inteiro — o palco
+ * aparece por tras de tudo e o preview deixa de ser o que sera exportado. Medido em
+ * tests/e2e/preview-fidelity.spec.ts. */
 .ic-canvas-ghost {
   opacity: 0.42;
 }
@@ -742,10 +746,13 @@ input[type='range'] {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* O `background-size` **nao** esta aqui: vem inline de `gridBackgroundSize`, que
+     deriva a porcentagem das divisões escolhidas (ver `utils/gridConfig.ts`). O
+     `rgba(127,127,127)` fixo foi trocado por `color-mix` com `--ic-text`: um cinza
+     literal não acompanha o tema, e o grid sumia no tema claro. */
   background-image:
-    linear-gradient(to right, rgba(127, 127, 127, 0.16) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(127, 127, 127, 0.16) 1px, transparent 1px);
-  background-size: 12.5% 12.5%;
+    linear-gradient(to right, color-mix(in srgb, var(--ic-text) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ic-text) 16%, transparent) 1px, transparent 1px);
 }
 
 .ic-keyline-overlay {
@@ -754,6 +761,18 @@ input[type='range'] {
   top: 0;
   pointer-events: none;
   color: var(--ic-gold);
+}
+
+/* A máscara da import margin. `pointer-events: none` é obrigatório: ela fica sobre o
+   frame, e um SVG que intercepta clique roubaria a seleção da camada de baixo. A cor é
+   `--ic-accent` e não `--ic-gold`, que já pertence à keyline — duas guias na mesma
+   caixa com a mesma cor lêem como um defeito de render, não como duas referências. */
+.ic-margin-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  color: var(--ic-accent);
 }
 
 .ic-snap-guide {
@@ -797,8 +816,6 @@ input[type='range'] {
 .ic-canvas-layer img {
   width: 100%;
   height: 100%;
-  display: grid;
-  place-items: center;
   object-fit: contain;
   pointer-events: none;
 }
@@ -1184,18 +1201,6 @@ input[type='range'] {
   border-top: 1px solid var(--ic-border);
 }
 
-.ic-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.5);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-}
-
 .ic-modal {
   width: min(420px, 100%);
   border: 1px solid var(--ic-border);
@@ -1332,10 +1337,9 @@ input[type='range'] {
 .ic-sizes-button span {
   display: none;
 }
-
-.ic-sizes-button {
-  padding: 0 9px;
-}
+/* Duas definicoes aqui desde antes do ratchet; a segunda (`padding: 0 9px`) vencia por
+ * ordem e e o valor efetivo. Fundida nesta com o vencedor registrado — o outro valor
+ * (12px) e historia. */
 
 .ic-sizes-button:hover,
 
@@ -1709,10 +1713,16 @@ textarea:focus-visible,
   font-size: 12px;
   color: var(--ic-text-muted);
 }
-.ic-export-preview-grid {
+/* Size ramp em coluna, do maior para o menor. O porque esta em ExportPreview.tsx;
+ * `align-items: end` porque um icone pequeno no topo parece flutuar. */
+.ic-export-preview-ramp {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
+  align-items: end;
+  justify-items: center;
 }
 .ic-export-preview-cell {
   margin: 0;
@@ -1720,48 +1730,42 @@ textarea:focus-visible,
   gap: 6px;
   justify-items: center;
 }
+/* O gradiente e o split claro/escuro; a imagem cobre os dois lados, e por isso que cabe
+ * UM contorno de mascara. */
 .ic-export-preview-frame {
-  width: 100%;
-  border: 1px solid var(--ic-border-soft);
-  border-radius: 10px;
+  position: relative;
+  display: grid;
   overflow: hidden;
-  display: grid;
+  background: linear-gradient(#ffffff 0 50%, #101114 50% 100%);
 }
-/* Two backgrounds per size: the same file is judged on both, which is where a
-   transparent or low-contrast icon gives itself away. */
-.ic-export-preview-bg {
-  display: grid;
-  place-items: center;
-  padding: 10px 6px;
-  min-height: 72px;
-}
-.ic-export-preview-bg.is-light { background: #ffffff; }
-.ic-export-preview-bg.is-dark { background: #101114; }
-.ic-export-preview-bg img {
+.ic-export-preview-frame img {
   display: block;
-  image-rendering: auto;
+  width: 100%;
+  height: 100%;
+}
+/* `box-shadow`, e nao `border`: a borda encolheria a imagem 1px de cada lado, e quem julga "a arte tocou a borda" nao pode ter a borda mexendo no desenho. */
+.ic-export-preview-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--ic-border-strong);
 }
 .ic-export-preview-cell figcaption {
   font-size: 11px;
-  color: var(--ic-text-faint);
+  color: var(--ic-text-muted);
+  text-align: center;
 }
 .ic-export-preview-pending,
 .ic-export-preview-empty {
   font-size: 12px;
   color: var(--ic-text-faint);
 }
-.ic-export-preview-warn {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--ic-text-muted);
-  border-left: 2px solid var(--ic-warning);
-  padding: 6px 0 6px 10px;
-}
-.ic-export-preview-warn strong { color: var(--ic-text); }
+.ic-export-preview-warn,
 .ic-export-preview-note {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--ic-text-faint);
+  margin: 0;;
+  font-size: 12px;;
+  line-height: 1.45;;
+  color: var(--ic-text-muted);;
+  border-left: 2px solid var(--ic-warning);;
+  padding: 6px 0 6px 10px;;
 }

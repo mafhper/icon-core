@@ -52,6 +52,62 @@ export interface SaveOptions {
   budget?: number;
 }
 
+/**
+ * Nome de arquivo derivado do nome do projeto.
+ *
+ * Exportado porque o nome aparece em **três** lugares — o download, o `<input>` de
+ * abertura e o rótulo do item no menu — e divergir entre eles produz o Sintoma 2 do
+ * `IC-N4` (uma verdade asserted num lugar e falsa em outro).
+ */
+export const projectFileName = (name: string): string =>
+  `${name.toLowerCase().replace(/\s+/g, '-')}.iconcore.json`;
+
+export type DownloadOutcome =
+  /** The browser accepted the download. The dirty flag may be cleared. */
+  | { kind: 'downloaded'; fileName: string }
+  /** Nothing was handed over; **the project is still unsaved**. */
+  | { kind: 'skipped'; reason: 'no-project' | 'no-document' };
+
+/**
+ * "Salvar" como o app consegue fazer hoje: **baixar o `.json`**.
+ *
+ * ## Por que isto mora aqui, e não no botão
+ *
+ * Estava **duplicado**: 13 linhas em `Topbar.tsx` e as mesmas 13 em
+ * `useKeyboardShortcuts.ts`. Duas cópias significam dois lugares para um bug aparecer,
+ * e o bug apareceu nos dois — o `SET_DIRTY(false)` rodava mesmo quando não havia projeto
+ * para baixar, e o editor marcava "salvo" sem ter salvo nada.
+ *
+ * ## Por que ainda é um download, e não "salvar no lugar"
+ *
+ * Porque `showDirectoryPicker` não está implementado — é o `D1b` do `IC63`, e ele
+ * **exige gesto do usuário** e não é automatizável. Quando o `M1` do `IC65` (ou o
+ * `D1b`) entrar, o `downloadProject` vira o **fallback** e o handle de pasta assume.
+ * Por isso o retorno distingue `downloaded` de `skipped`: só o primeiro autoriza
+ * limpar o dirty.
+ *
+ * ## `revokeObjectURL` imediato, e por que ainda funciona
+ *
+ * Revogar no mesmo tick jáCancelled o download em Firefox antes. O `setTimeout`
+ * adia o suficiente para o fetch do blob ter começado, e revoke de objeto já
+ * retrieved é seguro. Este é o mesmo bug que o ADR-017 do outro lado já pagou.
+ */
+export const downloadProject = (
+  project: { metadata: { name: string } } | null | undefined,
+  doc: Document = document
+): DownloadOutcome => {
+  if (!project) return { kind: 'skipped', reason: 'no-project' };
+  const fileName = projectFileName(project.metadata.name);
+  const json = JSON.stringify(project, null, 2);
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  const anchor = doc.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  return { kind: 'downloaded', fileName };
+};
+
 export const saveProject = (
   store: Pick<Storage, 'setItem'>,
   key: string,

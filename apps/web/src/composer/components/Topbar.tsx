@@ -1,51 +1,37 @@
-import { Download, FolderOpen, Info, Save, Search } from 'lucide-react';
+import { Info, Search } from 'lucide-react';
+import { ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useState } from 'react';
-import { Button, ButtonGroup, IconButton, ToolbarDivider, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
-import { useToast } from '../toast/ToastContext';
-import { parseProjectFile } from '../utils/projectGuard';
 import { openCommandPalette } from '../utils/commandPalette';
 import { modKey } from '../utils/platform';
 import { AnimatedIconCoreLogo } from '../../app/AnimatedIconCoreLogo';
 import { AboutModal } from './AboutModal';
+import { AppMenu } from './AppMenu';
+
+/**
+ * Faixa superior: logo, menu de aplicação, paleta de comandos, About.
+ *
+ * ## O título **saiu** daqui
+ *
+ * O nome do projeto vivia ao lado do logo, e o dono pediu para movê-lo: ele cresce, e
+ * um nome comprido empurrava o menu para a direita — deslocando tudo a cada digitação.
+ * Agora ele está no painel esquerdo, acima de Layers, onde tem largura inteira e não
+ * disputa espaço com nada.
+ *
+ * O logo continua sendo o atalho para Workspaces. Só o **título** saiu.
+ *
+ * ## "Save" e "Export" também saíram
+ *
+ * Os dois foram para o menu de aplicação (`AppMenu`), e as duas cópias do download
+ * — uma aqui, outra em `useKeyboardShortcuts` — foram para `downloadProject`. Um item
+ * de menu com atalho no rótulo é descobrível; um ícone solto na barra não é.
+ *
+ * O que fica aqui é o que **não** é ação de arquivo: a paleta de comandos e o About.
+ */
 
 export const Topbar = () => {
-  const { state, dispatch, navigate } = useComposer();
-  const toast = useToast();
+  const { navigate, saveProject, saveProjectAs, openProjectFile, fileHandle } = useComposer();
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const projectName = state.project?.metadata.name ?? 'Icon Core';
-
-  const handleSave = () => {
-    if (!state.project) return;
-    const json = JSON.stringify(state.project, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${state.project.metadata.name.toLowerCase().replace(/\s+/g, '-')}.iconcore.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    dispatch({ type: 'SET_DIRTY', payload: false });
-    toast.success('Project saved');
-  };
-
-  const handleOpen = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.iconcore.json,.json';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const project = parseProjectFile(await file.text());
-      if (!project) {
-        toast.error(`"${file.name}" is not a valid Icon Core project file.`);
-        return;
-      }
-      dispatch({ type: 'LOAD_PROJECT', payload: project });
-      toast.success(`Opened ${project.metadata.name}`);
-    };
-    input.click();
-  };
 
   return (
     <header className="sticky top-0 z-20 flex-none border-b border-ic-border bg-ic-bg/88 backdrop-blur-[18px]">
@@ -53,41 +39,24 @@ export const Topbar = () => {
         <div className="inline-flex min-w-0 items-center gap-2.5">
           <button
             type="button"
-            className="flex min-w-0 cursor-pointer items-center gap-2.5 rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-left text-inherit hover:bg-ic-elevated"
+            className="flex shrink-0 cursor-pointer items-center rounded-[9px] border-0 bg-transparent px-1.5 py-1 text-inherit hover:bg-ic-elevated"
             onClick={() => navigate('workspaces')}
             title="Home — start or open a project"
-            aria-label={state.isDirty ? `${projectName}, unsaved changes` : projectName}
+            aria-label="Go to workspaces"
           >
-            <AnimatedIconCoreLogo className="block h-[22px] w-[22px] shrink-0" animated={false} />
-            <span className="truncate text-[0.9rem] font-semibold tracking-tight text-ic-text">
-              {projectName}
-            </span>
-            {/* Decorative: the dirty state rides in the button's accessible name
-                (a label on a bare span is ignored by assistive tech). */}
-            {state.isDirty && (
-              <span aria-hidden="true" title="Unsaved changes" className="h-[7px] w-[7px] shrink-0 rounded-full bg-ic-gold" />
-            )}
+            <AnimatedIconCoreLogo className="block h-[22px] w-[22px]" animated={false} />
           </button>
+
+          <AppMenu
+            onOpenProject={() => void openProjectFile()}
+            onAbout={() => setIsAboutOpen(true)}
+            onSave={saveProject}
+            onSaveAs={saveProjectAs}
+            canSaveInPlace={fileHandle != null}
+          />
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-2">
-          <ButtonGroup label="Project file">
-            <Tooltip content="Open project…">
-              <IconButton icon={<FolderOpen size={15} />} aria-label="Open project" onClick={handleOpen} />
-            </Tooltip>
-            <Tooltip content="Save project">
-              <IconButton
-                icon={<Save size={15} />}
-                aria-label="Save project"
-                onClick={handleSave}
-                disabled={!state.project}
-                title="Save project"
-              />
-            </Tooltip>
-          </ButtonGroup>
-
-          <ToolbarDivider />
-
           {/* Discoverability for the keyboard-first palette: the only visible
               entry point (Ctrl/Cmd+K still works). */}
           <ButtonGroup label="Commands">
@@ -108,20 +77,6 @@ export const Topbar = () => {
               aria-label="About Icon Core"
               onClick={() => setIsAboutOpen(true)}
             />
-          </Tooltip>
-
-          <ToolbarDivider />
-
-          <Tooltip content="Export icon pack">
-            <Button
-              variant="secondary"
-              iconLeft={<Download size={15} />}
-              onClick={() => navigate('export-utilities')}
-              disabled={!state.project}
-              aria-label="Export icon pack"
-            >
-              Export
-            </Button>
           </Tooltip>
         </div>
       </div>

@@ -2,8 +2,19 @@ import { useMemo, useState } from 'react';
 import { Eraser, Ratio } from 'lucide-react';
 import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
 import { defaultMaskRadius } from '@iconcore/shared';
-import { Button, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
+import { RADIUS_MARKS, radiusMarkValue } from '../utils/radiusMarks';
+import { resolveWorkAreaColor } from '../utils/workArea';
+import { MAX_DIVISIONS, MIN_DIVISIONS } from '../utils/gridConfig';
+import {
+  KEYLINE_PART_LABELS,
+  KEYLINE_STANDARDS,
+  availableParts,
+  type KeylineStandard
+} from '../utils/keylineConfig';
 import { useComposer } from '../ComposerContext';
+import { FontPicker } from './FontPicker';
+import { DEFAULT_FONT_STACK } from '@iconcore/renderer';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
 import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
@@ -15,12 +26,6 @@ import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
 const shapeKinds: ShapeKind[] = ['circle', 'rectangle', 'rounded-rectangle', 'squircle', 'triangle', 'line', 'star'];
-
-const BACKDROP_OPTIONS = [
-  { value: 'dots', label: 'Dots' },
-  { value: 'grid', label: 'Grid' },
-  { value: 'plain', label: 'Plain' }
-] as const;
 
 /**
  * Alinhamento do texto, em rótulos que dizem o que cada botão faz.
@@ -106,9 +111,6 @@ export const LayerInspector = () => {
             <h2>Background</h2>
           </div>
         </div>
-        <p className="ic-variant-scope-note">
-          The <strong>Background</strong> layer is the handle of the exported image background. The editor backdrop is a separate setting (Work area).
-        </p>
         <div className="ic-field-stack">
           <BackgroundFillSection
             background={state.project.canvas.background}
@@ -121,6 +123,59 @@ export const LayerInspector = () => {
   }
 
   if (!layer || !baseLayer) {
+    const size = state.project.canvas.size;
+    /**
+     * A cor **calculada** de `--ic-bg`, para a amostra do `ColorField`.
+     *
+     * Ler o token e nao usar um hex fixo porque a amostra tem de ser a cor que a
+     * bancada esta de fato: um valor fixo mentiria no outro tema. E `try/catch`
+     * porque `getComputedStyle` pode lancar num iframe sem origem — sem isto o
+     * inspetor inteiro nao renderiza por causa de uma amostra.
+     */
+    const themeBg = (() => {
+      try {
+        return getComputedStyle(document.documentElement).getPropertyValue('--ic-bg').trim();
+      } catch {
+        return '';
+      }
+    })();
+    const raioMaximo = Math.round(size / 2);
+    const raioAtual = Math.round(
+      state.project.canvas.maskRadius ?? defaultMaskRadius(state.maskShape, size)
+    );
+    /**
+     * As marcas do slider, e o mapa que devolve a **forma** de uma marca.
+     *
+     * O `Slider` é domain-free — `check-ui-boundary` cobra isso, e com razão: ele não
+     * pode saber o que é `maskShape`. Então o kit devolve a marca e o app traduz. A
+     * tradução é por `description`, e ela só é segura porque `RADIUS_MARKS` tem
+     * descrições **unicas** — o que um teste garante, porque um `Map` com chave
+     * duplicada devolveria a forma errada em silêncio.
+     */
+    const marcasRaio = RADIUS_MARKS.map((m) => ({
+      px: radiusMarkValue(m.shape, size, raioMaximo),
+      label: m.label,
+      description: m.description
+    }));
+    const formaPor = new Map(RADIUS_MARKS.map((m) => [m.description, m.shape]));
+
+    /**
+     * As partes de keyline que o **documento** sustenta.
+     *
+     * A `safe-area` depende de `canvas.safeArea` existir. Sem ele, o tracejado seria
+     * uma caixa inventada no lugar onde a plataforma recorta, e a pessoa ajustaria a
+     * arte a uma margem que não existe - o switch liga, a guia aparece, e é mentira.
+     *
+     * A plataforma entra aqui pelo mesmo motivo: a zona so existe onde ha **numero
+     * medido**, e hoje o unico e o Android (66/108). Sem o segundo argumento, o switch da
+     * zona aparecia no iOS ligando uma caixa de 2/3 que nao e de ninguem — que e como o
+     * dono chegou a concluir que os presets eram iguais.
+     */
+    const partesDisponiveis = availableParts(
+      Boolean(state.project.canvas.safeArea),
+      state.keylineStandard
+    );
+
     return (
       <aside className="ic-inspector">
         <div className="ic-inspector-head">
@@ -129,25 +184,32 @@ export const LayerInspector = () => {
             <h2>Canvas</h2>
           </div>
         </div>
-        <p className="ic-variant-scope-note">
-          Select the <strong>Background</strong> layer to edit the image background — or another layer to edit it.
-        </p>
         <div className="ic-field-stack">
           <Section
             title="Work area"
-            hint="Editor backdrop around the icon — never exported, and distinct from the image background."
           >
-            <SegmentedControl
-              aria-label="Work area backdrop"
-              options={BACKDROP_OPTIONS}
-              value={state.editorBackdrop}
-              onChange={(backdrop) => dispatch({ type: 'SET_EDITOR_BACKDROP', payload: backdrop })}
+            <ColorField
+              label="Work area color"
+              value={resolveWorkAreaColor(state.workAreaColor, themeBg)}
+              onChange={(next) =>
+                dispatch({ type: 'SET_WORK_AREA_COLOR', payload: { color: next.color, alpha: next.alpha } })
+              }
             />
+            {state.workAreaColor != null && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="text-[0.7rem] text-ic-text-muted hover:text-ic-accent-text hover:underline"
+                  onClick={() => dispatch({ type: 'SET_WORK_AREA_COLOR', payload: null })}
+                >
+                  Follow the theme
+                </button>
+              </div>
+            )}
           </Section>
 
           <Section
             title="Import margin"
-            hint="Breathing room left around a freshly imported asset, as a share of the canvas. Zero lets the artwork fill it; the margin applies to the next import, not to layers you already have."
           >
             <Slider
               variant="inline"
@@ -164,22 +226,170 @@ export const LayerInspector = () => {
               }
               onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
             />
+            {/*
+                O toggle da visualização, e não a margem do componente.
+                `state.showKeylines` **não** serve aqui: a máscara e uma informação
+                diferente da guia de plataforma, e compartilhar o flag faria o
+                `Cmd/Ctrl+G` na barra de baixo (que é da keyline) apagar a margem.
+            */}
+            <Switch
+              label="Show margin on canvas"
+              checked={state.showMarginOverlay}
+              onChange={() => dispatch({ type: 'TOGGLE_MARGIN_OVERLAY' })}
+            />
+          </Section>
+
+{/*
+              A **configuração** do grid, e não o toggle.
+
+              O toggle continua na barra de ação inferior (`Ctrl/Ctrl+G`), que é onde a
+              pessoa o procura — o dono foi explícito: "a ativacao/ ciclo deles continua
+              como atalho la". O que vem para o Edit Space é só o ajuste, para o grid não
+              ser um botão de liga/desliga sem nenhum ajuste.
+
+              Aparece junto do `Toggle grid` e some com ele desligado, para não oferecer
+              ajuste de algo que não está na tela.
+          */}
+          <Section
+            title="Grid"
+          >
+            <Switch
+              label="Show grid"
+              checked={state.showGrid}
+              onChange={() => dispatch({ type: 'TOGGLE_GRID' })}
+            />
+            {state.showGrid && (
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField
+                  label="Columns"
+                  min={MIN_DIVISIONS}
+                  max={MAX_DIVISIONS}
+                  step={1}
+                  value={state.gridColumns}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'SET_GRID_DIVISIONS',
+                      payload: { columns: Number(event.target.value), rows: state.gridRows }
+                    })
+                  }
+                  onBlur={() => dispatch({ type: 'COMMIT_HISTORY' })}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') dispatch({ type: 'COMMIT_HISTORY' });
+                  }}
+                />
+                <NumberField
+                  label="Rows"
+                  min={MIN_DIVISIONS}
+                  max={MAX_DIVISIONS}
+                  step={1}
+                  value={state.gridRows}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'SET_GRID_DIVISIONS',
+                      payload: { columns: state.gridColumns, rows: Number(event.target.value) }
+                    })
+                  }
+                  onBlur={() => dispatch({ type: 'COMMIT_HISTORY' })}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') dispatch({ type: 'COMMIT_HISTORY' });
+                  }}
+                />
+              </div>
+            )}
+          </Section>
+
+          {/*
+              A **configuração** da keyline. O toggle continua na barra inferior
+              (`Ctrl/Ctrl+K`), que é onde a pessoa o procura — o dono foi explícito:
+              "a ativacao/ ciclo deles continua como atalho la".
+          */}
+          <Section
+            title="Keyline"
+          >
+            <Switch
+              label="Show keyline"
+              checked={state.showKeylines}
+              onChange={() => dispatch({ type: 'TOGGLE_KEYLINES' })}
+            />
+            {state.showKeylines && (
+              <>
+                <Select
+                  label="Platform"
+                  value={state.keylineStandard}
+                  onChange={(event) =>
+                    dispatch({ type: 'SET_KEYLINE_STANDARD', payload: event.target.value as KeylineStandard })
+                  }
+                >
+                  {Object.entries(KEYLINE_STANDARDS).map(([value, info]) => (
+                    <option key={value} value={value}>
+                      {info.label}
+                    </option>
+                  ))}
+                </Select>
+                <div className="grid grid-cols-1 gap-2">
+                  {partesDisponiveis.map((part) => (
+                    <Switch
+                      key={part}
+                      label={KEYLINE_PART_LABELS[part]}
+                      checked={state.keylineParts.has(part)}
+                      onChange={() => dispatch({ type: 'TOGGLE_KEYLINE_PART', payload: part })}
+                    />
+                  ))}
+                </div>
+                {/*
+                    As recomendadas da plataforma, acionadas em um clique. Trocar o tipo
+                    **nao** mexe nas partes (a pessoa escolheu), e este botao existe
+                    para quem quer o conjunto sem ligar cinco switches — que e o uso
+                                    comum depois de escolher a plataforma.
+                */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="text-[0.7rem] text-ic-text-muted hover:text-ic-accent-text hover:underline"
+                    onClick={() => {
+                      for (const part of KEYLINE_STANDARDS[state.keylineStandard].suggestedParts) {
+                        if (!state.keylineParts.has(part)) {
+                          dispatch({ type: 'TOGGLE_KEYLINE_PART', payload: part });
+                        }
+                      }
+                    }}
+                  >
+                    Use {KEYLINE_STANDARDS[state.keylineStandard].label} guides
+                  </button>
+                </div>
+              </>
+            )}
           </Section>
 
           <Section
             title="Frame radius"
-            hint="How much the work area rounds its corners. Applies to the canvas frame and the background — the export stays full bleed, because the platform applies its own mask when it displays the icon."
           >
             <Slider
               variant="inline"
               label="Radius"
               unit="px"
               min="0"
-              max={Math.round(state.project.canvas.size / 2)}
-              value={Math.round(
-                state.project.canvas.maskRadius ??
-                  defaultMaskRadius(state.maskShape, state.project.canvas.size)
-              )}
+              max={raioMaximo}
+              value={raioAtual}
+              marks={marcasRaio}
+              onMark={(marca) => {
+                const forma = formaPor.get(marca.description);
+                if (!forma) return;
+                /**
+                 * A marca muda **a forma**, e zera o raio declarado.
+                 *
+                 * A primeira versao tambem gravava `radius: marca.px`. Foi um e2e que
+                 * pegou o efeito: ao declarar o raio, `maskRadius` deixava de estar
+                 * ausente e passava a ganhar do padrao da forma — entao clicar em
+                 * "Circle" e depois girar o platform toggle **nao mexia em nada**. A
+                 * marca e um atalho para "use a forma desta", e nao para "use este
+                 * numero"; `radius: null` e o que devolve o valor ao contrato de
+                 * "ausente = siga a forma".
+                 */
+                dispatch({ type: 'SET_CANVAS_MASK_RADIUS', payload: { radius: null } });
+                dispatch({ type: 'SET_MASK_SHAPE', payload: forma });
+                dispatch({ type: 'COMMIT_HISTORY' });
+              }}
               onChange={(event) =>
                 dispatch({
                   type: 'SET_CANVAS_MASK_RADIUS',
@@ -265,75 +475,116 @@ export const LayerInspector = () => {
 
       <div className="ic-field-stack">
         {layer.kind === 'text' && (
-          <Section title="Text" hint="On a text layer, content and typography come first.">
+          <Section title="Text">
+            {/**
+             * A ordem é um argumento, não preferência: **fonte, tamanho, estilo, alinhamento**.
+             *
+             * Quem escolhe a fonte só depois descobre o tamanho que preenche o canvas; e o
+             * estilo (negrito, itálico) altera a largura do texto, então vem depois do tamanho
+             * — mexer no peso depois do tamanho muda a quebra, e a pessoa ajusta o tamanho
+             * duas vezes. O alinhamento vem por último porque age sobre o que já está medido.
+             *
+             * A versão anterior punha Size e Weight **antes** da fonte, e o itálico solto no
+             * fim, depois do alinhamento: três controles em ordem que não corresponde a
+             * nenhuma.
+             */}
             <TextField
               label="Text"
               value={layer.text?.content ?? ''}
               onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
             />
+
+            <FontPicker
+              value={layer.text?.fontFamily ?? DEFAULT_FONT_STACK}
+              onChange={(fontFamily) => updateLayer({ text: { ...layer.text, fontFamily } as IconLayer['text'] })}
+            />
+
+            <NumberField
+              label="Size"
+              min="8"
+              value={layer.text?.fontSize ?? 64}
+              onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
+            />
+
+            {/**
+             * Negrito e itálico, lado a lado, como pares.
+             *
+             * O peso saiu de um `NumberField` 100..900 para um switch, e a razão é a Cal Sans
+             * embarca **dois** pesos (400 e 700): oferecer seis que a fonte não tem é deixar
+             * o navegador escolher o mais próximo — um controle que promete precisão que não
+             * existe. O switch mapeia 700 para 400 e vice-versa, que é o que os dois pesos
+             * fazem.
+             *
+             * A perda de capacidade é real e fica registrada: quem precisar de 500 ou 600
+             * precisa de um `Select` de peso **por fonte**, o que exige metadata de peso em
+             * `fonts.ts` e saber os pesos de uma família instalada — que a Local Font Access
+             * API não devolve. Fica para quando alguém precisar num logo.
+             *
+             * Os dois ficam na mesma linha porque são **pares**: as duas coisas que
+             * inclinam ou engrossam o mesmo glifo. O itálico solto no fim do painel, como
+             * estava, não era par de nada.
+             */}
             <div className="grid grid-cols-2 gap-2.5">
-              <NumberField
-                label="Size"
-                min="8"
-                value={layer.text?.fontSize ?? 64}
-                onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
+              <Switch
+                label="Bold"
+                checked={(layer.text?.fontWeight ?? 700) >= 600}
+                onChange={(event) =>
+                  updateLayer({
+                    text: { ...layer.text, fontWeight: event.target.checked ? 700 : 400 } as IconLayer['text']
+                  })
+                }
               />
-              <NumberField
-                label="Weight"
-                min="100"
-                max="900"
-                step="100"
-                value={layer.text?.fontWeight ?? 700}
-                onChange={(event) => updateLayer({ text: { ...layer.text, fontWeight: Number(event.target.value) } as IconLayer['text'] })}
+              <Switch
+                label="Italic"
+                checked={layer.text?.fontStyle === 'italic'}
+                onChange={(event) =>
+                  updateLayer({
+                    text: {
+                      ...layer.text,
+                      fontStyle: event.target.checked ? 'italic' : 'normal'
+                    } as IconLayer['text']
+                  })
+                }
               />
             </div>
 
-            {/*
-              `IC63/2` — itálico e alinhamento.
-
-              A caixa do alinhamento é o **shape da layer** (58% da largura do canvas,
-              `createTextLayer`), não o canvas inteiro: ancorar à esquerda no meio do
-              canvas faria o texto crescer para a direita a partir do centro, que é o
-              oposto de "esquerda". A geometria mora em `textLayout.ts` e os dois
-              pipelines consomem a mesma função.
-
-              O alinhamento vem **primeiro** na UI e não como um campo numérico solto:
-              três botões em texto (`Left / Center / Right`) dizem o que cada um faz, e
-              nenhum número de 0 a 2 seria adivinhável. É a mesma escolha da
-              `VariantBar`, e pela mesma razão — o valor é curto e o nome é o
-              significado.
-
-              Sem CSS novo: o budget de `index.css` tem 5 linhas de folga e a política é
-              que budget não sobe.
-            */}
-            <SegmentedControl
-              aria-label="Text alignment"
-              options={TEXT_ALIGN_OPTIONS}
-              value={layer.text?.textAlign ?? 'center'}
-              onChange={(textAlign) =>
-                updateLayer({ text: { ...layer.text, textAlign } as IconLayer['text'] })
-              }
-            />
-
-            {/*
-              `IC63/2` — o itálico é o único controle de "estilo" que entra aqui.
-
-              `letterSpacing` ficou de fora de propósito: ele exigiria um campo novo no
-              modelo **e** nos dois renderers, e é exatamente o tipo de adição que entra
-              "já que a caixa está aberta" e sai sem medição. Fica para quando alguém
-              precisar dele num logo, e não como Keys.
-            */}
-            <Switch
-              label="Italic"
-              checked={layer.text?.fontStyle === 'italic'}
-              onChange={(event) =>
-                updateLayer({
-                  text: { ...layer.text, fontStyle: event.target.checked ? 'italic' : 'normal' } as IconLayer['text']
-                })
-              }
-            />
+            {/**
+             * O alinhamento com rótulo **visível**.
+             *
+             * O `SegmentedControl` do kit só aceita `aria-label`, então o rótulo visível é um
+             * `span` com as mesmas classes que o `Field` usa no rótulo dele — é o que faz o
+             * texto ter a mesma altura e cor de todos os outros rótulos do painel. Sem ele, a
+             * tela mostrava "Left Center Right" sem dizer do que se tratava.
+             *
+             * Não é um `<label>`: o controle é um grupo de botões, não um elemento rotulável,
+             * e um `<label>` em volta enviaria o clique para o primeiro botão rotulável — o
+             * clique em "esquerda" marcaria "centro".
+             *
+             * A caixa do alinhamento é o **shape da layer** (58% da largura do canvas,
+             * `createTextLayer`), não o canvas inteiro: ancorar à esquerda no meio do canvas
+             * faria o texto crescer para a direita a partir do centro, que é o oposto de
+             * "esquerda". A geometria mora em `textLayout.ts` e os dois pipelines consomem a
+             * mesma função.
+             *
+             * `Left / Center / Right` em texto, e não 0/1/2: o valor é curto e o nome **é** o
+             * significado — a mesma escolha da `VariantBar`.
+             */}
+            <div className="grid gap-1.5">
+              <span className="truncate text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
+                Alignment
+              </span>
+              <SegmentedControl
+                aria-label="Text alignment"
+                options={TEXT_ALIGN_OPTIONS}
+                value={layer.text?.textAlign ?? 'center'}
+                onChange={(textAlign) =>
+                  updateLayer({ text: { ...layer.text, textAlign } as IconLayer['text'] })
+                }
+              />
+            </div>
           </Section>
         )}
+
 
         <Section title="Layer">
           <TextField

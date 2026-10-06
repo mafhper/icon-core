@@ -292,8 +292,11 @@ const SURFACES: Array<{
     name: 'export utilities',
     selector: '.ic-export-view',
     needsProject: true,
+    // Through the **Export menu**: the standalone Export button left the toolbar, so
+    // there is no longer a topbar button to click.
     open: async (page) => {
-      await page.getByRole('button', { name: /export icon pack/i }).click();
+      await page.getByRole('button', { name: 'Export menu' }).click();
+      await page.getByRole('menuitem', { name: /export icon pack/i }).click();
       await expect(page.locator('.ic-export-view')).toBeVisible();
     }
   }
@@ -478,8 +481,11 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
   await expect(page.locator('.ic-variant-panel')).toBeVisible();
   await audit('.ic-variant-panel', 'variant panel');
 
-  // Export Utilities (the plan editor).
-  await page.getByRole('button', { name: /export icon pack/i }).click();
+  // Export Utilities (the plan editor). Reached through the **Export menu**, since the
+  // standalone Export button left the toolbar: this is the regression lock for that.
+  await page.getByRole('button', { name: 'Export menu' }).click();
+  await audit('body', 'export menu open');
+  await page.getByRole('menuitem', { name: /export icon pack/i }).click();
   await expect(page.getByRole('heading', { name: 'Export', exact: true })).toBeVisible();
   await audit('body', 'export');
 

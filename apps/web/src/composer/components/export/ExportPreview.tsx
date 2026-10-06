@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { IconCoreProject, IconVariant } from '@iconcore/shared';
+import { defaultMaskRadius } from '@iconcore/shared';
+import type { CanvasMaskShape, IconCoreProject, IconVariant } from '@iconcore/shared';
 import { renderProject, createCanvasBackend } from '@iconcore/renderer';
 import { auditProject } from '@iconcore/validator';
 
@@ -17,8 +18,31 @@ import { auditProject } from '@iconcore/validator';
  * backend, object URLs, and a hard revoke on unmount.
  */
 
-/** Sizes the presets actually ship, so the preview is not decorative. */
-const SIZES = [32, 180, 512] as const;
+/**
+ * Os tamanhos que os presets entregam, e o que cada um ocupa na coluna.
+ *
+ * `displaySize` **nao e proporcional** ao `size`, e isso e uma decisao, nao um
+ * atalho. Proporcional nao caberia: a coluna tem cerca de 230px de largura, e
+ * 512 + 180 + 32 dariam 724px de altura. Entao o 32 fica em 32px — 1:1, que e o que a
+ * pessoa precisa julgar — e os dois maiores sao ampliados para caber.
+ *
+ * A versao anterior era `Math.min(size, 96)`: 180 e 512 davam 96 e 96, duas colunas
+ * identicas lado a lado, sem como comparar. O cap de 96 nao tinha relacao com o tamanho,
+ * entao nenhuma escolha de CSS resolvia.
+ */
+interface PreviewSize {
+  size: number;
+  displaySize: number;
+}
+
+const SIZES: readonly PreviewSize[] = [
+  { size: 512, displaySize: 160 },
+  { size: 180, displaySize: 96 },
+  { size: 32, displaySize: 32 }
+];
+
+/** O menor render: e onde a arte que parou curto fica mais obvio. */
+const SMALLEST = SIZES[SIZES.length - 1].size;
 
 interface Thumb {
   url: string;
@@ -44,7 +68,7 @@ const useExportThumbs = (
 
     const run = async () => {
       const entries: Array<[number, Thumb]> = [];
-      for (const size of SIZES) {
+      for (const { size } of SIZES) {
         try {
           const blob = await renderProject(project, variant, { width: size, height: size }, backend);
           const bitmap = await createImageBitmap(blob);
@@ -144,6 +168,14 @@ const worstMarginPct = (fill: Thumb['fill'], size: number): number => {
 interface ExportPreviewProps {
   project: IconCoreProject;
   variant: IconVariant;
+  /**
+   * A mascara que o export vai recortar.
+   *
+   * Precisa vir de fora porque este painel tambem mostra **o recorte**: sem ela, a pessoa
+   * julga um quadrado e exporta um icone cortado. Antes o componente so tinha
+   * `project`, `variant` e `enabled` — nenhuma informacao sobre a forma final.
+   */
+  maskShape: CanvasMaskShape;
   /** Pause rendering (e.g. while the export is running). */
   enabled?: boolean;
 }
@@ -152,13 +184,13 @@ interface ExportPreviewProps {
  * Preview panel for the export screen: the icon as it will be written, on a
  * light and a dark background, with the largest background band called out.
  */
-export const ExportPreview = ({ project, variant, enabled = true }: ExportPreviewProps) => {
+export const ExportPreview = ({ project, variant, maskShape, enabled = true }: ExportPreviewProps) => {
   const thumbs = useExportThumbs(project, variant, enabled);
   const audit = useMemo(() => auditProject(project), [project]);
 
   // The smallest render is the one that matters for legibility, and it is also
   // the one where an inset artwork is most obvious.
-  const smallest = SIZES[0];
+  const smallest = SMALLEST;
   const thumb = thumbs.get(smallest);
   const marginPct = thumb ? worstMarginPct(thumb.fill, smallest) : 0;
   const inset = marginPct >= 10;
@@ -174,31 +206,78 @@ export const ExportPreview = ({ project, variant, enabled = true }: ExportPrevie
         <p className="ic-export-preview-empty">This project has no visible layer yet.</p>
       ) : (
         <>
-          <div className="ic-export-preview-grid">
-            {SIZES.map((size) => {
+          {/**
+           * Uma coluna, do maior para o menor.
+           *
+           * O size ramp se le de cima para baixo: do confortavel ao apertado. Na grade
+           * horizontal de antes o 32 e o 512 ficavam lado a lado e nenhum era o ponto de
+           * partida.
+           *
+           * `maskRadiusPx` e `defaultMaskRadius` com o tamanho **de exibicao**, nao com o
+           * `size`: o contorno precisa seguir a forma do que esta na tela. Com o raio do
+           * 512 num thumb de 160px, o recorte pareceria maior do que e.
+           */}
+          <ol className="ic-export-preview-ramp">
+            {SIZES.map(({ size, displaySize }) => {
               const t = thumbs.get(size);
-              const px = Math.min(size, 96);
+              const maskRadiusPx = defaultMaskRadius(maskShape, displaySize);
               return (
-                <figure key={size} className="ic-export-preview-cell">
-                  <div className="ic-export-preview-frame">
-                    {t ? (
-                      <>
-                        <div className="ic-export-preview-bg is-light">
-                          <img src={t.url} alt={`${size}px on light`} style={{ width: px, height: px }} />
-                        </div>
-                        <div className="ic-export-preview-bg is-dark">
-                          <img src={t.url} alt={`${size}px on dark`} style={{ width: px, height: px }} />
-                        </div>
-                      </>
-                    ) : (
-                      <span className="ic-export-preview-pending">{size}px</span>
-                    )}
-                  </div>
-                  <figcaption>{size}px</figcaption>
-                </figure>
+                <li key={size} className="ic-export-preview-row">
+                  <figure className="ic-export-preview-cell">
+                    {/**
+                     * O par claro/escuro dentro de **um** contorno: e o mesmo arquivo sendo
+                     * julgado nos dois fundos, e o recorte da plataforma em volta dos dois.
+                     * Um contorno por fundo mostraria um icone que nao existe — dois
+                     * recortes sobrepostos.
+                     */}
+                    <div
+                      className="ic-export-preview-frame"
+                      data-mask={maskShape}
+                      style={{
+                        width: displaySize,
+                        height: displaySize,
+                        borderRadius: maskRadiusPx
+                      }}
+                    >
+                      {t ? (
+                        /**
+                         * O mesmo arquivo nos **dois** fundos, num quadrado so: metade clara
+                         * em cima, metade escura embaixo, e a imagem por cima.
+                         *
+                         * Antes eram dois quadrados empilhados, cada um com o seu fundo — e
+                         * nao cabia um unico contorno de mascara sobre os dois. Split e o
+                         * que permite um recorte, que e o ponto.
+                         *
+                         * O `alt` cita os dois fundos, porque e o que se ve.
+                         */
+                        <img
+                          src={t.url}
+                          alt={`${size}px on light and dark backgrounds`}
+                        />
+                      ) : (
+                        <span className="ic-export-preview-pending">{size}px</span>
+                      )}
+                    </div>
+
+                    {/**
+                     * O contorno tracejado, por cima. Um `box-shadow` com spread em vez de
+                     * `border`: a borda encolheria a imagem em 1px de cada lado, e quem
+                     * julga "a arte tocou a borda" nao pode ter a borda mexendo no desenho.
+                     */}
+                    <span
+                      className="ic-export-preview-mask"
+                      style={{ borderRadius: maskRadiusPx }}
+                      aria-hidden="true"
+                    />
+
+                    <figcaption>
+                      <strong>{size}px</strong>
+                    </figcaption>
+                  </figure>
+                </li>
               );
             })}
-          </div>
+          </ol>
 
           {inset && (
             <p className="ic-export-preview-warn" role="status">
