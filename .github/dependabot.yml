@@ -1,5 +1,12 @@
 version: 2
 
+# Agrupamento: minor + patch vem num PR só; **major continua separado**, porque
+# major é revisão humana e não deve viajar junto com o que não é.
+#
+# O motivo é medido, não estético: sem grupo, o run de 2026-10-06 abriu **nove**
+# PRs de uma vez (quatro deles de minor que viraram um PR combinado à mão), e o
+# `github-actions` abria **um PR por linha de `uses:`**. Agrupar é o que torna a
+# triagem semanal barata — e é o que permite manter o auto-merge desligado.
 updates:
   - package-ecosystem: "npm"
     directory: "/"
@@ -14,6 +21,13 @@ updates:
       semver-minor-days: 7
       semver-major-days: 30
     open-pull-requests-limit: 10
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "cargo"
     directory: "/apps/desktop/src-tauri"
@@ -25,6 +39,15 @@ updates:
     cooldown:
       default-days: 5
     open-pull-requests-limit: 10
+    groups:
+      # O bump do `tauri` arrasta a família (tauri-build, tauri-utils, wry, tao).
+      # Agrupado, isso vira um PR; solto, cada um pede o mesmo build de Rust.
+      cargo-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -36,11 +59,20 @@ updates:
     cooldown:
       default-days: 5
     open-pull-requests-limit: 10
-    # init e analyze precisam andar juntos: o CodeQL recusa quando um esta em
-    # 4.38.0 e o outro em 4.38.2 ("configuration file for version X, but running
-    # version Y"). Sem o grupo o Dependabot abre um PR por linha de `uses:` e
-    # cada um sozinho reprova o check Analyze.
     groups:
+      # Este grupo vem PRIMEIRO de propósito, e a ordem importa: o Dependabot
+      # aplica o primeiro grupo que casa. Sem `update-types`, ele captura o
+      # codeql-action em qualquer nível — inclusive major —, que é o que
+      # precisamos: init e analyze têm de andar juntos, porque o CodeQL recusa
+      # quando um está em 4.38.0 e o outro em 4.38.2 ("configuration file for
+      # version X, but running version Y"). Sem o grupo o Dependabot abre um PR
+      # por linha de `uses:` e cada um sozinho reprova o check `Analyze`.
       codeql-action:
         patterns:
           - "github/codeql-action/*"
+      github-actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
