@@ -53,6 +53,13 @@ jobs:
       - name: Project download guard
         run: node scripts/check-project-download.mjs
 
+      # Sete arquivos carregam a versao do release. Se um ficar para tras, nada acusa:
+      # o `npm ci` passa (a versao do lockfile e metadado, nao contrato), o build passa
+      # e a suite passa. Aconteceu em 2026-10-06 — o package-lock.json dizia 1.6.0
+      # depois do bump para 1.7.0 (IC-N44).
+      - name: Version sync guard
+        run: node scripts/check-version-sync.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -134,6 +141,37 @@ jobs:
 
       - name: Build desktop (debug)
         run: npm run desktop:smoke
+
+      # O build acima regenera `gen/schemas/` a partir do ACL do tauri **compilado**.
+      # Aqueles três JSON são rastreados, e nada comparava os dois até agora (IC-N45):
+      # um bump de tauri que mude o ACL deixa os schemas descrevendo a versão antiga
+      # enquanto o binário aceita os comandos da nova. Aconteceu no PR #231 — o tauri
+      # 2.12.1 acrescentou `core:app:exit` e `core:window:set_fullscreen_on_monitor`,
+      # e os PRs do Dependabot não podiam trazer a regeneração porque ele não builda.
+      #
+      # Compara **conteúdo**, ignorando `CR` no fim de linha: o Rust escreve `\n`
+      # sempre e o checkout no Windows entrega CRLF, então sem isso o step acusaria
+      # diferença de fim de linha como se fosse schema velho — foi o que aconteceu na
+      # primeira execução dele (o `.gitattributes` corrige a origem; isto cobre o resto).
+      - name: Schemas do Tauri em dia
+        shell: bash
+        run: |
+          falhou=""
+          if ! git diff --ignore-cr-at-eol --quiet -- apps/desktop/src-tauri/gen/schemas/; then
+            falhou="conteudo"
+          fi
+          novos="$(git ls-files --others --exclude-standard -- apps/desktop/src-tauri/gen/schemas/)"
+
+          if [ -n "$falhou" ] || [ -n "$novos" ]; then
+            echo "::error::gen/schemas/ mudou depois do build. Rode 'npm run desktop:smoke' e commite os schemas regerados junto com o bump do tauri."
+            git diff --ignore-cr-at-eol -- apps/desktop/src-tauri/gen/schemas/
+            if [ -n "$novos" ]; then
+              echo "arquivo(s) novo(s) sem commit:"
+              printf '%s\n' "$novos"
+            fi
+            exit 1
+          fi
+          echo "gen/schemas/ em dia com o tauri compilado."
 
   dependency-review:
     if: github.event_name == 'pull_request'
