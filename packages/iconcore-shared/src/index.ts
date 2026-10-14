@@ -442,6 +442,21 @@ export type ExportDestination = 'zip' | 'folder' | 'files';
 /** Opacity requirement of a raster artifact (e.g. PWA maskable requires `opaque`). */
 export type ExportBackground = 'transparent' | 'opaque';
 
+/**
+ * Which parts of the document an artifact paints.
+ *
+ * `'all'` (the default, and what every artifact produced before this existed) is the
+ * whole composition: the canvas background plus every layer.
+ *
+ * `'none'` paints the canvas background **only**. It exists for the Android adaptive
+ * icon's background layer, which is not a picture of the icon but the fill the launcher
+ * scales and masks: the system draws `background` across the full 108dp and **enlarges it
+ * 1.5×**, then draws `foreground` on top. An artifact that carried the artwork would show
+ * the mark twice — the background copy stretched and offset — which is the defect that
+ * made this field necessary.
+ */
+export type ExportArtifactLayers = 'all' | 'none';
+
 /** Platform a preset targets. */
 export type ExportPlatform = 'windows' | 'macos' | 'linux' | 'web' | 'android';
 
@@ -470,6 +485,14 @@ export interface ExportArtifactSpec {
   /** 0..1, applied to lossy formats (webp/jpeg) only. */
   quality?: number;
   background?: ExportBackground;
+  /**
+   * Whether the artifact paints the document's **layers** (the artwork) or only the canvas
+   * background. See {@link ExportArtifactLayers}.
+   *
+   * **Additive and optional:** absent means `'all'`, so an existing plan resolves exactly
+   * as it always did.
+   */
+  layers?: ExportArtifactLayers;
   /**
    * The fraction of the canvas the **artwork** occupies, centred. The rest is padding the
    * platform uses for its own framing. Absent means full bleed, which is what every

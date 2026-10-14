@@ -1,4 +1,4 @@
-import type { BlendMode, CanvasMaskShape, Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
+import type { BlendMode, CanvasMaskShape, Dimensions, ExportArtifactLayers, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
 import { resolveMaskRadius, resolveSize } from '@iconcore/shared';
 import { toRgba } from './color';
 import { escapeXml } from './escapeXml';
@@ -282,6 +282,12 @@ export interface RenderSvgOptions {
    */
   mask?: CanvasMaskShape | 'none';
   /**
+   * Whether the document's layers are emitted. Defaults to `'all'`; `'none'` emits the
+   * background rect only, mirroring the raster path (the Android adaptive background is
+   * the reason the option exists — see `RenderOptions.layers`).
+   */
+  layers?: ExportArtifactLayers;
+  /**
    * Natural dimensions per layer id for raster (non-SVG) image layers, so they
    * can be embedded as `data:` URIs. Without an entry the image
    * layer is omitted from the SVG — and a warning is reported unless
@@ -355,8 +361,9 @@ export const renderToSvgWithOptions = (
 
   // --- layers -------------------------------------------------------------
   // The background handle is a UI affordance for `canvas.background`; it never
-  // produces pixels.
-  const visible = project.layers
+  // produces pixels. `layers: 'none'` drops the artwork entirely, mirroring the
+  // raster compositor (the Android adaptive background layer).
+  const visible = (options.layers === 'none' ? [] : project.layers)
     .map((layer) => resolveLayer(layer, variant))
     .filter((l) => l.visible && l.role !== 'background')
     .sort((a, b) => a.zIndex - b.zIndex);

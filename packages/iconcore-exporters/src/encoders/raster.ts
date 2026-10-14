@@ -39,11 +39,15 @@ export const encodeRaster = async (
 
   // Transparent unless the artifact *asks* for opaque (a PWA maskable tile) or
   // the format cannot carry alpha at all. See `backgroundModeFor`.
+  // `layers` is the artifact's: the Android adaptive background is the fill alone,
+  // never the artwork (the launcher scales that layer 1.5× and the mark would show
+  // twice). Everything else composes the document as it always did.
   const options: RenderOptions = {
     format: artifact.format,
     quality: artifact.quality,
     background: backgroundModeFor(artifact),
-    mask: maskModeFor(artifact, project)
+    mask: maskModeFor(artifact, project),
+    layers: artifact.layers
   };
   const blob = await renderProject(project, variant, target, backend, options);
 

@@ -52,7 +52,10 @@ export const renderProject = async (
   // once — avoids double lossy re-encoding when a format like webp/jpeg is
   // combined with a downscale.
   const composed = await composeLayers(
-    project.layers,
+    // `layers: 'none'` paints only the background fill. The Android adaptive
+    // background layer is exactly that: a fill the launcher scales and masks, and
+    // the artwork would otherwise be drawn a second time inside it.
+    options.layers === 'none' ? [] : project.layers,
     original,
     background,
     variant,
