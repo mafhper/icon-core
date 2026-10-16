@@ -2,6 +2,8 @@ import type { CanvasMaskShape, Dimensions, Fill, IconLayer, IconVariant, ShapeKi
 import { imageFilterToCss, resolveMaskRadius } from '@iconcore/shared';
 import type { RenderBackend, ResolvedLayer } from './types';
 import { traceSuperellipse } from './geometry/superellipse';
+import { traceSmoothRect } from './geometry/smoothCorners';
+import { toRgba } from './color';
 import { layerBaseRect } from './geometry';
 import { clipSquircle } from './masks/applyMask';
 import { applySvgPaintOverrides } from './svgPaint';
@@ -32,19 +34,29 @@ const resolveLayerForVariant = (
   };
 };
 
-const traceShapePath = (
+const addShapeSubpath = (
   native: CanvasRenderingContext2D,
   shape: NonNullable<IconLayer['source']['shape']>,
   x: number,
-  y: number
+  y: number,
+  /** Only the line shape reads this: its body's end cap. */
+  lineCap: 'butt' | 'round' | 'square' = 'round'
 ): void => {
   const { width, height } = shape;
-  native.beginPath();
 
   if (shape.kind === 'circle') {
     native.arc(x + width / 2, y + height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
   } else if (shape.kind === 'rounded-rectangle') {
-    native.roundRect(x, y, width, height, shape.cornerRadius ?? Math.min(width, height) * 0.18);
+    const radius = shape.cornerRadius ?? Math.min(width, height) * 0.18;
+    const smoothing = shape.cornerSmoothing ?? 0;
+    if (smoothing > 0) {
+      // The second corner level: radius + smoothing, the same construction the
+      // SVG `d` uses (geometry/smoothCorners) — one curve, two pipelines.
+      traceSmoothRect(native, x, y, width, height, radius, smoothing);
+      native.closePath();
+      return;
+    }
+    native.roundRect(x, y, width, height, radius);
   } else if (shape.kind === 'squircle') {
     // The one definition, shared with the SVG pipeline and with the mask in
     // `backends/canvas.ts`. This branch used to use `min(width, height) * 0.22`
@@ -58,7 +70,17 @@ const traceShapePath = (
     native.lineTo(x + width, y + height);
     native.lineTo(x, y + height);
   } else if (shape.kind === 'line') {
-    native.roundRect(x, y, width, height, Math.min(width, height) / 2);
+    // The line's body is a closed capsule whose end shape IS the cap control:
+    // round (the capsule it always was), butt (plain box) or square (the box
+    // extended by half the thickness on each end). Closed on purpose — it keeps
+    // gradient fills and the worker backend working exactly like every shape.
+    if (lineCap === 'butt') {
+      native.rect(x, y, width, height);
+    } else if (lineCap === 'square') {
+      native.rect(x - height / 2, y, width + height, height);
+    } else {
+      native.roundRect(x, y, width, height, Math.min(width, height) / 2);
+    }
   } else if (shape.kind === 'star') {
     const cx = x + width / 2;
     const cy = y + height / 2;
@@ -83,6 +105,17 @@ const traceShapePath = (
   }
 
   native.closePath();
+};
+
+const traceShapePath = (
+  native: CanvasRenderingContext2D,
+  shape: NonNullable<IconLayer['source']['shape']>,
+  x: number,
+  y: number,
+  lineCap: 'butt' | 'round' | 'square' = 'round'
+): void => {
+  native.beginPath();
+  addShapeSubpath(native, shape, x, y, lineCap);
 };
 
 export const composeLayers = async (
@@ -155,12 +188,23 @@ export const composeLayers = async (
       backend.applyOpacity(ctx, layer.resolvedOpacity);
     }
 
-    const shadow = layer.resolvedEffects?.find((effect) => effect.kind === 'depth-shadow' && effect.enabled);
-    if (shadow) {
-      ctxAny.shadowOffsetX = Number(shadow.params.x ?? 0);
-      ctxAny.shadowOffsetY = Number(shadow.params.y ?? 14);
-      ctxAny.shadowBlur = Number(shadow.params.blur ?? 28);
-      ctxAny.shadowColor = String(shadow.params.color ?? 'rgba(15, 23, 42, 0.28)');
+    const legacyShadow = layer.resolvedEffects?.find((effect) => effect.kind === 'depth-shadow' && effect.enabled);
+    const dropShadow = layer.resolvedEffects?.find((effect) => effect.kind === 'drop-shadow' && effect.enabled);
+    if (legacyShadow) {
+      // The composer-era shadow, kept byte-for-byte for every existing project.
+      ctxAny.shadowOffsetX = Number(legacyShadow.params.x ?? 0);
+      ctxAny.shadowOffsetY = Number(legacyShadow.params.y ?? 14);
+      ctxAny.shadowBlur = Number(legacyShadow.params.blur ?? 28);
+      ctxAny.shadowColor = String(legacyShadow.params.color ?? 'rgba(15, 23, 42, 0.28)');
+    } else if (dropShadow) {
+      // The generic drop shadow (a glow is the same effect with zero offset).
+      ctxAny.shadowOffsetX = Number(dropShadow.params.x ?? 0);
+      ctxAny.shadowOffsetY = Number(dropShadow.params.y ?? 8);
+      ctxAny.shadowBlur = Number(dropShadow.params.blur ?? 16);
+      ctxAny.shadowColor = toRgba(
+        String(dropShadow.params.color ?? 'black'),
+        Number(dropShadow.params.opacity ?? 1)
+      );
     }
 
     if (layer.resolvedTransform) {
@@ -185,18 +229,66 @@ export const composeLayers = async (
       const shape = layer.resolvedSource.shape;
       const x = (canvas.width - shape.width) / 2;
       const y = (canvas.height - shape.height) / 2;
+      // Only a line reads the cap: it shapes the body itself, not an outline.
+      const lineCap = layer.resolvedStroke?.cap ?? 'round';
       if (layer.resolvedFill) {
         ctxAny.save();
-        traceShapePath(ctxAny, shape, x, y);
+        traceShapePath(ctxAny, shape, x, y, lineCap);
         ctxAny.clip();
         backend.applyFill(ctx, layer.resolvedFill, x, y, shape.width, shape.height);
         ctxAny.restore();
       }
-      if (layer.resolvedStroke) {
-        traceShapePath(ctxAny, shape, x, y);
-        ctxAny.strokeStyle = layer.resolvedStroke.color;
-        ctxAny.lineWidth = layer.resolvedStroke.width;
-        ctxAny.stroke();
+      if (layer.resolvedStroke && shape.kind !== 'line') {
+        const stroke = layer.resolvedStroke;
+        ctxAny.save();
+        ctxAny.strokeStyle = stroke.color;
+        ctxAny.lineCap = stroke.cap ?? 'butt';
+        ctxAny.lineJoin = stroke.join ?? 'miter';
+        // The platforms' default the reference relies on: beyond it, mitered
+        // corners bevel instead of spiking.
+        ctxAny.miterLimit = 4;
+        if (stroke.alignment === 'center') {
+          ctxAny.lineWidth = stroke.width;
+          traceShapePath(ctxAny, shape, x, y);
+          ctxAny.stroke();
+        } else {
+          // Half of the doubled stroke lands on each side of the outline; the
+          // clip keeps the half the alignment asks for.
+          ctxAny.lineWidth = stroke.width * 2;
+          if (stroke.alignment === 'inside') {
+            traceShapePath(ctxAny, shape, x, y);
+            ctxAny.clip();
+          } else {
+            ctxAny.beginPath();
+            ctxAny.rect(0, 0, canvas.width, canvas.height);
+            addShapeSubpath(ctxAny, shape, x, y);
+            ctxAny.clip('evenodd');
+          }
+          traceShapePath(ctxAny, shape, x, y);
+          ctxAny.stroke();
+        }
+        ctxAny.restore();
+      }
+      // Inner shadow: the shadow of the inverse region, kept by a clip to the
+      // shape — the hole's edge casts into the hole and nothing else paints.
+      const innerShadow = layer.resolvedEffects?.find((effect) => effect.kind === 'inner-shadow' && effect.enabled);
+      if (innerShadow) {
+        ctxAny.save();
+        traceShapePath(ctxAny, shape, x, y, lineCap);
+        ctxAny.clip();
+        ctxAny.shadowOffsetX = Number(innerShadow.params.x ?? 0);
+        ctxAny.shadowOffsetY = Number(innerShadow.params.y ?? 6);
+        ctxAny.shadowBlur = Number(innerShadow.params.blur ?? 12);
+        ctxAny.shadowColor = toRgba(
+          String(innerShadow.params.color ?? 'black'),
+          Number(innerShadow.params.opacity ?? 0.35)
+        );
+        ctxAny.beginPath();
+        ctxAny.rect(0, 0, canvas.width, canvas.height);
+        addShapeSubpath(ctxAny, shape, x, y, lineCap);
+        ctxAny.fillStyle = 'black';
+        ctxAny.fill('evenodd');
+        ctxAny.restore();
       }
     }
 

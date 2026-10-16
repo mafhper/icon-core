@@ -1,9 +1,10 @@
-import type { BlendMode, CanvasMaskShape, Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter } from '@iconcore/shared';
+import type { BlendMode, CanvasMaskShape, Dimensions, Fill, GradientFill, IconCoreProject, IconLayer, IconVariant, ShapeDefinition, ImageFilter, LayerEffect } from '@iconcore/shared';
 import { resolveMaskRadius, resolveSize } from '@iconcore/shared';
 import { toRgba } from './color';
 import { escapeXml } from './escapeXml';
 import { layerBaseRect } from './geometry';
 import { superellipsePathD } from './geometry/superellipse';
+import { smoothRectPathD } from './geometry/smoothCorners';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
 import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
 import { applySvgPaintOverrides } from './svgPaint';
@@ -154,6 +155,60 @@ const imageFilterToSvgFilter = (filter: ImageFilter | undefined, id: string): st
 };
 
 /**
+ * Compose a layer's effects into one SVG filter: inner shadow (composited
+ * inside the shape), then drop shadow (a glow is the same effect with zero
+ * offset), then the layer blur. Mirrors the canvas stack; no enabled effect
+ * produces no filter, so projects without effects keep their exact markup.
+ */
+const effectFilterMarkup = (effects: LayerEffect[] | undefined, id: string): string => {
+  const enabled = (kind: string) => effects?.find((effect) => effect.kind === kind && effect.enabled);
+  const inner = enabled('inner-shadow');
+  // The composer-era depth shadow maps onto the same primitive.
+  const drop = enabled('drop-shadow') ?? enabled('depth-shadow');
+  const blur = enabled('surface-blur');
+  if (!inner && !drop && !blur) return '';
+
+  const parts: string[] = [];
+  let source = 'SourceGraphic';
+
+  if (inner) {
+    const x = Number(inner.params.x ?? 0);
+    const y = Number(inner.params.y ?? 6);
+    const r = Number(inner.params.blur ?? 12) / 2;
+    const color = String(inner.params.color ?? 'black');
+    const opacity = Number(inner.params.opacity ?? 0.35);
+    parts.push(
+      `<feOffset dx="${x}" dy="${y}" in="SourceAlpha" result="${id}-io"/>`,
+      `<feGaussianBlur stdDeviation="${r}" in="${id}-io" result="${id}-ib"/>`,
+      `<feComposite in="${id}-ib" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="${id}-ic"/>`,
+      `<feFlood flood-color="${color}" flood-opacity="${opacity}" result="${id}-if"/>`,
+      `<feComposite in="${id}-if" in2="${id}-ic" operator="in" result="${id}-is"/>`,
+      `<feMerge result="${id}-im"><feMergeNode in="SourceGraphic"/><feMergeNode in="${id}-is"/></feMerge>`
+    );
+    source = `${id}-im`;
+  }
+
+  if (drop) {
+    const x = Number(drop.params.x ?? 0);
+    const y = Number(drop.params.y ?? 8);
+    const r = Number(drop.params.blur ?? 16) / 2;
+    const color = String(drop.params.color ?? 'black');
+    const opacity = Number(drop.params.opacity ?? 1);
+    parts.push(
+      `<feDropShadow dx="${x}" dy="${y}" stdDeviation="${r}" flood-color="${color}" flood-opacity="${opacity}" in="${source}" result="${id}-d"/>`
+    );
+    source = `${id}-d`;
+  }
+
+  if (blur) {
+    const r = Number(blur.params.radius ?? 8) / 2;
+    parts.push(`<feGaussianBlur stdDeviation="${r}" in="${source}"/>`);
+  }
+
+  return `<filter id="${id}" x="-60%" y="-60%" width="220%" height="220%">${parts.join('')}</filter>`;
+};
+
+/**
  * One shape element, filled with `paint`, carrying opacity/transform/filter.
  *
  * `offsetX/offsetY` place the shape's top-left corner. The Canvas2D compositor
@@ -169,12 +224,16 @@ const shapeMarkup = (
   filterAttr: string = '',
   offsetX = 0,
   offsetY = 0,
-  blendMode?: BlendMode
+  blendMode?: BlendMode,
+  /** Only the line body reads this: its end cap (the cap control). */
+  lineCap: 'butt' | 'round' | 'square' = 'round',
+  /** Extra attributes for the emitted element (stroke outline calls). */
+  extraAttrs: string = ''
 ): string => {
   const t = transform ? ` transform="${transform}"` : '';
   const f = filterAttr ? ` ${filterAttr}` : '';
   const b = blendModeAttr(blendMode);
-  const common = `fill="${paint}" opacity="${opacity}"${t}${f}${b}`;
+  const common = `fill="${paint}" opacity="${opacity}"${t}${f}${b}${extraAttrs}`;
   const ox = offsetX;
   const oy = offsetY;
 
@@ -186,6 +245,15 @@ const shapeMarkup = (
     return `<polygon points="${ox + shape.width / 2},${oy} ${ox + shape.width},${oy + shape.height} ${ox},${oy + shape.height}" ${common}/>\n`;
   }
   if (shape.kind === 'line') {
+    // Closed body like the compositor's: round = the capsule it always was
+    // (identical markup), butt = the flat box, square = the box extended by
+    // half the thickness per end.
+    if (lineCap === 'butt') {
+      return `<rect x="${ox}" y="${oy}" width="${shape.width}" height="${shape.height}" ${common}/>\n`;
+    }
+    if (lineCap === 'square') {
+      return `<rect x="${ox - shape.height / 2}" y="${oy}" width="${shape.width + shape.height}" height="${shape.height}" ${common}/>\n`;
+    }
     const rx = Math.min(shape.width, shape.height) / 2;
     return `<rect x="${ox}" y="${oy}" width="${shape.width}" height="${shape.height}" rx="${rx}" ${common}/>\n`;
   }
@@ -225,8 +293,68 @@ const shapeMarkup = (
     return `<g transform="translate(${ox} ${oy})">${outline}</g>\n`;
   }
 
+  if (shape.kind === 'rounded-rectangle' && (shape.cornerSmoothing ?? 0) > 0) {
+    // Radius + smoothing — the same construction `traceSmoothRect` draws on
+    // canvas (geometry/smoothCorners). The radius default mirrors the
+    // compositor's `?? min * 0.18`.
+    const radius = shape.cornerRadius ?? Math.min(shape.width, shape.height) * 0.18;
+    const outline = `<path d="${smoothRectPathD(shape.width, shape.height, radius, shape.cornerSmoothing ?? 0)}" ${common}/>`;
+    return `<g transform="translate(${ox} ${oy})">${outline}</g>\n`;
+  }
+
   const rx = shape.cornerRadius ?? 0;
   return `<rect x="${ox}" y="${oy}" width="${shape.width}" height="${shape.height}" rx="${rx}" ${common}/>\n`;
+};
+
+/**
+ * The stroke outline for a shape, with the alignment applied:
+ *  - `center`: one element, the stroke straddling the edge;
+ *  - `inside`: the doubled stroke clipped to the shape;
+ *  - `outside`: the doubled stroke kept by a mask that hides the shape itself.
+ * `defs` receives whatever clipPath/mask the alignment needs.
+ */
+const strokeOutline = (
+  shape: ShapeDefinition,
+  stroke: NonNullable<IconLayer['stroke']>,
+  ox: number,
+  oy: number,
+  canvas: Dimensions,
+  defs: string[],
+  nextId: (prefix: string) => string
+): string => {
+  const cap = stroke.cap ?? 'butt';
+  const join = stroke.join ?? 'miter';
+  const color = toRgba(stroke.color, 1);
+  const outline = (width: number) =>
+    shapeMarkup(
+      shape,
+      'none',
+      1,
+      '',
+      '',
+      ox,
+      oy,
+      undefined,
+      'round',
+      ` stroke="${color}" stroke-width="${width}" stroke-linecap="${cap}" stroke-linejoin="${join}" stroke-miterlimit="4"`
+    );
+
+  if (stroke.alignment === 'center') return outline(stroke.width);
+
+  if (stroke.alignment === 'inside') {
+    const clipId = nextId(`stroke-in-${shape.kind}`);
+    defs.push(`<clipPath id="${clipId}">${shapeMarkup(shape, 'black', 1, '', '', ox, oy)}</clipPath>`);
+    return `<g clip-path="url(#${clipId})">${outline(stroke.width * 2)}</g>`;
+  }
+
+  const maskId = nextId(`stroke-out-${shape.kind}`);
+  defs.push(
+    `<mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="${canvas.width}" height="${canvas.height}">` +
+      `<rect x="0" y="0" width="${canvas.width}" height="${canvas.height}" fill="white"/>` +
+      `${shapeMarkup(shape, 'black', 1, '', '', ox, oy)}` +
+      `</mask>`
+  );
+  return `<g mask="url(#${maskId})">${outline(stroke.width * 2)}</g>`;
 };
 
 /**
@@ -367,9 +495,11 @@ export const renderToSvgWithOptions = (
     const opacity = layer.opacity;
     const transformAttr = layerTransformAttr(canvas, layer.transform);
 
-    // Build SVG filter for this layer if it has an imageFilter
+    // Build the SVG filter for this layer: the layer effects (shadows/blur)
+    // take precedence, falling back to the image adjustments for image layers.
     const filterId = nextId(`filter-${layer.id}`);
-    const filterMarkup = imageFilterToSvgFilter(layer.imageFilter, filterId);
+    const effectsFilter = effectFilterMarkup(layer.effects, filterId);
+    const filterMarkup = effectsFilter || imageFilterToSvgFilter(layer.imageFilter, filterId);
     if (filterMarkup) defs.push(filterMarkup);
     const filterAttr = filterMarkup ? ` filter="url(#${filterId})"` : '';
 
@@ -497,33 +627,82 @@ export const renderToSvgWithOptions = (
     if (!shape) continue;
 
     const fill = layer.fill;
-    // A shape with no paint (missing fill or `kind: 'none'`) is transparent.
-    if (!fill || fill.kind === 'none') continue;
+    const stroke = layer.stroke && layer.stroke.width > 0 ? layer.stroke : undefined;
+    // A shape with no paint (no fill and no stroke) is transparent.
+    if ((!fill || fill.kind === 'none') && !stroke) continue;
 
-    if (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient') {
+    const ox = (canvas.width - shape.width) / 2;
+    const oy = (canvas.height - shape.height) / 2;
+
+    // The line's body carries its cap control (default: the round capsule it
+    // always was — identical markup for every existing project).
+    if (shape.kind === 'line') {
+      if (fill && (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient')) {
+        svgLayers += shapeMarkup(
+          shape,
+          sampleStops(fill.stops, 0),
+          opacity,
+          transformAttr,
+          filterAttr,
+          ox,
+          oy,
+          layer.blendMode,
+          stroke?.cap ?? 'round'
+        );
+      } else if (fill && fill.kind !== 'none') {
+        const resolved = paintFor(fill, nextId(`line-${layer.id}`));
+        if (!resolved) continue;
+        if (resolved.defs) defs.push(resolved.defs);
+        svgLayers += shapeMarkup(
+          shape,
+          resolved.paint,
+          opacity,
+          transformAttr,
+          filterAttr,
+          ox,
+          oy,
+          layer.blendMode,
+          stroke?.cap ?? 'round'
+        );
+      }
+      continue;
+    }
+
+    if (fill && (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient')) {
       const clipId = nextId(`clip-${layer.id}`);
       defs.push(`<clipPath id="${clipId}">${shapeMarkup(shape, '#000000', 1, '')}</clipPath>`);
       // The approximation stands in for a conic/diamond gradient, and it inherits
       // the layer's blend mode too — otherwise a layer with both would lose the
       // blend in SVG while keeping it on canvas.
       svgLayers += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})"${filterAttr}${blendModeAttr(layer.blendMode)}>${approximationMarkup(fill, shape)}</g>\n`;
+      if (stroke) {
+        svgLayers += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}${blendModeAttr(layer.blendMode)}>${strokeOutline(shape, stroke, ox, oy, canvas, defs, nextId)}</g>\n`;
+      }
       continue;
     }
 
-    const resolved = paintFor(fill, nextId(`fill-${layer.id}`));
-    if (!resolved) continue;
-    if (resolved.defs) defs.push(resolved.defs);
+    const resolved = fill && fill.kind !== 'none' ? paintFor(fill, nextId(`fill-${layer.id}`)) : null;
+    if (fill && fill.kind !== 'none' && !resolved) continue;
+    if (resolved?.defs) defs.push(resolved.defs);
     // Centred like the Canvas2D compositor: `((S - w) / 2, (S - h) / 2)`.
-    svgLayers += shapeMarkup(
-      shape,
-      resolved.paint,
-      opacity,
-      transformAttr,
-      filterAttr,
-      (canvas.width - shape.width) / 2,
-      (canvas.height - shape.height) / 2,
-      layer.blendMode
-    );
+    const fillMarkup = resolved
+      ? shapeMarkup(shape, resolved.paint, opacity, transformAttr, filterAttr, ox, oy, layer.blendMode)
+      : '';
+
+    if (!stroke) {
+      // No stroke: the exact markup this pipeline always produced.
+      svgLayers += fillMarkup;
+      continue;
+    }
+
+    // Stroke present: one group carries the layer's opacity/transform/filter/
+    // blend so fill + outline composite exactly like the canvas stack — two
+    // siblings with their own opacity would double it where they overlap.
+    const innerFill = resolved ? shapeMarkup(shape, resolved.paint, 1, '', '', ox, oy) : '';
+    svgLayers +=
+      `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}${blendModeAttr(layer.blendMode)}>` +
+      `${innerFill}${strokeOutline(shape, stroke, ox, oy, canvas, defs, nextId)}` +
+      `</g>\n`;
   }
 
   const defsBlock = () => (defs.length > 0 ? `  <defs>\n    ${defs.join('\n    ')}\n  </defs>\n` : '');
