@@ -229,6 +229,73 @@ describe('Studio inspector panel (Fase 4)', () => {
   });
 });
 
+describe('Studio export dialog + main menu (Fase 5)', () => {
+  const openMenu = (name: string) => {
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Main menu' }));
+    fireEvent.click(screen.getByRole('menuitem', { name }));
+  };
+
+  it('opens the three-stage export from the main menu, gated by validation', () => {
+    renderShell(<SeededShell project={createBlankProject('Export', 512)} />);
+
+    // Navigation runs on the URL hash: setting it only navigates when the
+    // `hashchange` fires, which jsdom never does on its own (a real browser
+    // does). Emit it, like the browser would.
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    fireEvent(window, new Event('hashchange'));
+    const dialog = screen.getByRole('dialog', { name: 'Export icons' });
+    expect(within(dialog).getByText('SVG')).toBeInTheDocument();
+    expect(within(dialog).getByText('PNG')).toBeInTheDocument();
+    expect(within(dialog).getByText('ICO')).toBeInTheDocument();
+
+    // Deselecting every format leaves nothing to render: no export.
+    // (Re-query between clicks: each toggle re-renders the inputs.)
+    const box = (name: string) => within(dialog).getByRole('checkbox', { name: name });
+    const exportName = () => within(dialog).getByRole('button', { name: /Export/ }).textContent;
+    fireEvent.click(box('SVG'));
+    const afterSvg = exportName();
+    fireEvent.click(box('PNG'));
+    const afterPng = exportName();
+    expect([afterSvg, afterPng]).toEqual(['Export 2 files', 'Export ']);
+    expect(within(dialog).getByRole('button', { name: 'Export' })).toBeDisabled();
+  });
+
+  it('renames the document through the menu form', () => {
+    renderShell(<SeededShell project={createBlankProject('Old', 512)} />);
+    openMenu('Rename document…');
+
+    const field = screen.getByLabelText('Name');
+    fireEvent.change(field, { target: { value: 'Renamed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    expect(screen.getAllByText('Renamed').length).toBeGreaterThan(0);
+  });
+
+  it('asks before a new document destroys the old one', () => {
+    const project = createBlankProject('Keep', 512);
+    renderShell(<SeededShell project={project} />);
+    openMenu('New document…');
+
+    expect(screen.getByRole('dialog', { name: 'New document?' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
+
+    const form = screen.getByRole('dialog', { name: 'New document' });
+    fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'Fresh' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Create document' }));
+    expect(screen.getAllByText('Fresh').length).toBeGreaterThan(0);
+    expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('0');
+  });
+
+  it('persists the theme preference from the preferences dialog', () => {
+    renderShell(<SeededShell project={createBlankProject('Prefs', 512)} />);
+    openMenu('Preferences…');
+
+    fireEvent.click(screen.getByRole('button', { name: 'System' }));
+    expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('system');
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByRole('dialog', { name: 'Preferences' })).not.toBeInTheDocument();
+  });
+});
+
 describe('StudioApp shell (Fase 1)', () => {
   it('mounts the five regions with the document chrome', () => {
     renderShell(<SeededShell project={createBlankProject('Studio One', 1024)} />);

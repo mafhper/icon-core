@@ -47,7 +47,8 @@ export const WEB_APP_SPECS = [
   'text-panel',
   'foreignobject-regression',
   'storage-isolation',
-  'studio-shell'
+  'studio-shell',
+  'studio-export'
 ] as const;
 
 /**

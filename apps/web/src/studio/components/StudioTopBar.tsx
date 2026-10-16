@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ArrowUpToLine,
   Box,
@@ -19,7 +20,11 @@ import type { IconVariant } from '@iconcore/shared';
 import { IconButton, Menu, MenuItem, Tooltip, withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 import type { StudioThemePreference } from '../useStudioTheme';
+import { StudioConfirmDialog } from './StudioConfirmDialog';
 import { StudioInsertMenu } from './StudioInsertMenu';
+import { StudioMainMenu, type StudioMenuDialog } from './StudioMainMenu';
+import { StudioNameDialog } from './StudioNameDialog';
+import { StudioPreferencesDialog } from './StudioPreferencesDialog';
 
 const VARIANTS: Array<{ id: IconVariant; label: string }> = [
   { id: 'default', label: 'Default' },
@@ -65,6 +70,7 @@ export const StudioTopBar = ({
   onOpenShortcuts
 }: StudioTopBarProps) => {
   const { state, dispatch, navigate } = useComposer();
+  const [menuDialog, setMenuDialog] = useState<StudioMenuDialog>(null);
   const project = state.project;
   const canUndo = state.historyIndex > 0;
   const canRedo = state.historyIndex < state.history.length - 1;
@@ -108,6 +114,15 @@ export const StudioTopBar = ({
         </div>
       </header>
       <div className="studio-topbar" role="toolbar" aria-label="Studio toolbar">
+        <div className="studio-topbar-group">
+          <StudioMainMenu
+            onDialog={(dialog) => {
+              if (dialog === 'shortcuts') onOpenShortcuts();
+              else setMenuDialog(dialog);
+            }}
+          />
+        </div>
+        <span className="studio-divider" aria-hidden="true" />
         <div className="studio-topbar-group">
           <Tooltip content="Undo (Ctrl+Z)">
             <IconButton
@@ -203,6 +218,50 @@ export const StudioTopBar = ({
           <span>Export</span>
         </button>
       </div>
+      {menuDialog === 'confirm-new' && (
+        <StudioConfirmDialog
+          title="New document?"
+          message="The current document will be replaced. The autosave stores the new blank project, so anything unsaved is gone — and it stays gone."
+          confirmLabel="Discard and continue"
+          onConfirm={() => setMenuDialog('new')}
+          onCancel={() => setMenuDialog(null)}
+        />
+      )}
+      {menuDialog === 'new' && (
+        <StudioNameDialog
+          title="New document"
+          description="A blank canvas at the size you pick."
+          initialName="Untitled"
+          submitLabel="Create document"
+          sizes={[256, 512, 1024]}
+          initialSize={project?.canvas.size ?? 512}
+          onSubmit={(name, size) => {
+            dispatch({ type: 'NEW_PROJECT', payload: { name, size: size ?? 512 } });
+            navigate('edit-space');
+            setMenuDialog(null);
+          }}
+          onClose={() => setMenuDialog(null)}
+        />
+      )}
+      {menuDialog === 'rename' && project && (
+        <StudioNameDialog
+          title="Rename document"
+          initialName={project.metadata.name}
+          submitLabel="Rename"
+          onSubmit={(name) => {
+            dispatch({ type: 'SET_PROJECT_NAME', payload: name });
+            setMenuDialog(null);
+          }}
+          onClose={() => setMenuDialog(null)}
+        />
+      )}
+      {menuDialog === 'preferences' && (
+        <StudioPreferencesDialog
+          preference={themePreference}
+          onPreference={onThemePreference}
+          onClose={() => setMenuDialog(null)}
+        />
+      )}
     </>
   );
 };

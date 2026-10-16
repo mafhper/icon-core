@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TooltipProvider } from '@iconcore/ui';
 import { ComposerProvider, useComposer } from '../composer/ComposerContext';
-import { ExportView } from '../composer/views/ExportView';
 import { UiGallery } from '../composer/views/UiGallery';
 import { CommandPalette } from '../composer/components/CommandPalette';
 import { PanelResizer } from '../composer/components/PanelResizer';
@@ -13,6 +12,7 @@ import { ToastViewport } from '../composer/toast/ToastViewport';
 import { StudioTopBar } from './components/StudioTopBar';
 import { StudioLayersPanel } from './components/StudioLayersPanel';
 import { StudioCanvasStage } from './components/StudioCanvasStage';
+import { StudioExportDialog } from './components/StudioExportDialog';
 import { StudioInspectorPanel } from './components/StudioInspectorPanel';
 import { StudioShortcutsDialog } from './components/StudioShortcutsDialog';
 import { StudioStatusBar, type StudioTool } from './components/StudioStatusBar';
@@ -41,7 +41,7 @@ import './studio.css';
  * view stays reachable until Fase 5 replaces it with the studio dialog.
  */
 export const StudioShell = () => {
-  const { state } = useComposer();
+  const { state, navigate } = useComposer();
   const [tool, setTool] = useState<StudioTool>('select');
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -104,12 +104,7 @@ export const StudioShell = () => {
         onThemePreference={changeTheme}
         onOpenShortcuts={() => setShortcutsOpen(true)}
       />
-      {state.view === 'export-utilities' && state.project ? (
-        <div className="studio-body">
-          <ExportView />
-        </div>
-      ) : (
-        <div className="studio-body">
+      <div className="studio-body">
           <section
             className="studio-panel studio-panel-left"
             aria-label="Layers panel"
@@ -133,7 +128,9 @@ export const StudioShell = () => {
           >
             <StudioInspectorPanel />
           </section>
-        </div>
+      </div>
+      {state.view === 'export-utilities' && state.project && (
+        <StudioExportDialog onClose={() => navigate('edit-space')} />
       )}
       <StudioStatusBar tool={tool} cursor={cursor} />
       {shortcutsOpen && <StudioShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
