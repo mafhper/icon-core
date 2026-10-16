@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { useEffect, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IconCoreProject } from '@iconcore/shared';
+import type { IconCoreProject, IconLayer } from '@iconcore/shared';
 import { TooltipProvider } from '@iconcore/ui';
 import { ComposerProvider, useComposer } from '../composer/ComposerContext';
 import { ToastProvider } from '../composer/toast/ToastContext';
@@ -100,6 +100,84 @@ describe('Studio layers + insert + shortcuts (Fase 2)', () => {
   });
 });
 
+describe('Studio canvas stage (Fase 3)', () => {
+  const prism = (): IconLayer => ({
+    id: 'layer-prism',
+    name: 'Prism',
+    kind: 'shape',
+    visible: true,
+    zIndex: 1,
+    source: { type: 'inline', shape: { kind: 'rounded-rectangle', width: 220, height: 220, cornerRadius: 48 } },
+    transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+    opacity: 1,
+    fill: { kind: 'solid', color: '#3f6ce0', alpha: 1 }
+  });
+
+  const openViewOptions = () => {
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'View options' }));
+  };
+
+  it('toggles grid, safe area and mask from View options, all real', () => {
+    const project = createBlankProject('Stage', 512);
+    project.layers = [prism()];
+    renderShell(<SeededShell project={project} />);
+    const canvas = screen.getByRole('region', { name: 'Canvas' });
+
+    expect(canvas.querySelector('.ic-canvas-grid')).not.toBeInTheDocument();
+
+    openViewOptions();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Grid — Off' }));
+    expect(canvas.querySelector('.ic-canvas-grid')).toBeInTheDocument();
+
+    // The safe-area guide draws from the document's own safeArea box.
+    expect(canvas.querySelector('.ic-safe-area-overlay')).not.toBeInTheDocument();
+    openViewOptions();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Safe area — Off' }));
+    expect(canvas.querySelector('.ic-safe-area-overlay')).toBeInTheDocument();
+
+    // Unmasking squares the frame; the export still masks (preview flag only).
+    const frame = canvas.querySelector('.ic-canvas-frame') as HTMLElement;
+    expect(frame.style.borderRadius).not.toBe('0px');
+    openViewOptions();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Icon mask — On' }));
+    expect(frame.style.borderRadius).toBe('0px');
+  });
+
+  it('switches variant tiles without losing the selection', () => {
+    const project = createBlankProject('Tiles', 512);
+    project.layers = [prism()];
+    renderShell(<SeededShell project={project} />);
+
+    fireEvent.click(within(screen.getByRole('region', { name: 'Layers panel' })).getByText('Prism'));
+    expect(screen.getByLabelText('Selection dimensions')).toHaveTextContent('220 × 220 px');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dark' }));
+    expect(screen.getByRole('region', { name: 'Canvas' })).toHaveTextContent('Dark');
+    // Orientation kept: the same layer stays selected at the same size.
+    expect(screen.getByLabelText('Selection dimensions')).toHaveTextContent('220 × 220 px');
+  });
+
+  it('pans with the Hand without moving layers or losing selection', () => {
+    const project = createBlankProject('Pan', 512);
+    project.layers = [prism()];
+    renderShell(<SeededShell project={project} />);
+
+    fireEvent.click(within(screen.getByRole('region', { name: 'Layers panel' })).getByText('Prism'));
+    fireEvent.keyDown(window, { key: 'h' });
+
+    const stage = document.querySelector('.studio-stage') as HTMLElement;
+    fireEvent.pointerDown(stage, { clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(stage, { clientX: 150, clientY: 120 });
+    fireEvent.pointerUp(stage);
+    expect(stage.style.getPropertyValue('--pan-x')).toBe('50px');
+    expect(stage.style.getPropertyValue('--pan-y')).toBe('20px');
+
+    // The pan's trailing click never reaches the canvas: selection survives.
+    fireEvent.click(stage);
+    expect(screen.getByLabelText('Selection dimensions')).toHaveTextContent('220 × 220 px');
+  });
+});
+
 describe('StudioApp shell (Fase 1)', () => {
   it('mounts the five regions with the document chrome', () => {
     renderShell(<SeededShell project={createBlankProject('Studio One', 1024)} />);
@@ -110,10 +188,11 @@ describe('StudioApp shell (Fase 1)', () => {
     expect(screen.getByRole('region', { name: 'Inspector panel' })).toBeInTheDocument();
     expect(screen.getByRole('contentinfo', { name: 'Status bar' })).toBeInTheDocument();
 
-    // Brand + document, not a dashboard. The name lives in two homes on
-    // purpose (mockup): the titlebar readout and the panel title that renames.
+    // Brand + document, not a dashboard. The name lives in three homes on
+    // purpose (mockup): the titlebar readout, the panel title that renames,
+    // and the canvas breadcrumb.
     expect(screen.getByText('Icon-Core')).toBeInTheDocument();
-    expect(screen.getAllByText('Studio One')).toHaveLength(2);
+    expect(screen.getAllByText('Studio One')).toHaveLength(3);
   });
 
   it('collapses each side panel and always offers an evident way back', () => {

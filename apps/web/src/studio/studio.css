@@ -287,10 +287,81 @@
   position: relative;
 }
 
+/* Hand pan: the stage translates the Composer's edit surface by the pan
+   offset the shell owns (Reset view returns it with the zoom). */
+.studio-stage > .ic-preview-panel > .ic-edit-stage {
+  transform: translate(var(--pan-x, 0px), var(--pan-y, 0px));
+}
+
 /* The reused Composer canvas owns its own scroll-free stage; the studio
    wrapper only tracks the pointer for the statusbar readout. */
 .studio-stage > .ic-preview-panel {
   min-height: 100%;
+}
+
+/* Four-corner selection handles: the Composer paints one scale handle; the
+   studio promotes it to four (uniform scale about the centre from any
+   corner — the engine has no directional resize to offer). */
+.studio-canvas .ic-scale-handle.is-tl {
+  left: -7px;
+  top: -7px;
+  right: auto;
+  bottom: auto;
+  cursor: nwse-resize;
+}
+
+.studio-canvas .ic-scale-handle.is-tr {
+  left: auto;
+  top: -7px;
+  right: -7px;
+  bottom: auto;
+  cursor: nesw-resize;
+}
+
+.studio-canvas .ic-scale-handle.is-bl {
+  left: -7px;
+  top: auto;
+  right: auto;
+  bottom: -7px;
+  cursor: nesw-resize;
+}
+
+.studio-canvas .ic-scale-handle.is-br {
+  cursor: nwse-resize;
+}
+
+.studio-canvas .ic-dimension-tag {
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  transform: translateX(-50%) scale(calc(1 / max(var(--layer-scale, 1), 0.01)));
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ic-text);
+  background-color: var(--ic-overlay);
+  border: 1px solid var(--ic-border);
+  pointer-events: none;
+}
+
+.studio-tile-empty {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background-color: var(--ic-elevated);
+}
+
+.studio-tile-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--ic-accent-text);
+}
+
+.studio-canvas .ic-safe-area-overlay {
+  color: var(--ic-accent-text);
 }
 
 .studio-pillbar {

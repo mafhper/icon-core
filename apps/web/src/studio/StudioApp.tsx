@@ -5,7 +5,6 @@ import { ExportView } from '../composer/views/ExportView';
 import { UiGallery } from '../composer/views/UiGallery';
 import { CommandPalette } from '../composer/components/CommandPalette';
 import { LayerInspector } from '../composer/components/LayerInspector';
-import { PreviewCanvas } from '../composer/components/PreviewCanvas';
 import { PanelResizer } from '../composer/components/PanelResizer';
 import { WelcomeModal } from '../composer/components/WelcomeModal';
 import { useKeyboardShortcuts } from '../composer/hooks/useKeyboardShortcuts';
@@ -14,7 +13,7 @@ import { ToastProvider } from '../composer/toast/ToastContext';
 import { ToastViewport } from '../composer/toast/ToastViewport';
 import { StudioTopBar } from './components/StudioTopBar';
 import { StudioLayersPanel } from './components/StudioLayersPanel';
-import { StudioPillBar } from './components/StudioPillBar';
+import { StudioCanvasStage } from './components/StudioCanvasStage';
 import { StudioShortcutsDialog } from './components/StudioShortcutsDialog';
 import { StudioStatusBar, type StudioTool } from './components/StudioStatusBar';
 import {
@@ -26,15 +25,16 @@ import {
 import './studio.css';
 
 /**
- * Studio shell (rebuild limpo, Fase 1): five regions over the real engine.
+ * Studio shell (rebuild limpo, Fases 1–3): five regions over the real engine.
  *
  * The state, history, canvas pipeline and inspector are the Composer's —
  * `ComposerProvider`, the reducer actions, `PreviewCanvas`, `LayerList` and
  * `LayerInspector` — so Layers → Canvas → Inspector are synchronised by
  * construction from the first commit. What is new is the chrome: titlebar,
  * toolbar, resizable side panels (205–380px, independently collapsible with
- * an always-visible way back), and the three-zone statusbar, all under the
- * `[data-theme]` contract, dark-first.
+ * an always-visible way back), the canvas stage (breadcrumb, View options,
+ * Hand pan, pill, live variant tiles) and the three-zone statusbar, all
+ * under the `[data-theme]` contract, dark-first.
  *
  * Project-independent surfaces keep their contracts: `#/ui` renders the
  * gallery alone (never under the welcome modal), and the export-utilities
@@ -87,14 +87,6 @@ export const StudioShell = () => {
     setThemePreference(preference);
   }, []);
 
-  const trackCursor = useCallback((event: React.PointerEvent) => {
-    const frame = event.currentTarget.getBoundingClientRect();
-    setCursor({
-      x: Math.round(event.clientX - frame.left),
-      y: Math.round(event.clientY - frame.top)
-    });
-  }, []);
-
   if (state.view === 'ui') {
     return <UiGallery />;
   }
@@ -129,15 +121,7 @@ export const StudioShell = () => {
           {isLarge && leftOpen && (
             <PanelResizer side="left" label="Resize Layers panel" onStart={startLeftResize} />
           )}
-          <section
-            className={`studio-canvas ${tool === 'hand' ? 'is-hand' : ''}`}
-            aria-label="Canvas"
-            onPointerMove={trackCursor}
-            onPointerLeave={() => setCursor(null)}
-          >
-            <PreviewCanvas />
-            <StudioPillBar tool={tool} onTool={setTool} />
-          </section>
+          <StudioCanvasStage tool={tool} onTool={setTool} onCursor={setCursor} />
           {isLarge && inspectorOpen && (
             <PanelResizer side="right" label="Resize Inspector panel" onStart={startRightResize} />
           )}

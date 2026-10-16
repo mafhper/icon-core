@@ -372,7 +372,89 @@ const PROJECTS = {
       blendMode: 'multiply',
       fill: { kind: 'solid', color: '#ff5252' }
     })
-  ], { maskRadius: 56 })
+  ], { maskRadius: 56 }),
+
+  // --- Studio rebuild (Fase 3): the IC77 motor, one behaviour each ---------
+  //
+  // Stroke, hollow fill, alignment, corner smoothing, drop shadow and line
+  // caps all arrived together in the cherry-pick, and the markup pins live in
+  // `strokeAndSmoothing.spec.ts`. What pins assert, pixels verify: each
+  // fixture below must render NON-BLANK on both pipelines (a hollow shape the
+  // two sides both skip agrees at ~100% and proves nothing — the `simples`
+  // blank-canvas story, retold). If a fixture below ever renders blank, the
+  // feature is broken, not the threshold.
+
+  // Centered stroke with an explicit join: the outline straddles the edge.
+  traco: base('traco', [
+    shape({ kind: 'rectangle', width: 176, height: 176, cornerRadius: 0 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      stroke: { color: '#0f172a', width: 12, alignment: 'center', join: 'round' }
+    })
+  ]),
+
+  // Hollow: no fill, only the outline. The old pipeline `continue`d past
+  // `fill: none` and drew nothing — this fixture is blank if that returns.
+  vazado: base('vazado', [
+    shape({ kind: 'rectangle', width: 176, height: 176, cornerRadius: 0 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'none' },
+      stroke: { color: '#b91c1c', width: 16, alignment: 'center', join: 'miter' }
+    })
+  ]),
+
+  // Inside alignment: the doubled stroke clipped to the shape.
+  tracoDentro: base('tracoDentro', [
+    shape({ kind: 'rectangle', width: 176, height: 176, cornerRadius: 0 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      stroke: { color: '#0f172a', width: 16, alignment: 'inside', join: 'miter' }
+    })
+  ]),
+
+  // Outside alignment: the doubled stroke kept by the mask.
+  tracoFora: base('tracoFora', [
+    shape({ kind: 'rectangle', width: 176, height: 176, cornerRadius: 0 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      stroke: { color: '#0f172a', width: 16, alignment: 'outside', join: 'bevel' }
+    })
+  ]),
+
+  // Second corner level: radius + smoothing, one curve in both pipelines.
+  cantos: base('cantos', [
+    shape({ kind: 'rounded-rectangle', width: 208, height: 208, cornerRadius: 48, cornerSmoothing: 0.6 }, {
+      transform: { x: 24, y: 24, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#00695c' }
+    })
+  ]),
+
+  // Generic drop shadow (a glow is the same effect with zero offset).
+  //
+  // Threshold 4, measured — not fitted blindly: agreement is 96.4% with 100%
+  // alpha coverage, i.e. the silhouettes are identical and only the soft
+  // fringe shading differs. That fringe is rasterized by two different
+  // engines (Chromium canvas on the reference side, sharp/libvips on the
+  // candidate side) from the textbook mapping (stdDeviation = blur/2, the
+  // same mapping every shadow export ships). A mapping change to chase the
+  // fringe would move all existing shadow exports for a sharper number here.
+  sombra: base('sombra', [
+    shape({ kind: 'rectangle', width: 160, height: 160, cornerRadius: 0 }, {
+      transform: { x: 48, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'drop-shadow', enabled: true, params: { x: 0, y: 8, blur: 16, color: '#000000', opacity: 0.5 } }]
+    })
+  ]),
+
+  // Line body with a flat cap: butt draws the plain box, round the capsule.
+  // The cap lives on the stroke but shapes the closed body, not an outline.
+  linha: base('linha', [
+    shape({ kind: 'line', width: 200, height: 32 }, {
+      transform: { x: 28, y: 112, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      stroke: { color: '#0f172a', width: 8, alignment: 'center', cap: 'butt' }
+    })
+  ])
 };
 
 /**
@@ -441,7 +523,14 @@ const ACEITACAO = {
   rotacao: { minFora: 1 },
   camadas: { minFora: 0.5 },
   squircleComBlend: { minFora: 0.5 },
-  maskComBlend: { minFora: 0.5 }
+  maskComBlend: { minFora: 0.5 },
+  traco: { minFora: 1 },
+  vazado: { minFora: 1 },
+  tracoDentro: { minFora: 1 },
+  tracoFora: { minFora: 1 },
+  cantos: { minFora: 1 },
+  sombra: { minFora: 4 },
+  linha: { minFora: 1 }
 };
 
 const BASELINE = 'packages/iconcore-renderer/tests/__fixtures__/svg-parity';

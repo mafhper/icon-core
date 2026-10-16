@@ -220,3 +220,23 @@ describe('Work area color (SET_WORK_AREA_COLOR)', () => {
     expect(next.historyIndex).toBe(initialState.historyIndex);
   });
 });
+
+describe('Studio view flags (TOGGLE_SAFE_AREA, TOGGLE_MASK)', () => {
+  it('starts masked and without the safe-area guide', () => {
+    expect(initialState.showMask).toBe(true);
+    expect(initialState.showSafeArea).toBe(false);
+  });
+
+  it('toggles each flag without touching the document, dirty or history', () => {
+    const masked = composerReducer(initialState, { type: 'TOGGLE_MASK' });
+    expect(masked.showMask).toBe(false);
+    expect(masked.project).toBe(initialState.project);
+    expect(masked.isDirty).toBe(initialState.isDirty);
+
+    const guided = composerReducer(masked, { type: 'TOGGLE_SAFE_AREA' });
+    expect(guided.showSafeArea).toBe(true);
+    // The two flags are independent: unmasking never guides, guiding never unmasks.
+    expect(guided.showMask).toBe(false);
+    expect(guided.history.length).toBe(initialState.history.length);
+  });
+});

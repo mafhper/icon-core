@@ -90,6 +90,25 @@ export interface ComposerState {
   showMarginOverlay: boolean;
   showSnapping: boolean;
   /**
+   * The adaptive safe-area guide, drawn from `project.canvas.safeArea`.
+   *
+   * **Off by default**, like every overlay except the margin one: the margin
+   * answers a control the person just touched, while this one is a reference
+   * they ask for. Same family as `showMarginOverlay` (a guide, not art —
+   * no history, no dirty), but its own flag, because "import margin" and
+   * "safe area" are two different boxes and one toggle must never move both.
+   */
+  showSafeArea: boolean;
+  /**
+   * Whether the canvas frame previews the icon mask (the rounded frame).
+   *
+   * **On by default**: every existing project renders masked, so the default
+   * keeps the preview identical to what it always was. Off shows the square
+   * frame — the preview comparison, not the export, which always masks.
+   * A preview flag, not art: no history, no dirty.
+   */
+  showMask: boolean;
+  /**
    * Divisões do grid, por eixo. `8` reproduz o `background-size: 12.5%` fixo de antes.
    *
    * São **divisões**, não pixels: a pessoa quer "divida em 8", não "linha a cada 24px" —
@@ -193,6 +212,8 @@ export type ComposerAction =
   | { type: 'TOGGLE_MARGIN_OVERLAY' }
   | { type: 'SET_GRID_DIVISIONS'; payload: { columns: number; rows: number } }
   | { type: 'TOGGLE_SNAPPING' }
+  | { type: 'TOGGLE_SAFE_AREA' }
+  | { type: 'TOGGLE_MASK' }
   | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' }
   /**
    * Troca a cor da bancada. `null` volta ao token do tema.
@@ -223,6 +244,8 @@ export const initialState: ComposerState = {
   keylineStandard: 'generic',
   showMarginOverlay: true,
   showSnapping: true,
+  showSafeArea: false,
+  showMask: true,
   gridColumns: DEFAULT_DIVISIONS,
   gridRows: DEFAULT_DIVISIONS,
   history: [],
@@ -861,6 +884,12 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'TOGGLE_SNAPPING':
       return { ...state, showSnapping: !state.showSnapping };
+
+    case 'TOGGLE_SAFE_AREA':
+      return { ...state, showSafeArea: !state.showSafeArea };
+
+    case 'TOGGLE_MASK':
+      return { ...state, showMask: !state.showMask };
 
     case 'SET_MASK_SHAPE': {
       // The shape belongs to the document, not just to the toolbar: it is part

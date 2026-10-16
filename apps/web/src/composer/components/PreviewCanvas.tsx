@@ -15,6 +15,7 @@ import { layerSize } from '../utils/layerStyle';
 
 const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
+import { SafeAreaOverlay } from './SafeAreaOverlay';
 import { VariantPanel } from './VariantPanel';
 import { KeylineOverlay } from './KeylineOverlay';
 import { MarginOverlay } from './MarginOverlay';
@@ -109,7 +110,7 @@ const useRenderedIcon = (
   return url;
 };
 
-export const PreviewCanvas = () => {
+export const PreviewCanvas = ({ interactionMode = 'select' }: { interactionMode?: 'select' | 'hand' } = {}) => {
   const { state, dispatch } = useComposer();
   const importFiles = useLayerImport();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -142,7 +143,11 @@ export const PreviewCanvas = () => {
   // One resolver in `@iconcore/shared` owns the shape → radius rule. The old
   // inline ternary handled three of the four shapes, so `squircle` silently got
   // the square's 4px instead of the superellipse the keylines draw at.
-  const frameRadiusPx = project.canvas.maskRadius ?? defaultMaskRadius(state.maskShape, canvasSize);
+  // The mask preview flag rounds the frame; off shows the square frame.
+  // The export always masks — this is the preview comparison, not the output.
+  const frameRadiusPx = state.showMask
+    ? (project.canvas.maskRadius ?? defaultMaskRadius(state.maskShape, canvasSize))
+    : 0;
   const frameRadius = `${frameRadiusPx}px`;
 
   const scheduleTransform = (id: string, transform: IconLayer['transform']) => {
@@ -163,6 +168,8 @@ export const PreviewCanvas = () => {
     layer: IconLayer,
     mode: DragMode
   ) => {
+    // The Hand tool owns the pointer: pans happen at the stage, never here.
+    if (interactionMode === 'hand') return;
     if (layer.locked) return;
     event.preventDefault();
     event.stopPropagation();
@@ -341,6 +348,7 @@ export const PreviewCanvas = () => {
           // Canvas adjustments (work area) belong to the stage *around* the icon;
           // a click inside the icon frame is the frame's own business.
           if ((event.target as HTMLElement).closest('.ic-canvas-frame')) return;
+          if (interactionMode === 'hand') return;
           dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: null } });
         }}
       >
@@ -360,6 +368,7 @@ export const PreviewCanvas = () => {
               // its own: clicking the icon's background selects its handle, which
               // brings it up in the sidebar and in the inspector.
               event.stopPropagation();
+              if (interactionMode === 'hand') return;
               const background = layers.find((layer) => layer.role === 'background');
               if (background) dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: background.id } });
             }}
@@ -386,6 +395,7 @@ export const PreviewCanvas = () => {
                 que responde ao controle que a pessoa acabou de mexer.
             */}
             <MarginOverlay />
+            <SafeAreaOverlay />
             {layers.filter((baseLayer) => baseLayer.role !== 'background').map((baseLayer) => {
               const layer = resolveLayerVariant(baseLayer, state.activeVariant);
               if (!layer.visible) return null;
@@ -409,28 +419,38 @@ export const PreviewCanvas = () => {
                   onPointerDown={(event) => startDrag(event, layer, 'move')}
                   onClick={(event) => {
                     event.stopPropagation();
+                    if (interactionMode === 'hand') return;
                     dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
                   }}
                   onContextMenu={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
+                    if (interactionMode === 'hand') return;
                     dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
                     setMenu({ x: event.clientX, y: event.clientY, layerId: layer.id });
                   }}
                 >
                   {selected && !layer.locked && (
                     <>
-                      <button
-                        type="button"
-                        className="ic-transform-handle ic-scale-handle"
-                        onPointerDown={(event) => startDrag(event, layer, 'scale')}
-                        title="Scale layer"
-                      />
+                      <span className="ic-dimension-tag" aria-hidden="true">
+                        {Math.round(rect.w)} × {Math.round(rect.h)}
+                      </span>
+                      {(['tl', 'tr', 'bl', 'br'] as const).map((corner) => (
+                        <button
+                          key={corner}
+                          type="button"
+                          className={`ic-transform-handle ic-scale-handle is-${corner}`}
+                          onPointerDown={(event) => startDrag(event, layer, 'scale')}
+                          title="Scale layer"
+                          aria-label={`Scale ${layer.name}`}
+                        />
+                      ))}
                       <button
                         type="button"
                         className="ic-transform-handle ic-rotate-handle"
                         onPointerDown={(event) => startDrag(event, layer, 'rotate')}
                         title="Rotate layer"
+                        aria-label={`Rotate ${layer.name}`}
                       />
                     </>
                   )}

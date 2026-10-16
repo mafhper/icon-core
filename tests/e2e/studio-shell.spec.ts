@@ -57,6 +57,28 @@ test('studio: Insert cria uma elipse e a exclusao pede confirmacao', async ({ pa
   await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('0');
 });
 
+test('studio stage: tiles trocam a variante e View options alterna a mascara', async ({ page }) => {
+  await preparar(page);
+
+  const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
+  await toolbar.getByRole('button', { name: 'Insert layer' }).click();
+  await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
+  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
+
+  // Tiles com preview vivo: trocar nao perde a camada.
+  await page.getByRole('group', { name: 'Appearance variants' }).getByRole('button', { name: 'Monochrome' }).click();
+  await expect(page.getByRole('region', { name: 'Canvas' })).toContainText('Monochrome');
+  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
+
+  // View options: desligar a mascara quadra o frame (o export continua mascarado).
+  const frame = page.locator('.ic-canvas-frame');
+  const antes = await frame.evaluate((el) => getComputedStyle(el).borderTopLeftRadius);
+  expect(antes).not.toBe('0px');
+  await page.getByRole('button', { name: 'View options' }).click();
+  await page.getByRole('menuitem', { name: 'Icon mask — On' }).click();
+  await expect(frame).toHaveCSS('border-top-left-radius', '0px');
+});
+
 test('studio: paineis recolhem e reabrem; atalhos listam os vinculos reais', async ({ page }) => {
   await preparar(page);
 
