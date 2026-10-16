@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Eye, EyeOff, Lock, Unlock, Trash2, Copy, ChevronRight } from 'lucide-react';
 import type { IconLayer } from '@iconcore/shared';
-import { withIconStroke } from '@iconcore/ui';
+import { Button, withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../ComposerContext';
 import { QualityWarnings } from './QualityWarnings';
 import { LayerContextMenu } from './LayerContextMenu';
 import { groupLayers } from '../utils/layerGroups';
 
 /** Drag-and-drop and rename both need the flat, display-ordered list. */
-export const LayerList = () => {
+export const LayerList = ({ onDeleteRequest }: { onDeleteRequest?: (id: string) => void } = {}) => {
   const { state, dispatch } = useComposer();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -95,6 +95,21 @@ export const LayerList = () => {
             </div>
             <p className="text-xs text-ic-text-muted mb-1">No layers yet</p>
             <p className="text-xs text-ic-text-muted/60">Add a shape or upload an image</p>
+            <Button
+              variant="secondary"
+              className="mt-3"
+              onClick={() =>
+                dispatch({
+                  type: 'ADD_LAYER',
+                  payload: {
+                    kind: 'shape',
+                    shape: { kind: 'rounded-rectangle', width: 220, height: 220, cornerRadius: 48 }
+                  }
+                })
+              }
+            >
+              Add a shape
+            </Button>
             <span className="mt-3 inline-flex items-center gap-1 text-[10px] text-ic-text-muted/40">
               <span className="kbd">L</span> add layer
             </span>
@@ -147,7 +162,9 @@ export const LayerList = () => {
                       onDuplicate={() =>
                         dispatch({ type: 'DUPLICATE_LAYER', payload: { id: layer.id } })
                       }
-                      onRemove={() => dispatch({ type: 'REMOVE_LAYER', payload: { id: layer.id } })}
+                      onRemove={() =>
+                        onDeleteRequest ? onDeleteRequest(layer.id) : dispatch({ type: 'REMOVE_LAYER', payload: { id: layer.id } })
+                      }
                       onRename={(value) => commitRename(layer.id, value)}
                       onBeginRename={() =>
                         dispatch({ type: 'SET_RENAMING_LAYER', payload: { id: layer.id } })
@@ -171,7 +188,7 @@ export const LayerList = () => {
       <QualityWarnings />
 
       {menu && (
-        <LayerContextMenu x={menu.x} y={menu.y} layerId={menu.layerId} onClose={() => setMenu(null)} />
+        <LayerContextMenu x={menu.x} y={menu.y} layerId={menu.layerId} onClose={() => setMenu(null)} onDeleteRequest={onDeleteRequest} />
       )}
     </aside>
   );

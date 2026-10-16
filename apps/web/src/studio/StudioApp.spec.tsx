@@ -44,6 +44,62 @@ const SeededShell = ({ project }: { project: IconCoreProject }) => {
   return <StudioShell />;
 };
 
+describe('Studio layers + insert + shortcuts (Fase 2)', () => {
+  it('inserts an ellipse through the primary Insert menu', () => {
+    renderShell(<SeededShell project={createBlankProject('Insert', 512)} />);
+    expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('0');
+
+    // The primary Insert lives in the toolbar (the panel header carries the same menu).
+    // Radix opens dropdowns on pointer-down, not on click.
+    const toolbar = screen.getByRole('toolbar', { name: 'Studio toolbar' });
+    fireEvent.pointerDown(within(toolbar).getByRole('button', { name: 'Insert layer' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Ellipse' }));
+
+    expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('1');
+  });
+
+  it('asks before a menu-driven delete, and removes on confirm', () => {
+    const project = createBlankProject('Delete', 512);
+    project.layers = [
+      {
+        id: 'layer-prism',
+        name: 'Prism',
+        kind: 'shape',
+        visible: true,
+        zIndex: 1,
+        source: { type: 'inline', shape: { kind: 'rounded-rectangle', width: 220, height: 220, cornerRadius: 48 } },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        fill: { kind: 'solid', color: '#3f6ce0', alpha: 1 }
+      }
+    ];
+    renderShell(<SeededShell project={project} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Prism' }));
+    expect(screen.getByRole('dialog', { name: 'Delete layer?' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete layer' }));
+    expect(screen.queryByRole('dialog', { name: 'Delete layer?' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('0');
+  });
+
+  it('opens the real shortcut list and switches tools from the keyboard', () => {
+    renderShell(<SeededShell project={createBlankProject('Keys', 512)} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }));
+    const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' });
+    expect(within(dialog).getByText('Duplicate selected layer')).toBeInTheDocument();
+    expect(within(dialog).getByText('Select tool')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'h' });
+    expect(screen.getByRole('contentinfo', { name: 'Status bar' })).toHaveTextContent('Hand');
+    fireEvent.keyDown(window, { key: 'v' });
+    expect(screen.getByRole('contentinfo', { name: 'Status bar' })).toHaveTextContent('Select');
+  });
+});
+
 describe('StudioApp shell (Fase 1)', () => {
   it('mounts the five regions with the document chrome', () => {
     renderShell(<SeededShell project={createBlankProject('Studio One', 1024)} />);
@@ -54,9 +110,10 @@ describe('StudioApp shell (Fase 1)', () => {
     expect(screen.getByRole('region', { name: 'Inspector panel' })).toBeInTheDocument();
     expect(screen.getByRole('contentinfo', { name: 'Status bar' })).toBeInTheDocument();
 
-    // Brand + document, not a dashboard.
+    // Brand + document, not a dashboard. The name lives in two homes on
+    // purpose (mockup): the titlebar readout and the panel title that renames.
     expect(screen.getByText('Icon-Core')).toBeInTheDocument();
-    expect(screen.getByText('Studio One')).toBeInTheDocument();
+    expect(screen.getAllByText('Studio One')).toHaveLength(2);
   });
 
   it('collapses each side panel and always offers an evident way back', () => {

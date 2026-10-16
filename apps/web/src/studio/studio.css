@@ -43,6 +43,21 @@
   white-space: nowrap;
 }
 
+.studio-brand-button {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+}
+
+.studio-brand-button:hover {
+  background-color: var(--ic-accent-soft);
+}
+
 .studio-beta {
   font-size: 10px;
   font-weight: 700;

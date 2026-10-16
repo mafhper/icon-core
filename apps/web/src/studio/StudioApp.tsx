@@ -5,7 +5,6 @@ import { ExportView } from '../composer/views/ExportView';
 import { UiGallery } from '../composer/views/UiGallery';
 import { CommandPalette } from '../composer/components/CommandPalette';
 import { LayerInspector } from '../composer/components/LayerInspector';
-import { LayerList } from '../composer/components/LayerList';
 import { PreviewCanvas } from '../composer/components/PreviewCanvas';
 import { PanelResizer } from '../composer/components/PanelResizer';
 import { WelcomeModal } from '../composer/components/WelcomeModal';
@@ -14,6 +13,9 @@ import { usePanelLayout } from '../composer/hooks/usePanelLayout';
 import { ToastProvider } from '../composer/toast/ToastContext';
 import { ToastViewport } from '../composer/toast/ToastViewport';
 import { StudioTopBar } from './components/StudioTopBar';
+import { StudioLayersPanel } from './components/StudioLayersPanel';
+import { StudioPillBar } from './components/StudioPillBar';
+import { StudioShortcutsDialog } from './components/StudioShortcutsDialog';
 import { StudioStatusBar, type StudioTool } from './components/StudioStatusBar';
 import {
   readThemePreference,
@@ -42,6 +44,7 @@ export const StudioShell = () => {
   const { state } = useComposer();
   const [tool, setTool] = useState<StudioTool>('select');
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [themePreference, setThemePreference] = useState<StudioThemePreference>(readThemePreference);
   useKeyboardShortcuts();
   useStudioTheme(themePreference);
@@ -73,6 +76,7 @@ export const StudioShell = () => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key === 'v' || event.key === 'V') setTool('select');
       if (event.key === 'h' || event.key === 'H') setTool('hand');
+      if (event.key === '?') setShortcutsOpen(true);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -106,6 +110,7 @@ export const StudioShell = () => {
         onToggleInspector={toggleInspector}
         themePreference={themePreference}
         onThemePreference={changeTheme}
+        onOpenShortcuts={() => setShortcutsOpen(true)}
       />
       {state.view === 'export-utilities' && state.project ? (
         <div className="studio-body">
@@ -119,13 +124,7 @@ export const StudioShell = () => {
             data-open={leftOpen}
             style={{ width: leftOpen ? leftWidth : 0 }}
           >
-            <div className="studio-panel-heading">
-              <span>Layers</span>
-              <span className="studio-panel-count">{state.project?.layers.length ?? 0}</span>
-            </div>
-            <div className="studio-panel-scroll">
-              <LayerList />
-            </div>
+            <StudioLayersPanel />
           </section>
           {isLarge && leftOpen && (
             <PanelResizer side="left" label="Resize Layers panel" onStart={startLeftResize} />
@@ -137,6 +136,7 @@ export const StudioShell = () => {
             onPointerLeave={() => setCursor(null)}
           >
             <PreviewCanvas />
+            <StudioPillBar tool={tool} onTool={setTool} />
           </section>
           {isLarge && inspectorOpen && (
             <PanelResizer side="right" label="Resize Inspector panel" onStart={startRightResize} />
@@ -154,6 +154,7 @@ export const StudioShell = () => {
         </div>
       )}
       <StudioStatusBar tool={tool} cursor={cursor} />
+      {shortcutsOpen && <StudioShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
       {state.view !== 'export-utilities' && <CommandPalette />}
       {showWelcome && <WelcomeModal dismissible={Boolean(state.project)} />}
       <span className="sr-only" role="status">

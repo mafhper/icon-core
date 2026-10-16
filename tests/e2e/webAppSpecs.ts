@@ -46,7 +46,8 @@ export const WEB_APP_SPECS = [
   'layer-drag',
   'text-panel',
   'foreignobject-regression',
-  'storage-isolation'
+  'storage-isolation',
+  'studio-shell'
 ] as const;
 
 /**

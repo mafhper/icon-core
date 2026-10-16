@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   Circle,
+  Keyboard,
   Monitor,
   Moon,
   PanelLeftClose,
@@ -18,6 +19,7 @@ import type { IconVariant } from '@iconcore/shared';
 import { IconButton, Menu, MenuItem, Tooltip, withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 import type { StudioThemePreference } from '../useStudioTheme';
+import { StudioInsertMenu } from './StudioInsertMenu';
 
 const VARIANTS: Array<{ id: IconVariant; label: string }> = [
   { id: 'default', label: 'Default' },
@@ -39,6 +41,7 @@ interface StudioTopBarProps {
   onToggleInspector: () => void;
   themePreference: StudioThemePreference;
   onThemePreference: (preference: StudioThemePreference) => void;
+  onOpenShortcuts: () => void;
 }
 
 const themeIcon = (preference: StudioThemePreference) =>
@@ -58,7 +61,8 @@ export const StudioTopBar = ({
   onToggleLeft,
   onToggleInspector,
   themePreference,
-  onThemePreference
+  onThemePreference,
+  onOpenShortcuts
 }: StudioTopBarProps) => {
   const { state, dispatch, navigate } = useComposer();
   const project = state.project;
@@ -70,11 +74,17 @@ export const StudioTopBar = ({
   return (
     <>
       <header className="studio-titlebar">
-        <div className="studio-brand">
+        <button
+          type="button"
+          className="studio-brand studio-brand-button"
+          aria-label="Go to workspaces"
+          title="Go to workspaces"
+          onClick={() => navigate('workspaces')}
+        >
           {withIconStroke(<Box size={17} />, 'semibold')}
           <span>Icon-Core</span>
           <span className="studio-beta">BETA</span>
-        </div>
+        </button>
         <div className="studio-doc" aria-live="polite">
           <strong>{project?.metadata.name ?? 'No document'}</strong>
           {state.isDirty && <span className="studio-doc-unsaved" aria-label="Unsaved changes" />}
@@ -117,6 +127,9 @@ export const StudioTopBar = ({
           </Tooltip>
         </div>
         <span className="studio-divider" aria-hidden="true" />
+        <div className="studio-topbar-group">
+          <StudioInsertMenu variant="primary" />
+        </div>
         <div className="studio-topbar-group">
           <span className="text-xs text-ic-text-muted" aria-hidden="true">
             Appearance
@@ -180,6 +193,9 @@ export const StudioTopBar = ({
               />
             ))}
           </Menu>
+          <Tooltip content="Keyboard shortcuts (?)">
+            <IconButton icon={<Keyboard size={16} />} aria-label="Keyboard shortcuts" onClick={onOpenShortcuts} />
+          </Tooltip>
         </div>
         <span className="studio-divider" aria-hidden="true" />
         <button type="button" className="studio-export-button" onClick={() => navigate('export-utilities')}>
