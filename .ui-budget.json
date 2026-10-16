@@ -19,7 +19,9 @@
     "apps/web/src/composer/utils/gradientPresets.spec.ts",
     "packages/iconcore-ui/src/library/colorLibrary.ts",
     "packages/iconcore-ui/tests/colorLibrary.spec.ts",
-    "packages/iconcore-ui/tests/components.test.tsx"
+    "packages/iconcore-ui/tests/components.test.tsx",
+    "apps/web/src/studio/colorMath.spec.ts",
+    "apps/web/src/studio/StudioApp.spec.tsx"
   ],
   "orphanCheck": {
     "css": "apps/web/src/index.css",

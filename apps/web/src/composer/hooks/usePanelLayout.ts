@@ -3,9 +3,10 @@ import { useMediaQuery } from './useMediaQuery';
 
 const LEFT_KEY = 'iconcore:panel-left';
 const RIGHT_KEY = 'iconcore:panel-right';
-const LEFT_MIN = 200;
-const LEFT_MAX = 360;
-const RIGHT_MIN = 240;
+// Studio acceptance (Fase 1): both side panels resize across 205–380px.
+const LEFT_MIN = 205;
+const LEFT_MAX = 380;
+const RIGHT_MIN = 205;
 const RIGHT_MAX = 380;
 
 const readStored = (key: string, fallback: number): number => {
