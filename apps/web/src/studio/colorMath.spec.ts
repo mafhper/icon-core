@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { hexToHsv, hsvToHex, normalizeHex } from './colorMath';
+import {
+  formatColor,
+  hexToHsv,
+  hexToRgb,
+  hslToRgb,
+  hsvToHex,
+  hsvToRgb,
+  normalizeHex,
+  parseColorField,
+  rgbToHex,
+  rgbToHsl,
+  rgbToHsv
+} from './colorMath';
 
 describe('normalizeHex', () => {
   it('accepts with or without the hash, in either case', () => {
@@ -50,5 +62,54 @@ describe('hsvToHex', () => {
       expect(hsv).not.toBeNull();
       expect(hsvToHex(hsv!)).toBe(hex);
     }
+  });
+});
+
+describe('rgb dialect', () => {
+  it('converts both ways on known values', () => {
+    expect(hexToRgb('#ff0000')).toEqual({ r: 255, g: 0, b: 0 });
+    expect(hexToRgb('#abc')).toEqual({ r: 170, g: 187, b: 204 });
+    expect(hexToRgb('nope')).toBeNull();
+    expect(rgbToHex({ r: 255, g: 136, b: 0 })).toBe('#ff8800');
+    expect(rgbToHex({ r: 0, g: 0, b: 0 })).toBe('#000000');
+  });
+
+  it('hsv and rgb agree on the primaries', () => {
+    expect(hsvToRgb({ h: 0, s: 1, v: 1 })).toEqual({ r: 255, g: 0, b: 0 });
+    expect(hsvToRgb({ h: 120, s: 1, v: 1 })).toEqual({ r: 0, g: 255, b: 0 });
+    expect(rgbToHsv({ r: 0, g: 0, b: 255 })).toEqual({ h: 240, s: 1, v: 1 });
+  });
+});
+
+describe('hsl dialect', () => {
+  it('converts both ways on known values', () => {
+    expect(rgbToHsl({ r: 255, g: 0, b: 0 })).toEqual({ h: 0, s: 100, l: 50 });
+    expect(rgbToHsl({ r: 128, g: 128, b: 128 })).toEqual({ h: 0, s: 0, l: 50 });
+    expect(hslToRgb({ h: 120, s: 100, l: 25 })).toEqual({ r: 0, g: 128, b: 0 });
+    expect(hslToRgb({ h: 0, s: 0, l: 100 })).toEqual({ r: 255, g: 255, b: 255 });
+  });
+});
+
+describe('field format and parse', () => {
+  it('prints each format in its own shape', () => {
+    expect(formatColor('#ff0000', 'hex')).toBe('#ff0000');
+    expect(formatColor('#ff0000', 'rgb')).toBe('255, 0, 0');
+    expect(formatColor('#ff0000', 'hsl')).toBe('0, 100%, 50%');
+    expect(formatColor('#ff0000', 'hsb')).toBe('0, 100%, 100%');
+    expect(formatColor('#808080', 'hsl')).toBe('0, 0%, 50%');
+  });
+
+  it('parses what it prints, and refuses the rest', () => {
+    expect(parseColorField('255, 0, 0', 'rgb')).toBe('#ff0000');
+    expect(parseColorField('0, 100%, 50%', 'hsl')).toBe('#ff0000');
+    expect(parseColorField('120, 100%, 25%', 'hsb')).toBe('#004000');
+    expect(parseColorField('#abc', 'hex')).toBe('#aabbcc');
+    expect(parseColorField('1, 2', 'rgb')).toBeNull();
+    expect(parseColorField('red', 'hsl')).toBeNull();
+    expect(parseColorField('zz', 'hex')).toBeNull();
+  });
+
+  it('clamps out-of-range channels instead of refusing', () => {
+    expect(parseColorField('999, 0, 0', 'rgb')).toBe('#ff0000');
   });
 });

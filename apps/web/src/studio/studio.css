@@ -451,30 +451,12 @@
   border-bottom-color: var(--ic-accent);
 }
 
-.studio-preview-tiles {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 12px;
+.studio-tiles-grid {
+  flex-wrap: wrap;
 }
 
-.studio-preview-tiles figure {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--ic-text-muted);
-  text-align: center;
-}
-
-.studio-preview-tiles img {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 10px;
-  object-fit: cover;
-  background-color: var(--ic-elevated);
-  border: 1px solid var(--ic-border-soft);
+.studio-tiles-grid .studio-tile {
+  flex: 1 1 40%;
 }
 
 /* --- Statusbar: three zones ---------------------------------------------- */
@@ -704,6 +686,21 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.studio-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.studio-picker-format-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--ic-label-size);
+  font-weight: 600;
+  color: var(--ic-text-muted);
 }
 
 .studio-picker-hue,

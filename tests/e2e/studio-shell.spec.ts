@@ -66,8 +66,9 @@ test('studio stage: tiles trocam a variante e View options alterna a mascara', a
   await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
 
   // Tiles com preview vivo: trocar nao perde a camada.
-  await page.getByRole('group', { name: 'Appearance variants' }).getByRole('button', { name: 'Monochrome' }).click();
-  await expect(page.getByRole('region', { name: 'Canvas' })).toContainText('Monochrome');
+  const canvas = page.getByRole('region', { name: 'Canvas' });
+  await canvas.getByRole('button', { name: 'Monochrome' }).click();
+  await expect(canvas).toContainText('Monochrome');
   await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
 
   // View options: desligar a mascara quadra o frame (o export continua mascarado).
@@ -77,6 +78,21 @@ test('studio stage: tiles trocam a variante e View options alterna a mascara', a
   await page.getByRole('button', { name: 'View options' }).click();
   await page.getByRole('menuitem', { name: 'Icon mask — On' }).click();
   await expect(frame).toHaveCSS('border-top-left-radius', '0px');
+});
+
+test('studio inspector: o traco engrossa sem esticar a forma', async ({ page }) => {
+  await preparar(page);
+
+  const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
+  await toolbar.getByRole('button', { name: 'Insert layer' }).click();
+  await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
+
+  const inspector = page.getByRole('region', { name: 'Inspector panel' });
+  await inspector.getByRole('button', { name: 'Add stroke' }).click();
+  await inspector.getByRole('spinbutton', { name: 'Stroke width' }).fill('24');
+
+  // A tag de dimensão do canvas não mexe: o traço é outline, não escala.
+  await expect(page.locator('.ic-dimension-tag')).toHaveText('220 × 220');
 });
 
 test('studio: paineis recolhem e reabrem; atalhos listam os vinculos reais', async ({ page }) => {

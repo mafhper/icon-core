@@ -178,6 +178,57 @@ describe('Studio canvas stage (Fase 3)', () => {
   });
 });
 
+describe('Studio inspector panel (Fase 4)', () => {
+  const prism = (): IconLayer => ({
+    id: 'layer-prism',
+    name: 'Prism',
+    kind: 'shape',
+    visible: true,
+    zIndex: 1,
+    source: { type: 'inline', shape: { kind: 'rounded-rectangle', width: 220, height: 220, cornerRadius: 48 } },
+    transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+    opacity: 1,
+    fill: { kind: 'solid', color: '#3f6ce0', alpha: 1 }
+  });
+
+  it('alterna Design e Preview sem perder a seleção', () => {
+    const project = createBlankProject('Panel', 512);
+    project.layers = [prism()];
+    renderShell(<SeededShell project={project} />);
+    const inspector = screen.getByRole('region', { name: 'Inspector panel' });
+
+    fireEvent.click(within(screen.getByRole('region', { name: 'Layers panel' })).getByText('Prism'));
+    // Design mostra o inspector contextual com a seção nova de Stroke.
+    expect(within(inspector).getByRole('tab', { name: 'Design' })).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.click(within(inspector).getByRole('tab', { name: 'Preview' }));
+    const tiles = within(inspector).getByRole('group', { name: 'Appearance variants' });
+    for (const name of ['Default', 'Light', 'Dark', 'Monochrome']) {
+      expect(within(tiles).getByRole('button', { name })).toBeInTheDocument();
+    }
+
+    fireEvent.click(within(inspector).getByRole('tab', { name: 'Design' }));
+    expect(within(inspector).getByDisplayValue('Prism')).toBeInTheDocument();
+    expect(screen.getByLabelText('Selection dimensions')).toHaveTextContent('220 × 220 px');
+  });
+
+  it('o traço engrossa sem esticar a forma, no canvas', () => {
+    const project = createBlankProject('Width', 512);
+    project.layers = [prism()];
+    renderShell(<SeededShell project={project} />);
+    const inspector = screen.getByRole('region', { name: 'Inspector panel' });
+    const canvas = screen.getByRole('region', { name: 'Canvas' });
+
+    fireEvent.click(within(screen.getByRole('region', { name: 'Layers panel' })).getByText('Prism'));
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Add stroke' }));
+    fireEvent.change(within(inspector).getByRole('slider', { name: 'Stroke width' }), { target: { value: '24' } });
+
+    // A tag de dimensão do canvas não mexe: 220 × 220 antes e depois.
+    expect(within(canvas).getByText('220 × 220')).toBeInTheDocument();
+    expect(screen.getByLabelText('Selection dimensions')).toHaveTextContent('220 × 220 px');
+  });
+});
+
 describe('StudioApp shell (Fase 1)', () => {
   it('mounts the five regions with the document chrome', () => {
     renderShell(<SeededShell project={createBlankProject('Studio One', 1024)} />);

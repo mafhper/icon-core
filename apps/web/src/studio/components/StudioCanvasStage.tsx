@@ -1,20 +1,13 @@
 import { useRef, useState } from 'react';
 import { Box, ChevronDown, ChevronRight, Settings2 } from 'lucide-react';
-import type { IconVariant } from '@iconcore/shared';
 import { Menu, MenuItem } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 import { PreviewCanvas } from '../../composer/components/PreviewCanvas';
 import { workAreaToCss } from '../../composer/utils/workArea';
 import { StudioPillBar } from './StudioPillBar';
+import { StudioVariantTiles } from './StudioVariantTiles';
+import { variantLabel } from '../variantLabels';
 import type { StudioTool } from './StudioStatusBar';
-import { useStudioPreview } from '../useStudioPreview';
-
-const TILES: Array<{ id: IconVariant; label: string }> = [
-  { id: 'default', label: 'Default' },
-  { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
-  { id: 'mono', label: 'Monochrome' }
-];
 
 interface StudioCanvasStageProps {
   tool: StudioTool;
@@ -38,7 +31,7 @@ const check = (on: boolean) => (on ? 'On' : 'Off');
 export const StudioCanvasStage = ({ tool, onTool, onCursor }: StudioCanvasStageProps) => {
   const { state, dispatch } = useComposer();
   const project = state.project;
-  const activeLabel = TILES.find((tile) => tile.id === state.activeVariant)?.label ?? 'Default';
+  const activeLabel = variantLabel(state.activeVariant);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const panRef = useRef(pan);
   panRef.current = pan;
@@ -147,39 +140,7 @@ export const StudioCanvasStage = ({ tool, onTool, onCursor }: StudioCanvasStageP
         <PreviewCanvas interactionMode={tool} />
       </div>
       <StudioPillBar tool={tool} onTool={onTool} />
-      <div className="studio-tiles" role="group" aria-label="Appearance variants">
-        {TILES.map((tile) => (
-          <VariantTile
-            key={tile.id}
-            variant={tile.id}
-            label={tile.label}
-            active={state.activeVariant === tile.id}
-            onSelect={() => dispatch({ type: 'SET_ACTIVE_VARIANT', payload: tile.id })}
-          />
-        ))}
-      </div>
+      <StudioVariantTiles />
     </section>
-  );
-};
-
-const VariantTile = ({
-  variant,
-  label,
-  active,
-  onSelect
-}: {
-  variant: IconVariant;
-  label: string;
-  active: boolean;
-  onSelect: () => void;
-}) => {
-  const { state } = useComposer();
-  const url = useStudioPreview(state.project, variant);
-  return (
-    <button type="button" className="studio-tile" data-active={active} onClick={onSelect} aria-pressed={active}>
-      {url ? <img src={url} alt="" draggable={false} /> : <span className="studio-tile-empty" aria-hidden="true" />}
-      <span>{label}</span>
-      {active && <span className="studio-tile-dot" aria-hidden="true" />}
-    </button>
   );
 };

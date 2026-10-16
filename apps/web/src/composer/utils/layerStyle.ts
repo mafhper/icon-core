@@ -99,3 +99,42 @@ export const setShadow = (layer: IconLayer, shadow: LayerEffect): LayerEffect[] 
     ? effects.map((effect) => effect.kind === 'depth-shadow' ? shadow : effect)
     : [...effects, shadow];
 };
+
+const SHADOW_DEFAULTS: Record<string, Record<string, number | string>> = {
+  'drop-shadow': { x: 0, y: 8, blur: 16, color: '#000000', opacity: 0.5 },
+  'inner-shadow': { x: 0, y: 6, blur: 12, color: '#000000', opacity: 0.35 }
+};
+
+/** A generic shadow effect (drop/inner), or a disabled default for the inspector. */
+export const getEffect = (layer: IconLayer, kind: 'drop-shadow' | 'inner-shadow'): LayerEffect =>
+  layer.effects?.find((effect) => effect.kind === kind) ?? {
+    kind,
+    enabled: false,
+    params: { ...SHADOW_DEFAULTS[kind] }
+  };
+
+/** Return a new effects array with a generic shadow effect upserted. */
+export const setEffect = (layer: IconLayer, effect: LayerEffect): LayerEffect[] => {
+  const effects = layer.effects ?? [];
+  const exists = effects.some((item) => item.kind === effect.kind);
+  return exists
+    ? effects.map((item) => (item.kind === effect.kind ? effect : item))
+    : [...effects, effect];
+};
+
+/**
+ * A glow is not an effect kind: it is a drop shadow with zero offset. The
+ * preset exists so the inspector offers one honest button instead of three
+ * coordinated sliders pretending to be a feature.
+ */
+export const GLOW_PRESET: LayerEffect = {
+  kind: 'drop-shadow',
+  enabled: true,
+  params: { x: 0, y: 0, blur: 24, color: '#3f6ce0', opacity: 0.65 }
+};
+
+/** Shadow paint, with the defaults the renderers assume. No bare literals upstream. */
+export const effectPaint = (effect: LayerEffect, fallbackOpacity: number): { color: string; alpha: number } => ({
+  color: String(effect.params.color ?? '#000000'),
+  alpha: Number(effect.params.opacity ?? fallbackOpacity)
+});

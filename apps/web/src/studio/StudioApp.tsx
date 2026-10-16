@@ -4,7 +4,6 @@ import { ComposerProvider, useComposer } from '../composer/ComposerContext';
 import { ExportView } from '../composer/views/ExportView';
 import { UiGallery } from '../composer/views/UiGallery';
 import { CommandPalette } from '../composer/components/CommandPalette';
-import { LayerInspector } from '../composer/components/LayerInspector';
 import { PanelResizer } from '../composer/components/PanelResizer';
 import { WelcomeModal } from '../composer/components/WelcomeModal';
 import { useKeyboardShortcuts } from '../composer/hooks/useKeyboardShortcuts';
@@ -14,6 +13,7 @@ import { ToastViewport } from '../composer/toast/ToastViewport';
 import { StudioTopBar } from './components/StudioTopBar';
 import { StudioLayersPanel } from './components/StudioLayersPanel';
 import { StudioCanvasStage } from './components/StudioCanvasStage';
+import { StudioInspectorPanel } from './components/StudioInspectorPanel';
 import { StudioShortcutsDialog } from './components/StudioShortcutsDialog';
 import { StudioStatusBar, type StudioTool } from './components/StudioStatusBar';
 import {
@@ -131,9 +131,7 @@ export const StudioShell = () => {
             data-open={inspectorOpen}
             style={{ width: inspectorOpen ? rightWidth : 0 }}
           >
-            <div className="studio-panel-scroll">
-              <LayerInspector />
-            </div>
+            <StudioInspectorPanel />
           </section>
         </div>
       )}

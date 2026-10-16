@@ -1,5 +1,6 @@
 import type { Fill } from '@iconcore/shared';
-import { ColorField, Select } from '@iconcore/ui';
+import { Select } from '@iconcore/ui';
+import { StudioColorPicker } from '../../studio/components/StudioColorPicker';
 import { convertFillKind, FILL_KIND_OPTIONS, isGradientFill, solidOf } from '../utils/fill';
 import { GradientEditor } from './GradientEditor';
 
@@ -43,10 +44,10 @@ export const FillEditor = ({ label, fill, onChange, onCommit, noneNote }: FillEd
       ) : isGradientFill(fill) ? (
         <GradientEditor fill={fill} onChange={onChange} onCommit={onCommit} />
       ) : (
-        <ColorField
+        <StudioColorPicker
           label="Color"
           value={solid}
-          onChange={(next) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha })}
+          onChange={(next, transient) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha }, transient)}
           onCommit={onCommit}
         />
       )}

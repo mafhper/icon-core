@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Eraser, Ratio } from 'lucide-react';
-import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
+import type { Fill, IconLayer, ShapeDefinition, ShapeKind, Stroke } from '@iconcore/shared';
 import { defaultMaskRadius } from '@iconcore/shared';
 import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { RADIUS_MARKS, radiusMarkValue } from '../utils/radiusMarks';
@@ -17,11 +17,12 @@ import { FontPicker } from './FontPicker';
 import { DEFAULT_FONT_STACK } from '@iconcore/renderer';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
-import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
+import { effectPaint, fillColor, getEffect, getShadow, GLOW_PRESET, setEffect, setShadow } from '../utils/layerStyle';
 import { readSvgLayerColors } from '../utils/svgLayerColors';
 import { useResetLayerAspect } from '../hooks/useResetLayerAspect';
 import { FillEditor } from './FillEditor';
 import { SvgPaintEditor } from './SvgPaintEditor';
+import { StudioColorPicker } from '../../studio/components/StudioColorPicker';
 import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
@@ -441,6 +442,9 @@ export const LayerInspector = () => {
   };
 
   const shadow = getShadow(layer);
+  const dropShadow = getEffect(layer, 'drop-shadow');
+  const innerShadow = getEffect(layer, 'inner-shadow');
+  const hasDropShadow = (layer.effects ?? []).some((effect) => effect.kind === 'drop-shadow');
   const isImage = baseLayer.kind === 'image' || baseLayer.kind === 'svg';
   const imageFilter = layer.imageFilter ?? {};
   const updateImageFilter = (patch: Partial<typeof imageFilter>, transient = false) =>
@@ -654,6 +658,106 @@ export const LayerInspector = () => {
                 onCommit={commit}
               />
             )}
+            {shape.kind === 'rounded-rectangle' && (
+              <Slider
+                variant="inline"
+                label="Corner smoothing"
+                unit="%"
+                min="0"
+                max="100"
+                value={Math.round((shape.cornerSmoothing ?? 0) * 100)}
+                onChange={(event) => updateShape({ cornerSmoothing: Number(event.target.value) / 100 }, true)}
+                onCommit={commit}
+              />
+            )}
+          </Section>
+        )}
+
+        {baseLayer.kind === 'shape' && shape && shape.kind !== 'line' && (
+          <Section title="Stroke">
+            {/*
+              Vazado, traço real e alinhamento: o motor pinta o contorno como
+              outline (a forma nunca estica), `fill: none` desenha só a borda, e
+              inside/outside usam clip/mask nos dois pipelines — o aceite duro
+              da Fase 4, travado pelas fixtures `traco*`/`vazado` da paridade.
+            */}
+            {layer.stroke ? (
+              <>
+                <Slider
+                  variant="inline"
+                  label="Stroke width"
+                  unit="px"
+                  min="0"
+                  max="64"
+                  value={Math.round(layer.stroke.width)}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, width: Number(event.target.value) } }, true)}
+                  onCommit={commit}
+                />
+                <Select
+                  label="Alignment"
+                  value={layer.stroke.alignment}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, alignment: event.target.value as Stroke['alignment'] } })}
+                >
+                  <option value="center">center</option>
+                  <option value="inside">inside</option>
+                  <option value="outside">outside</option>
+                </Select>
+                <Select
+                  label="Join"
+                  value={layer.stroke.join ?? 'miter'}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, join: event.target.value as 'miter' | 'round' | 'bevel' } })}
+                >
+                  <option value="miter">miter</option>
+                  <option value="round">round</option>
+                  <option value="bevel">bevel</option>
+                </Select>
+                <StudioColorPicker
+                  label="Stroke color"
+                  value={{ color: layer.stroke.color, alpha: 1 }}
+                  showAlpha={false}
+                  onChange={(next, transient) => updateLayer({ stroke: { ...layer.stroke!, color: next.color } }, transient)}
+                  onCommit={commit}
+                />
+                <Button variant="secondary" onClick={() => updateLayer({ stroke: undefined })}>
+                  Remove stroke
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={() => updateLayer({ stroke: { color: fillColor(layer.fill), width: 4, alignment: 'center' } })}
+              >
+                Add stroke
+              </Button>
+            )}
+          </Section>
+        )}
+
+        {baseLayer.kind === 'shape' && shape && shape.kind === 'line' && (
+          <Section title="Stroke">
+            {/*
+              A linha é um corpo fechado cuja forma É o cap: round (a cápsula
+              que sempre foi), butt (caixa) ou square (caixa estendida). Não há
+              outline separado — fixture `linha` da paridade.
+            */}
+            <Select
+              label="Cap"
+              value={layer.stroke?.cap ?? 'round'}
+              onChange={(event) =>
+                updateLayer({
+                  stroke: {
+                    color: layer.stroke?.color ?? fillColor(layer.fill),
+                    width: layer.stroke?.width ?? 8,
+                    alignment: 'center',
+                    cap: event.target.value as 'butt' | 'round' | 'square'
+                  }
+                })
+              }
+            >
+              <option value="butt">butt</option>
+              <option value="round">round</option>
+              <option value="square">square</option>
+            </Select>
           </Section>
         )}
 
@@ -728,6 +832,116 @@ export const LayerInspector = () => {
             }, true)}
             onPointerUp={commit}
           />
+
+          <Switch
+            label="Drop shadow"
+            checked={dropShadow.enabled}
+            onChange={(event) => updateLayer({ effects: setEffect(layer, { ...dropShadow, enabled: event.target.checked }) })}
+          />
+          {dropShadow.enabled && (
+            <>
+              <StudioColorPicker
+                label="Drop shadow color"
+                value={effectPaint(dropShadow, 0.5)}
+                onChange={(next, transient) =>
+                  updateLayer(
+                    { effects: setEffect(layer, { ...dropShadow, params: { ...dropShadow.params, color: next.color, opacity: next.alpha } }) },
+                    transient
+                  )
+                }
+                onCommit={commit}
+              />
+              <Slider
+                variant="inline"
+                label="Shadow X"
+                unit="px"
+                min="-100"
+                max="100"
+                value={Number(dropShadow.params.x ?? 0)}
+                onChange={(event) => updateLayer({
+                  effects: setEffect(layer, { ...dropShadow, params: { ...dropShadow.params, x: Number(event.target.value) } })
+                }, true)}
+                onPointerUp={commit}
+              />
+              <Slider
+                variant="inline"
+                label="Shadow Y"
+                unit="px"
+                min="-100"
+                max="100"
+                value={Number(dropShadow.params.y ?? 8)}
+                onChange={(event) => updateLayer({
+                  effects: setEffect(layer, { ...dropShadow, params: { ...dropShadow.params, y: Number(event.target.value) } })
+                }, true)}
+                onPointerUp={commit}
+              />
+              <Slider
+                variant="inline"
+                label="Drop blur"
+                unit="px"
+                min="0"
+                max="80"
+                value={Number(dropShadow.params.blur ?? 16)}
+                onChange={(event) => updateLayer({
+                  effects: setEffect(layer, { ...dropShadow, params: { ...dropShadow.params, blur: Number(event.target.value) } })
+                }, true)}
+                onPointerUp={commit}
+              />
+            </>
+          )}
+          {!hasDropShadow && (
+            <Button
+              variant="secondary"
+              onClick={() => updateLayer({ effects: setEffect(layer, { ...GLOW_PRESET }) })}
+            >
+              Add glow
+            </Button>
+          )}
+
+          <Switch
+            label="Inner shadow"
+            checked={innerShadow.enabled}
+            onChange={(event) => updateLayer({ effects: setEffect(layer, { ...innerShadow, enabled: event.target.checked }) })}
+          />
+          {innerShadow.enabled && (
+            <>
+              <StudioColorPicker
+                label="Inner shadow color"
+                value={effectPaint(innerShadow, 0.35)}
+                onChange={(next, transient) =>
+                  updateLayer(
+                    { effects: setEffect(layer, { ...innerShadow, params: { ...innerShadow.params, color: next.color, opacity: next.alpha } }) },
+                    transient
+                  )
+                }
+                onCommit={commit}
+              />
+              <Slider
+                variant="inline"
+                label="Inner Y"
+                unit="px"
+                min="-100"
+                max="100"
+                value={Number(innerShadow.params.y ?? 6)}
+                onChange={(event) => updateLayer({
+                  effects: setEffect(layer, { ...innerShadow, params: { ...innerShadow.params, y: Number(event.target.value) } })
+                }, true)}
+                onPointerUp={commit}
+              />
+              <Slider
+                variant="inline"
+                label="Inner blur"
+                unit="px"
+                min="0"
+                max="80"
+                value={Number(innerShadow.params.blur ?? 12)}
+                onChange={(event) => updateLayer({
+                  effects: setEffect(layer, { ...innerShadow, params: { ...innerShadow.params, blur: Number(event.target.value) } })
+                }, true)}
+                onPointerUp={commit}
+              />
+            </>
+          )}
 
           <Slider
             variant="inline"

@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Fill } from '@iconcore/shared';
 import { FillEditor } from './FillEditor';
 
@@ -16,14 +16,14 @@ describe('FillEditor', () => {
     renderFill({ kind: 'solid', color: '#F8FAFC', alpha: 1 });
 
     expect(screen.getByLabelText('Fill').tagName).toBe('SELECT');
-    expect(screen.getByText('Color')).toBeInTheDocument();
+    // The studio picker keeps the colour contract: a hex field under the kind.
+    expect(screen.getByLabelText('Color hex')).toBeInTheDocument();
 
-    for (const label of [screen.getByText('Fill'), screen.getByText('Color')]) {
-      expect(label.className).toContain('text-ic-text-muted');
-      expect(label.className).not.toContain('uppercase');
-      expect(label.className).not.toContain('tracking-');
-      expect(label.className).not.toContain('font-bold');
-    }
+    const label = screen.getByText('Fill');
+    expect(label.className).toContain('text-ic-text-muted');
+    expect(label.className).not.toContain('uppercase');
+    expect(label.className).not.toContain('tracking-');
+    expect(label.className).not.toContain('font-bold');
   });
 
   it('renders the colour as one flat paint field, not nested boxes', () => {
@@ -60,5 +60,13 @@ describe('FillEditor', () => {
     renderFill({ kind: 'none' });
     expect(screen.queryByLabelText('Color hex')).not.toBeInTheDocument();
     expect(screen.getByText(/shape is transparent/i)).toBeInTheDocument();
+  });
+
+  it('converts picker edits to a solid fill, transiently', () => {
+    const onChange = vi.fn();
+    render(<FillEditor label="Fill" fill={{ kind: 'solid', color: '#F8FAFC', alpha: 1 }} onChange={onChange} onCommit={noop} />);
+
+    fireEvent.change(screen.getByLabelText('Color hex'), { target: { value: 'ff0000' } });
+    expect(onChange).toHaveBeenCalledWith({ kind: 'solid', color: '#ff0000', alpha: 1 }, true);
   });
 });
