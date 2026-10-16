@@ -105,15 +105,6 @@ button {
   font-family: 'IBM Plex Mono', monospace;
 }
 
-.card-surface {
-  background: var(--ic-surface);
-  border-color: var(--ic-border);
-  box-shadow:
-    inset 0 1px 0 var(--ic-inset-top),
-    inset 0 -1px 0 var(--ic-inset-bottom),
-    0 18px 36px var(--ic-shadow);
-}
-
 @layer base {
   input,
   textarea,
@@ -445,74 +436,6 @@ input[type='range'] {
   background: var(--ic-bg);
 }
 
-/* ---- Composer AppShell (PR-05/PR-06) ---- */
-
-.ic-app-shell {
-  position: relative;
-  height: 100dvh;
-  min-height: 100dvh;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.ic-app-body {
-  flex: 1 1 auto;
-  position: relative;
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-  align-items: stretch;
-  overflow: hidden;
-}
-
-.ic-app-main,
-
-
-.ic-app-panel {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  /* physical-panel trick: catches light at the top edge instead of a gradient */
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-/* Side panels are always visible columns that can be collapsed independently
-   (PR-08 v2): width is driven by --panel-left/--panel-right, and the shell
-   sets those to 0px when a panel is collapsed. Canvas never moves; it simply
-   reflows into the freed space (Icon Composer-style consistency). */
-.ic-left-panel {
-  flex: 0 0 auto;
-  width: var(--panel-left, 240px);
-  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.ic-right-panel {
-  flex: 0 0 auto;
-  width: var(--panel-right, 288px);
-  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.ic-left-panel:not([data-open]),
-
-
-.ic-right-panel:not([data-open]) {
-  width: 0;
-  opacity: 0;
-  visibility: hidden;
-  border: 0;
-  transition: width 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.2s;
-}
-
-.ic-app-main {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 /* Resizable panel strips */
 
 .ic-panel-resizer {
@@ -545,76 +468,6 @@ input[type='range'] {
 }
 
 /* Overlay backdrop (drawer/sheet modes) */
-
-.ic-tool-rail {
-  flex: 0 0 44px;
-  width: 44px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 0;
-  border-right: 1px solid var(--ic-border);
-  background: var(--ic-surface);
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.ic-tool-rail-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.ic-action-bar {
-  flex: 0 0 auto;
-  border-top: 1px solid var(--ic-border);
-  background: color-mix(in srgb, var(--ic-bg) 88%, transparent 12%);
-  backdrop-filter: blur(18px);
-}
-
-.ic-action-bar-inner {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 16px;
-}
-
-/* Topbar leading (hamburger + brand) */
-
-/* ---- Collapsible side panels (PR-08 v2) ----
-   Both side panels are always-visibile columns at every viewport width.
-   Each can be collapsed independently from its toggle; the canvas reflows
-   into the freed space instead of being covered or pushed around. */
-
-/* Narrower viewports: cap panel widths so a fully-open panel never eats the
-   whole screen and hide the resize handles (columns still work). */
-@media (max-width: 1179.98px) {
-  .ic-panel-resizer {
-    display: none;
-  }
-
-  .ic-left-panel[data-open] {
-    width: min(86vw, var(--panel-left, 240px));
-  }
-
-  .ic-right-panel[data-open] {
-    width: min(86vw, var(--panel-right, 288px));
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ic-left-panel,
-
-  .ic-right-panel {
-    transition: none;
-    animation: none;
-  }
-}
 
 .ic-canvas-toolbar {
   flex: 0 0 auto;
@@ -653,7 +506,7 @@ input[type='range'] {
 }
 
 .ic-layer-list {
-  /* Fill the .ic-app-panel column: without flex:1 the surface only reaches
+  /* Fill the panel column: without flex:1 the surface only reaches
      the height of its content, leaving the page background visible below. */
   flex: 1 1 auto;
   min-width: 0;
@@ -902,30 +755,8 @@ input[type='range'] {
   color: var(--ic-danger);
 }
 
-/* --- Export plan editor (EX5) --------------------------------------------
-   Only what Tailwind utilities cannot express here: data-attribute states and
-   the two-column shell. A disabled artifact stays visible but recedes, so a
-   preset can be trimmed without rows disappearing. */
-
-.ic-export-view {
-  --ic-export-columns: 1fr;
-}
-
-@media (min-width: 900px) {
-  .ic-export-view {
-    --ic-export-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-  }
-}
-
-.ic-plan-badge[data-kind='container'] {
-  color: var(--ic-accent-text);
-}
-
-.ic-plan-badge[data-kind='vector'] {
-  color: var(--ic-success);
-}
 .ic-inspector {
-  /* Fill the .ic-app-panel column so its surface and scroll area span the
+  /* Fill the panel column so its surface and scroll area span the
      full height instead of collapsing to the content height. */
   flex: 1 1 auto;
   width: 100%;
@@ -1313,91 +1144,6 @@ input[type='range'] {
   height: 176px;
 }
 
-.ic-sizes-control {
-  position: relative;
-  align-self: center;
-  flex: 0 0 auto;
-}
-
-.ic-sizes-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--ic-border);
-  border-radius: 11px;
-  background: var(--ic-elevated);
-  color: var(--ic-text-muted);
-  font-size: 0.74rem;
-  font-weight: 680;
-  cursor: pointer;
-}
-
-.ic-sizes-button span {
-  display: none;
-}
-/* Duas definicoes aqui desde antes do ratchet; a segunda (`padding: 0 9px`) vencia por
- * ordem e e o valor efetivo. Fundida nesta com o vencedor registrado — o outro valor
- * (12px) e historia. */
-
-.ic-sizes-button:hover,
-
-
-.ic-sizes-button.is-active {
-  color: var(--ic-accent-text);
-  border-color: var(--ic-accent);
-}
-
-.ic-sizes-pop {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  z-index: 20;
-  display: grid;
-  grid-auto-flow: column;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid var(--ic-border);
-  border-radius: 14px;
-  background: var(--ic-surface);
-  box-shadow: 0 18px 40px var(--ic-shadow);
-  overflow-x: auto;
-  max-width: min(620px, 60vw);
-}
-
-.ic-size-cell {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.ic-size-thumb {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--ic-border);
-  border-radius: 10px;
-  background: #ffffff;
-  overflow: hidden;
-}
-
-.ic-size-thumb img {
-  object-fit: contain;
-}
-
-.ic-size-pending,
-
-
-.ic-size-label {
-  font-size: 10px;
-  color: var(--ic-text-muted);
-}
-
 .ic-layer-row.is-dragging {
   opacity: 0.45;
 }
@@ -1465,14 +1211,6 @@ input[type='range'] {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-.composer-enter > * {
-  animation: composer-fade-in 0.3s ease-out both;
-}
-
-.composer-enter > *:nth-child(1) { animation-delay: 0ms; }
-.composer-enter > *:nth-child(2) { animation-delay: 40ms; }
-.composer-enter > *:nth-child(3) { animation-delay: 80ms; }
 
 .composer-layer-enter {
   animation: composer-fade-in 0.2s ease-out both;
@@ -1605,8 +1343,6 @@ textarea:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .ic-toast,
 
-  .composer-enter > *,
-
   .composer-layer-enter {
     animation: none !important;
   }
@@ -1694,78 +1430,4 @@ textarea:focus-visible,
   font-size: 0.78rem;
   color: var(--ic-accent-text);
   width: fit-content;
-}
-
-/* --- export preview (pre-write render of what the export will produce) --- */
-.ic-export-preview {
-  padding: 20px;
-  display: grid;
-  gap: 14px;
-}
-.ic-export-preview-head h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ic-text);
-}
-.ic-export-preview-head p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--ic-text-muted);
-}
-/* Size ramp em coluna, do maior para o menor. O porque esta em ExportPreview.tsx;
- * `align-items: end` porque um icone pequeno no topo parece flutuar. */
-.ic-export-preview-ramp {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 14px;
-  align-items: end;
-  justify-items: center;
-}
-.ic-export-preview-cell {
-  margin: 0;
-  display: grid;
-  gap: 6px;
-  justify-items: center;
-}
-/* O gradiente e o split claro/escuro; a imagem cobre os dois lados, e por isso que cabe
- * UM contorno de mascara. */
-.ic-export-preview-frame {
-  position: relative;
-  display: grid;
-  overflow: hidden;
-  background: linear-gradient(#ffffff 0 50%, #101114 50% 100%);
-}
-.ic-export-preview-frame img {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-/* `box-shadow`, e nao `border`: a borda encolheria a imagem 1px de cada lado, e quem julga "a arte tocou a borda" nao pode ter a borda mexendo no desenho. */
-.ic-export-preview-mask {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1px var(--ic-border-strong);
-}
-.ic-export-preview-cell figcaption {
-  font-size: 11px;
-  color: var(--ic-text-muted);
-  text-align: center;
-}
-.ic-export-preview-pending,
-.ic-export-preview-empty {
-  font-size: 12px;
-  color: var(--ic-text-faint);
-}
-.ic-export-preview-warn,
-.ic-export-preview-note {
-  margin: 0;;
-  font-size: 12px;;
-  line-height: 1.45;;
-  color: var(--ic-text-muted);;
-  border-left: 2px solid var(--ic-warning);;
-  padding: 6px 0 6px 10px;;
 }

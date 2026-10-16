@@ -1,8 +1,8 @@
-import { Download, FilePlus, Keyboard, PenLine, Save, Settings2 } from 'lucide-react';
+import { Download, FilePlus, Info, Keyboard, PenLine, Save, Settings2 } from 'lucide-react';
 import { IconButton, Menu, MenuItem, MenuSeparator, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 
-export type StudioMenuDialog = 'new' | 'rename' | 'preferences' | 'shortcuts' | 'confirm-new' | null;
+export type StudioMenuDialog = 'new' | 'rename' | 'preferences' | 'shortcuts' | 'confirm-new' | 'about' | null;
 
 /**
  * Studio main menu (Fase 5): every document-level action in one place.
@@ -40,6 +40,7 @@ export const StudioMainMenu = ({ onDialog }: { onDialog: (dialog: Exclude<Studio
       <MenuSeparator />
       <MenuItem icon={<Settings2 size={14} />} label="Preferences…" onSelect={() => onDialog('preferences')} />
       <MenuItem icon={<Keyboard size={14} />} label="Keyboard shortcuts" shortcut="?" onSelect={() => onDialog('shortcuts')} />
+      <MenuItem icon={<Info size={14} />} label="About Icon-Core" onSelect={() => onDialog('about')} />
     </Menu>
   );
 };

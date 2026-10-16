@@ -1,5 +1,6 @@
-import { Magnet, MousePointer2, Hand } from 'lucide-react';
+import { Hand, Magnet, MousePointer2 } from 'lucide-react';
 import { resolveSize } from '@iconcore/shared';
+import { withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 import pkg from '../../../package.json';
 
@@ -13,7 +14,10 @@ interface StudioStatusBarProps {
 const toolLabel = (tool: StudioTool): string => (tool === 'hand' ? 'Hand' : 'Select');
 
 const toolIcon = (tool: StudioTool) =>
-  tool === 'hand' ? <Hand size={12} aria-hidden="true" /> : <MousePointer2 size={12} aria-hidden="true" />;
+  // Regular readout text: the icon follows at 1.5px (the kit's stroke rule).
+  tool === 'hand'
+    ? withIconStroke(<Hand size={12} aria-hidden="true" />)
+    : withIconStroke(<MousePointer2 size={12} aria-hidden="true" />);
 
 /**
  * Studio statusbar (Fase 1): three zones.
@@ -55,7 +59,7 @@ export const StudioStatusBar = ({ tool, cursor }: StudioStatusBarProps) => {
           aria-pressed={state.showSnapping}
           onClick={() => dispatch({ type: 'TOGGLE_SNAPPING' })}
         >
-          <Magnet size={12} aria-hidden="true" />
+          {withIconStroke(<Magnet size={12} aria-hidden="true" />)}
           <span>{state.showSnapping ? 'Snapping on' : 'Snapping off'}</span>
         </button>
       </span>

@@ -19,6 +19,7 @@ import {
 import type { IconVariant } from '@iconcore/shared';
 import { IconButton, Menu, MenuItem, Tooltip, withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
+import { AboutModal } from '../../composer/components/AboutModal';
 import type { StudioThemePreference } from '../useStudioTheme';
 import { StudioConfirmDialog } from './StudioConfirmDialog';
 import { StudioInsertMenu } from './StudioInsertMenu';
@@ -262,6 +263,7 @@ export const StudioTopBar = ({
           onClose={() => setMenuDialog(null)}
         />
       )}
+      {menuDialog === 'about' && <AboutModal onClose={() => setMenuDialog(null)} />}
     </>
   );
 };

@@ -275,7 +275,9 @@ const SURFACES: Array<{
 }> = [
   { name: 'welcome modal', selector: '.ic-welcome-modal', needsProject: false },
   { name: 'layers panel', selector: '.ic-layer-list', needsProject: true },
-  { name: 'action bar', selector: '.ic-action-bar', needsProject: true },
+  // The Composer action bar is gone with the old shell; its successor is the
+  // floating canvas pill, which owns the same verbs under the same names.
+  { name: 'canvas pill', selector: '.studio-pillbar', needsProject: true },
   { name: 'topbar', selector: '.ic-topbar, header', needsProject: true },
   // F6 — 2ª passada: as duas superfícies que ficaram sem contrato na 1ª.
   {
@@ -289,15 +291,15 @@ const SURFACES: Array<{
     }
   },
   {
-    name: 'export utilities',
-    selector: '.ic-export-view',
+    name: 'export dialog',
+    selector: '.studio-dialog',
     needsProject: true,
-    // Through the **Export menu**: the standalone Export button left the toolbar, so
-    // there is no longer a topbar button to click.
+    // Through the topbar Export button: the old Export menu and plan-editor
+    // view left with the Composer chrome (Fase 6 cut); the dialog is the
+    // surface now, held to the same polish contract.
     open: async (page) => {
-      await page.getByRole('button', { name: 'Export menu' }).click();
-      await page.getByRole('menuitem', { name: /export icon pack/i }).click();
-      await expect(page.locator('.ic-export-view')).toBeVisible();
+      await page.getByRole('button', { name: 'Export' }).click();
+      await expect(page.locator('.studio-dialog')).toBeVisible();
     }
   }
 ];
@@ -481,17 +483,17 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
   await expect(page.locator('.ic-variant-panel')).toBeVisible();
   await audit('.ic-variant-panel', 'variant panel');
 
-  // Export Utilities (the plan editor). Reached through the **Export menu**, since the
-  // standalone Export button left the toolbar: this is the regression lock for that.
-  await page.getByRole('button', { name: 'Export menu' }).click();
-  await audit('body', 'export menu open');
-  await page.getByRole('menuitem', { name: /export icon pack/i }).click();
-  await expect(page.getByRole('heading', { name: 'Export', exact: true })).toBeVisible();
+  // Export dialog (the plan editor left with the Composer chrome; the dialog
+  // is the surface now). Reached through the topbar Export button.
+  await page.getByRole('button', { name: 'Export' }).click();
+  await audit('body', 'export dialog open');
+  await expect(page.getByRole('heading', { name: 'Export icons' })).toBeVisible();
   await audit('body', 'export');
 
   // About modal (portalled to <body>; audited last, so it need not be dismissed).
-  await page.getByRole('button', { name: /back to edit space/i }).click();
-  await page.getByRole('button', { name: /about/i }).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Main menu' }).click();
+  await page.getByRole('menuitem', { name: 'About Icon-Core' }).click();
   await expect(page.locator('.ic-about-modal')).toBeVisible();
   await audit('.ic-about-modal', 'about modal');
 
@@ -508,7 +510,8 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
  */
 test('modal overlays cover the viewport', async ({ page }) => {
   await openInspector(page, false);
-  await page.getByRole('button', { name: /about/i }).click();
+  await page.getByRole('button', { name: 'Main menu' }).click();
+  await page.getByRole('menuitem', { name: 'About Icon-Core' }).click();
   await expect(page.locator('.ic-about-modal')).toBeVisible();
 
   const viewport = page.viewportSize()!;

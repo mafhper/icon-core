@@ -48,6 +48,9 @@
   border: none;
   color: inherit;
   font: inherit;
+  /* `font: inherit` resets the weight the brand sets above; restore it, or the
+     wordmark renders regular and the icon-stroke audit (rightly) complains. */
+  font-weight: 700;
   cursor: pointer;
   padding: 4px 6px;
   margin-left: -6px;
