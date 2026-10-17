@@ -72,4 +72,73 @@ describe('StudioColorPicker', () => {
     expect(screen.queryByLabelText('Paint alpha')).not.toBeInTheDocument();
     expect(screen.getByRole('slider', { name: 'Paint hue' })).toBeInTheDocument();
   });
+
+  it('opens the same picker as a floating dialog from the swatch', () => {
+    renderPicker();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+    const dialog = screen.getByRole('dialog', { name: 'Paint picker' });
+    expect(dialog).toBeInTheDocument();
+    // The body floats inside the dialog, not embedded in the sidebar.
+    expect(
+      dialog.contains(screen.getByLabelText('Paint saturation and brightness. Arrow keys adjust.'))
+    ).toBe(true);
+    expect(screen.getByRole('slider', { name: 'Paint hue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose Paint color' })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
+  });
+
+  it('toggles the floating picker off from the swatch', () => {
+    renderPicker();
+    const swatch = screen.getByRole('button', { name: 'Choose Paint color' });
+    fireEvent.click(swatch);
+    expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+    fireEvent.click(swatch);
+    expect(screen.queryByRole('dialog', { name: 'Paint picker' })).not.toBeInTheDocument();
+  });
+
+  it('dismisses the floating picker on Escape', () => {
+    renderPicker();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+    expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Paint picker' })).not.toBeInTheDocument();
+  });
+
+  it('dismisses the floating picker on outside click', () => {
+    renderPicker();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+    expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+    fireEvent.mouseDown(document.body, { button: 0 });
+    expect(screen.queryByRole('dialog', { name: 'Paint picker' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the arrow trigger inline and exclusive with the swatch', () => {
+    renderPicker();
+    expand();
+    // Chevron still embeds in place: no dialog, body outside one.
+    expect(screen.queryByRole('dialog', { name: 'Paint picker' })).not.toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Paint saturation and brightness. Arrow keys adjust.')
+    ).toBeInTheDocument();
+    // Opening the swatch moves the same body into the dialog.
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+    const dialog = screen.getByRole('dialog', { name: 'Paint picker' });
+    expect(
+      dialog.contains(screen.getByLabelText('Paint saturation and brightness. Arrow keys adjust.'))
+    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Expand Paint picker' })).toBeInTheDocument();
+  });
+
+  it('confirms an explicit value edit in the floating picker and returns focus', () => {
+    const { onCommit } = renderPicker();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+    const field = screen.getByLabelText('Paint hex value');
+    fireEvent.change(field, { target: { value: '#00ff00' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: 'Paint picker' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose Paint color' })).toHaveFocus();
+  });
 });
