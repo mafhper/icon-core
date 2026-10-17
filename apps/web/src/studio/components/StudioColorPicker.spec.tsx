@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { GradientFill } from '@iconcore/shared';
 import { StudioColorPicker, type StudioColorValue } from './StudioColorPicker';
 
 afterEach(cleanup);
@@ -296,5 +297,192 @@ describe('StudioColorPicker', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Paint fill type: Solid color' }));
     expect(onFillKindChange).toHaveBeenCalledWith('solid');
+  });
+
+  describe('floating gradient body', () => {
+    const gradientFill: GradientFill = {
+      kind: 'linear-gradient',
+      angle: 90,
+      stops: [
+        { offset: 0, color: '#ff0000', alpha: 1 },
+        { offset: 1, color: '#0000ff', alpha: 1 }
+      ]
+    };
+
+    const renderGradient = (fill: GradientFill = gradientFill, extra = {}) => {
+      const onGradientChange = vi.fn();
+      const onGradientCommit = vi.fn();
+      const utils = render(
+        <StudioColorPicker
+          label="Paint"
+          value={{ color: '#ff0000', alpha: 1 }}
+          onChange={() => {}}
+          fillKind={fill.kind}
+          onFillKindChange={() => {}}
+          gradientFill={fill}
+          onGradientChange={onGradientChange}
+          onGradientCommit={onGradientCommit}
+          {...extra}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+      const dialog = screen.getByRole('dialog', { name: 'Paint picker' });
+      return { ...utils, dialog, onGradientChange, onGradientCommit };
+    };
+
+    it('keeps the panel open across the kind switch and swaps the body to the gradient editor', () => {
+      const onFillKindChange = vi.fn();
+      const { rerender } = render(
+        <StudioColorPicker
+          label="Paint"
+          value={{ color: '#ff0000', alpha: 1 }}
+          onChange={() => {}}
+          fillKind="solid"
+          onFillKindChange={onFillKindChange}
+        />
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+      expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+      // Solid body first.
+      expect(screen.getByLabelText('Paint saturation and brightness. Arrow keys adjust.')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Paint fill type: Linear gradient' }));
+      expect(onFillKindChange).toHaveBeenCalledWith('linear-gradient');
+
+      // The parent converts and re-renders with the gradient: the same panel
+      // stays open, now with the gradient body instead of the solid one.
+      rerender(
+        <StudioColorPicker
+          label="Paint"
+          value={{ color: '#ff0000', alpha: 1 }}
+          onChange={() => {}}
+          fillKind="linear-gradient"
+          onFillKindChange={onFillKindChange}
+          gradientFill={gradientFill}
+          onGradientChange={() => {}}
+          onGradientCommit={() => {}}
+        />
+      );
+      const dialog = screen.getByRole('dialog', { name: 'Paint picker' });
+      expect(dialog).toBeInTheDocument();
+      expect(within(dialog).getByLabelText('Paint gradient type')).toBeInTheDocument();
+      expect(within(dialog).getByRole('slider', { name: 'Stop 1' })).toBeInTheDocument();
+      expect(within(dialog).getByRole('spinbutton', { name: 'Stop 1 position' })).toBeInTheDocument();
+      expect(screen.queryByLabelText('Paint saturation and brightness. Arrow keys adjust.')).not.toBeInTheDocument();
+    });
+
+    it('offers the four gradient subtypes in the floating select', () => {
+      const { dialog, onGradientChange } = renderGradient();
+      const select = within(dialog).getByLabelText('Paint gradient type') as HTMLSelectElement;
+      const values = Array.from(select.querySelectorAll('option')).map((option) => option.value);
+      expect(values).toEqual(['linear-gradient', 'radial-gradient', 'angular-gradient', 'diamond-gradient']);
+
+      fireEvent.change(select, { target: { value: 'radial-gradient' } });
+      expect(onGradientChange).toHaveBeenCalledTimes(1);
+      const next = onGradientChange.mock.calls[0][0] as GradientFill;
+      expect(next.kind).toBe('radial-gradient');
+      // Stops survive the subtype switch.
+      expect(next.stops?.map((stop) => stop.color)).toEqual(['#ff0000', '#0000ff']);
+    });
+
+    it('adds, moves and removes stops without leaving the panel', () => {
+      const { dialog, onGradientChange } = renderGradient();
+      const scoped = within(dialog);
+
+      // Two stops to start.
+      expect(scoped.getByRole('spinbutton', { name: 'Stop 1 position' })).toHaveValue(0);
+      expect(scoped.getByRole('spinbutton', { name: 'Stop 2 position' })).toHaveValue(100);
+
+      fireEvent.click(scoped.getByRole('button', { name: 'Add gradient stop' }));
+      expect(onGradientChange).toHaveBeenCalledTimes(1);
+      const added = onGradientChange.mock.calls[0][0] as GradientFill;
+      expect(added.stops).toHaveLength(3);
+      expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+
+      // Move the first stop: position field drives the model transiently.
+      fireEvent.change(scoped.getByRole('spinbutton', { name: 'Stop 1 position' }), { target: { value: '25' } });
+      const moved = onGradientChange.mock.calls.at(-1)?.[0] as GradientFill;
+      expect(moved.stops?.[0].offset).toBeCloseTo(0.25);
+
+      // Alpha field drives the same stop.
+      fireEvent.change(scoped.getByRole('spinbutton', { name: 'Stop 1 alpha' }), { target: { value: '50' } });
+      const faded = onGradientChange.mock.calls.at(-1)?.[0] as GradientFill;
+      expect(faded.stops?.[0].alpha).toBeCloseTo(0.5);
+    });
+
+    it('removes a stop only when more than two remain', () => {
+      const three: GradientFill = {
+        kind: 'linear-gradient',
+        angle: 90,
+        stops: [
+          { offset: 0, color: '#ff0000' },
+          { offset: 0.5, color: '#00ff00' },
+          { offset: 1, color: '#0000ff' }
+        ]
+      };
+      const { dialog, onGradientChange } = renderGradient(three);
+      const scoped = within(dialog);
+
+      fireEvent.click(scoped.getByRole('button', { name: 'Remove stop 2' }));
+      expect(onGradientChange).toHaveBeenCalledTimes(1);
+      expect((onGradientChange.mock.calls[0][0] as GradientFill).stops).toHaveLength(2);
+
+      // With two stops the remove buttons disable: nothing left to remove.
+      cleanup();
+      const { dialog: dialog2 } = renderGradient();
+      expect(within(dialog2).getByRole('button', { name: 'Remove stop 1' })).toBeDisabled();
+    });
+
+    it('edits the active stop through the shared colour surface', () => {
+      const { dialog, onGradientChange } = renderGradient();
+      const scoped = within(dialog);
+
+      // The first stop is active by default: its colour surface is shown.
+      expect(scoped.getByLabelText('Stop 1 color hex value')).toHaveValue('#ff0000');
+
+      fireEvent.change(scoped.getByLabelText('Stop 1 color hex value'), { target: { value: '#00ff00' } });
+      const first = onGradientChange.mock.calls.at(-1)?.[0] as GradientFill;
+      expect(first.stops?.[0].color).toBe('#00ff00');
+      expect(first.stops?.[1].color).toBe('#0000ff');
+
+      // Selecting the second stop swaps the surface to it.
+      fireEvent.click(scoped.getByRole('button', { name: 'Select stop 2' }));
+      expect(scoped.getByLabelText('Stop 2 color hex value')).toHaveValue('#0000ff');
+
+      fireEvent.change(scoped.getByLabelText('Stop 2 color hex value'), { target: { value: '#ffff00' } });
+      const second = onGradientChange.mock.calls.at(-1)?.[0] as GradientFill;
+      expect(second.stops?.[1].color).toBe('#ffff00');
+    });
+
+    it('round-trips the first stop colour back to solid', () => {
+      const onFillKindChange = vi.fn();
+      renderGradient(gradientFill, { onFillKindChange });
+      fireEvent.click(screen.getByRole('button', { name: 'Paint fill type: Solid color' }));
+      expect(onFillKindChange).toHaveBeenCalledWith('solid');
+      // The panel is still open after asking to go back to solid.
+      expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+    });
+
+    it('shows geometry only for the kinds that use it', () => {
+      const { dialog } = renderGradient();
+      expect(within(dialog).getByRole('slider', { name: 'Angle' })).toBeInTheDocument();
+      expect(within(dialog).queryByRole('slider', { name: 'Center X' })).not.toBeInTheDocument();
+
+      cleanup();
+      const radial: GradientFill = {
+        kind: 'radial-gradient',
+        centerX: 0.5,
+        centerY: 0.5,
+        radius: 0.5,
+        stops: [
+          { offset: 0, color: '#ff0000' },
+          { offset: 1, color: '#0000ff' }
+        ]
+      };
+      const { dialog: radialDialog } = renderGradient(radial);
+      expect(within(radialDialog).getByRole('slider', { name: 'Center X' })).toBeInTheDocument();
+      expect(within(radialDialog).getByRole('slider', { name: 'Radius' })).toBeInTheDocument();
+      expect(within(radialDialog).queryByRole('slider', { name: 'Angle' })).not.toBeInTheDocument();
+    });
   });
 });
