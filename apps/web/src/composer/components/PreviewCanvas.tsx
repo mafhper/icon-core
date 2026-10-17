@@ -82,7 +82,16 @@ const useRenderedIcon = (
   return url;
 };
 
-export const PreviewCanvas = ({ interactionMode = 'select' }: { interactionMode?: 'select' | 'hand' } = {}) => {
+export const PreviewCanvas = (
+  { interactionMode = 'select', workAreaFallback = 'var(--ic-bg)' }: {
+    interactionMode?: 'select' | 'hand';
+    /**
+     * Para onde a mesa cai quando nada foi escolhido. O Composer usa o fundo
+     * do tema; a concha passa a mesa do mockup para que palco e faixa leiam
+     * um pano só. Só o padrão muda — cor escolhida pinta igual nos dois.
+     */
+    workAreaFallback?: string;
+  } = {}) => {
   const { state, dispatch } = useComposer();
   const [menu, setMenu] = useState<{ x: number; y: number; layerId: string } | null>(null);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
@@ -251,9 +260,10 @@ export const PreviewCanvas = ({ interactionMode = 'select' }: { interactionMode?
          * O `data-editor-backdrop` com tres regras CSS era o que impedia isto de ser uma
          * cor: o valor tinha de estar na folha, e por isso o `plain` — que ja era uma cor
          * — carregava um literal `#e6ecf5` dentro do `color-mix`. Inline, o fallback
-         * continua sendo `var(--ic-bg)` e nenhum literal existe.
+         * continua sendo o `workAreaFallback` (o fundo do tema no Composer) e nenhum
+         * literal existe.
          */
-        style={{ backgroundColor: workAreaToCss(state.workAreaColor) }}
+        style={{ backgroundColor: workAreaToCss(state.workAreaColor, workAreaFallback) }}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}

@@ -387,6 +387,21 @@
   overflow-y: auto;
 }
 
+/* Sombra só com rolagem real (decisão do dono): o mockup não tem sombra
+   nenhuma no fim do inspetor — nem no estado curto. Aqui o `aside` chegava
+   com fundo, borda e sombra de menu (na base do Composer ele divide a regra
+   do menu de contexto, com elevação e sombras internas), e a sombra de
+   elevação aparecia sobre o pé mesmo com o conteúdo curto, sem nada rolável
+   acima. Na concha o inspetor é coluna — fundo e hairline já vêm do painel —
+   então a pintura de menu sai por inteiro. Sem sombra inventada para indicar
+   rolagem: o mockup não tem, e a rolagem longa continua funcionando na
+   rolagem do painel. */
+.studio .ic-inspector {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
 .studio-panel-heading {
   display: flex;
   align-items: center;
@@ -452,18 +467,28 @@
 
 /* Hand pan: the stage translates the Composer's edit surface by the pan
    offset the shell owns (Reset view returns it with the zoom). The desk paint
-   is the mockup `workspace` surface: the Composer paints its own `--ic-bg`
-   here, and the shell promotes it to the desk (same adaptation pattern as the
-   handles below — the rule stays, only the paint changes). */
+   is the mockup `workspace` surface: the inline work-area colour falls back
+   to the desk token (see `StudioCanvasStage`), so by default this agrees
+   with it; a chosen colour keeps painting inline above it. The declaration
+   stays as the stated intent — the rule never overrides an inline paint. */
 .studio-stage > .ic-preview-panel > .ic-edit-stage {
   transform: translate(var(--pan-x, 0px), var(--pan-y, 0px));
   background-color: var(--ic-workspace);
 }
 
 /* The reused Composer canvas owns its own scroll-free stage; the studio
-   wrapper only tracks the pointer for the statusbar readout. */
+   wrapper only tracks the pointer for the statusbar readout.
+   Faixa contínua (decisão do dono): no mockup a coluna `workspace` tem uma
+   tinta só — palco, legenda, faixa e toolbar assentam direto na mesa (a
+   legenda e a faixa não têm fundo, borda nem sombra; a toolbar tem o fundo,
+   a borda e a sombra dela). Aqui a camada do meio pintava o fundo do app
+   (a regra base do Composer dá `var(--ic-bg)` ao painel) enquanto a coluna e
+   a mesa pintavam o workspace: a faixa de baixo lia uma banda acinzentada
+   separada. Condicionada à mesa — especificidade maior que a regra base, sem
+   tocar nela. */
 .studio-stage > .ic-preview-panel {
   min-height: 100%;
+  background-color: var(--ic-workspace);
 }
 
 /* Four-corner selection handles: the Composer paints one scale handle; the
@@ -522,8 +547,9 @@
 }
 
 /* Toolbar do canvas (mockup `canvas-toolbar`: in-flow abaixo dos tiles, altura
-   43px, respiro 5px 7px, raio 7px, fundo background, respiro inferior 24px;
-   ferramentas 29px e divisores 18px). */
+   43px, respiro 5px 7px, raio 7px, fundo background, sombra 4/18, respiro
+   inferior 24px; ferramentas 29px e divisores 18px). A faixa em volta não tem
+   sombra — só a toolbar, como no mockup. */
 .studio-pillbar {
   align-self: center;
   display: flex;
@@ -534,7 +560,7 @@
   border-radius: 7px;
   background-color: var(--ic-bg);
   border: 1px solid var(--ic-border);
-  box-shadow: 0 8px 24px var(--ic-shadow);
+  box-shadow: 0 4px 18px var(--ic-shadow);
   flex-shrink: 0;
 }
 

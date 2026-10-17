@@ -94,4 +94,16 @@ describe('Studio FATIA 1b (mockup visual port)', () => {
     const ordem = Array.from(canvas.children).map((el) => el.getAttribute('class'));
     expect(ordem).toEqual(['studio-stage-wrap', 'studio-caption', 'studio-tiles', 'studio-pillbar']);
   });
+
+  it('a mesa padrão é o workspace: palco e faixa no mesmo pano, sem banda', () => {
+    // Sem cor escolhida, os dois inlines da mesa (palco e superfície de
+    // edição) caem na mesa do mockup — não no fundo do app, que era o que
+    // pintava o palco de um fundo e a faixa de outro. Cor se mede no guard;
+    // aqui fica o papel que pinta: o token da mesa, não um valor resolvido.
+    renderShell(<SeededShell project={createBlankProject('Mesa', 512)} />);
+    const stage = document.querySelector('.studio-stage') as HTMLElement | null;
+    const edit = document.querySelector('.studio-stage .ic-edit-stage') as HTMLElement | null;
+    expect(stage?.style.backgroundColor).toContain('--ic-workspace');
+    expect(edit?.style.backgroundColor).toContain('--ic-workspace');
+  });
 });

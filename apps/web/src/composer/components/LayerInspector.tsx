@@ -127,16 +127,21 @@ export const LayerInspector = () => {
   if (!layer || !baseLayer) {
     const size = state.project.canvas.size;
     /**
-     * A cor **calculada** de `--ic-bg`, para a amostra do `ColorField`.
+     * A cor **calculada** de `--ic-workspace`, para a amostra do `ColorField`.
      *
      * Ler o token e nao usar um hex fixo porque a amostra tem de ser a cor que a
      * bancada esta de fato: um valor fixo mentiria no outro tema. E `try/catch`
      * porque `getComputedStyle` pode lancar num iframe sem origem — sem isto o
      * inspetor inteiro nao renderiza por causa de uma amostra.
+     *
+     * E o workspace, e nao `--ic-bg`: a faixa continua (palco e faixa no mesmo
+     * pano) fez o caimento da mesa seguir a mesa do mockup, entao a amostra do
+     * "nada escolhido" e a mesa — ler o fundo do app mostraria uma cor que o
+     * desk nunca vai ter.
      */
     const themeBg = (() => {
       try {
-        return getComputedStyle(document.documentElement).getPropertyValue('--ic-bg').trim();
+        return getComputedStyle(document.documentElement).getPropertyValue('--ic-workspace').trim();
       } catch {
         return '';
       }

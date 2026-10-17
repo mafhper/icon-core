@@ -34,7 +34,17 @@ interface StudioCanvasStageProps {
  * gesture transactions (one undo per drag), grid/keyline/margin overlays,
  * snapping — so stage and Inspector can only disagree by a bug, never by
  * construction.
+ *
+ * Faixa contínua (decisão do dono): no mockup a coluna `workspace` inteira —
+ * palco, legenda, faixa e toolbar — assenta num pano só, sem banda, sombra ou
+ * borda separando a parte de baixo. A cor de work area que o Composer pinta
+ * inline caía em `var(--ic-bg)` quando nada foi escolhido, e a coluna da
+ * concha pinta `var(--ic-workspace)`: o palco lia um fundo e a faixa outro, e
+ * a costura aparecia. Aqui o caimento padrão é a mesa do mockup; cor
+ * escolhida continua pintando igual nos dois (via `workAreaFallback`).
  */
+const DESK_FALLBACK = 'var(--ic-workspace)';
+
 export const StudioCanvasStage = ({ tool, onTool, onCursor, pan, onPan, onResetView }: StudioCanvasStageProps) => {
   const { state } = useComposer();
   const panRef = useRef(pan);
@@ -61,7 +71,7 @@ export const StudioCanvasStage = ({ tool, onTool, onCursor, pan, onPan, onResetV
             {
               '--pan-x': `${pan.x}px`,
               '--pan-y': `${pan.y}px`,
-              backgroundColor: workAreaToCss(state.workAreaColor)
+              backgroundColor: workAreaToCss(state.workAreaColor, DESK_FALLBACK)
             } as React.CSSProperties
           }
           onPointerDownCapture={(event) => {
@@ -92,7 +102,7 @@ export const StudioCanvasStage = ({ tool, onTool, onCursor, pan, onPan, onResetV
             }
           }}
         >
-          <PreviewCanvas interactionMode={tool} />
+          <PreviewCanvas interactionMode={tool} workAreaFallback={DESK_FALLBACK} />
         </div>
       </div>
       <StudioCanvasCaption />
