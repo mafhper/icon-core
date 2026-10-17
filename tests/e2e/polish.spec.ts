@@ -297,11 +297,13 @@ const SURFACES: Array<{
     name: 'export dialog',
     selector: '.studio-dialog',
     needsProject: true,
-    // Through the topbar Export button: the old Export menu and plan-editor
-    // view left with the Composer chrome (Fase 6 cut); the dialog is the
-    // surface now, held to the same polish contract.
+    // Through the Inspector Export tab: the old plan-editor view left with
+    // the Composer chrome (Fase 6 cut); the dialog is the surface now, held
+    // to the same polish contract.
     open: async (page) => {
-      await page.getByRole('button', { name: 'Export' }).click();
+      const inspector = page.getByRole('region', { name: 'Inspector panel' });
+      await inspector.getByRole('tab', { name: 'Export' }).click();
+      await inspector.getByRole('button', { name: 'Export' }).click();
       await expect(page.locator('.studio-dialog')).toBeVisible();
     }
   }
@@ -487,8 +489,10 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
   await audit('.ic-variant-panel', 'variant panel');
 
   // Export dialog (the plan editor left with the Composer chrome; the dialog
-  // is the surface now). Reached through the topbar Export button.
-  await page.getByRole('button', { name: 'Export' }).click();
+  // is the surface now). Reached through the Inspector Export tab.
+  const inspector = page.getByRole('region', { name: 'Inspector panel' });
+  await inspector.getByRole('tab', { name: 'Export' }).click();
+  await inspector.getByRole('button', { name: 'Export' }).click();
   await audit('body', 'export dialog open');
   await expect(page.getByRole('heading', { name: 'Export icons' })).toBeVisible();
   await audit('body', 'export');

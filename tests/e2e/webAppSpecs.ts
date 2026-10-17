@@ -47,6 +47,7 @@ export const WEB_APP_SPECS = [
   'foreignobject-regression',
   'storage-isolation',
   'studio-shell',
+  'studio-chrome2',
   'studio-export'
 ] as const;
 

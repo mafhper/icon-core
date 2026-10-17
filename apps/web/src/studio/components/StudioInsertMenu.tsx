@@ -1,26 +1,20 @@
 import { useRef } from 'react';
-import { ChevronDown, Circle, ImagePlus, Plus, Slash, Square, Type } from 'lucide-react';
+import { Circle, ImagePlus, Plus, Slash, Square, Type } from 'lucide-react';
 import { IconButton, Menu, MenuItem, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 import { useLayerImport } from '../../composer/hooks/useLayerImport';
 
-interface StudioInsertMenuProps {
-  /** `primary` renders the evident topbar button; `icon` the panel-header `+`. */
-  variant?: 'primary' | 'icon';
-}
-
 /**
- * Studio Insert menu (Fase 2): the primary, evident creation entry point.
+ * Studio Insert menu: the Layers header `+`, the one creation entry point.
  *
- * One menu drives both triggers (topbar button, Layers header `+`), so the
- * two can never disagree about what can be created. Every item dispatches a
- * real `ADD_LAYER` — shape kinds the engine draws, `asset` through the shared
- * image-import pipeline, `background` through the handle the reducer pins
- * last. Group creation is absent on purpose: layers carry no parent link in
- * the engine, so a Group item would promise what no dispatch can build
- * (BACKLOG, pós-ground-0).
+ * One menu, so the panel header can never disagree about what can be created.
+ * Every item dispatches a real `ADD_LAYER` — shape kinds the engine draws,
+ * `asset` through the shared image-import pipeline, `background` through the
+ * handle the reducer pins last. Group creation is absent on purpose: layers
+ * carry no parent link in the engine, so a Group item would promise what no
+ * dispatch can build (BACKLOG, pós-ground-0).
  */
-export const StudioInsertMenu = ({ variant = 'primary' }: StudioInsertMenuProps) => {
+export const StudioInsertMenu = () => {
   const { state, dispatch } = useComposer();
   const importFiles = useLayerImport();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -65,19 +59,11 @@ export const StudioInsertMenu = ({ variant = 'primary' }: StudioInsertMenuProps)
       <Menu
         label="Insert layer"
         trigger={
-          variant === 'primary' ? (
-            <button type="button" className="studio-insert-button" disabled={disabled} aria-label="Insert layer">
-              <Plus size={15} aria-hidden="true" />
-              <span>Insert</span>
-              <ChevronDown size={12} aria-hidden="true" />
-            </button>
-          ) : (
-            <span className="inline-flex">
-              <Tooltip content="Insert layer">
-                <IconButton icon={<Plus size={16} />} aria-label="Insert layer" disabled={disabled} />
-              </Tooltip>
-            </span>
-          )
+          <span className="inline-flex">
+            <Tooltip content="Insert layer">
+              <IconButton icon={<Plus size={16} />} aria-label="Insert layer" disabled={disabled} />
+            </Tooltip>
+          </span>
         }
       >
         {items}

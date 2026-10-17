@@ -1,31 +1,15 @@
-import { useState } from 'react';
-import {
-  ArrowUpToLine,
-  Box,
-  Check,
-  ChevronRight,
-  Keyboard,
-  Monitor,
-  Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
-  Redo2,
-  Sun,
-  Undo2
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Box, Check, ChevronRight, Keyboard, Monitor, Moon, Sun } from 'lucide-react';
 import { IconButton, Menu, MenuItem, Tooltip, withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 import { AboutModal } from '../../composer/components/AboutModal';
+import { isDesktopRuntime } from '../../lib/desktopExport';
 import type { StudioThemePreference } from '../useStudioTheme';
 import { variantLabel } from '../variantLabels';
 import { StudioConfirmDialog } from './StudioConfirmDialog';
-import { StudioInsertMenu } from './StudioInsertMenu';
 import { StudioMainMenu, type StudioMenuDialog } from './StudioMainMenu';
 import { StudioNameDialog } from './StudioNameDialog';
 import { StudioPreferencesDialog } from './StudioPreferencesDialog';
-import { StudioViewOptions } from './StudioViewOptions';
 
 const THEMES: Array<{ id: StudioThemePreference; label: string }> = [
   { id: 'dark', label: 'Dark theme' },
@@ -33,48 +17,35 @@ const THEMES: Array<{ id: StudioThemePreference; label: string }> = [
   { id: 'system', label: 'System theme' }
 ];
 
-interface StudioTopBarProps {
-  leftOpen: boolean;
-  inspectorOpen: boolean;
-  onToggleLeft: () => void;
-  onToggleInspector: () => void;
+interface StudioTitleBarProps {
   themePreference: StudioThemePreference;
   onThemePreference: (preference: StudioThemePreference) => void;
   onOpenShortcuts: () => void;
-  onResetView: () => void;
 }
 
 const themeIcon = (preference: StudioThemePreference) =>
   preference === 'light' ? <Sun size={16} /> : preference === 'system' ? <Monitor size={16} /> : <Moon size={16} />;
 
 /**
- * Studio top chrome (chrome slice): titlebar (brand + software menus +
- * document breadcrumb) over the toolbar (undo/redo, insert, view options,
- * panel toggles, theme, export).
+ * Studio titlebar (chrome slice): the full-width frame — brand, software
+ * menus, document breadcrumb — with ONLY theme and shortcuts on the right,
+ * plus the reserved Tauri window-button zone (never a functional control).
  *
- * The document breadcrumb (name › variant) lives here, not in the canvas —
- * and View options lives in this toolbar, not over the viewport. Variant
- * selection itself stays only in the canvas tiles (and the Inspector Preview
- * grid, which renders the same tiles) — never in this toolbar.
- *
- * Every control acts from day one: the menus open real dialogs, Insert
- * dispatches real layers, and View options flips real viewport flags.
+ * Panel toggles live at the canvas bar edges, Insert lives only in the Layers
+ * header, View options lives in the canvas bar, and Export lives in the
+ * Inspector Export tab: nothing functional is duplicated here.
  */
-export const StudioTopBar = ({
-  leftOpen,
-  inspectorOpen,
-  onToggleLeft,
-  onToggleInspector,
-  themePreference,
-  onThemePreference,
-  onOpenShortcuts,
-  onResetView
-}: StudioTopBarProps) => {
+export const StudioTitleBar = ({ themePreference, onThemePreference, onOpenShortcuts }: StudioTitleBarProps) => {
   const { state, dispatch, navigate } = useComposer();
   const [menuDialog, setMenuDialog] = useState<StudioMenuDialog>(null);
   const project = state.project;
-  const canUndo = state.historyIndex > 0;
-  const canRedo = state.historyIndex < state.history.length - 1;
+
+  // The desktop shell draws its window buttons over the titlebar's right end:
+  // the reserve zone keeps theme/shortcuts clear of them. Web browsers own
+  // their chrome outside the page, so the zone stays collapsed there.
+  useEffect(() => {
+    if (isDesktopRuntime()) document.documentElement.setAttribute('data-tauri', '');
+  }, []);
 
   return (
     <>
@@ -104,67 +75,6 @@ export const StudioTopBar = ({
           <span>{variantLabel(state.activeVariant)}</span>
         </div>
         <div className="studio-titlebar-actions">
-          <Tooltip content={leftOpen && inspectorOpen ? 'Minimize panels' : 'Restore panels'}>
-            <IconButton
-              icon={leftOpen && inspectorOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-              aria-label={leftOpen && inspectorOpen ? 'Minimize panels' : 'Restore panels'}
-              onClick={() => {
-                if (leftOpen && inspectorOpen) {
-                  onToggleLeft();
-                  onToggleInspector();
-                } else {
-                  if (!leftOpen) onToggleLeft();
-                  if (!inspectorOpen) onToggleInspector();
-                }
-              }}
-            />
-          </Tooltip>
-        </div>
-      </header>
-      <div className="studio-topbar" role="toolbar" aria-label="Studio toolbar">
-        <div className="studio-topbar-group">
-          <Tooltip content="Undo (Ctrl+Z)">
-            <IconButton
-              icon={<Undo2 size={16} />}
-              aria-label="Undo"
-              disabled={!canUndo}
-              onClick={() => dispatch({ type: 'UNDO' })}
-            />
-          </Tooltip>
-          <Tooltip content="Redo (Ctrl+Shift+Z)">
-            <IconButton
-              icon={<Redo2 size={16} />}
-              aria-label="Redo"
-              disabled={!canRedo}
-              onClick={() => dispatch({ type: 'REDO' })}
-            />
-          </Tooltip>
-        </div>
-        <span className="studio-divider" aria-hidden="true" />
-        <div className="studio-topbar-group">
-          <StudioInsertMenu variant="primary" />
-          <StudioViewOptions onResetView={onResetView} />
-        </div>
-        {/* Variant lives only in the canvas tiles (and the Inspector
-            Preview grid, which renders the same tiles): no topbar duplicate. */}
-        <div className="studio-topbar-spacer" />
-        <div className="studio-topbar-group">
-          <Tooltip content={leftOpen ? 'Hide Layers panel' : 'Show Layers panel'}>
-            <IconButton
-              icon={leftOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-              aria-label={leftOpen ? 'Hide Layers panel' : 'Show Layers panel'}
-              aria-pressed={leftOpen}
-              onClick={onToggleLeft}
-            />
-          </Tooltip>
-          <Tooltip content={inspectorOpen ? 'Hide Inspector panel' : 'Show Inspector panel'}>
-            <IconButton
-              icon={inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-              aria-label={inspectorOpen ? 'Hide Inspector panel' : 'Show Inspector panel'}
-              aria-pressed={inspectorOpen}
-              onClick={onToggleInspector}
-            />
-          </Tooltip>
           <Menu
             label="Theme"
             trigger={
@@ -187,13 +97,9 @@ export const StudioTopBar = ({
           <Tooltip content="Keyboard shortcuts (?)">
             <IconButton icon={<Keyboard size={16} />} aria-label="Keyboard shortcuts" onClick={onOpenShortcuts} />
           </Tooltip>
+          <div className="studio-tauri-zone" aria-hidden="true" />
         </div>
-        <span className="studio-divider" aria-hidden="true" />
-        <button type="button" className="studio-export-button" onClick={() => navigate('export-utilities')}>
-          <ArrowUpToLine size={14} aria-hidden="true" />
-          <span>Export</span>
-        </button>
-      </div>
+      </header>
       {menuDialog === 'confirm-new' && (
         <StudioConfirmDialog
           title="New document?"

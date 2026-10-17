@@ -9,9 +9,9 @@ import { useKeyboardShortcuts } from '../composer/hooks/useKeyboardShortcuts';
 import { usePanelLayout } from '../composer/hooks/usePanelLayout';
 import { ToastProvider } from '../composer/toast/ToastContext';
 import { ToastViewport } from '../composer/toast/ToastViewport';
-import { StudioTopBar } from './components/StudioTopBar';
 import { StudioLayersPanel } from './components/StudioLayersPanel';
 import { StudioCanvasStage } from './components/StudioCanvasStage';
+import { StudioTitleBar } from './components/StudioTitleBar';
 import { StudioExportDialog } from './components/StudioExportDialog';
 import { StudioInspectorPanel } from './components/StudioInspectorPanel';
 import { StudioShortcutsDialog } from './components/StudioShortcutsDialog';
@@ -31,11 +31,12 @@ import './studio.css';
  * `ComposerProvider`, the reducer actions, `PreviewCanvas`, `LayerList` and
  * `LayerInspector` — so Layers → Canvas → Inspector are synchronised by
  * construction from the first commit. What is new is the chrome: titlebar
- * (brand, software menus, document breadcrumb), toolbar (insert, view
- * options, panel toggles, theme, export), resizable side panels (205–380px,
- * independently collapsible with an always-visible way back), the canvas
- * stage (Hand pan, pill, live variant tiles) and the three-zone statusbar,
- * all under the `[data-theme]` contract, dark-first.
+ * (brand, software menus, document breadcrumb, theme, shortcuts), the canvas
+ * bar scoped to the canvas column (panel collapses at its edges, undo/redo,
+ * view options), resizable side panels (205–380px, independently collapsible
+ * with an always-visible way back), the canvas stage (Hand pan, pill, live
+ * variant tiles) and the three-zone statusbar, all under the `[data-theme]`
+ * contract, dark-first.
  *
  * Project-independent surfaces keep their contracts: `#/ui` renders the
  * gallery alone (never under the welcome modal), and the export-utilities
@@ -105,15 +106,10 @@ export const StudioShell = () => {
 
   return (
     <div className="studio">
-      <StudioTopBar
-        leftOpen={leftOpen}
-        inspectorOpen={inspectorOpen}
-        onToggleLeft={toggleLeft}
-        onToggleInspector={toggleInspector}
+      <StudioTitleBar
         themePreference={themePreference}
         onThemePreference={changeTheme}
         onOpenShortcuts={() => setShortcutsOpen(true)}
-        onResetView={resetView}
       />
       <div className="studio-body">
           <section
@@ -127,7 +123,18 @@ export const StudioShell = () => {
           {isLarge && leftOpen && (
             <PanelResizer side="left" label="Resize Layers panel" onStart={startLeftResize} />
           )}
-          <StudioCanvasStage tool={tool} onTool={setTool} onCursor={setCursor} pan={pan} onPan={setPan} onResetView={resetView} />
+          <StudioCanvasStage
+            tool={tool}
+            onTool={setTool}
+            onCursor={setCursor}
+            pan={pan}
+            onPan={setPan}
+            onResetView={resetView}
+            leftOpen={leftOpen}
+            inspectorOpen={inspectorOpen}
+            onToggleLeft={toggleLeft}
+            onToggleInspector={toggleInspector}
+          />
           {isLarge && inspectorOpen && (
             <PanelResizer side="right" label="Resize Inspector panel" onStart={startRightResize} />
           )}

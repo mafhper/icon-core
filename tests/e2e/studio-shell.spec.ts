@@ -40,14 +40,23 @@ test('studio monta as cinco regioes com o chrome do documento', async ({ page })
   await expect(page.getByRole('contentinfo', { name: 'Status bar' })).toBeVisible();
 
   await expect(page.getByText('Icon-Core').first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Export' })).toBeVisible();
+
+  // Export lives at the end of the Inspector Export tab — never in the
+  // titlebar, never in the canvas bar.
+  const inspector = page.getByRole('region', { name: 'Inspector panel' });
+  await inspector.getByRole('tab', { name: 'Export' }).click();
+  await expect(inspector.getByRole('button', { name: 'Export' })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Export' })).toHaveCount(0);
+  const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
+  await expect(toolbar.getByRole('button', { name: 'Export' })).toHaveCount(0);
+  await expect(toolbar.getByRole('button', { name: 'Insert layer' })).toHaveCount(0);
 });
 
 test('studio: Insert cria uma elipse e a exclusao pede confirmacao', async ({ page }) => {
   await preparar(page);
 
-  const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
-  await toolbar.getByRole('button', { name: 'Insert layer' }).click();
+  // Insert lives only in the Layers header — the canvas bar carries none.
+  await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: 'Insert layer' }).click();
   await page.getByRole('menuitem', { name: 'Ellipse' }).click();
   await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
 
@@ -60,8 +69,7 @@ test('studio: Insert cria uma elipse e a exclusao pede confirmacao', async ({ pa
 test('studio stage: tiles trocam a variante e View options alterna a mascara', async ({ page }) => {
   await preparar(page);
 
-  const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
-  await toolbar.getByRole('button', { name: 'Insert layer' }).click();
+  await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: 'Insert layer' }).click();
   await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
   await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
 
@@ -75,7 +83,8 @@ test('studio stage: tiles trocam a variante e View options alterna a mascara', a
   const frame = page.locator('.ic-canvas-frame');
   const antes = await frame.evaluate((el) => getComputedStyle(el).borderTopLeftRadius);
   expect(antes).not.toBe('0px');
-  await page.getByRole('button', { name: 'View options' }).click();
+  const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
+  await toolbar.getByRole('button', { name: 'View options' }).click();
   await page.getByRole('menuitem', { name: 'Icon mask — On' }).click();
   await expect(frame).toHaveCSS('border-top-left-radius', '0px');
 });
@@ -83,8 +92,7 @@ test('studio stage: tiles trocam a variante e View options alterna a mascara', a
 test('studio inspector: o traco engrossa sem esticar a forma', async ({ page }) => {
   await preparar(page);
 
-  const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
-  await toolbar.getByRole('button', { name: 'Insert layer' }).click();
+  await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: 'Insert layer' }).click();
   await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
 
   const inspector = page.getByRole('region', { name: 'Inspector panel' });

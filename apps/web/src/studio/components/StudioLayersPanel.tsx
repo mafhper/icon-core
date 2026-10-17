@@ -30,7 +30,7 @@ export const StudioLayersPanel = () => {
         <span>Layers</span>
         <span className="studio-panel-count">{state.project?.layers.length ?? 0}</span>
         <span className="studio-topbar-spacer" />
-        <StudioInsertMenu variant="icon" />
+        <StudioInsertMenu />
       </div>
       <div className="studio-panel-scroll">
         <LayerList onDeleteRequest={setPendingDeleteId} />

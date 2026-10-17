@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useComposer } from '../../composer/ComposerContext';
 import { PreviewCanvas } from '../../composer/components/PreviewCanvas';
 import { workAreaToCss } from '../../composer/utils/workArea';
+import { StudioCanvasBar } from './StudioCanvasBar';
 import { StudioCanvasCaption } from './StudioCanvasCaption';
 import { StudioPillBar } from './StudioPillBar';
 import { StudioVariantTiles } from './StudioVariantTiles';
@@ -14,21 +15,24 @@ interface StudioCanvasStageProps {
   pan: { x: number; y: number };
   onPan: (pan: { x: number; y: number }) => void;
   onResetView: () => void;
+  leftOpen: boolean;
+  inspectorOpen: boolean;
+  onToggleLeft: () => void;
+  onToggleInspector: () => void;
 }
 
 /**
- * Studio canvas stage: the mockup column order on the real viewport.
- *
- * From top to bottom — the pannable stage, the caption readout (sRGB ·
- * dimensions · variant), the live variant tiles, the canvas toolbar — in-flow
- * like the mockup `workspace`, with its breathings (caption 34px above,
- * tiles 16/0/23, toolbar 24px below). The document breadcrumb and View
- * options used to live over this viewport; they moved to the titlebar and
- * the toolbar, where the whole app can reach them. The creation toolbar the
+ * Studio canvas stage: the canvas column — the scoped toolbar, the pannable
+ * stage, the caption readout (sRGB · dimensions · variant), the live variant
+ * tiles, the canvas toolbar — in-flow like the mockup `workspace`, with its
+ * breathings (caption 34px above, tiles 16/0/23, toolbar 24px below). The
+ * document breadcrumb lives in the titlebar; the canvas bar carries the
+ * column's own controls (panel collapses at its edges, undo/redo, View
+ * options), where the whole column can reach them. The creation toolbar the
  * Composer painted inside the canvas is gone too: the Layers header Insert
  * is the one entry point. What the stage keeps is chrome with no dead
- * controls: the caption reads, tiles render the live pipeline, the pill
- * dispatches, and Fit to canvas returns zoom and pan together.
+ * controls: the bar and pill dispatch, the caption reads, tiles render the
+ * live pipeline, and Fit to canvas returns zoom and pan together.
  *
  * The viewport itself stays the Composer's `PreviewCanvas` — real zoom,
  * gesture transactions (one undo per drag), grid/keyline/margin overlays,
@@ -45,7 +49,18 @@ interface StudioCanvasStageProps {
  */
 const DESK_FALLBACK = 'var(--ic-workspace)';
 
-export const StudioCanvasStage = ({ tool, onTool, onCursor, pan, onPan, onResetView }: StudioCanvasStageProps) => {
+export const StudioCanvasStage = ({
+  tool,
+  onTool,
+  onCursor,
+  pan,
+  onPan,
+  onResetView,
+  leftOpen,
+  inspectorOpen,
+  onToggleLeft,
+  onToggleInspector
+}: StudioCanvasStageProps) => {
   const { state } = useComposer();
   const panRef = useRef(pan);
   panRef.current = pan;
@@ -64,6 +79,13 @@ export const StudioCanvasStage = ({ tool, onTool, onCursor, pan, onPan, onResetV
       onPointerMove={trackCursor}
       onPointerLeave={() => onCursor(null)}
     >
+      <StudioCanvasBar
+        leftOpen={leftOpen}
+        inspectorOpen={inspectorOpen}
+        onToggleLeft={onToggleLeft}
+        onToggleInspector={onToggleInspector}
+        onResetView={onResetView}
+      />
       <div className="studio-stage-wrap">
         <div
           className="studio-stage"

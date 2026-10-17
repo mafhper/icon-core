@@ -29,14 +29,16 @@ const preparar = async (page: Page) => {
   }
   await page.getByRole('toolbar', { name: 'Studio toolbar' }).waitFor({ timeout: 10000 });
 
-  const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
-  await toolbar.getByRole('button', { name: 'Insert layer' }).click();
+  await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: 'Insert layer' }).click();
   await page.getByRole('menuitem', { name: 'Ellipse' }).click();
   await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
 };
 
 const abrirExport = async (page: Page) => {
-  await page.getByRole('button', { name: 'Export' }).click();
+  // Export lives at the end of the Inspector Export tab.
+  const inspector = page.getByRole('region', { name: 'Inspector panel' });
+  await inspector.getByRole('tab', { name: 'Export' }).click();
+  await inspector.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByRole('dialog', { name: 'Export icons' })).toBeVisible();
 };
 

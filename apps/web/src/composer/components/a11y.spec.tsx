@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useEffect, type ReactNode } from 'react';
 import { TooltipProvider } from '@iconcore/ui';
@@ -74,9 +74,12 @@ describe('StudioExportDialog (accessible names)', () => {
         </ToastProvider>
       </TooltipProvider>
     );
+    // The export action lives at the end of the Inspector Export tab.
     // Navigation runs on the URL hash; jsdom never fires `hashchange` on its
     // own, so the test emits what the browser would.
-    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    const inspector = screen.getByRole('region', { name: 'Inspector panel' });
+    fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Export' }));
     fireEvent(window, new Event('hashchange'));
     return screen.getByRole('dialog', { name: 'Export icons' });
   };

@@ -45,14 +45,14 @@ const SeededShell = ({ project }: { project: IconCoreProject }) => {
 };
 
 describe('Studio layers + insert + shortcuts (Fase 2)', () => {
-  it('inserts an ellipse through the primary Insert menu', () => {
+  it('inserts an ellipse through the Layers header Insert menu', () => {
     renderShell(<SeededShell project={createBlankProject('Insert', 512)} />);
     expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('0');
 
-    // The primary Insert lives in the toolbar (the panel header carries the same menu).
-    // Radix opens dropdowns on pointer-down, not on click.
-    const toolbar = screen.getByRole('toolbar', { name: 'Studio toolbar' });
-    fireEvent.pointerDown(within(toolbar).getByRole('button', { name: 'Insert layer' }));
+    // Insert lives only in the Layers header (the canvas bar carries no
+    // creation control). Radix opens dropdowns on pointer-down, not on click.
+    const layers = screen.getByRole('region', { name: 'Layers panel' });
+    fireEvent.pointerDown(within(layers).getByRole('button', { name: 'Insert layer' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Ellipse' }));
 
     expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('1');
@@ -114,11 +114,12 @@ describe('Studio canvas stage (Fase 3)', () => {
   });
 
   const openViewOptions = () => {
-    // View options lives in the Studio toolbar, not over the viewport.
-    const toolbar = screen.getByRole('toolbar', { name: 'Studio toolbar' });
-    expect(within(toolbar).getByRole('button', { name: 'View options' })).toBeInTheDocument();
+    // View options lives in the canvas bar, over the canvas column — not in
+    // the titlebar, and the canvas carries no other copy.
+    const canvas = screen.getByRole('region', { name: 'Canvas' });
+    expect(within(canvas).getByRole('button', { name: 'View options' })).toBeInTheDocument();
     expect(
-      within(screen.getByRole('region', { name: 'Canvas' })).queryByRole('button', { name: 'View options' })
+      within(screen.getByRole('banner')).queryByRole('button', { name: 'View options' })
     ).not.toBeInTheDocument();
     fireEvent.pointerDown(screen.getByRole('button', { name: 'View options' }));
   };
@@ -197,7 +198,7 @@ describe('Studio inspector panel (Fase 4)', () => {
     fill: { kind: 'solid', color: '#3f6ce0', alpha: 1 }
   });
 
-  it('alterna Design e Preview sem perder a seleção', () => {
+  it('alterna Design e Export sem perder a seleção', () => {
     const project = createBlankProject('Panel', 512);
     project.layers = [prism()];
     renderShell(<SeededShell project={project} />);
@@ -207,11 +208,18 @@ describe('Studio inspector panel (Fase 4)', () => {
     // Design mostra o inspector contextual com a seção nova de Stroke.
     expect(within(inspector).getByRole('tab', { name: 'Design' })).toHaveAttribute('aria-selected', 'true');
 
-    fireEvent.click(within(inspector).getByRole('tab', { name: 'Preview' }));
+    fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
     const tiles = within(inspector).getByRole('group', { name: 'Appearance variants' });
     for (const name of ['Default', 'Light', 'Dark', 'Monochrome']) {
       expect(within(tiles).getByRole('button', { name })).toBeInTheDocument();
     }
+    // The export action lives at the end of the tab — not in the titlebar,
+    // not in the canvas bar.
+    expect(within(inspector).getByRole('button', { name: 'Export' })).toBeInTheDocument();
+    expect(within(screen.getByRole('banner')).queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('toolbar', { name: 'Studio toolbar' })).queryByRole('button', { name: 'Export' })
+    ).not.toBeInTheDocument();
 
     fireEvent.click(within(inspector).getByRole('tab', { name: 'Design' }));
     expect(within(inspector).getByDisplayValue('Prism')).toBeInTheDocument();
@@ -241,13 +249,16 @@ describe('Studio export dialog + main menu (Fase 5)', () => {
     fireEvent.click(screen.getByRole('menuitem', { name }));
   };
 
-  it('opens the three-stage export from the main menu, gated by validation', () => {
+  it('opens the three-stage export from the Export tab, gated by validation', () => {
     renderShell(<SeededShell project={createBlankProject('Export', 512)} />);
 
-    // Navigation runs on the URL hash: setting it only navigates when the
-    // `hashchange` fires, which jsdom never does on its own (a real browser
-    // does). Emit it, like the browser would.
-    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    // The export action lives at the end of the Inspector Export tab: open
+    // the tab, then run it. Navigation runs on the URL hash: setting it only
+    // navigates when the `hashchange` fires, which jsdom never does on its
+    // own (a real browser does). Emit it, like the browser would.
+    const inspector = screen.getByRole('region', { name: 'Inspector panel' });
+    fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Export' }));
     fireEvent(window, new Event('hashchange'));
     const dialog = screen.getByRole('dialog', { name: 'Export icons' });
     expect(within(dialog).getByText('SVG')).toBeInTheDocument();
@@ -339,17 +350,38 @@ describe('StudioApp shell (Fase 1)', () => {
     expect(screen.getAllByText('Studio One')).toHaveLength(2);
   });
 
-  it('keeps the document breadcrumb in the titlebar and nothing else in the canvas', () => {
+  it('keeps the document breadcrumb in the titlebar and the column bar over the canvas', () => {
     renderShell(<SeededShell project={createBlankProject('Studio One', 1024)} />);
 
     const titlebar = screen.getByRole('banner');
     expect(within(titlebar).getByText('Studio One')).toBeInTheDocument();
     expect(within(titlebar).getByText('Default')).toBeInTheDocument();
+    // The titlebar carries only theme + shortcuts on the right: no panel
+    // toggles, no Insert, no Export, no View options.
+    expect(within(titlebar).queryByRole('button', { name: /panel/i })).not.toBeInTheDocument();
+    expect(within(titlebar).queryByRole('button', { name: 'Insert layer' })).not.toBeInTheDocument();
+    expect(within(titlebar).queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+    expect(within(titlebar).queryByRole('button', { name: 'View options' })).not.toBeInTheDocument();
 
-    // The canvas carries no breadcrumb, no View options and no creation bar:
-    // the Layers header Insert is the one entry point.
+    // The canvas bar scopes undo/redo + View options to the canvas column,
+    // with a panel collapse at each edge — and no Insert, no Export.
     const canvas = screen.getByRole('region', { name: 'Canvas' });
-    expect(within(canvas).queryByRole('button', { name: 'View options' })).not.toBeInTheDocument();
+    const bar = within(canvas).getByRole('toolbar', { name: 'Studio toolbar' });
+    const names = within(bar)
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label') ?? '');
+    expect(names).toEqual([
+      'Hide Layers panel',
+      'Undo',
+      'Redo',
+      'View options',
+      'Hide Inspector panel'
+    ]);
+    expect(within(bar).queryByRole('button', { name: 'Insert layer' })).not.toBeInTheDocument();
+    expect(within(bar).queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+
+    // The canvas carries no creation bar: the Layers header Insert is the
+    // one entry point.
     for (const name of ['Add shape', 'Add text layer', 'Add background fill layer', 'Upload image']) {
       expect(within(canvas).queryByRole('button', { name })).not.toBeInTheDocument();
     }

@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { ArrowUpToLine } from 'lucide-react';
+import { useComposer } from '../../composer/ComposerContext';
 import { LayerInspector } from '../../composer/components/LayerInspector';
 import { StudioVariantTiles } from './StudioVariantTiles';
 
-type InspectorTab = 'design' | 'preview';
+type InspectorTab = 'design' | 'export';
 
 /**
- * Studio Inspector panel (Fase 4): Design and Preview tabs.
+ * Studio Inspector panel: Design and Export tabs.
  *
  * Design is the full `LayerInspector` — Position (X/Y plus W/H for shapes,
  * now Rotation before Scale), Geometry (shape, corner radius/smoothing),
@@ -13,16 +15,19 @@ type InspectorTab = 'design' | 'preview';
  * width and color besides Cap), Effects — then Text only with text selected,
  * and, with nothing selected, the document sections. Layer meta and Delete
  * come last. Constraints/Layout/Mask do not exist in the model and are marked
- * as an explicit deferral, not invented. Preview renders the four variants
- * live through the same tiles the canvas stage uses.
+ * as an explicit deferral, not invented. Export renders the four variants
+ * live through the same tiles the canvas stage uses (one implementation, so
+ * the grid and the strip can never disagree), with the export action at the
+ * end of the tab — the topbar Export button is gone, this is its home.
  */
 export const StudioInspectorPanel = () => {
+  const { navigate } = useComposer();
   const [tab, setTab] = useState<InspectorTab>('design');
 
   return (
     <>
       <div className="studio-tabs" role="tablist" aria-label="Inspector">
-        {(['design', 'preview'] as const).map((id) => (
+        {(['design', 'export'] as const).map((id) => (
           <button
             key={id}
             type="button"
@@ -32,7 +37,7 @@ export const StudioInspectorPanel = () => {
             className="studio-tab"
             onClick={() => setTab(id)}
           >
-            {id === 'design' ? 'Design' : 'Preview'}
+            {id === 'design' ? 'Design' : 'Export'}
           </button>
         ))}
       </div>
@@ -43,6 +48,14 @@ export const StudioInspectorPanel = () => {
       ) : (
         <div className="studio-panel-scroll">
           <StudioVariantTiles grid />
+        </div>
+      )}
+      {tab === 'export' && (
+        <div className="studio-export-foot">
+          <button type="button" className="studio-export-button" onClick={() => navigate('export-utilities')}>
+            <ArrowUpToLine size={14} aria-hidden="true" />
+            <span>Export</span>
+          </button>
         </div>
       )}
       {/* Mockup `inspector-foot`: static session line, no behaviour. */}

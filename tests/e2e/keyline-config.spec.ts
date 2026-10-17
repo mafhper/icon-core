@@ -43,7 +43,7 @@ test('keyline: partes ligaveis, uma a uma', async ({ page }) => {
   // Desligada por padrao — o padrao antigo era `false` e segue assim.
   await expect(page.locator('.ic-keyline-overlay')).toHaveCount(0);
 
-  // Liga pelo View options da topbar, a morada do toggle desde o slice do chrome.
+  // Liga pelo View options da barra do canvas, a morada do toggle desde o slice do chrome.
   await page.getByRole('button', { name: 'View options' }).click();
   await page.getByRole('menuitem', { name: 'Keylines — Off' }).click();
   await page.waitForTimeout(300);

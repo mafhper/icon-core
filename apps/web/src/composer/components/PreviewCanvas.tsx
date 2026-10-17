@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { IconLayer, IconVariant, IconCoreProject } from '@iconcore/shared';
+import { useMemo, useRef, useState } from 'react';
+import type { IconLayer } from '@iconcore/shared';
 import { defaultMaskRadius, resolveSize } from '@iconcore/shared';
-import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
+import { layerBaseRect } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
+import { useRenderedProject } from '../hooks/useRenderedProject';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { workAreaToCss } from '../utils/workArea';
@@ -33,55 +34,6 @@ interface DragState {
 const layerTransform = (layer: IconLayer, zoom: number): string =>
   `translate(-50%, -50%) translate(${layer.transform.x * zoom}px, ${layer.transform.y * zoom}px) rotate(${layer.transform.rotation}deg) scale(${layer.transform.scale})`;
 
-/**
- * Render the project through the SAME Canvas2D pipeline used for export, so the
- * live preview is pixel-identical to the exported asset. Returns an object URL
- * for the rendered PNG, re-rendered (RAF-coalesced) whenever the project or
- * variant changes. `enabled` lets callers skip the (compare) ghost render.
- */
-const useRenderedIcon = (
-  project: IconCoreProject | null,
-  variant: IconVariant,
-  enabled = true
-): string | null => {
-  const [url, setUrl] = useState<string | null>(null);
-  const urlRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!project || !enabled || project.layers.length === 0) {
-      setUrl(null);
-      return;
-    }
-
-    let cancelled = false;
-    const backend = createCanvasBackend();
-    const raf = requestAnimationFrame(async () => {
-      try {
-        const blob = await renderProject(project, variant, resolveSize(project.canvas), backend);
-        if (cancelled) return;
-        const next = URL.createObjectURL(blob);
-        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-        urlRef.current = next;
-        setUrl(next);
-      } catch (err) {
-        console.error('Live preview render failed:', err);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-      backend.destroy();
-    };
-  }, [project, variant, enabled]);
-
-  useEffect(() => () => {
-    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-  }, []);
-
-  return url;
-};
-
 export const PreviewCanvas = (
   { interactionMode = 'select', workAreaFallback = 'var(--ic-bg)' }: {
     interactionMode?: 'select' | 'hand';
@@ -105,8 +57,8 @@ export const PreviewCanvas = (
     [project]
   );
 
-  const previewUrl = useRenderedIcon(project, state.activeVariant);
-  const ghostUrl = useRenderedIcon(
+  const previewUrl = useRenderedProject(project, state.activeVariant);
+  const ghostUrl = useRenderedProject(
     project,
     'default',
     state.compareDefault && state.activeVariant !== 'default'

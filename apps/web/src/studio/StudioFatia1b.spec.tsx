@@ -49,24 +49,24 @@ const SeededShell = ({ project }: { project: IconCoreProject }) => {
  * O visual (tokens, métricas, Manrope) mora em `studio.css` + `tokens.css` e é
  * medido pelos portões (contraste com o mapa escopado, terceiros, marca); aqui
  * fica a amarração estrutural: os gatilhos falam a classe do mockup, a aba
- * Preview é a grade 2×2 dos mesmos tiles vivos do canvas, e o pé de sessão
+ * Export é a grade 2×2 dos mesmos tiles vivos do canvas, e o pé de sessão
  * existe. Nenhum teste afirma cor — cor se mede no guard, não no spec.
  */
 describe('Studio FATIA 1b (mockup visual port)', () => {
-  it('a variante vive só nos tiles: sem duplicata na topbar, View options no gatilho do mockup', () => {
+  it('a variante vive só nos tiles: sem duplicata na barra, View options no gatilho do mockup', () => {
     renderShell(<SeededShell project={createBlankProject('Triggers', 512)} />);
 
     expect(screen.getByRole('button', { name: 'View options' })).toHaveClass('studio-trigger');
-    // A variante não tem gatilho na topbar: os tiles do canvas a dirigem sozinhos.
+    // A variante não tem gatilho na barra do canvas: os tiles a dirigem sozinhos.
     expect(screen.queryByRole('button', { name: /^Appearance: / })).not.toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Appearance variants' })).toBeInTheDocument();
   });
 
-  it('a aba Preview é a grade 2×2 dos tiles vivos do canvas', () => {
+  it('a aba Export é a grade 2×2 dos tiles vivos do canvas', () => {
     renderShell(<SeededShell project={createBlankProject('Preview', 512)} />);
     const inspector = screen.getByRole('region', { name: 'Inspector panel' });
 
-    fireEvent.click(within(inspector).getByRole('tab', { name: 'Preview' }));
+    fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
     const grid = within(inspector).getByRole('group', { name: 'Appearance variants' });
     expect(grid).toHaveClass('studio-tiles-grid');
     for (const name of ['Default', 'Light', 'Dark', 'Monochrome']) {
@@ -81,7 +81,7 @@ describe('Studio FATIA 1b (mockup visual port)', () => {
     expect(within(inspector).getByText('All changes in this session')).toBeInTheDocument();
   });
 
-  it('a mesa segue a coluna do mockup: legenda, faixa, toolbar', () => {
+  it('a mesa segue a coluna do mockup: barra, legenda, faixa, toolbar', () => {
     renderShell(<SeededShell project={createBlankProject('Ordem', 1024)} />);
     const canvas = screen.getByRole('region', { name: 'Canvas' });
 
@@ -90,9 +90,10 @@ describe('Studio FATIA 1b (mockup visual port)', () => {
     expect(within(canvas).getByText('1024 × 1024 px')).toBeInTheDocument();
     expect(within(canvas).getByText('Default appearance')).toBeInTheDocument();
 
-    // A ordem é a do mockup: palco, legenda, faixa, toolbar — sem flutuação.
+    // A ordem é a do mockup: barra da coluna, palco, legenda, faixa,
+    // toolbar — sem flutuação.
     const ordem = Array.from(canvas.children).map((el) => el.getAttribute('class'));
-    expect(ordem).toEqual(['studio-stage-wrap', 'studio-caption', 'studio-tiles', 'studio-pillbar']);
+    expect(ordem).toEqual(['studio-canvasbar', 'studio-stage-wrap', 'studio-caption', 'studio-tiles', 'studio-pillbar']);
   });
 
   it('a mesa padrão é o workspace: palco e faixa no mesmo pano, sem banda', () => {

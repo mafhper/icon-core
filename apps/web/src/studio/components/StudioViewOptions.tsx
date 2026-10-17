@@ -5,9 +5,9 @@ import { useComposer } from '../../composer/ComposerContext';
 const check = (on: boolean) => (on ? 'On' : 'Off');
 
 /**
- * Studio View options (chrome slice): the canvas overlay menu in its topbar
- * home. Every row flips a real Composer flag; Reset view returns zoom and pan
- * together through the shell callback, so the topbar never owns viewport state.
+ * Studio View options (chrome slice): the canvas-bar menu in its canvas home.
+ * Every row flips a real Composer flag; Reset view returns zoom and pan
+ * together through the shell callback, so the bar never owns viewport state.
  */
 export const StudioViewOptions = ({ onResetView }: { onResetView: () => void }) => {
   const { state, dispatch } = useComposer();

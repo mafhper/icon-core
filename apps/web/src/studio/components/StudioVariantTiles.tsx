@@ -4,7 +4,7 @@ import { useStudioPreview } from '../useStudioPreview';
 import { variantTiles } from '../variantLabels';
 
 /**
- * Live variant tiles, shared by the canvas stage and the Inspector Preview
+ * Live variant tiles, shared by the canvas stage and the Inspector Export
  * tab: one implementation, so the two surfaces can never disagree about what
  * a variant looks like. Each tile renders the real pipeline (not a tinted
  * guess), and switching never touches layers, zoom or selection — the

@@ -1,57 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
 import type { IconCoreProject, IconVariant } from '@iconcore/shared';
-import { resolveSize } from '@iconcore/shared';
-import { createCanvasBackend, renderProject } from '@iconcore/renderer';
+import { useRenderedProject } from '../composer/hooks/useRenderedProject';
 
 /**
- * Live variant thumbnail (Fase 3): renders the project through the same
- * Canvas2D pipeline the export uses, keyed by project + variant, and hands
- * back an object URL. The previous URL is revoked before the next one lands
- * (revoking in the same tick would cancel nothing here — unlike the project
- * *download*, an `<img>` just shows the old pixels until the new URL arrives —
- * but holding every render would leak a blob per keystroke).
+ * Live variant thumbnail: the canvas stage strip, the Inspector grid and the
+ * export dialog preview share this hook — which is the same subscription the
+ * canvas itself uses — so a geometry edit the logo adopts is adopted by all
+ * four tiles and the grid by construction, never by a second implementation
+ * that could lag behind.
  */
 export const useStudioPreview = (
   project: IconCoreProject | null,
   variant: IconVariant
-): string | null => {
-  const [url, setUrl] = useState<string | null>(null);
-  const urlRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!project || project.layers.length === 0) {
-      setUrl(null);
-      return;
-    }
-
-    let cancelled = false;
-    const backend = createCanvasBackend();
-    const raf = requestAnimationFrame(async () => {
-      try {
-        const blob = await renderProject(project, variant, resolveSize(project.canvas), backend);
-        if (cancelled) return;
-        const next = URL.createObjectURL(blob);
-        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-        urlRef.current = next;
-        setUrl(next);
-      } catch (err) {
-        console.error('Studio tile render failed:', err);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-      backend.destroy();
-    };
-  }, [project, variant]);
-
-  useEffect(
-    () => () => {
-      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-    },
-    []
-  );
-
-  return url;
-};
+): string | null => useRenderedProject(project, variant);
