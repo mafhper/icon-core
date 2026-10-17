@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { IconLayer, ShapeKind } from '@iconcore/shared';
-import { borderRadiusForLayer, fillColor, fillToCss, getShadow, setShadow, shadowCssForLayer } from './layerStyle';
+import type { IconLayer, LayerEffect, ShapeKind } from '@iconcore/shared';
+import { toRgba } from '@iconcore/renderer';
+import { GLOW_PRESET, borderRadiusForLayer, fillColor, fillToCss, getShadow, isGlowActive, legacyToDropParams, patchGlow, resolveDropShadow, setDropEnabled, setGlowEnabled, setShadow, shadowCssForLayer } from './layerStyle';
 
 const shapeLayer = (kind: ShapeKind, cornerRadius?: number): IconLayer => ({
   id: 'l',
@@ -56,5 +57,106 @@ describe('shadow helpers', () => {
     const effects = setShadow(layer, { kind: 'depth-shadow', enabled: true, params: { x: 1, y: 2, blur: 4, color: '#000' } });
     expect(effects).toHaveLength(1);
     expect(shadowCssForLayer({ ...layer, effects })).toBe('1px 2px 4px #000');
+  });
+});
+
+describe('D2 — absorção do depth-shadow legado pelo Drop shadow', () => {
+  const legada = (params: Record<string, number | string> = {}): IconLayer => ({
+    ...shapeLayer('circle'),
+    effects: [
+      {
+        kind: 'depth-shadow',
+        enabled: true,
+        params: { x: 0, y: 18, blur: 34, color: 'rgba(15, 23, 42, 0.28)', ...params }
+      }
+    ]
+  });
+
+  it('migra números e cor sem mover um pixel no canvas', () => {
+    const legacy = legada().effects![0];
+    const drop = legacyToDropParams(legacy);
+    expect(drop.x).toBe(0);
+    expect(drop.y).toBe(18);
+    expect(drop.blur).toBe(34);
+    // A tinta que o canvas pinta é a mesma string: aposentar o legado não move um pixel.
+    expect(toRgba(String(drop.color), Number(drop.opacity))).toBe(String(legacy.params.color));
+  });
+
+  it('resolveDropShadow lê sem escrever: migrado desligado, legado intacto', () => {
+    const layer = legada();
+    const drop: LayerEffect = resolveDropShadow(layer);
+    expect(drop).toMatchObject({ kind: 'drop-shadow', enabled: false });
+    expect(drop.params.y).toBe(18);
+    expect(layer.effects?.find((e) => e.kind === 'depth-shadow')?.enabled).toBe(true);
+  });
+
+  it('ligar aposenta o legado com params intactos; desligar apaga os dois sem destruir', () => {
+    const ligada = setDropEnabled(legada(), true);
+    expect(ligada.find((e) => e.kind === 'drop-shadow')).toMatchObject({ enabled: true, params: { y: 18 } });
+    const legadoAposentado = ligada.find((e) => e.kind === 'depth-shadow');
+    expect(legadoAposentado?.enabled).toBe(false);
+    expect(legadoAposentado?.params.y).toBe(18);
+
+    const desligada = setDropEnabled({ ...legada(), effects: ligada }, false);
+    expect(desligada.filter((e) => e.enabled)).toHaveLength(0);
+    expect(desligada.find((e) => e.kind === 'drop-shadow')?.params.y).toBe(18);
+    expect(desligada.find((e) => e.kind === 'depth-shadow')?.params.y).toBe(18);
+  });
+
+  it('desligar sem drop somido não inventa entrada', () => {
+    const desligada = setDropEnabled(legada(), false);
+    expect(desligada.some((e) => e.kind === 'drop-shadow')).toBe(false);
+    expect(desligada.find((e) => e.kind === 'depth-shadow')?.enabled).toBe(false);
+  });
+});
+
+describe('Glow — preset e fileira', () => {
+  const nua = (): IconLayer => ({
+    ...shapeLayer('circle'),
+    effects: []
+  });
+
+  it('preset inicial é o atual, aplicado do zero', () => {
+    expect(setGlowEnabled(nua(), true)).toEqual([{ ...GLOW_PRESET }]);
+  });
+
+  it('sobre o drop ativo centra em vez de duplicar, mantendo blur e cor', () => {
+    const layer: IconLayer = {
+      ...nua(),
+      effects: [
+        { kind: 'drop-shadow', enabled: true, params: { x: 10, y: 18, blur: 34, color: '#0f172a', opacity: 0.28 } }
+      ]
+    };
+    const ligada = setGlowEnabled(layer, true);
+    expect(ligada.filter((e) => e.kind === 'drop-shadow')).toHaveLength(1);
+    expect(ligada.find((e) => e.kind === 'drop-shadow')).toMatchObject({
+      enabled: true,
+      params: { x: 0, y: 0, blur: 34, color: '#0f172a' }
+    });
+    expect(isGlowActive({ ...layer, effects: ligada })).toBe(true);
+  });
+
+  it('patchGlow escreve blur e cor com offset zero, nunca outro valor', () => {
+    const layer: IconLayer = {
+      ...nua(),
+      effects: [
+        { kind: 'drop-shadow', enabled: true, params: { x: 10, y: 18, blur: 34, color: '#0f172a', opacity: 0.28 } }
+      ]
+    };
+    const editada = patchGlow(layer, { blur: 32 });
+    expect(editada.find((e) => e.kind === 'drop-shadow')).toMatchObject({
+      enabled: true,
+      params: { x: 0, y: 0, blur: 32 }
+    });
+  });
+
+  it('desligar preserva os params', () => {
+    const ligada = setGlowEnabled(nua(), true);
+    const desligada = setGlowEnabled({ ...nua(), effects: ligada }, false);
+    expect(desligada.find((e) => e.kind === 'drop-shadow')).toMatchObject({
+      enabled: false,
+      params: { x: 0, y: 0, blur: 24 }
+    });
+    expect(isGlowActive({ ...nua(), effects: desligada })).toBe(false);
   });
 });

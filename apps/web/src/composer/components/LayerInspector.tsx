@@ -17,10 +17,11 @@ import { FontPicker } from './FontPicker';
 import { DEFAULT_FONT_STACK } from '@iconcore/renderer';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
-import { effectPaint, fillColor, getEffect, getShadow, GLOW_PRESET, setEffect, setShadow } from '../utils/layerStyle';
+import { fillColor } from '../utils/layerStyle';
 import { readSvgLayerColors } from '../utils/svgLayerColors';
 import { useResetLayerAspect } from '../hooks/useResetLayerAspect';
 import { FillEditor } from './FillEditor';
+import { LayerInspectorEffects } from './LayerInspectorEffects';
 import { SvgPaintEditor } from './SvgPaintEditor';
 import { StudioColorPicker } from '../../studio/components/StudioColorPicker';
 import { BackgroundRemovalModal } from './BackgroundRemovalModal';
@@ -441,25 +442,10 @@ export const LayerInspector = () => {
     });
   };
 
-  const shadow = getShadow(layer);
-  const dropShadow = getEffect(layer, 'drop-shadow');
-  const innerShadow = getEffect(layer, 'inner-shadow');
-  const hasDropShadow = (layer.effects ?? []).some((effect) => effect.kind === 'drop-shadow');
   const isImage = baseLayer.kind === 'image' || baseLayer.kind === 'svg';
   const imageFilter = layer.imageFilter ?? {};
   const updateImageFilter = (patch: Partial<typeof imageFilter>, transient = false) =>
     updateLayer({ imageFilter: { ...imageFilter, ...patch } }, transient);
-
-  const blurRadius = Number(layer.effects?.find((effect) => effect.kind === 'surface-blur')?.params.radius ?? 0);
-  const setBlur = (radius: number, transient = false) => {
-    const effects = layer.effects ?? [];
-    const next = radius <= 0
-      ? effects.filter((effect) => effect.kind !== 'surface-blur')
-      : effects.some((effect) => effect.kind === 'surface-blur')
-        ? effects.map((effect) => (effect.kind === 'surface-blur' ? { ...effect, enabled: true, params: { radius } } : effect))
-        : [...effects, { kind: 'surface-blur' as const, enabled: true, params: { radius } }];
-    updateLayer({ effects: next }, transient);
-  };
 
   return (
     <aside className="ic-inspector">
@@ -763,147 +749,7 @@ export const LayerInspector = () => {
           </Section>
         )}
 
-        <Section title="Effects">
-          <Switch
-            label="Depth shadow"
-            checked={shadow.enabled}
-            onChange={(event) => updateLayer({ effects: setShadow(layer, { ...shadow, enabled: event.target.checked }) })}
-          />
-
-          <Slider
-            variant="inline"
-            label="Shadow blur"
-            unit="px"
-            min="0"
-            max="80"
-            value={Number(shadow.params.blur ?? 34)}
-            onChange={(event) => updateLayer({
-              effects: setShadow(layer, { ...shadow, params: { ...shadow.params, blur: Number(event.target.value) } })
-            }, true)}
-            onPointerUp={commit}
-          />
-
-          <Switch
-            label="Drop shadow"
-            checked={dropShadow.enabled}
-            onChange={(event) => updateLayer({ effects: setEffect(layer, { ...dropShadow, enabled: event.target.checked }) })}
-          />
-          {dropShadow.enabled && (
-            <>
-              <StudioColorPicker
-                label="Drop shadow color"
-                value={effectPaint(dropShadow, 0.5)}
-                onChange={(next, transient) =>
-                  updateLayer(
-                    { effects: setEffect(layer, { ...dropShadow, params: { ...dropShadow.params, color: next.color, opacity: next.alpha } }) },
-                    transient
-                  )
-                }
-                onCommit={commit}
-              />
-              <Slider
-                variant="inline"
-                label="Shadow X"
-                unit="px"
-                min="-100"
-                max="100"
-                value={Number(dropShadow.params.x ?? 0)}
-                onChange={(event) => updateLayer({
-                  effects: setEffect(layer, { ...dropShadow, params: { ...dropShadow.params, x: Number(event.target.value) } })
-                }, true)}
-                onPointerUp={commit}
-              />
-              <Slider
-                variant="inline"
-                label="Shadow Y"
-                unit="px"
-                min="-100"
-                max="100"
-                value={Number(dropShadow.params.y ?? 8)}
-                onChange={(event) => updateLayer({
-                  effects: setEffect(layer, { ...dropShadow, params: { ...dropShadow.params, y: Number(event.target.value) } })
-                }, true)}
-                onPointerUp={commit}
-              />
-              <Slider
-                variant="inline"
-                label="Drop blur"
-                unit="px"
-                min="0"
-                max="80"
-                value={Number(dropShadow.params.blur ?? 16)}
-                onChange={(event) => updateLayer({
-                  effects: setEffect(layer, { ...dropShadow, params: { ...dropShadow.params, blur: Number(event.target.value) } })
-                }, true)}
-                onPointerUp={commit}
-              />
-            </>
-          )}
-          {!hasDropShadow && (
-            <Button
-              variant="secondary"
-              onClick={() => updateLayer({ effects: setEffect(layer, { ...GLOW_PRESET }) })}
-            >
-              Add glow
-            </Button>
-          )}
-
-          <Switch
-            label="Inner shadow"
-            checked={innerShadow.enabled}
-            onChange={(event) => updateLayer({ effects: setEffect(layer, { ...innerShadow, enabled: event.target.checked }) })}
-          />
-          {innerShadow.enabled && (
-            <>
-              <StudioColorPicker
-                label="Inner shadow color"
-                value={effectPaint(innerShadow, 0.35)}
-                onChange={(next, transient) =>
-                  updateLayer(
-                    { effects: setEffect(layer, { ...innerShadow, params: { ...innerShadow.params, color: next.color, opacity: next.alpha } }) },
-                    transient
-                  )
-                }
-                onCommit={commit}
-              />
-              <Slider
-                variant="inline"
-                label="Inner Y"
-                unit="px"
-                min="-100"
-                max="100"
-                value={Number(innerShadow.params.y ?? 6)}
-                onChange={(event) => updateLayer({
-                  effects: setEffect(layer, { ...innerShadow, params: { ...innerShadow.params, y: Number(event.target.value) } })
-                }, true)}
-                onPointerUp={commit}
-              />
-              <Slider
-                variant="inline"
-                label="Inner blur"
-                unit="px"
-                min="0"
-                max="80"
-                value={Number(innerShadow.params.blur ?? 12)}
-                onChange={(event) => updateLayer({
-                  effects: setEffect(layer, { ...innerShadow, params: { ...innerShadow.params, blur: Number(event.target.value) } })
-                }, true)}
-                onPointerUp={commit}
-              />
-            </>
-          )}
-
-          <Slider
-            variant="inline"
-            label="Layer blur"
-            unit="px"
-            min="0"
-            max="60"
-            value={blurRadius}
-            onChange={(event) => setBlur(Number(event.target.value), true)}
-            onCommit={commit}
-          />
-        </Section>
+        <LayerInspectorEffects layer={layer} updateLayer={updateLayer} commit={commit} />
 
         {/* Text depois de Effects: a ordem segue a decisao barata (Text so com texto selecionado); tipografia profunda fica diferida. */}
         {layer.kind === 'text' && (

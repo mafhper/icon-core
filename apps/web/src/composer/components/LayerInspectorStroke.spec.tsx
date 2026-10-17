@@ -7,6 +7,7 @@ import { ToastProvider } from '../toast/ToastContext';
 import { LayerInspector } from './LayerInspector';
 import type { IconCoreProject, IconLayer } from '@iconcore/shared';
 import { createBlankProject, createShapeLayer } from '../utils/projectFactory';
+import { GLOW_PRESET } from '../utils/layerStyle';
 
 /**
  * Fase 4 — a emenda UI → estado → renderer do traço e dos efeitos novos.
@@ -139,23 +140,125 @@ describe('Inspector Effects (Fase 4)', () => {
     const vistos = montar(ROUNDED);
     await screen.findByLabelText('Drop shadow');
 
+    // A fábrica semeia um depth-shadow legado ligado: o primeiro clique aposenta
+    // tudo, o segundo liga o drop migrado.
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
     fireEvent.click(screen.getByLabelText('Drop shadow'));
     expect(camada(vistos).effects?.find((e) => e.kind === 'drop-shadow')?.enabled).toBe(true);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Drop shadow' }));
     fireEvent.change(screen.getByRole('slider', { name: 'Drop blur' }), { target: { value: '24' } });
     const svg = svgDaUltima(vistos);
     expect(svg).toContain('feDropShadow');
     expect(svg).toContain('stdDeviation="12"');
   });
 
-  it('Add glow é drop shadow com offset zero, não um efeito novo', async () => {
+  it('trocar a cor no modal chega ao modelo e ao SVG', async () => {
     const vistos = montar(ROUNDED);
-    await screen.findByRole('button', { name: 'Add glow' });
+    await screen.findByLabelText('Drop shadow');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add glow' }));
-    const glow = camada(vistos).effects?.find((e) => e.kind === 'drop-shadow');
-    expect(glow).toMatchObject({ enabled: true, params: { x: 0, y: 0 } });
-    expect(svgDaUltima(vistos)).toContain('feDropShadow');
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Drop shadow' }));
+    const hex = await screen.findByLabelText('Drop shadow color hex');
+    // Sem literal no spec: a cor vem do preset público, sem o `#` que o campo não mostra.
+    fireEvent.change(hex, { target: { value: String(GLOW_PRESET.params.color).replace('#', '') } });
+    fireEvent.blur(hex);
+
+    expect(camada(vistos).effects?.find((e) => e.kind === 'drop-shadow')?.params.color).toBe(
+      GLOW_PRESET.params.color
+    );
+    expect(svgDaUltima(vistos)).toContain(`flood-color="${String(GLOW_PRESET.params.color)}"`);
+  });
+  it('fechar o modal confirma sem perder: o valor arrastado sobrevive', async () => {
+    const vistos = montar(ROUNDED);
+    await screen.findByLabelText('Drop shadow');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Drop shadow' }));
+    fireEvent.change(await screen.findByRole('slider', { name: 'Drop X' }), { target: { value: '30' } });
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(camada(vistos).effects?.find((e) => e.kind === 'drop-shadow')?.params.x).toBe(30);
+    expect(svgDaUltima(vistos)).toContain('dx="30"');
+  });
+
+  it('o switch legado sumiu da UI: sem Depth shadow nem Shadow blur', async () => {
+    montar(ROUNDED);
+    await screen.findByLabelText('Drop shadow');
+
+    expect(screen.queryByLabelText('Depth shadow')).toBeNull();
+    expect(screen.queryByRole('slider', { name: 'Shadow blur' })).toBeNull();
+  });
+
+  it('projeto antigo com depth-shadow: desligar apaga a pintura, ligar migra os números', async () => {
+    const vistos = montar(ROUNDED);
+    await screen.findByLabelText('Drop shadow');
+
+    const semente = camada(vistos).effects?.find((e) => e.kind === 'depth-shadow');
+    expect(semente?.enabled).toBe(true);
+    // A linha lê "uma sombra pinta", não "o drop existe".
+    expect(screen.getByLabelText('Drop shadow')).toBeChecked();
+
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
+    const semSombra = camada(vistos);
+    expect(semSombra.effects?.filter((e) => e.enabled)).toHaveLength(0);
+    expect(renderToSvg(vistos.at(-1)!, 'default')).not.toContain('feDropShadow');
+
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
+    const migrada = camada(vistos);
+    const drop = migrada.effects?.find((e) => e.kind === 'drop-shadow');
+    expect(drop?.enabled).toBe(true);
+    expect(drop?.params.y).toBe(Number(semente?.params.y));
+    expect(drop?.params.blur).toBe(Number(semente?.params.blur));
+    expect(migrada.effects?.find((e) => e.kind === 'depth-shadow')?.enabled).toBe(false);
+    const svg = svgDaUltima(vistos);
+    expect(svg).toContain('feDropShadow');
+    expect(svg).toContain(`dy="${Number(semente?.params.y)}"`);
+  });
+
+  it('Glow é drop shadow com offset zero, não um efeito novo', async () => {
+    const vistos = montar(ROUNDED);
+    await screen.findByLabelText('Glow');
+
+    // A linha existe sempre; o botão Add glow sumiu.
+    expect(screen.queryByRole('button', { name: 'Add glow' })).toBeNull();
+
+    // Sobre o drop ativo com offset: centra em vez de duplicar.
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Drop shadow' }));
+    fireEvent.change(await screen.findByRole('slider', { name: 'Drop X' }), { target: { value: '10' } });
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    fireEvent.click(screen.getByLabelText('Glow'));
+    const gotas = camada(vistos).effects?.filter((e) => e.kind === 'drop-shadow');
+    expect(gotas).toHaveLength(1);
+    expect(gotas?.[0]).toMatchObject({ enabled: true, params: { x: 0, y: 0 } });
+    expect(screen.getByLabelText('Glow')).toBeChecked();
+    const svg = svgDaUltima(vistos);
+    expect(svg).toContain('feDropShadow');
+    expect(svg).toContain('dx="0"');
+    expect(svg).toContain('dy="0"');
+  });
+
+  it('Glow modal mostra X/Y travados em zero e edita blur com os números no SVG', async () => {
+    const vistos = montar(ROUNDED);
+    await screen.findByLabelText('Glow');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Glow' }));
+    const travadoX = await screen.findByRole('spinbutton', { name: 'Glow X (locked at 0)' });
+    const travadoY = screen.getByRole('spinbutton', { name: 'Glow Y (locked at 0)' });
+    expect(travadoX).toBeDisabled();
+    expect(travadoX).toHaveValue(0);
+    expect(travadoY).toBeDisabled();
+    expect(travadoY).toHaveValue(0);
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Glow blur' }), { target: { value: '32' } });
+    const gotas = camada(vistos).effects?.filter((e) => e.kind === 'drop-shadow');
+    expect(gotas).toHaveLength(1);
+    expect(gotas?.[0]).toMatchObject({ enabled: true, params: { x: 0, y: 0, blur: 32 } });
+    const svg = svgDaUltima(vistos);
+    expect(svg).toContain('feDropShadow');
+    expect(svg).toContain('stdDeviation="16"');
   });
 
   it('Inner shadow compõe o filtro interno sem desligar o resto', async () => {
@@ -167,5 +270,82 @@ describe('Inspector Effects (Fase 4)', () => {
     expect(inner?.enabled).toBe(true);
     // O depth-shadow da fábrica continua lá: ligar um não apaga o outro.
     expect(camada(vistos).effects?.find((e) => e.kind === 'depth-shadow')).toBeDefined();
+  });
+
+  it('Inner modal move X e blur com os números no SVG', async () => {
+    const vistos = montar(ROUNDED);
+    await screen.findByLabelText('Inner shadow');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Inner shadow' }));
+    fireEvent.change(await screen.findByRole('slider', { name: 'Inner X' }), { target: { value: '30' } });
+    fireEvent.change(screen.getByRole('slider', { name: 'Inner blur' }), { target: { value: '20' } });
+
+    expect(camada(vistos).effects?.find((e) => e.kind === 'inner-shadow')).toMatchObject({
+      enabled: true,
+      params: { x: 30, blur: 20 }
+    });
+    const svg = svgDaUltima(vistos);
+    expect(svg).toContain('dx="30"');
+    expect(svg).toContain('stdDeviation="10"');
+    expect(svg).toContain('feFlood');
+  });
+
+  it('Layer blur: modal com Raio; desliga sem destruir; desligado emite zero markup', async () => {
+    const vistos = montar(ROUNDED);
+    await screen.findByLabelText('Layer blur');
+
+    // A fábrica liga o legado: aposenta para o blur falar sozinho no SVG.
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
+
+    fireEvent.click(screen.getByLabelText('Layer blur'));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Layer blur' }));
+    fireEvent.change(await screen.findByRole('slider', { name: 'Blur radius' }), { target: { value: '20' } });
+
+    const blur = () => camada(vistos).effects?.find((e) => e.kind === 'surface-blur');
+    expect(blur()).toMatchObject({ enabled: true, params: { radius: 20 } });
+    const comBlur = svgDaUltima(vistos);
+    expect(comBlur).toContain('feGaussianBlur');
+    expect(comBlur).toContain('stdDeviation="10"');
+
+    fireEvent.click(screen.getByLabelText('Layer blur'));
+    expect(blur()).toMatchObject({ enabled: false, params: { radius: 20 } });
+    const semBlur = svgDaUltima(vistos);
+    expect(semBlur).not.toContain('feGaussianBlur');
+    expect(semBlur).not.toContain('<filter');
+
+    fireEvent.click(screen.getByLabelText('Layer blur'));
+    expect(blur()).toMatchObject({ enabled: true, params: { radius: 20 } });
+  });
+
+  it('um modal por vez: abrir o inner fecha o drop', async () => {
+    montar(ROUNDED);
+    await screen.findByLabelText('Drop shadow');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Drop shadow' }));
+    await screen.findByRole('dialog', { name: 'Drop shadow settings' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Inner shadow' }));
+    await screen.findByRole('dialog', { name: 'Inner shadow settings' });
+    expect(screen.queryByRole('dialog', { name: 'Drop shadow settings' })).toBeNull();
+  });
+
+  it('drop + inner compõem; desligar o inner preserva o drop', async () => {
+    const vistos = montar(ROUNDED);
+    await screen.findByLabelText('Inner shadow');
+
+    // A fábrica semeia o legado ligado: aposenta tudo antes de ligar o drop migrado.
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
+    fireEvent.click(screen.getByLabelText('Drop shadow'));
+    fireEvent.click(screen.getByLabelText('Inner shadow'));
+    const composto = svgDaUltima(vistos);
+    expect(composto).toContain('feDropShadow');
+    expect(composto).toContain('feFlood');
+
+    fireEvent.click(screen.getByLabelText('Inner shadow'));
+    expect(camada(vistos).effects?.find((e) => e.kind === 'inner-shadow')?.enabled).toBe(false);
+    expect(camada(vistos).effects?.find((e) => e.kind === 'drop-shadow')?.enabled).toBe(true);
+    const soDrop = svgDaUltima(vistos);
+    expect(soDrop).toContain('feDropShadow');
+    expect(soDrop).not.toContain('feFlood');
   });
 });
