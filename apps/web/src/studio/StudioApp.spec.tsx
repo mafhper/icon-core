@@ -291,6 +291,26 @@ describe('Studio export dialog + main menu (Fase 5)', () => {
     expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('0');
   });
 
+  it('closes the document through the menu confirm, back to the workspace list', () => {
+    const project = createBlankProject('Open', 512);
+    // The provider navigates from the URL hash on mount: leaving `#/workspaces`
+    // behind would open the welcome (and its banner) under the next test.
+    const prevHash = window.location.hash;
+    try {
+      renderShell(<SeededShell project={project} />);
+      openMenu('Close document');
+
+      expect(screen.getByRole('dialog', { name: 'Close this document?' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Close document' }));
+      expect(screen.queryByRole('dialog', { name: 'Close this document?' })).not.toBeInTheDocument();
+      // No project: the welcome owns the screen and the doc chrome reports it.
+      expect(screen.getByRole('dialog', { name: 'Start a new icon' })).toBeInTheDocument();
+      expect(screen.getByText('No document')).toBeInTheDocument();
+    } finally {
+      window.location.hash = prevHash;
+    }
+  });
+
   it('persists the theme preference from the preferences dialog', () => {
     renderShell(<SeededShell project={createBlankProject('Prefs', 512)} />);
     openMenu('Preferences…');

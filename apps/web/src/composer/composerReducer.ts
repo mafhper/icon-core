@@ -165,6 +165,15 @@ export type AddLayerPayload =
 export type ComposerAction =
   | { type: 'NEW_PROJECT'; payload: { name: string; size: number; view?: ComposerView } }
   | { type: 'LOAD_PROJECT'; payload: { project: IconCoreProject; view?: ComposerView; projectId?: string } | IconCoreProject }
+  /**
+   * Closes the open document: the canvas clears and the workspace list opens.
+   *
+   * The stored record is untouched — closing is not deleting — so the project
+   * stays in the library and the welcome offers it back as "Continue". Editor
+   * preferences (zoom, grid, overlays) survive: they describe the bench, not
+   * the document. History is dropped with the document it described.
+   */
+  | { type: 'CLOSE_PROJECT' }
   | { type: 'ADD_LAYER'; payload: AddLayerPayload }
   | { type: 'UPDATE_LAYER'; payload: { id: string; changes: Partial<IconLayer>; transient?: boolean } }
   | { type: 'UPDATE_LAYER_VARIANT'; payload: { id: string; variant: IconVariant; changes: Partial<Omit<IconLayer, 'id' | 'variantOverrides'>>; transient?: boolean } }
@@ -468,6 +477,20 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
         // project the user just opened. A caller that does not know an id (opening a
         // file, for instance) falls back to the freshly minted one.
         projectId: payload.projectId ?? mintProjectId()
+      };
+    }
+
+    case 'CLOSE_PROJECT': {
+      return {
+        ...state,
+        project: null,
+        projectId: null,
+        activeLayerId: null,
+        renamingLayerId: null,
+        view: 'workspaces',
+        history: [],
+        historyIndex: -1,
+        isDirty: false
       };
     }
 

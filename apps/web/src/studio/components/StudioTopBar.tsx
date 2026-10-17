@@ -231,6 +231,19 @@ export const StudioTopBar = ({
           onClose={() => setMenuDialog(null)}
         />
       )}
+      {menuDialog === 'confirm-close' && (
+        <StudioConfirmDialog
+          title="Close this document?"
+          message="The canvas clears and the project list opens. Anything already saved stays in the library."
+          confirmLabel="Close document"
+          onConfirm={() => {
+            dispatch({ type: 'CLOSE_PROJECT' });
+            navigate('workspaces');
+            setMenuDialog(null);
+          }}
+          onCancel={() => setMenuDialog(null)}
+        />
+      )}
       {menuDialog === 'preferences' && (
         <StudioPreferencesDialog
           preference={themePreference}

@@ -240,3 +240,26 @@ describe('Studio view flags (TOGGLE_SAFE_AREA, TOGGLE_MASK)', () => {
     expect(guided.history.length).toBe(initialState.history.length);
   });
 });
+
+describe('Studio close document (CLOSE_PROJECT)', () => {
+  it('clears the canvas and opens the workspace list, keeping the bench', () => {
+    const open = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'Open', size: 512 } });
+    const withLayer = composerReducer(open, {
+      type: 'ADD_LAYER',
+      payload: { kind: 'shape', shape: { kind: 'circle', width: 100, height: 100 } }
+    });
+    expect(withLayer.project).not.toBeNull();
+
+    const closed = composerReducer(withLayer, { type: 'CLOSE_PROJECT' });
+    expect(closed.project).toBeNull();
+    expect(closed.projectId).toBeNull();
+    expect(closed.activeLayerId).toBeNull();
+    expect(closed.view).toBe('workspaces');
+    expect(closed.history).toHaveLength(0);
+    expect(closed.historyIndex).toBe(-1);
+    expect(closed.isDirty).toBe(false);
+    // The bench is not the document: zoom and overlays survive the close.
+    expect(closed.zoom).toBe(withLayer.zoom);
+    expect(closed.showGrid).toBe(withLayer.showGrid);
+  });
+});

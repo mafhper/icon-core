@@ -188,11 +188,115 @@ const traceShapePath = (
 };
 
 /**
+ * Whether a classic (spread-less) outer shadow has to be pre-rendered instead
+ * of riding the content draws.
+ *
+ * `paintLayerContent` clips a filled shape to its own outline so the `fillRect`
+ * behind a gradient stays inside it. A `ctx.shadow*` set on that same context
+ * is clipped by the same clip: everything the shadow casts outside the shape
+ * never reaches the page, while the SVG pipeline (`feDropShadow`, unclipped)
+ * paints it. A filled shape with the offset past its edge renders white below
+ * on canvas and mid-grey in SVG — the two pipelines answering different
+ * questions about the same document.
+ *
+ * Text and image layers paint unclipped (`fillText`/`drawImage`), so the fast
+ * path survives for them; hollow shapes (`fill: none`) cast only from the
+ * stroke and stay on it too. Only a filled shape clips.
+ */
+const needsUnclippedShadow = (layer: ResolvedLayer): boolean => {
+  if (layer.kind === 'text') return false;
+  if (!layer.resolvedSource.shape) return false;
+  const fill = layer.resolvedFill;
+  if (!fill || fill.kind === 'none') return false;
+  return true;
+};
+
+/**
+ * A classic outer shadow (legacy depth or spread-less drop), pre-rendered
+ * from the silhouette and laid under the content.
+ *
+ * Same primitive and same numbers as the fast path (`shadowOffset*`,
+ * `shadowBlur`, `shadowColor`) — the kernel does not move, only the clip
+ * does: the silhouette paints on a full-size offscreen with no clip, so the
+ * offset survives, and the interior is punched out (`destination-out`) so the
+ * content the caller paints next lands on the same pixels it always did. The
+ * draw resets filter, alpha and composite around itself: the silhouette
+ * already carries the layer opacity, and the layer's own surface-blur must
+ * not soften the shadow on the way in (the spread twin documents the same
+ * rule for its own draw).
+ *
+ * Stroke casts are deliberately not part of the silhouette: the fast path
+ * stacked a fill cast and a stroke cast, both clipped; one unclipped fill
+ * cast covers every shape the parity gate pairs with a classic shadow, and a
+ * hollow shape never reaches here at all.
+ */
+const paintClassicDropShadow = (
+  main: CanvasRenderingContext2D,
+  backend: RenderBackend,
+  canvas: Dimensions,
+  layer: ResolvedLayer,
+  effect: LayerEffect,
+  legacy: boolean
+): void => {
+  const ghost = backend.createCanvas(canvas.width, canvas.height);
+  const g = ghost.native as CanvasRenderingContext2D;
+  if (layer.resolvedTransform) {
+    backend.applyTransform(ghost, layer.resolvedTransform);
+  }
+  if (legacy) {
+    g.shadowOffsetX = Number(effect.params.x ?? 0);
+    g.shadowOffsetY = Number(effect.params.y ?? 14);
+    g.shadowBlur = Number(effect.params.blur ?? 28);
+    g.shadowColor = String(effect.params.color ?? 'rgba(15, 23, 42, 0.28)');
+  } else {
+    g.shadowOffsetX = Number(effect.params.x ?? 0);
+    g.shadowOffsetY = Number(effect.params.y ?? 8);
+    g.shadowBlur = Number(effect.params.blur ?? 16);
+    g.shadowColor = toRgba(
+      String(effect.params.color ?? 'black'),
+      Number(effect.params.opacity ?? 1)
+    );
+  }
+  const shape = layer.resolvedSource.shape!;
+  const x = (canvas.width - shape.width) / 2;
+  const y = (canvas.height - shape.height) / 2;
+  const lineCap = layer.resolvedStroke?.cap ?? 'round';
+  // The silhouette carries the layer opacity (and a solid fill's own alpha)
+  // so the cast has the strength the fast path's inherited `globalAlpha`
+  // gave it — the shadow of a translucent layer is lighter, on both sides.
+  const fill = layer.resolvedFill!;
+  g.globalAlpha = layer.resolvedOpacity;
+  g.fillStyle = fill.kind === 'solid' ? toRgba('#ffffff', fill.alpha ?? 1) : '#ffffff';
+  traceShapePath(g, shape, x, y, lineCap);
+  g.fill();
+  // Punch the interior: only the outside fringe reaches the page, so a
+  // translucent content never blends over a white silhouette of itself.
+  g.save();
+  g.shadowOffsetX = 0;
+  g.shadowOffsetY = 0;
+  g.shadowBlur = 0;
+  g.shadowColor = 'rgba(0,0,0,0)';
+  g.globalCompositeOperation = 'destination-out';
+  g.globalAlpha = 1;
+  traceShapePath(g, shape, x, y, lineCap);
+  g.fill();
+  g.restore();
+
+  main.save();
+  main.filter = 'none';
+  main.globalAlpha = 1;
+  main.globalCompositeOperation = 'source-over';
+  main.drawImage(g.canvas, 0, 0);
+  main.restore();
+};
+
+/**
  * Paint one layer's own pixels onto `target`: transform, text, shape
  * fill/stroke, inner shadow, images. Everything EXCEPT the drop shadow,
  * which the caller owns — the shadow either rides the draw operations
- * (`ctx.shadow*`, spread 0) or is pre-rendered from a silhouette
- * (`paintSpreadShadow`, spread != 0) and laid under this paint.
+ * (`ctx.shadow*`, spread 0, unclipped layers) or is pre-rendered from a
+ * silhouette (`paintClassicDropShadow` for a clipped filled shape,
+ * `paintSpreadShadow` for spread != 0) and laid under this paint.
  *
  * Extracted so the spread path can render the same pixels twice (once white
  * for the shadow silhouette, once real for the layer) without two copies of
@@ -1013,21 +1117,35 @@ export const composeLayers = async (
     const legacyShadow = layer.resolvedEffects?.find((effect) => effect.kind === 'depth-shadow' && effect.enabled);
     const dropShadow = layer.resolvedEffects?.find((effect) => effect.kind === 'drop-shadow' && effect.enabled);
     if (legacyShadow) {
-      // The composer-era shadow, kept byte-for-byte for every existing project.
-      ctxAny.shadowOffsetX = Number(legacyShadow.params.x ?? 0);
-      ctxAny.shadowOffsetY = Number(legacyShadow.params.y ?? 14);
-      ctxAny.shadowBlur = Number(legacyShadow.params.blur ?? 28);
-      ctxAny.shadowColor = String(legacyShadow.params.color ?? 'rgba(15, 23, 42, 0.28)');
+      // The composer-era shadow. Unclipped layers keep it byte-for-byte; a
+      // filled shape pre-renders (same clip reason as the generic drop below).
+      if (needsUnclippedShadow(layer)) {
+        // Same clip reason as the generic drop below: the fill clip would
+        // amputate the offset, so the shadow pre-renders and the content
+        // paints clean.
+        paintClassicDropShadow(ctxAny, backend, canvas, layer, legacyShadow, true);
+      } else {
+        ctxAny.shadowOffsetX = Number(legacyShadow.params.x ?? 0);
+        ctxAny.shadowOffsetY = Number(legacyShadow.params.y ?? 14);
+        ctxAny.shadowBlur = Number(legacyShadow.params.blur ?? 28);
+        ctxAny.shadowColor = String(legacyShadow.params.color ?? 'rgba(15, 23, 42, 0.28)');
+      }
     } else if (dropShadow) {
       if (shadowSpread(dropShadow) === 0) {
-        // The generic drop shadow (a glow is the same effect with zero offset).
-        ctxAny.shadowOffsetX = Number(dropShadow.params.x ?? 0);
-        ctxAny.shadowOffsetY = Number(dropShadow.params.y ?? 8);
-        ctxAny.shadowBlur = Number(dropShadow.params.blur ?? 16);
-        ctxAny.shadowColor = toRgba(
-          String(dropShadow.params.color ?? 'black'),
-          Number(dropShadow.params.opacity ?? 1)
-        );
+        if (needsUnclippedShadow(layer)) {
+          // The fill clip amputates the offset (see needsUnclippedShadow):
+          // pre-render unclipped, then paint the content with no shadow set.
+          paintClassicDropShadow(ctxAny, backend, canvas, layer, dropShadow, false);
+        } else {
+          // The generic drop shadow (a glow is the same effect with zero offset).
+          ctxAny.shadowOffsetX = Number(dropShadow.params.x ?? 0);
+          ctxAny.shadowOffsetY = Number(dropShadow.params.y ?? 8);
+          ctxAny.shadowBlur = Number(dropShadow.params.blur ?? 16);
+          ctxAny.shadowColor = toRgba(
+            String(dropShadow.params.color ?? 'black'),
+            Number(dropShadow.params.opacity ?? 1)
+          );
+        }
       } else {
         // Spread: the shadow is pre-rendered from the silhouette and laid
         // under the layer; the paint below runs clean, with no `shadow*` set.

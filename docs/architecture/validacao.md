@@ -72,16 +72,18 @@ fixture que não existe.
 
 Coisas que esta regra **não** faz, e que continuam abertas:
 
-- **O número agregado de paridade não é portão binário.** 94% em 16 fixtures esconde
-  regressão — uma fixture pode cair 20 pontos e a média mal mexer. Falta limiar **por
-  fixture** com baseline versionado; hoje o baseline é local e não está no repositório.
+- **O número agregado de paridade não é portão binário.** A média em 32 fixtures esconde
+  regressão — uma fixture pode cair 20 pontos e a média mal mexer. Cada fixture tem
+  limiar próprio (`minFora` em `scripts/check-svg-parity.mjs`) e fixture sem limite
+  reprova; o baseline continua local e não está no repositório.
 - **`charset-scan` não é `cspell`.** Ele pega CJK, cirílico, árabe e Hangul. Não pega
   prosa em outro idioma (`itángulo`, `Ameasured`) nem palavra duplicada
   (`estabeleceram estabeleceram`), que já foram defeitos reais.
 - **Não há branch protection no `main`.** Um `--amend` com erro de stage já teve efeito
   uma vez.
-- **`adb`/in-browser e2e do Composer não existem.** A cobertura de e2e é do promo; fluxos
-  do Composer não são cobertos.
+- **`adb` continua fora; e2e do app no navegador existem.** 18 specs em `tests/e2e/`
+  dirigem o studio (shell, export com assinaturas, camadas, inspetor); fluxos fora do
+  navegador (instalação, sistema) continuam sem cobertura.
 
 ## Referências
 

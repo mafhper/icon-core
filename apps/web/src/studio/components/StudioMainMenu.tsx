@@ -1,8 +1,8 @@
-import { Download, FilePlus, Info, Keyboard, PenLine, Save, Settings2 } from 'lucide-react';
+import { Download, FilePlus, FileX2, Info, Keyboard, PenLine, Save, Settings2 } from 'lucide-react';
 import { IconButton, Menu, MenuItem, MenuSeparator, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 
-export type StudioMenuDialog = 'new' | 'rename' | 'preferences' | 'shortcuts' | 'confirm-new' | 'about' | null;
+export type StudioMenuDialog = 'new' | 'rename' | 'preferences' | 'shortcuts' | 'confirm-new' | 'confirm-close' | 'about' | null;
 
 /**
  * Studio main menu (Fase 5): every document-level action in one place.
@@ -34,6 +34,12 @@ export const StudioMainMenu = ({ onDialog }: { onDialog: (dialog: Exclude<Studio
         label="Rename document…"
         disabled={!hasProject}
         onSelect={() => onDialog('rename')}
+      />
+      <MenuItem
+        icon={<FileX2 size={14} />}
+        label="Close document"
+        disabled={!hasProject}
+        onSelect={() => onDialog('confirm-close')}
       />
       <MenuItem icon={<Save size={14} />} label="Save session" shortcut="Ctrl+S" disabled={!hasProject} onSelect={() => void saveProject()} />
       <MenuItem icon={<Download size={14} />} label="Export icons…" disabled={!hasProject} onSelect={() => navigate('export-utilities')} />

@@ -446,6 +446,19 @@ const PROJECTS = {
     })
   ]),
 
+  // Long offset past the shape edge: the canvas used to clip the fill to the
+  // outline, amputating everything the shadow casts outside it (white below
+  // on canvas, mid-grey in SVG), while the small offset above hides inside
+  // its own tolerance. The offset here lands a full band outside the shape,
+  // so a clipped canvas cannot pass this fixture.
+  sombraLonga: base('sombraLonga', [
+    shape({ kind: 'rounded-rectangle', width: 176, height: 176, cornerRadius: 32 }, {
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'drop-shadow', enabled: true, params: { x: 0, y: 20, blur: 16, color: '#000000', opacity: 0.5 } }]
+    })
+  ]),
+
   // Tier 2 (2.0) — spread. Positive grows the silhouette, negative chokes
   // it; the SVG dilates/erodes before the blur (drop) or with a flipped sign
   // (inner — the caster, not the contour). Thresholds measured live, same
@@ -619,6 +632,7 @@ const ACEITACAO = {
   tracoFora: { minFora: 1 },
   cantos: { minFora: 1 },
   sombra: { minFora: 4 },
+  sombraLonga: { minFora: 4 },
   sombraSpread: { minFora: 2 },
   sombraChoke: { minFora: 1 },
   innerSpreadMais: { minFora: 12 },

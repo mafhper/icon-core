@@ -240,7 +240,9 @@ Things a reader will otherwise waste time rediscovering:
   on the transform, on layer placement and on polygon outlines because tests
   say so, not because one shared implementation serves both. Adding a shape kind
   means touching both.
-- No visual gate compares a rasterised Canvas render against the SVG export
-  with a tolerance. The parity tests work on geometry, which is cheaper and
-  catches the class of bug that actually shipped, but it is not the same thing
-  as pixel agreement.
+- Pixel parity between the two pipelines is gated per fixture:
+  `scripts/check-svg-parity.mjs` renders every fixture through the browser
+  canvas and through the SVG export and compares pixel by pixel, each fixture
+  with its own `minFora` allowance — and a fixture without a declared limit
+  fails closed. Geometry-only unit tests remain the cheap net; the gate is the
+  pixel agreement.

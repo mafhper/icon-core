@@ -116,3 +116,14 @@ test('studio: paineis recolhem e reabrem; atalhos listam os vinculos reais', asy
   await page.keyboard.press('h');
   await expect(page.getByRole('contentinfo', { name: 'Status bar' })).toContainText('Hand');
 });
+
+test('studio: fechar o documento pede confirmacao e volta a lista', async ({ page }) => {
+  await preparar(page);
+
+  await page.getByRole('button', { name: 'Main menu' }).click();
+  await page.getByRole('menuitem', { name: 'Close document' }).click();
+  await expect(page.getByRole('dialog', { name: 'Close this document?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close document' }).click();
+  await expect(page.getByRole('dialog', { name: 'Start a new icon' })).toBeVisible();
+  await expect(page.getByText('No document')).toBeVisible();
+});
