@@ -143,7 +143,14 @@
 .studio button,
 .studio input,
 .studio select {
-  font: inherit;
+  /* Herda família/tamanho sem zerar o peso: `font: inherit` (shorthand)
+     redefinia `font-weight` com especificidade (0,1,1) e vencia cada regra
+     de peso (0,1,0) — marca 700, gatilhos 500 e Composer 600/700 caíam para
+     400 e o audit de traço (1.5px no regular, 2px no 500+) reclamava com
+     razão. Só família/tamanho/altura herdam; o peso declarado vence. */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   letter-spacing: 0;
 }
 
@@ -179,9 +186,11 @@
   background: none;
   border: none;
   color: inherit;
-  font: inherit;
-  /* `font: inherit` resets the weight the brand sets above; restore it, or the
-     wordmark renders regular and the icon-stroke audit (rightly) complains. */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  /* O peso vem da marca (700, mockup 650→Bold): herdar só família/tamanho
+     preserva-o sem precisar restaurar após o shorthand. */
   font-weight: 700;
   cursor: pointer;
   padding: 4px 6px;
@@ -441,6 +450,18 @@
 
 .studio-crumbbar .studio-crumbbar-spacer {
   flex: 1 1 auto;
+}
+
+.studio-stage-wrap {
+  /* A pill flutuava ancorada no `.studio-canvas` (seção inteira): `bottom: 14px`
+     caía dentro da faixa de tiles e o `.studio-pillbar` interceptava o clique
+     no tile. O wrap envolve só mesa + pill — a faixa fica fora — então a pill
+     flutua sobre a mesa em qualquer viewport sem cobrir os tiles. */
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .studio-stage {
@@ -736,7 +757,9 @@
   color: var(--ic-text-muted);
   background: none;
   border: none;
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 4px;

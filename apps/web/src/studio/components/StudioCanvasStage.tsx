@@ -100,46 +100,48 @@ export const StudioCanvasStage = ({ tool, onTool, onCursor }: StudioCanvasStageP
           <MenuItem label="Reset view" onSelect={resetView} />
         </Menu>
       </div>
-      <div
-        className="studio-stage"
-        style={
-          {
-            '--pan-x': `${pan.x}px`,
-            '--pan-y': `${pan.y}px`,
-            backgroundColor: workAreaToCss(state.workAreaColor)
-          } as React.CSSProperties
-        }
-        onPointerDownCapture={(event) => {
-          if (tool !== 'hand') return;
-          // The Hand owns the pointer from here: layers must not start drags
-          // and the stage must not deselect underneath the pan.
-          event.stopPropagation();
-          event.preventDefault();
-          movedRef.current = false;
-          dragRef.current = { x: event.clientX, y: event.clientY, pan: panRef.current };
-        }}
-        onPointerMoveCapture={(event) => {
-          const drag = dragRef.current;
-          if (!drag) return;
-          const dx = event.clientX - drag.x;
-          const dy = event.clientY - drag.y;
-          if (Math.abs(dx) + Math.abs(dy) > 3) movedRef.current = true;
-          setPan({ x: drag.pan.x + dx, y: drag.pan.y + dy });
-        }}
-        onPointerUpCapture={() => {
-          dragRef.current = null;
-        }}
-        onClickCapture={(event) => {
-          if (movedRef.current) {
-            // A pan that travelled ends in a click the canvas must not hear.
-            event.stopPropagation();
-            movedRef.current = false;
+      <div className="studio-stage-wrap">
+        <div
+          className="studio-stage"
+          style={
+            {
+              '--pan-x': `${pan.x}px`,
+              '--pan-y': `${pan.y}px`,
+              backgroundColor: workAreaToCss(state.workAreaColor)
+            } as React.CSSProperties
           }
-        }}
-      >
-        <PreviewCanvas interactionMode={tool} />
+          onPointerDownCapture={(event) => {
+            if (tool !== 'hand') return;
+            // The Hand owns the pointer from here: layers must not start drags
+            // and the stage must not deselect underneath the pan.
+            event.stopPropagation();
+            event.preventDefault();
+            movedRef.current = false;
+            dragRef.current = { x: event.clientX, y: event.clientY, pan: panRef.current };
+          }}
+          onPointerMoveCapture={(event) => {
+            const drag = dragRef.current;
+            if (!drag) return;
+            const dx = event.clientX - drag.x;
+            const dy = event.clientY - drag.y;
+            if (Math.abs(dx) + Math.abs(dy) > 3) movedRef.current = true;
+            setPan({ x: drag.pan.x + dx, y: drag.pan.y + dy });
+          }}
+          onPointerUpCapture={() => {
+            dragRef.current = null;
+          }}
+          onClickCapture={(event) => {
+            if (movedRef.current) {
+              // A pan that travelled ends in a click the canvas must not hear.
+              event.stopPropagation();
+              movedRef.current = false;
+            }
+          }}
+        >
+          <PreviewCanvas interactionMode={tool} />
+        </div>
+        <StudioPillBar tool={tool} onTool={onTool} />
       </div>
-      <StudioPillBar tool={tool} onTool={onTool} />
       <StudioVariantTiles />
     </section>
   );
