@@ -16,9 +16,12 @@ const openInspector = async (page: Page, withShape: boolean) => {
   await page.getByRole('button', { name: /^Create$/i }).first().click();
   await expect(page.locator('.ic-inspector')).toBeVisible();
   if (!withShape) return;
-  await page.getByRole('button', { name: /add shape/i }).first().click();
-  await page.getByRole('menuitem').first().click();
-  await page.waitForTimeout(400);
+  // The layers empty state owns the only shape CTA now: it dispatches
+  // ADD_LAYER directly, so there is no menu step after the click. The old
+  // canvas-toolbar Add menu left with the Composer chrome and is not coming
+  // back; the list assertion below is the sync point for the re-render.
+  await page.getByRole('button', { name: 'Add a shape' }).click();
+  await expect(page.locator('.ic-layer-list')).not.toContainText('No layers yet');
 };
 
 const collect = (page: Page, scope: string, fn: (root: Element, pill: number) => string[], pill = PILL_RADIUS) =>

@@ -55,8 +55,8 @@ const openEditor = async (page: Page, panelWidth: number, withShape: boolean) =>
   await page.getByRole('button', { name: /^Create$/i }).first().click();
   await expect(page.locator('.ic-inspector')).toBeVisible();
   if (!withShape) return;
-  await page.getByRole('button', { name: /add shape/i }).first().click();
-  await page.getByRole('menuitem').first().click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
   await page.waitForTimeout(400);
 };
 
@@ -70,7 +70,8 @@ for (const width of WIDTHS) {
 test('inspector fits with the Background layer selected', async ({ page }) => {
   await openEditor(page, 288, true);
   // The Background layer is a handle created on demand, not part of a blank project.
-  await page.getByRole('button', { name: /add background fill layer/i }).first().click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Background' }).click();
   await page.locator('.ic-layer-row', { hasText: /background/i }).first().click();
   await page.waitForTimeout(300);
   await expectFits(page);
@@ -78,7 +79,8 @@ test('inspector fits with the Background layer selected', async ({ page }) => {
 
 test('clicking the icon area selects the Background layer; clicking the stage shows canvas adjustments', async ({ page }) => {
   await openEditor(page, 288, false);
-  await page.getByRole('button', { name: /add background fill layer/i }).first().click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Background' }).click();
   await page.waitForTimeout(400);
 
   // Inside the icon: the background handle becomes the selection.
