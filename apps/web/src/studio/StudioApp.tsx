@@ -30,20 +30,22 @@ import './studio.css';
  * The state, history, canvas pipeline and inspector are the Composer's —
  * `ComposerProvider`, the reducer actions, `PreviewCanvas`, `LayerList` and
  * `LayerInspector` — so Layers → Canvas → Inspector are synchronised by
- * construction from the first commit. What is new is the chrome: titlebar,
- * toolbar, resizable side panels (205–380px, independently collapsible with
- * an always-visible way back), the canvas stage (breadcrumb, View options,
- * Hand pan, pill, live variant tiles) and the three-zone statusbar, all
- * under the `[data-theme]` contract, dark-first.
+ * construction from the first commit. What is new is the chrome: titlebar
+ * (brand, software menus, document breadcrumb), toolbar (insert, view
+ * options, panel toggles, theme, export), resizable side panels (205–380px,
+ * independently collapsible with an always-visible way back), the canvas
+ * stage (Hand pan, pill, live variant tiles) and the three-zone statusbar,
+ * all under the `[data-theme]` contract, dark-first.
  *
  * Project-independent surfaces keep their contracts: `#/ui` renders the
  * gallery alone (never under the welcome modal), and the export-utilities
  * view stays reachable until Fase 5 replaces it with the studio dialog.
  */
 export const StudioShell = () => {
-  const { state, navigate } = useComposer();
+  const { state, dispatch, navigate } = useComposer();
   const [tool, setTool] = useState<StudioTool>('select');
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [themePreference, setThemePreference] = useState<StudioThemePreference>(readThemePreference);
   useKeyboardShortcuts();
@@ -87,6 +89,14 @@ export const StudioShell = () => {
     setThemePreference(preference);
   }, []);
 
+  // The viewport owns no state: the shell holds the Hand pan so both Reset
+  // view (topbar View options) and Fit to canvas (pill) return zoom and pan
+  // together, from either address.
+  const resetView = useCallback(() => {
+    setPan({ x: 0, y: 0 });
+    dispatch({ type: 'SET_ZOOM', payload: 1 });
+  }, [dispatch]);
+
   if (state.view === 'ui') {
     return <UiGallery />;
   }
@@ -103,6 +113,7 @@ export const StudioShell = () => {
         themePreference={themePreference}
         onThemePreference={changeTheme}
         onOpenShortcuts={() => setShortcutsOpen(true)}
+        onResetView={resetView}
       />
       <div className="studio-body">
           <section
@@ -116,7 +127,7 @@ export const StudioShell = () => {
           {isLarge && leftOpen && (
             <PanelResizer side="left" label="Resize Layers panel" onStart={startLeftResize} />
           )}
-          <StudioCanvasStage tool={tool} onTool={setTool} onCursor={setCursor} />
+          <StudioCanvasStage tool={tool} onTool={setTool} onCursor={setCursor} pan={pan} onPan={setPan} onResetView={resetView} />
           {isLarge && inspectorOpen && (
             <PanelResizer side="right" label="Resize Inspector panel" onStart={startRightResize} />
           )}

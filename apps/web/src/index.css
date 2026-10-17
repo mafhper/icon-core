@@ -469,42 +469,6 @@ input[type='range'] {
 
 /* Overlay backdrop (drawer/sheet modes) */
 
-.ic-canvas-toolbar {
-  flex: 0 0 auto;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-bottom: 1px solid var(--ic-border);
-  background: var(--ic-surface);
-  padding: 8px 12px;
-}
-
-.ic-toolbar-group {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Visible group caption inside roomy toolbars (canvas toolbar). Supplementary:
-   every control keeps its own Tooltip + aria-label. Hidden on narrow screens
-   where the toolbar wraps and space is scarce. */
-.ic-toolbar-label {
-  padding: 0 4px;
-  /* Was --ic-text-faint (3.1–3.8:1); the caption is small text, so it uses the
-     muted token (4.6–7.1:1). `--ic-text-faint` stays for decorative use. */
-  color: var(--ic-text-muted);
-  font-size: 0.66rem;
-  font-weight: 720;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  user-select: none;
-  white-space: nowrap;
-}
-
 .ic-layer-list {
   /* Fill the panel column: without flex:1 the surface only reaches
      the height of its content, leaving the page background visible below. */
@@ -1187,15 +1151,6 @@ input[type='range'] {
 }
 
 @media (max-width: 640px) {
-
-  .ic-canvas-toolbar {
-    align-items: stretch;
-  }
-
-  .ic-toolbar-group {
-    justify-content: space-between;
-    width: 100%;
-  }
 
   .ic-edit-stage {
     min-height: 360px;

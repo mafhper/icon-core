@@ -114,6 +114,12 @@ describe('Studio canvas stage (Fase 3)', () => {
   });
 
   const openViewOptions = () => {
+    // View options lives in the Studio toolbar, not over the viewport.
+    const toolbar = screen.getByRole('toolbar', { name: 'Studio toolbar' });
+    expect(within(toolbar).getByRole('button', { name: 'View options' })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Canvas' })).queryByRole('button', { name: 'View options' })
+    ).not.toBeInTheDocument();
     fireEvent.pointerDown(screen.getByRole('button', { name: 'View options' }));
   };
 
@@ -306,11 +312,79 @@ describe('StudioApp shell (Fase 1)', () => {
     expect(screen.getByRole('region', { name: 'Inspector panel' })).toBeInTheDocument();
     expect(screen.getByRole('contentinfo', { name: 'Status bar' })).toBeInTheDocument();
 
-    // Brand + document, not a dashboard. The name lives in three homes on
-    // purpose (mockup): the titlebar readout, the panel title that renames,
-    // and the canvas breadcrumb.
+    // Brand + document, not a dashboard. The name lives in two homes: the
+    // titlebar breadcrumb and the panel title that renames. The canvas
+    // breadcrumb is gone — its variant half moved to the titlebar too.
     expect(screen.getByText('Icon-Core')).toBeInTheDocument();
-    expect(screen.getAllByText('Studio One')).toHaveLength(3);
+    expect(screen.getAllByText('Studio One')).toHaveLength(2);
+  });
+
+  it('keeps the document breadcrumb in the titlebar and nothing else in the canvas', () => {
+    renderShell(<SeededShell project={createBlankProject('Studio One', 1024)} />);
+
+    const titlebar = screen.getByRole('banner');
+    expect(within(titlebar).getByText('Studio One')).toBeInTheDocument();
+    expect(within(titlebar).getByText('Default')).toBeInTheDocument();
+
+    // The canvas carries no breadcrumb, no View options and no creation bar:
+    // the Layers header Insert is the one entry point.
+    const canvas = screen.getByRole('region', { name: 'Canvas' });
+    expect(within(canvas).queryByRole('button', { name: 'View options' })).not.toBeInTheDocument();
+    for (const name of ['Add shape', 'Add text layer', 'Add background fill layer', 'Upload image']) {
+      expect(within(canvas).queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: 'Main menu' })).toBeInTheDocument();
+  });
+
+  it('runs the pill in mockup order with every tool acting', () => {
+    const project = createBlankProject('Pill', 512);
+    project.layers = [
+      {
+        id: 'layer-prism',
+        name: 'Prism',
+        kind: 'shape',
+        visible: true,
+        zIndex: 1,
+        source: { type: 'inline', shape: { kind: 'rounded-rectangle', width: 220, height: 220, cornerRadius: 48 } },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        fill: { kind: 'solid', color: '#3f6ce0', alpha: 1 }
+      }
+    ];
+    renderShell(<SeededShell project={project} />);
+    const pill = screen.getByRole('toolbar', { name: 'Canvas tools' });
+    const names = within(pill)
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label') ?? '');
+
+    // Tools, icon styles and order follow the mockup: no keyline toggle and
+    // no platform cycle here — both stay reachable from their own homes.
+    expect(names).toEqual([
+      'Selection tool',
+      'Hand tool',
+      'Toggle grid',
+      'Toggle safe area',
+      'Toggle snapping',
+      'Zoom out',
+      'Zoom 100 percent',
+      'Zoom in',
+      'Fit to canvas'
+    ]);
+
+    // The safe-area toggle draws the real guide on the canvas.
+    const canvas = screen.getByRole('region', { name: 'Canvas' });
+    expect(canvas.querySelector('.ic-safe-area-overlay')).not.toBeInTheDocument();
+    fireEvent.click(within(pill).getByRole('button', { name: 'Toggle safe area' }));
+    expect(canvas.querySelector('.ic-safe-area-overlay')).toBeInTheDocument();
+
+    // The zoom menu jumps to a real preset…
+    fireEvent.pointerDown(within(pill).getByRole('button', { name: 'Zoom 100 percent' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: '150%' }));
+    expect(within(pill).getByRole('button', { name: 'Zoom 150 percent' })).toBeInTheDocument();
+
+    // …and Fit to canvas returns zoom (and the Hand pan) together.
+    fireEvent.click(within(pill).getByRole('button', { name: 'Fit to canvas' }));
+    expect(within(pill).getByRole('button', { name: 'Zoom 100 percent' })).toBeInTheDocument();
   });
 
   it('collapses each side panel and always offers an evident way back', () => {
