@@ -51,7 +51,8 @@ const abrir = async (page: Page) => {
 /** Cria `n` camadas de texto com nomes distintos e fecha os popovers. */
 const criarCamadas = async (page: Page, n: number) => {
   for (let i = 0; i < n; i++) {
-    await page.getByRole('button', { name: 'Add text layer' }).click();
+    await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
     await page.waitForTimeout(220);
   }
   await page.keyboard.press('Escape');
@@ -157,11 +158,12 @@ test('arrastar com o handle de Background presente nao o traz para cima', async 
   await criarCamadas(page, 3);
 
   /**
-   * O handle e criado pelo botao "Add background fill layer", e um projeto novo **nao** tem
+   * O handle e criado pelo item Background do Insert, e um projeto novo **nao** tem
    * um. Um teste com `test.skip` aqui mediria nada; entao o handle e criado pela mesma
    * acao que a pessoa usaria.
    */
-  await page.getByRole('button', { name: 'Add background fill layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Background' }).click();
   await page.waitForTimeout(450);
 
   const antes = await ordem(page);

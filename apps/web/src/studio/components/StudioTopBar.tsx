@@ -3,6 +3,7 @@ import {
   ArrowUpToLine,
   Box,
   Check,
+  ChevronRight,
   Keyboard,
   Monitor,
   Moon,
@@ -18,11 +19,13 @@ import { IconButton, Menu, MenuItem, Tooltip, withIconStroke } from '@iconcore/u
 import { useComposer } from '../../composer/ComposerContext';
 import { AboutModal } from '../../composer/components/AboutModal';
 import type { StudioThemePreference } from '../useStudioTheme';
+import { variantLabel } from '../variantLabels';
 import { StudioConfirmDialog } from './StudioConfirmDialog';
 import { StudioInsertMenu } from './StudioInsertMenu';
 import { StudioMainMenu, type StudioMenuDialog } from './StudioMainMenu';
 import { StudioNameDialog } from './StudioNameDialog';
 import { StudioPreferencesDialog } from './StudioPreferencesDialog';
+import { StudioViewOptions } from './StudioViewOptions';
 
 const THEMES: Array<{ id: StudioThemePreference; label: string }> = [
   { id: 'dark', label: 'Dark theme' },
@@ -38,21 +41,24 @@ interface StudioTopBarProps {
   themePreference: StudioThemePreference;
   onThemePreference: (preference: StudioThemePreference) => void;
   onOpenShortcuts: () => void;
+  onResetView: () => void;
 }
 
 const themeIcon = (preference: StudioThemePreference) =>
   preference === 'light' ? <Sun size={16} /> : preference === 'system' ? <Monitor size={16} /> : <Moon size={16} />;
 
 /**
- * Studio top chrome (Fase 1): titlebar (brand + document + panel controls)
- * over the toolbar (undo/redo, insert, panel toggles, theme, export).
+ * Studio top chrome (chrome slice): titlebar (brand + software menus +
+ * document breadcrumb) over the toolbar (undo/redo, insert, view options,
+ * panel toggles, theme, export).
  *
- * Variant selection lives only in the canvas tiles (and the Inspector
- * Preview grid, which renders the same tiles) — never in this toolbar.
+ * The document breadcrumb (name › variant) lives here, not in the canvas —
+ * and View options lives in this toolbar, not over the viewport. Variant
+ * selection itself stays only in the canvas tiles (and the Inspector Preview
+ * grid, which renders the same tiles) — never in this toolbar.
  *
- * Every control acts from day one — there is no Insert menu yet (Fase 2) and
- * no rename/new-document entry points yet (Fase 5 brings the dialogs), so the
- * document name renders as text, not as a button that goes nowhere.
+ * Every control acts from day one: the menus open real dialogs, Insert
+ * dispatches real layers, and View options flips real viewport flags.
  */
 export const StudioTopBar = ({
   leftOpen,
@@ -61,7 +67,8 @@ export const StudioTopBar = ({
   onToggleInspector,
   themePreference,
   onThemePreference,
-  onOpenShortcuts
+  onOpenShortcuts,
+  onResetView
 }: StudioTopBarProps) => {
   const { state, dispatch, navigate } = useComposer();
   const [menuDialog, setMenuDialog] = useState<StudioMenuDialog>(null);
@@ -83,9 +90,18 @@ export const StudioTopBar = ({
           <span>Icon-Core</span>
           <span className="studio-beta">BETA</span>
         </button>
+        <StudioMainMenu
+          onDialog={(dialog) => {
+            if (dialog === 'shortcuts') onOpenShortcuts();
+            else setMenuDialog(dialog);
+          }}
+        />
         <div className="studio-doc" aria-live="polite">
+          <Box size={13} aria-hidden="true" />
           <strong>{project?.metadata.name ?? 'No document'}</strong>
           {state.isDirty && <span className="studio-doc-unsaved" aria-label="Unsaved changes" />}
+          <ChevronRight size={12} aria-hidden="true" />
+          <span>{variantLabel(state.activeVariant)}</span>
         </div>
         <div className="studio-titlebar-actions">
           <Tooltip content={leftOpen && inspectorOpen ? 'Minimize panels' : 'Restore panels'}>
@@ -107,15 +123,6 @@ export const StudioTopBar = ({
       </header>
       <div className="studio-topbar" role="toolbar" aria-label="Studio toolbar">
         <div className="studio-topbar-group">
-          <StudioMainMenu
-            onDialog={(dialog) => {
-              if (dialog === 'shortcuts') onOpenShortcuts();
-              else setMenuDialog(dialog);
-            }}
-          />
-        </div>
-        <span className="studio-divider" aria-hidden="true" />
-        <div className="studio-topbar-group">
           <Tooltip content="Undo (Ctrl+Z)">
             <IconButton
               icon={<Undo2 size={16} />}
@@ -136,6 +143,7 @@ export const StudioTopBar = ({
         <span className="studio-divider" aria-hidden="true" />
         <div className="studio-topbar-group">
           <StudioInsertMenu variant="primary" />
+          <StudioViewOptions onResetView={onResetView} />
         </div>
         {/* Variant lives only in the canvas tiles (and the Inspector
             Preview grid, which renders the same tiles): no topbar duplicate. */}

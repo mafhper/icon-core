@@ -31,7 +31,8 @@ test('frame radius: as marcas mudam raio e forma juntas', async ({ page }) => {
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
@@ -40,7 +41,7 @@ test('frame radius: as marcas mudam raio e forma juntas', async ({ page }) => {
   const raio = () => frame.evaluate((el) => getComputedStyle(el).borderTopLeftRadius);
 
   // A marca do círculo: existe, e diz o que ela é.
-  const circulo = page.getByRole('button', { name: /^Circle/ });
+  const circulo = page.getByRole('button', { name: /^Circle — / });
   await expect(circulo).toBeVisible();
 
   const antes = await raio();
@@ -51,24 +52,12 @@ test('frame radius: as marcas mudam raio e forma juntas', async ({ page }) => {
   expect(await raio()).toBe('256px');
   expect(await raio()).not.toBe(antes);
 
-  // E a forma foi junto: o botão da plataforma agora é o círculo.
-  await expect(page.getByRole('button', { name: /^Platform: Circle/ })).toBeVisible();
-
-  /**
- * O platform toggle tem de **mexer no raio** — este é o pedido do dono.
- *
- * O ciclo é `['square', 'rounded-rectangle', 'circle']`, então Circle devolve para
- * **square**, e o raio de square é 4px. A primeira versão deste teste esperava 24px
- * (o de `rounded-rectangle`) e falhou: o código estava certo e a expectativa é que
- * estava errada.
- *
- * O que este passo trava é o contrato, não o número: `maskRadius` ausente significa
- * "siga a forma", então girar a plataforma **tem** de mover o valor. Um
- * `maskRadius` declarado quebraria isso — e foi exatamente o defeito que a marca
- * introduziu na primeira versão.
- */
-  await page.getByRole('button', { name: /^Platform: Circle/ }).click();
+  // E a forma foi junto: a marca do quadrado leva o raio aos 4px de square.
+  // A pill do slice do chrome não tem mais o ciclo de plataforma; a morada da
+  // forma é a marca do inspetor, e o contrato travado aqui continua o mesmo:
+  // `maskRadius` ausente significa "siga a forma", então trocar a forma tem de
+  // mover o valor.
+  await page.getByRole('button', { name: /^Square — / }).click();
   await page.waitForTimeout(300);
   expect(await raio()).toBe('4px');
-  await expect(page.getByRole('button', { name: /^Platform: Square/ })).toBeVisible();
 });

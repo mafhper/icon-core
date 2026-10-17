@@ -281,7 +281,7 @@
 }
 
 /* Gatilho de menu da concha (mockup `variant-selector button`: 29px, 11px,
-   borda, fundo field, raio 4px). Em uso só no `View options` do canvas: a
+   borda, fundo field, raio 4px). Em uso no `View options` da topbar: a
    variante vive só nos tiles, sem duplicata na topbar. */
 .studio-trigger {
   display: inline-flex;
@@ -424,27 +424,9 @@
   cursor: grabbing;
 }
 
-/* Faixa breadcrumb (mockup `workspace-top`: sem fundo nem borda — a mesa
-   aparece através; 13px 20px; texto 10px — piso 11px). */
-.studio-crumbbar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 13px 20px;
-  font-size: 11px;
-  color: var(--ic-text-muted);
-  background: none;
-  border-bottom: none;
-}
-
-.studio-crumbbar strong {
-  font-weight: 500;
-  color: var(--ic-text-muted);
-}
-
-.studio-crumbbar .studio-crumbbar-spacer {
-  flex: 1 1 auto;
-}
+/* O breadcrumb e o View options moravam sobre a mesa (mockup
+   `workspace-top`); no slice do chrome eles se mudaram — o breadcrumb para a
+   titlebar, o View options para a topbar — e a mesa começa direto no palco. */
 
 .studio-stage-wrap {
   /* A pill flutuava ancorada no `.studio-canvas` (seção inteira): `bottom: 14px`
@@ -561,11 +543,27 @@
   margin: 0 6px;
 }
 
-/* Leitura do zoom (mockup `zoom-value` 10px — piso 11px). */
-.studio-pillbar > span {
-  font-size: 11px;
-  color: var(--ic-text-muted);
+/* Leitura do zoom (mockup `zoom-value` 10px — piso 11px): o gatilho do menu
+   de presets, dimensionado pelo conteúdo. */
+.studio-zoom-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 58px;
+  justify-content: center;
   padding: 0 5px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ic-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.studio-zoom-value:hover {
+  color: var(--ic-text);
 }
 
 /* Faixa de variantes (mockup `variant-previews`: gap 14, respiro 16/0/23,
@@ -696,9 +694,8 @@
 }
 
 /* Pé do inspetor (mockup `inspector-foot`: 36px, respiro 0 14, 9px — piso 11px).
-   Hairline no topo como no mockup mais a sombra suave para cima sobre o
-   conteúdo que rola acima — claro e escuro via papéis. `position` para a
-   sombra pintar sobre a rolagem; fundo explícito para a separação ler. */
+   Hairline no topo como no mockup, sem sombra: a coluna vai de cima a baixo e
+   o pé corre inline até a statusbar — claro e escuro via papéis. */
 .studio-inspector-foot {
   display: flex;
   align-items: center;
@@ -709,8 +706,6 @@
   font-size: 11px;
   color: var(--ic-text-faint);
   border-top: 1px solid var(--ic-border);
-  box-shadow: 0 -10px 22px -14px var(--ic-shadow);
-  position: relative;
   background-color: var(--ic-bg);
 }
 

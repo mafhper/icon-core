@@ -59,7 +59,8 @@ const preparar = async (page: Page) => {
     await page.waitForTimeout(600);
   }
   for (let i = 0; i < 3; i++) {
-    await page.getByRole('button', { name: 'Add text layer' }).click();
+    await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
     await page.waitForTimeout(220);
   }
   await page.keyboard.press('Escape');
@@ -121,7 +122,8 @@ test('reordenar: o Background fica no fim mesmo depois de reordenar', async ({ p
   // O projeto novo **nao tem** Background: é um handle que a pessoa cria. Sem criá-lo,
   // a regra do `IC66` não tem o que segurar — e o teste original falhava por isso, não
   // porque o `MOVE_LAYER` empurrasse algo.
-  await page.getByRole('button', { name: 'Add background fill layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Background' }).click();
   await page.waitForTimeout(300);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(250);

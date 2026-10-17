@@ -39,7 +39,8 @@ test('frame radius: o raio computado muda quando o slider muda', async ({ page }
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
 
   // Desseleciona a camada: com uma layer ativa o inspetor mostra **a camada**, e as

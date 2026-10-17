@@ -57,9 +57,9 @@ const criarComForma = async (page: Page) => {
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(900);
   }
-  await page.getByRole('button', { name: 'Add shape' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
   await page.waitForTimeout(400);
-  await page.getByRole('menuitem', { name: /^Rectangle$/ }).first().click();
+  await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
   await page.waitForTimeout(900);
 };
 

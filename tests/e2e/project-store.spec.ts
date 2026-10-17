@@ -487,13 +487,12 @@ test.describe('o id do projeto muda quando o projeto muda', () => {
    * Autosave is debounced by two seconds, so a layer has to be added and then waited
    * out.
    *
-   * "Add text layer" and not "Add shape": the shape control is a **menu trigger**
-   * (`PreviewCanvas.tsx:279`), so clicking it opens a menu and adds nothing. A first
-   * draft used it, the project stayed empty, the #198 guard correctly declined to warn
-   * about an empty project, and the test failed at the alert dialog with no clue why.
+   * Text through the Insert menu: one menuitem, one layer, no submenu to open —
+   * and the layer arrives selected, which is what the steps below assume.
    */
   const salvar = async (page: import('@playwright/test').Page) => {
-    await page.getByRole('button', { name: 'Add text layer' }).click();
+    await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
     await page.waitForTimeout(3000);
   };
 
@@ -570,13 +569,14 @@ test.describe('o id do projeto muda quando o projeto muda', () => {
 
 test.describe('a lista de projetos', () => {
   const salvar = async (page: import('@playwright/test').Page) => {
-    await page.getByRole('button', { name: 'Add text layer' }).click();
+    await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
     await page.waitForTimeout(3000);
   };
 
   /**
-   * The Topbar's accessible name **is the open project's name** (`Topbar.tsx:59`),
-   * falling back to "Icon Core" only while none is open. So Home is found by the
+   * The titlebar breadcrumb carries the open project's name, falling back to
+   * "No document" only while none is open. So Home is found by the
    * name of whatever is currently open, and the caller has to know it.
    *
    * Two drafts got this wrong, both by assuming the fallback: once it looked for
@@ -620,8 +620,7 @@ test.describe('a lista de projetos', () => {
    * Open the welcome, whether or not it is already up.
    *
    * The first draft always clicked Home, and hung: with no project open the welcome
-   * is **not dismissible** (`ComposerApp.tsx:39` passes `dismissible={Boolean(project)}`),
-   * so `.ic-modal-overlay` sat on top of the button and swallowed every click.
+   * is **not dismissible**, so `.ic-modal-overlay` sat on top of the button and swallowed every click.
    */
   const abrirWelcome = async (page: import('@playwright/test').Page, projetoAberto: string) => {
     if (await page.getByRole('dialog', { name: 'Start a new icon' }).isVisible().catch(() => false)) {
@@ -858,9 +857,9 @@ test.describe('a cor de um SVG importado', () => {
     // **O Fill sumiu.** Era ele que prometia "transparent" para uma camada que
     // desenhava branco, e não fazia nada quando mexido.
     //
-    // `exact: true` é obrigatório: sem ele o seletor casa "Add background fill layer",
-    // um botão da barra de layers sem relação nenhuma — e foi assim que a primeira
-    // versão deste teste reprovou achando que o defeito continuava lá.
+    // `exact: true` é obrigatório: sem ele o seletor casa qualquer rótulo que
+    // contenha "Fill" — e foi assim que a primeira versão deste teste reprovou
+    // achando que o defeito continuava lá.
     await expect(page.getByLabel('Fill', { exact: true })).toHaveCount(0);
     await expect(page.getByText(/No fill/i)).toHaveCount(0);
 
