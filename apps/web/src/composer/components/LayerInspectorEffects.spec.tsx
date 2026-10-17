@@ -340,3 +340,65 @@ describe('Effects — bloom (Tier 3) e paridade modal ↔ sidebar', () => {
     expect(svgDa(ultima(vistas))).toContain('stdDeviation="15"');
   });
 });
+
+describe('Effects — chevron inline + modal sincronizados', () => {
+  afterEach(() => cleanup());
+
+  it('o chevron expande inline os ajustes completos: os mesmos do modal', () => {
+    montar(camadaBase());
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Drop shadow settings' }));
+
+    // O grupo inline é o grupo do modal: cor+alfa, X, Y, blur, spread.
+    expect(screen.getByRole('slider', { name: 'Drop X' })).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: 'Drop Y' })).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: 'Drop blur' })).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: 'Drop spread' })).toHaveValue('0');
+    expect(screen.getByRole('textbox', { name: 'Drop shadow color hex' })).toBeInTheDocument();
+    // O modal continua fechado: uma superfície por vez, a outra sob demanda.
+    expect(screen.queryByRole('dialog', { name: 'Drop shadow settings' })).toBeNull();
+  });
+
+  it('editar inline reflete no modal: o mesmo estado nas duas superfícies', () => {
+    const { vistas } = montar(camadaBase());
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Drop shadow settings' }));
+    fireEvent.change(screen.getByRole('slider', { name: 'Drop spread' }), { target: { value: '12' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Drop shadow' }));
+    const spreads = screen.getAllByRole('slider', { name: 'Drop spread' });
+    expect(spreads).toHaveLength(2);
+    expect(spreads[0]).toHaveValue('12');
+    expect(spreads[1]).toHaveValue('12');
+
+    // Editar inline confirma como no modal: a fileira lê ON e o SVG carrega.
+    expect(screen.getByRole('switch', { name: 'Drop shadow' })).toBeChecked();
+    expect(svgDa(ultima(vistas))).toContain('operator="dilate" radius="12"');
+  });
+
+  it('editar no modal reflete no inline aberto', () => {
+    montar(camadaBase());
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Drop shadow settings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Drop shadow' }));
+
+    const spreads = screen.getAllByRole('slider', { name: 'Drop spread' });
+    expect(spreads).toHaveLength(2);
+    fireEvent.change(spreads[1], { target: { value: '20' } });
+
+    expect(screen.getAllByRole('slider', { name: 'Drop spread' })[0]).toHaveValue('20');
+  });
+
+  it('a sincronia vale nos parâmetros de bloom: intensidade inline chega ao modal', () => {
+    const { vistas } = montar(camadaBase());
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Bloom settings' }));
+    fireEvent.change(screen.getByRole('slider', { name: 'Bloom intensity' }), { target: { value: '3' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Bloom' }));
+    const intensities = screen.getAllByRole('slider', { name: 'Bloom intensity' });
+    expect(intensities).toHaveLength(2);
+    expect(intensities[0]).toHaveValue('3');
+    expect(intensities[1]).toHaveValue('3');
+    expect(ultima(vistas).effects?.find((e) => e.kind === 'bloom')).toMatchObject({
+      enabled: true,
+      params: { intensity: 3 }
+    });
+  });
+});

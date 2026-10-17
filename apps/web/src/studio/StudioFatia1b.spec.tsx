@@ -80,4 +80,18 @@ describe('Studio FATIA 1b (mockup visual port)', () => {
 
     expect(within(inspector).getByText('All changes in this session')).toBeInTheDocument();
   });
+
+  it('a mesa segue a coluna do mockup: legenda, faixa, toolbar', () => {
+    renderShell(<SeededShell project={createBlankProject('Ordem', 1024)} />);
+    const canvas = screen.getByRole('region', { name: 'Canvas' });
+
+    // A legenda lê perfil, tamanho e variante, nessa ordem.
+    expect(within(canvas).getByText('sRGB')).toBeInTheDocument();
+    expect(within(canvas).getByText('1024 × 1024 px')).toBeInTheDocument();
+    expect(within(canvas).getByText('Default appearance')).toBeInTheDocument();
+
+    // A ordem é a do mockup: palco, legenda, faixa, toolbar — sem flutuação.
+    const ordem = Array.from(canvas.children).map((el) => el.getAttribute('class'));
+    expect(ordem).toEqual(['studio-stage-wrap', 'studio-caption', 'studio-tiles', 'studio-pillbar']);
+  });
 });

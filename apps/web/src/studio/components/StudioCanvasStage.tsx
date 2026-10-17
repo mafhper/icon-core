@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useComposer } from '../../composer/ComposerContext';
 import { PreviewCanvas } from '../../composer/components/PreviewCanvas';
 import { workAreaToCss } from '../../composer/utils/workArea';
+import { StudioCanvasCaption } from './StudioCanvasCaption';
 import { StudioPillBar } from './StudioPillBar';
 import { StudioVariantTiles } from './StudioVariantTiles';
 import type { StudioTool } from './StudioStatusBar';
@@ -16,15 +17,18 @@ interface StudioCanvasStageProps {
 }
 
 /**
- * Studio canvas stage (chrome slice): the real viewport, the Hand pan, the
- * floating pill and the live variant tiles — no furniture.
+ * Studio canvas stage: the mockup column order on the real viewport.
  *
- * The document breadcrumb and View options used to live over this viewport;
- * they moved to the titlebar and the toolbar, where the whole app can reach
- * them. The creation toolbar the Composer painted inside the canvas is gone
- * too: the Layers header Insert is the one entry point. What the stage keeps
- * is chrome with no dead controls: the pill dispatches, tiles render the live
- * pipeline, and Fit to canvas returns zoom and pan together.
+ * From top to bottom — the pannable stage, the caption readout (sRGB ·
+ * dimensions · variant), the live variant tiles, the canvas toolbar — in-flow
+ * like the mockup `workspace`, with its breathings (caption 34px above,
+ * tiles 16/0/23, toolbar 24px below). The document breadcrumb and View
+ * options used to live over this viewport; they moved to the titlebar and
+ * the toolbar, where the whole app can reach them. The creation toolbar the
+ * Composer painted inside the canvas is gone too: the Layers header Insert
+ * is the one entry point. What the stage keeps is chrome with no dead
+ * controls: the caption reads, tiles render the live pipeline, the pill
+ * dispatches, and Fit to canvas returns zoom and pan together.
  *
  * The viewport itself stays the Composer's `PreviewCanvas` — real zoom,
  * gesture transactions (one undo per drag), grid/keyline/margin overlays,
@@ -90,9 +94,10 @@ export const StudioCanvasStage = ({ tool, onTool, onCursor, pan, onPan, onResetV
         >
           <PreviewCanvas interactionMode={tool} />
         </div>
-        <StudioPillBar tool={tool} onTool={onTool} onFit={onResetView} />
       </div>
+      <StudioCanvasCaption />
       <StudioVariantTiles />
+      <StudioPillBar tool={tool} onTool={onTool} onFit={onResetView} />
     </section>
   );
 };

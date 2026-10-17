@@ -791,6 +791,14 @@ input[type='range'] {
   margin-top: 18px;
 }
 
+/* Effects inline expansion: the shared field group embedded under its row
+   (the chevron surface; the edit button shows the same group in a Popover).
+   The indent lines the fields up under the switch label, the way the mockup
+   indents `effect-detail` under its row. No paint here — only breathing. */
+.ic-effect-inline {
+  padding: 6px 0 10px 22px;
+}
+
 /* Export Utilities — output settings */
 
 /* Quality check — a compact chip pinned to the sidebar, expandable into a popover */
