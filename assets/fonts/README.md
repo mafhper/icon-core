@@ -110,7 +110,6 @@ a próxima coisa a decidir: embutir o mono também, ou aceitar a dependência sa
 falha sem rede.
 
 ## A interface do app usa a Cal Sans
-
 `--font-display`, `--font-body` e o `body` apontam para a Cal Sans embarcada. Isso é o que
 torna a troca do default completa: sem isso, a fonte embarcada ficaria disponível no seletor
 enquanto a tela continuaria pedindo a remota, e o defeito seria apenas trocado de lugar.
@@ -130,3 +129,33 @@ Isto está escrito no validador (`TEXT_FONT_NOT_EMBEDDED`), que só avisa quando
 
 A correção de raiz é **converter o texto em `<path>` no export**, como o Figma faz no
 "flatten". Não existe ainda, e é a peça que fecha o contrato de fidelidade do SVG.
+
+## Manrope — a fonte da concha do Studio (FATIA 1b)
+
+| | |
+|---|---|
+| Origem | <https://github.com/googlefonts/manrope> (arquivos via `@fontsource/manrope@5.2.5`, mesma OFL) |
+| Licença | SIL Open Font License 1.1 — texto em `LICENSES/manrope-OFL.txt` |
+| Pesos embarcados | 400 (Regular), 500 (Medium), 600 (SemiBold), 700 (Bold) |
+| Formato | WOFF2 com subconjunto latin — ~14 KB por peso |
+
+O mockup do Studio usa Manrope como typeface da interface (densidade 10/11/12px,
+pesos 400–700). A decisão do dono na FATIA 1b adota a aparência do mockup, então a
+concha (`.studio`) compõe em Manrope — declarada por `@font-face` dentro de
+`apps/web/src/studio/studio.css`, com `url('../fonts/…')` para os derivados em
+`apps/web/src/fonts/` (o mesmo motivo do `src/` da Cal Sans: o Vite resolve,
+hasheia e respeita a base `/icon-core/app/`).
+
+**Estáticos, não variável**, pela mesma razão da Cal Sans: a concha pede pesos
+discretos (400/500/600/700) e um eixo contínuo traria uma dimensão sem uso. O 650
+do mockup (marca) resolve para o Bold pelo casamento de peso do CSS — diferença
+imperceptível, sem arquivo extra.
+
+**Nunca via CDN.** Offline é requisito do produto: o `apps/promo` continua
+carregando Manrope do Google Fonts (é a landing page, fora deste contrato), mas a
+concha do editor usa só estes arquivos — sem rede, sem fallback, sem troca de
+métrica. O guard `check-third-party-assets.mjs` reprova se faltar metadado ou
+arquivo; o `check-brand.mjs` compara fonte e derivados por SHA-256.
+
+A Cal Sans continua onde estava: typeface das camadas de texto, do corpo do app
+fora da concha e da galeria `#/ui`. Nada aqui muda o default dela.

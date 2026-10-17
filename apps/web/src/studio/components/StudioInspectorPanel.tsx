@@ -43,6 +43,11 @@ export const StudioInspectorPanel = () => {
           <StudioVariantTiles grid />
         </div>
       )}
+      {/* Mockup `inspector-foot`: static session line, no behaviour. */}
+      <div className="studio-inspector-foot">
+        <span className="studio-status-dot" aria-hidden="true" />
+        <span>All changes in this session</span>
+      </div>
     </>
   );
 };

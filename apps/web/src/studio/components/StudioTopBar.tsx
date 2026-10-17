@@ -153,7 +153,7 @@ export const StudioTopBar = ({
           <Menu
             label="Appearance variant"
             trigger={
-              <button type="button" className="studio-tab" aria-label={`Appearance: ${activeLabel}`}>
+              <button type="button" className="studio-trigger" aria-label={`Appearance: ${activeLabel}`}>
                 <span className="inline-flex items-center gap-1.5">
                   <Circle size={12} aria-hidden="true" />
                   {activeLabel}

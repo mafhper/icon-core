@@ -115,7 +115,11 @@ const fonteExiste = (nome) => fs.existsSync(fonteDe(nome));
  */
 const FONTES = {
   'CalSans-Regular.woff2': ['apps/web/src/fonts/CalSans-Regular.woff2'],
-  'CalSans-Bold.woff2': ['apps/web/src/fonts/CalSans-Bold.woff2']
+  'CalSans-Bold.woff2': ['apps/web/src/fonts/CalSans-Bold.woff2'],
+  'Manrope-Regular.woff2': ['apps/web/src/fonts/Manrope-Regular.woff2'],
+  'Manrope-Medium.woff2': ['apps/web/src/fonts/Manrope-Medium.woff2'],
+  'Manrope-SemiBold.woff2': ['apps/web/src/fonts/Manrope-SemiBold.woff2'],
+  'Manrope-Bold.woff2': ['apps/web/src/fonts/Manrope-Bold.woff2']
 };
 
 /** Todas as derivadas: arte e fonte, com o mesmo contrato de SHA-256. */

@@ -55,6 +55,18 @@
   --ic-scroll-thumb: rgba(145, 149, 156, 0.42);
   --ic-scroll-thumb-hover: rgba(145, 149, 156, 0.62);
 
+  /* FATIA 1b — Studio desk surfaces (mockup palette, dark-first).
+     Roles: `--ic-workspace` is the canvas-desk paint behind the artboard;
+     `--ic-checker-light`/`--ic-checker-dark` are the transparency checker pair.
+     All three are *surface* roles — never text — so they carry no contrast
+     pair (same rule as `--ic-dot`). Consumed today only under `.studio`
+     (see `apps/web/src/studio/studio.css`); legacy rules do not reference
+     them and stay pixel-identical. Values are the mockup oklch desk/checker
+     landed as sRGB hex (conversion table in the FATIA 1b ADR). */
+  --ic-workspace: #0f1110;
+  --ic-checker-light: #242424;
+  --ic-checker-dark: #1b1b1b;
+
   /* Brand accents — theme-independent; defined on :root so they cascade to every theme. */
   --ic-gold: #c99a45;
   --ic-brand-gradient: linear-gradient(135deg, #f3d18a, #6bb7d8);
@@ -93,6 +105,11 @@
   --ic-scroll-track: rgba(0, 0, 0, 0.04);
   --ic-scroll-thumb: rgba(0, 0, 0, 0.22);
   --ic-scroll-thumb-hover: rgba(0, 0, 0, 0.34);
+
+  /* FATIA 1b — light side of the Studio desk surfaces (see the dark note). */
+  --ic-workspace: #dfe2e0;
+  --ic-checker-light: #eeeeee;
+  --ic-checker-dark: #cecece;
 }
 
 /*

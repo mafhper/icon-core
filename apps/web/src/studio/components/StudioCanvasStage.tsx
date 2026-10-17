@@ -64,7 +64,7 @@ export const StudioCanvasStage = ({ tool, onTool, onCursor }: StudioCanvasStageP
         <Menu
           label="View options"
           trigger={
-            <button type="button" className="studio-tab" aria-label="View options">
+            <button type="button" className="studio-trigger" aria-label="View options">
               <span className="inline-flex items-center gap-1.5">
                 <Settings2 size={14} aria-hidden="true" />
                 <span>View options</span>

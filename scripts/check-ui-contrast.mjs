@@ -27,18 +27,27 @@ const css = fs.readFileSync(tokensPath, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 // (a second bare `:root {...}` holds theme-independent Layer 3 sizes).
 // Plain indexOf parsing (no dynamic RegExp): first occurrence wins, which is
 // the dark block for `:root` since it precedes the Layer 3 block.
-const block = (selector) => {
-  const start = css.indexOf(selector);
-  if (start === -1) return '';
-  const brace = css.indexOf('{', start + selector.length);
-  if (brace === -1) return '';
-  let depth = 0;
-  for (let j = brace; j < css.length; j++) {
-    if (css[j] === '{') depth += 1;
-    else if (css[j] === '}') {
-      depth -= 1;
-      if (depth === 0) return css.slice(brace + 1, j);
+const block = (cssText, selector) => {
+  // Whitespace-tolerant match (the dark selector spans a newline in the file)
+  // that must land on a rule opening: a bare substring search would also match
+  // longer selectors that merely contain it (`.studio-titlebar` contains
+  // `.studio`), and latch onto the wrong block.
+  const pattern = selector
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\s+/g, '\\s*');
+  const rx = new RegExp(`${pattern}\\s*\\{`, 'g');
+  let m;
+  while ((m = rx.exec(cssText)) !== null) {
+    const braceIndex = m.index + m[0].length - 1;
+    let depth = 0;
+    for (let j = braceIndex; j < cssText.length; j++) {
+      if (cssText[j] === '{') depth += 1;
+      else if (cssText[j] === '}') {
+        depth -= 1;
+        if (depth === 0) return cssText.slice(braceIndex + 1, j);
+      }
     }
+    return '';
   }
   return '';
 };
@@ -111,9 +120,31 @@ const PAIRS = [
   ['--ic-warning', '--ic-bg', 3.0, 'warning as text (large/bold only)']
 ];
 
+const studioPath = path.join(rootDir, 'apps', 'web', 'src', 'studio', 'studio.css');
+const studioCss = fs.existsSync(studioPath)
+  ? fs.readFileSync(studioPath, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  : '';
+
 const themes = {
-  dark: parseVars(block(':root')),
-  light: parseVars(block("[data-theme='light']"))
+  dark: parseVars(block(css, ":root, [data-theme='dark']")),
+  light: parseVars(block(css, "[data-theme='light']"))
+};
+
+// FATIA 1b — the Studio scope redefines roles under `.studio` (dark-first)
+// and `[data-theme='light'] .studio` (light) so the mockup palette never leaks
+// into legacy surfaces. The same pairs are enforced against the merged map
+// (scoped definitions win; `var()` references resolve against the merge), or
+// the green adoption would ship unmeasured. Any regression here fails the gate
+// exactly like a global one.
+const scoped = {
+  'dark+studio': {
+    ...themes.dark,
+    ...parseVars(block(studioCss, '.studio'))
+  },
+  'light+studio': {
+    ...themes.light,
+    ...parseVars(block(studioCss, "[data-theme='light'] .studio"))
+  }
 };
 
 // A6 fixed the two pre-existing shortfalls (dark accent #4a7cf0 -> #3f6ce0,
@@ -126,7 +157,7 @@ const themes = {
 const ADVISORY = new Set();
 
 let failed = 0;
-for (const [themeName, vars] of Object.entries(themes)) {
+const checkPairs = (themeName, vars) => {
   console.log(`\n[${themeName}]`);
   for (const [fgTok, bgTok, min, note] of PAIRS) {
     const fgRaw = resolveVar(vars, vars[fgTok] ?? '');
@@ -143,7 +174,9 @@ for (const [themeName, vars] of Object.entries(themes)) {
     if (r < min && !advisory) failed += 1;
     console.log(`  ${ok} ${fgTok} on ${bgTok} = ${r.toFixed(2)}:1 (min ${min}:1 — ${note})`);
   }
-}
+};
+for (const [themeName, vars] of Object.entries(themes)) checkPairs(themeName, vars);
+for (const [themeName, vars] of Object.entries(scoped)) checkPairs(themeName, vars);
 
 if (failed > 0) {
   console.error(`\nUI contrast guard FAILED: ${failed} pair(s) below minimum.`);

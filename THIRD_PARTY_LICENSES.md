@@ -11,6 +11,7 @@ asset's `files` are populated, that those files exist).
 | Component | License | Source | License text | Attribution |
 |---|---|---|---|---|
 | Lucide (app icons) | ISC | https://lucide.dev (npm `lucide-react`) | https://github.com/lucide-icons/lucide/blob/main/LICENSE | See `NOTICE` |
+| Manrope (Studio shell typeface) | OFL-1.1 | https://github.com/googlefonts/manrope | `LICENSES/manrope-OFL.txt` | See `NOTICE` |
 
 > **Rune Icons is registered but not yet redistributed.** It is listed in
 > `third-party/manifest.json` as the accepted source of the built-in icon library
@@ -39,6 +40,14 @@ Application chrome icons are provided by the [Lucide](https://lucide.dev)
 project (ISC License, Copyright (c) Lucide Contributors). See the original
 LICENSE for full terms:
 https://github.com/lucide-icons/lucide/blob/main/LICENSE
+
+### Manrope — SIL Open Font License 1.1
+
+The Studio shell typeface is [Manrope](https://github.com/googlefonts/manrope)
+(SIL Open Font License 1.1, Copyright 2018 The Manrope Project Authors),
+embedded as four static latin-subset WOFF2 weights under `assets/fonts/` (see
+`assets/fonts/README.md`). A copy of the license is kept at
+`LICENSES/manrope-OFL.txt`.
 
 ## Adding a component
 
