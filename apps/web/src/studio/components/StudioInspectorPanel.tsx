@@ -7,12 +7,14 @@ type InspectorTab = 'design' | 'preview';
 /**
  * Studio Inspector panel (Fase 4): Design and Preview tabs.
  *
- * Design is the full `LayerInspector` — Geometry (now with corner
- * smoothing), the new Stroke section (width that never stretches the shape,
- * alignment, caps and joins in both engines), Color, Effects (now with
- * drop/inner shadows and the glow preset) — and, with nothing selected, the
- * document sections. Preview renders the four variants live through the same
- * tiles the canvas stage uses.
+ * Design is the full `LayerInspector` — Position (X/Y plus W/H for shapes,
+ * now Rotation before Scale), Geometry (shape, corner radius/smoothing),
+ * Appearance (blend, opacity), Fill, Stroke (color first; lines also expose
+ * width and color besides Cap), Effects — then Text only with text selected,
+ * and, with nothing selected, the document sections. Layer meta and Delete
+ * come last. Constraints/Layout/Mask do not exist in the model and are marked
+ * as an explicit deferral, not invented. Preview renders the four variants
+ * live through the same tiles the canvas stage uses.
  */
 export const StudioInspectorPanel = () => {
   const [tab, setTab] = useState<InspectorTab>('design');

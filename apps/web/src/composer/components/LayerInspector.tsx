@@ -478,127 +478,7 @@ export const LayerInspector = () => {
       )}
 
       <div className="ic-field-stack">
-        {layer.kind === 'text' && (
-          <Section title="Text">
-            {/**
-             * A ordem é um argumento, não preferência: **fonte, tamanho, estilo, alinhamento**.
-             *
-             * Quem escolhe a fonte só depois descobre o tamanho que preenche o canvas; e o
-             * estilo (negrito, itálico) altera a largura do texto, então vem depois do tamanho
-             * — mexer no peso depois do tamanho muda a quebra, e a pessoa ajusta o tamanho
-             * duas vezes. O alinhamento vem por último porque age sobre o que já está medido.
-             *
-             * A versão anterior punha Size e Weight **antes** da fonte, e o itálico solto no
-             * fim, depois do alinhamento: três controles em ordem que não corresponde a
-             * nenhuma.
-             */}
-            <TextField
-              label="Text"
-              value={layer.text?.content ?? ''}
-              onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
-            />
-
-            <FontPicker
-              value={layer.text?.fontFamily ?? DEFAULT_FONT_STACK}
-              onChange={(fontFamily) => updateLayer({ text: { ...layer.text, fontFamily } as IconLayer['text'] })}
-            />
-
-            <NumberField
-              label="Size"
-              min="8"
-              value={layer.text?.fontSize ?? 64}
-              onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
-            />
-
-            {/**
-             * Negrito e itálico, lado a lado, como pares.
-             *
-             * O peso saiu de um `NumberField` 100..900 para um switch, e a razão é a Cal Sans
-             * embarca **dois** pesos (400 e 700): oferecer seis que a fonte não tem é deixar
-             * o navegador escolher o mais próximo — um controle que promete precisão que não
-             * existe. O switch mapeia 700 para 400 e vice-versa, que é o que os dois pesos
-             * fazem.
-             *
-             * A perda de capacidade é real e fica registrada: quem precisar de 500 ou 600
-             * precisa de um `Select` de peso **por fonte**, o que exige metadata de peso em
-             * `fonts.ts` e saber os pesos de uma família instalada — que a Local Font Access
-             * API não devolve. Fica para quando alguém precisar num logo.
-             *
-             * Os dois ficam na mesma linha porque são **pares**: as duas coisas que
-             * inclinam ou engrossam o mesmo glifo. O itálico solto no fim do painel, como
-             * estava, não era par de nada.
-             */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <Switch
-                label="Bold"
-                checked={(layer.text?.fontWeight ?? 700) >= 600}
-                onChange={(event) =>
-                  updateLayer({
-                    text: { ...layer.text, fontWeight: event.target.checked ? 700 : 400 } as IconLayer['text']
-                  })
-                }
-              />
-              <Switch
-                label="Italic"
-                checked={layer.text?.fontStyle === 'italic'}
-                onChange={(event) =>
-                  updateLayer({
-                    text: {
-                      ...layer.text,
-                      fontStyle: event.target.checked ? 'italic' : 'normal'
-                    } as IconLayer['text']
-                  })
-                }
-              />
-            </div>
-
-            {/**
-             * O alinhamento com rótulo **visível**.
-             *
-             * O `SegmentedControl` do kit só aceita `aria-label`, então o rótulo visível é um
-             * `span` com as mesmas classes que o `Field` usa no rótulo dele — é o que faz o
-             * texto ter a mesma altura e cor de todos os outros rótulos do painel. Sem ele, a
-             * tela mostrava "Left Center Right" sem dizer do que se tratava.
-             *
-             * Não é um `<label>`: o controle é um grupo de botões, não um elemento rotulável,
-             * e um `<label>` em volta enviaria o clique para o primeiro botão rotulável — o
-             * clique em "esquerda" marcaria "centro".
-             *
-             * A caixa do alinhamento é o **shape da layer** (58% da largura do canvas,
-             * `createTextLayer`), não o canvas inteiro: ancorar à esquerda no meio do canvas
-             * faria o texto crescer para a direita a partir do centro, que é o oposto de
-             * "esquerda". A geometria mora em `textLayout.ts` e os dois pipelines consomem a
-             * mesma função.
-             *
-             * `Left / Center / Right` em texto, e não 0/1/2: o valor é curto e o nome **é** o
-             * significado — a mesma escolha da `VariantBar`.
-             */}
-            <div className="grid gap-1.5">
-              <span className="truncate text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
-                Alignment
-              </span>
-              <SegmentedControl
-                aria-label="Text alignment"
-                options={TEXT_ALIGN_OPTIONS}
-                value={layer.text?.textAlign ?? 'center'}
-                onChange={(textAlign) =>
-                  updateLayer({ text: { ...layer.text, textAlign } as IconLayer['text'] })
-                }
-              />
-            </div>
-          </Section>
-        )}
-
-
-        <Section title="Layer">
-          <TextField
-            label="Name"
-            value={baseLayer.name}
-            onChange={(event) => dispatch({ type: 'UPDATE_LAYER', payload: { id: baseLayer.id, changes: { name: event.target.value } } })}
-          />
-        </Section>
-
-        <Section title="Composition">
+        <Section title="Position">
           <div className="grid grid-cols-2 gap-2.5">
             <NumberField
               label="X"
@@ -612,17 +492,29 @@ export const LayerInspector = () => {
             />
           </div>
 
-          <Slider
-            variant="inline"
-            label="Scale"
-            unit="×"
-            min="0.08"
-            max="4"
-            step="0.01"
-            value={layer.transform.scale}
-            onChange={(event) => updateTransform({ scale: Number(event.target.value) })}
-            onCommit={commit}
-          />
+          {/*
+              W/H vive aqui enquanto Layout nao existe no modelo.
+
+              No painel de referencia, dimensoes moram em Layout; aqui o motor so
+              tem `shape.width/height`, entao os numeros ficam em Position — que e
+              onde a pessoa procura medidas. Quando Layout existir, eles se mudam.
+          */}
+          {baseLayer.kind === 'shape' && shape && (
+            <div className="grid grid-cols-2 gap-2.5">
+              <NumberField
+                label="W"
+                min={1}
+                value={Math.round(shape.width)}
+                onChange={(event) => updateShape({ width: Math.max(1, Number(event.target.value)) })}
+              />
+              <NumberField
+                label="H"
+                min={1}
+                value={Math.round(shape.height)}
+                onChange={(event) => updateShape({ height: Math.max(1, Number(event.target.value)) })}
+              />
+            </div>
+          )}
 
           <Slider
             variant="inline"
@@ -633,6 +525,18 @@ export const LayerInspector = () => {
             step="1"
             value={layer.transform.rotation}
             onChange={(event) => updateTransform({ rotation: Number(event.target.value) })}
+            onCommit={commit}
+          />
+
+          <Slider
+            variant="inline"
+            label="Scale"
+            unit="×"
+            min="0.08"
+            max="4"
+            step="0.01"
+            value={layer.transform.scale}
+            onChange={(event) => updateTransform({ scale: Number(event.target.value) })}
             onCommit={commit}
           />
         </Section>
@@ -673,95 +577,36 @@ export const LayerInspector = () => {
           </Section>
         )}
 
-        {baseLayer.kind === 'shape' && shape && shape.kind !== 'line' && (
-          <Section title="Stroke">
-            {/*
-              Vazado, traço real e alinhamento: o motor pinta o contorno como
-              outline (a forma nunca estica), `fill: none` desenha só a borda, e
-              inside/outside usam clip/mask nos dois pipelines — o aceite duro
-              da Fase 4, travado pelas fixtures `traco*`/`vazado` da paridade.
-            */}
-            {layer.stroke ? (
-              <>
-                <Slider
-                  variant="inline"
-                  label="Stroke width"
-                  unit="px"
-                  min="0"
-                  max="64"
-                  value={Math.round(layer.stroke.width)}
-                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, width: Number(event.target.value) } }, true)}
-                  onCommit={commit}
-                />
-                <Select
-                  label="Alignment"
-                  value={layer.stroke.alignment}
-                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, alignment: event.target.value as Stroke['alignment'] } })}
-                >
-                  <option value="center">center</option>
-                  <option value="inside">inside</option>
-                  <option value="outside">outside</option>
-                </Select>
-                <Select
-                  label="Join"
-                  value={layer.stroke.join ?? 'miter'}
-                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, join: event.target.value as 'miter' | 'round' | 'bevel' } })}
-                >
-                  <option value="miter">miter</option>
-                  <option value="round">round</option>
-                  <option value="bevel">bevel</option>
-                </Select>
-                <StudioColorPicker
-                  label="Stroke color"
-                  value={{ color: layer.stroke.color, alpha: 1 }}
-                  showAlpha={false}
-                  onChange={(next, transient) => updateLayer({ stroke: { ...layer.stroke!, color: next.color } }, transient)}
-                  onCommit={commit}
-                />
-                <Button variant="secondary" onClick={() => updateLayer({ stroke: undefined })}>
-                  Remove stroke
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="secondary"
-                onClick={() => updateLayer({ stroke: { color: fillColor(layer.fill), width: 4, alignment: 'center' } })}
-              >
-                Add stroke
-              </Button>
-            )}
-          </Section>
-        )}
+        {/*
+            Constraints / Layout / Mask NAO existem no modelo — diferimento explicito.
 
-        {baseLayer.kind === 'shape' && shape && shape.kind === 'line' && (
-          <Section title="Stroke">
-            {/*
-              A linha é um corpo fechado cuja forma É o cap: round (a cápsula
-              que sempre foi), butt (caixa) ou square (caixa estendida). Não há
-              outline separado — fixture `linha` da paridade.
-            */}
-            <Select
-              label="Cap"
-              value={layer.stroke?.cap ?? 'round'}
-              onChange={(event) =>
-                updateLayer({
-                  stroke: {
-                    color: layer.stroke?.color ?? fillColor(layer.fill),
-                    width: layer.stroke?.width ?? 8,
-                    alignment: 'center',
-                    cap: event.target.value as 'butt' | 'round' | 'square'
-                  }
-                })
-              }
-            >
-              <option value="butt">butt</option>
-              <option value="round">round</option>
-              <option value="square">square</option>
-            </Select>
-          </Section>
-        )}
+            O painel de referencia os mostra entre Position e Appearance, mas o
+            motor nao tem esses conceitos (traço e preenchimento sao unitarios,
+            sem layout nem mascara). Nao inventar secoes nem campos: quando o
+            schema ganhar esses conceitos, eles entram aqui, nesta posicao.
+        */}
+        <Section title="Appearance">
+          <Select
+            label="Blend mode"
+            value={layer.blendMode ?? 'normal'}
+            onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
+          >
+            {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+          </Select>
 
-        <Section title="Color">
+          <Slider
+            variant="inline"
+            label="Opacity"
+            unit="%"
+            min="0"
+            max="100"
+            value={Math.round(layer.opacity * 100)}
+            onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
+            onCommit={commit}
+          />
+        </Section>
+
+        <Section title="Fill">
           {/*
             `IC63/1b` — para `kind: 'svg'`, o `Fill` é **trocado**, não acrescido.
 
@@ -793,25 +638,130 @@ export const LayerInspector = () => {
               onCommit={commit}
             />
           )}
+        </Section>
 
-          <Slider
-            variant="inline"
-            label="Opacity"
-            unit="%"
-            min="0"
-            max="100"
-            value={Math.round(layer.opacity * 100)}
-            onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
-            onCommit={commit}
-          />
+        {baseLayer.kind === 'shape' && shape && shape.kind !== 'line' && (
+          <Section title="Stroke">
+            {/*
+              Vazado, traço real e alinhamento: o motor pinta o contorno como
+              outline (a forma nunca estica), `fill: none` desenha só a borda, e
+              inside/outside usam clip/mask nos dois pipelines — o aceite duro
+              da Fase 4, travado pelas fixtures `traco*`/`vazado` da paridade.
+            */}
+            {layer.stroke ? (
+              <>
+                <StudioColorPicker
+                  label="Stroke color"
+                  value={{ color: layer.stroke.color, alpha: 1 }}
+                  showAlpha={false}
+                  onChange={(next, transient) => updateLayer({ stroke: { ...layer.stroke!, color: next.color } }, transient)}
+                  onCommit={commit}
+                />
+                <Select
+                  label="Alignment"
+                  value={layer.stroke.alignment}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, alignment: event.target.value as Stroke['alignment'] } })}
+                >
+                  <option value="center">center</option>
+                  <option value="inside">inside</option>
+                  <option value="outside">outside</option>
+                </Select>
+                <Slider
+                  variant="inline"
+                  label="Stroke width"
+                  unit="px"
+                  min="0"
+                  max="64"
+                  value={Math.round(layer.stroke.width)}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, width: Number(event.target.value) } }, true)}
+                  onCommit={commit}
+                />
+                <Select
+                  label="Join"
+                  value={layer.stroke.join ?? 'miter'}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, join: event.target.value as 'miter' | 'round' | 'bevel' } })}
+                >
+                  <option value="miter">miter</option>
+                  <option value="round">round</option>
+                  <option value="bevel">bevel</option>
+                </Select>
+                <Button variant="secondary" onClick={() => updateLayer({ stroke: undefined })}>
+                  Remove stroke
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={() => updateLayer({ stroke: { color: fillColor(layer.fill), width: 4, alignment: 'center' } })}
+              >
+                Add stroke
+              </Button>
+            )}
+          </Section>
+        )}
 
-          <Select
-            label="Blend mode"
-            value={layer.blendMode ?? 'normal'}
-            onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
-          >
-            {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-          </Select>        </Section>
+        {baseLayer.kind === 'shape' && shape && shape.kind === 'line' && (
+          <Section title="Stroke">
+            {/*
+              A linha é um corpo fechado cuja forma É o cap: round (a cápsula
+              que sempre foi), butt (caixa) ou square (caixa estendida). Não há
+              outline separado — fixture `linha` da paridade.
+            */}
+            <StudioColorPicker
+              label="Stroke color"
+              value={{ color: layer.stroke?.color ?? fillColor(layer.fill), alpha: 1 }}
+              showAlpha={false}
+              onChange={(next, transient) =>
+                updateLayer({
+                  stroke: {
+                    color: next.color,
+                    width: layer.stroke?.width ?? 8,
+                    alignment: 'center',
+                    cap: layer.stroke?.cap ?? 'round'
+                  }
+                }, transient)
+              }
+              onCommit={commit}
+            />
+            <Slider
+              variant="inline"
+              label="Stroke width"
+              unit="px"
+              min="0"
+              max="64"
+              value={Math.round(layer.stroke?.width ?? 8)}
+              onChange={(event) =>
+                updateLayer({
+                  stroke: {
+                    color: layer.stroke?.color ?? fillColor(layer.fill),
+                    width: Number(event.target.value),
+                    alignment: 'center',
+                    cap: layer.stroke?.cap ?? 'round'
+                  }
+                }, true)
+              }
+              onCommit={commit}
+            />
+            <Select
+              label="Cap"
+              value={layer.stroke?.cap ?? 'round'}
+              onChange={(event) =>
+                updateLayer({
+                  stroke: {
+                    color: layer.stroke?.color ?? fillColor(layer.fill),
+                    width: layer.stroke?.width ?? 8,
+                    alignment: 'center',
+                    cap: event.target.value as 'butt' | 'round' | 'square'
+                  }
+                })
+              }
+            >
+              <option value="butt">butt</option>
+              <option value="round">round</option>
+              <option value="square">square</option>
+            </Select>
+          </Section>
+        )}
 
         <Section title="Effects">
           <Switch
@@ -955,6 +905,118 @@ export const LayerInspector = () => {
           />
         </Section>
 
+        {/* Text depois de Effects: a ordem segue a decisao barata (Text so com texto selecionado); tipografia profunda fica diferida. */}
+        {layer.kind === 'text' && (
+          <Section title="Text">
+            {/**
+             * A ordem é um argumento, não preferência: **fonte, tamanho, estilo, alinhamento**.
+             *
+             * Quem escolhe a fonte só depois descobre o tamanho que preenche o canvas; e o
+             * estilo (negrito, itálico) altera a largura do texto, então vem depois do tamanho
+             * — mexer no peso depois do tamanho muda a quebra, e a pessoa ajusta o tamanho
+             * duas vezes. O alinhamento vem por último porque age sobre o que já está medido.
+             *
+             * A versão anterior punha Size e Weight **antes** da fonte, e o itálico solto no
+             * fim, depois do alinhamento: três controles em ordem que não corresponde a
+             * nenhuma.
+             */}
+            <TextField
+              label="Text"
+              value={layer.text?.content ?? ''}
+              onChange={(event) => updateLayer({ text: { ...layer.text, content: event.target.value } as IconLayer['text'] })}
+            />
+
+            <FontPicker
+              value={layer.text?.fontFamily ?? DEFAULT_FONT_STACK}
+              onChange={(fontFamily) => updateLayer({ text: { ...layer.text, fontFamily } as IconLayer['text'] })}
+            />
+
+            <NumberField
+              label="Size"
+              min="8"
+              value={layer.text?.fontSize ?? 64}
+              onChange={(event) => updateLayer({ text: { ...layer.text, fontSize: Number(event.target.value) } as IconLayer['text'] })}
+            />
+
+            {/**
+             * Negrito e itálico, lado a lado, como pares.
+             *
+             * O peso saiu de um `NumberField` 100..900 para um switch, e a razão é a Cal Sans
+             * embarca **dois** pesos (400 e 700): oferecer seis que a fonte não tem é deixar
+             * o navegador escolher o mais próximo — um controle que promete precisão que não
+             * existe. O switch mapeia 700 para 400 e vice-versa, que é o que os dois pesos
+             * fazem.
+             *
+             * A perda de capacidade é real e fica registrada: quem precisar de 500 ou 600
+             * precisa de um `Select` de peso **por fonte**, o que exige metadata de peso em
+             * `fonts.ts` e saber os pesos de uma família instalada — que a Local Font Access
+             * API não devolve. Fica para quando alguém precisar num logo.
+             *
+             * Os dois ficam na mesma linha porque são **pares**: as duas coisas que
+             * inclinam ou engrossam o mesmo glifo. O itálico solto no fim do painel, como
+             * estava, não era par de nada.
+             */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <Switch
+                label="Bold"
+                checked={(layer.text?.fontWeight ?? 700) >= 600}
+                onChange={(event) =>
+                  updateLayer({
+                    text: { ...layer.text, fontWeight: event.target.checked ? 700 : 400 } as IconLayer['text']
+                  })
+                }
+              />
+              <Switch
+                label="Italic"
+                checked={layer.text?.fontStyle === 'italic'}
+                onChange={(event) =>
+                  updateLayer({
+                    text: {
+                      ...layer.text,
+                      fontStyle: event.target.checked ? 'italic' : 'normal'
+                    } as IconLayer['text']
+                  })
+                }
+              />
+            </div>
+
+            {/**
+             * O alinhamento com rótulo **visível**.
+             *
+             * O `SegmentedControl` do kit só aceita `aria-label`, então o rótulo visível é um
+             * `span` com as mesmas classes que o `Field` usa no rótulo dele — é o que faz o
+             * texto ter a mesma altura e cor de todos os outros rótulos do painel. Sem ele, a
+             * tela mostrava "Left Center Right" sem dizer do que se tratava.
+             *
+             * Não é um `<label>`: o controle é um grupo de botões, não um elemento rotulável,
+             * e um `<label>` em volta enviaria o clique para o primeiro botão rotulável — o
+             * clique em "esquerda" marcaria "centro".
+             *
+             * A caixa do alinhamento é o **shape da layer** (58% da largura do canvas,
+             * `createTextLayer`), não o canvas inteiro: ancorar à esquerda no meio do canvas
+             * faria o texto crescer para a direita a partir do centro, que é o oposto de
+             * "esquerda". A geometria mora em `textLayout.ts` e os dois pipelines consomem a
+             * mesma função.
+             *
+             * `Left / Center / Right` em texto, e não 0/1/2: o valor é curto e o nome **é** o
+             * significado — a mesma escolha da `VariantBar`.
+             */}
+            <div className="grid gap-1.5">
+              <span className="truncate text-[length:var(--ic-label-size)] leading-none text-ic-text-muted">
+                Alignment
+              </span>
+              <SegmentedControl
+                aria-label="Text alignment"
+                options={TEXT_ALIGN_OPTIONS}
+                value={layer.text?.textAlign ?? 'center'}
+                onChange={(textAlign) =>
+                  updateLayer({ text: { ...layer.text, textAlign } as IconLayer['text'] })
+                }
+              />
+            </div>
+          </Section>
+        )}
+
         {isImage && (
           <Section title="Image adjustments">
             <Slider
@@ -1019,6 +1081,14 @@ export const LayerInspector = () => {
             )}
           </Section>
         )}
+
+        <Section title="Layer">
+          <TextField
+            label="Name"
+            value={baseLayer.name}
+            onChange={(event) => dispatch({ type: 'UPDATE_LAYER', payload: { id: baseLayer.id, changes: { name: event.target.value } } })}
+          />
+        </Section>
 
         <Button
           variant="secondary"
