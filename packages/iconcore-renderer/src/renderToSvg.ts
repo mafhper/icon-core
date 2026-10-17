@@ -179,10 +179,26 @@ const imageFilterToSvgFilter = (filter: ImageFilter | undefined, id: string): st
 };
 
 /**
+ * Whether a bloom entry acts in the SVG pipeline: enabled with blur and at
+ * least one coat. Mirrors the canvas `bloomActive` — one rule, two
+ * pipelines, so a coat that paints on one side cannot vanish on the other.
+ */
+const bloomActiveSvg = (effect: LayerEffect | undefined): boolean => {
+  if (!effect || !effect.enabled) return false;
+  return Number(effect.params.blur ?? 0) > 0 && Math.round(Number(effect.params.intensity ?? 0)) >= 1;
+};
+
+/** Bloom coats, clamped to the same ceiling the canvas enforces. */
+const bloomCoats = (effect: LayerEffect): number =>
+  Math.min(5, Math.max(1, Math.round(Number(effect.params.intensity ?? 0))));
+
+/**
  * Compose a layer's effects into one SVG filter: inner shadow (composited
  * inside the shape), then drop shadow (a glow is the same effect with zero
- * offset), then the layer blur. Mirrors the canvas stack; no enabled effect
- * produces no filter, so projects without effects keep their exact markup.
+ * offset), then bloom (stacked zero-offset coats — the intense glow), then
+ * the layer blur. Mirrors the canvas stack (`filter:` runs image adjustments,
+ * bloom coats, then blur); no enabled effect produces no filter, so projects
+ * without effects keep their exact markup.
  *
  * Spread rides `feMorphology` before the blur on both shadows — dilate for a
  * positive spread, erode for a negative one — the same contour-first order
@@ -195,8 +211,9 @@ const effectFilterMarkup = (effects: LayerEffect[] | undefined, id: string): str
   const inner = enabled('inner-shadow');
   // The composer-era depth shadow maps onto the same primitive.
   const drop = enabled('drop-shadow') ?? enabled('depth-shadow');
+  const bloom = enabled('bloom');
   const blur = enabled('surface-blur');
-  if (!inner && !drop && !blur) return '';
+  if (!inner && !drop && !blur && !bloomActiveSvg(bloom)) return '';
 
   const spreadOf = (effect: LayerEffect): number => Number(effect.params.spread ?? 0);
   /**
@@ -279,6 +296,26 @@ const effectFilterMarkup = (effects: LayerEffect[] | undefined, id: string): str
       );
     }
     source = `${id}-d`;
+  }
+
+  if (bloomActiveSvg(bloom)) {
+    // Bloom is the drop decomposition with zero offset, chained: each coat
+    // glows the previous one's merge, which is exactly what the canvas stack
+    // of `drop-shadow()` functions does. `stdDeviation` is half the blur —
+    // the same mapping the drop branch uses, so one number means one softness
+    // in both pipelines.
+    const r = Number(bloom!.params.blur ?? 0) / 2;
+    const color = String(bloom!.params.color ?? 'black');
+    const opacity = Number(bloom!.params.opacity ?? 1);
+    let from = source;
+    for (let coat = 0; coat < bloomCoats(bloom!); coat++) {
+      const result = `${id}-b${coat}`;
+      parts.push(
+        `<feDropShadow dx="0" dy="0" stdDeviation="${r}" flood-color="${color}" flood-opacity="${opacity}" in="${from}" result="${result}"/>`
+      );
+      from = result;
+    }
+    source = from;
   }
 
   if (blur) {

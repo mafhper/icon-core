@@ -99,6 +99,30 @@ describe('stroke', () => {
   });
 });
 
+describe('line thickness', () => {
+  it('vive no corpo: alturas distintas, markups distintos, e o markup carrega a espessura', () => {
+    const fina = render([shapeLayer({ kind: 'line', width: 200, height: 8 })]);
+    const grossa = render([shapeLayer({ kind: 'line', width: 200, height: 24 })]);
+    expect(fina).toContain('height="8"');
+    expect(grossa).toContain('height="24"');
+    expect(fina).not.toEqual(grossa);
+  });
+
+  it('stroke.width sozinho não move a linha: o campo é fantasma, documentado', () => {
+    const cap = { color: '#102030', alignment: 'center', cap: 'round' } as const;
+    const estreito = render([
+      shapeLayer({ kind: 'line', width: 200, height: 32 }, { stroke: { ...cap, width: 8 } })
+    ]);
+    const largo = render([
+      shapeLayer({ kind: 'line', width: 200, height: 32 }, { stroke: { ...cap, width: 24 } })
+    ]);
+    // W8 vs W24 com o mesmo H: o mesmo markup — é por isso que o slider
+    // escreve a altura, e não este campo.
+    expect(estreito).toEqual(largo);
+    expect(estreito).not.toContain('stroke-width');
+  });
+});
+
 describe('line caps', () => {
   it('defaults to the round capsule it always was', () => {
     const svg = render([shapeLayer({ kind: 'line', width: 200, height: 40 })]);

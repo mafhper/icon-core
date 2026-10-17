@@ -17,7 +17,7 @@ import { FontPicker } from './FontPicker';
 import { DEFAULT_FONT_STACK } from '@iconcore/renderer';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
-import { fillColor } from '../utils/layerStyle';
+import { fillColor, strokeScaleNote } from '../utils/layerStyle';
 import { readSvgLayerColors } from '../utils/svgLayerColors';
 import { useResetLayerAspect } from '../hooks/useResetLayerAspect';
 import { FillEditor } from './FillEditor';
@@ -659,6 +659,7 @@ export const LayerInspector = () => {
                   min="0"
                   max="64"
                   value={Math.round(layer.stroke.width)}
+                  valueLabel={strokeScaleNote(layer.stroke.width, layer.transform.scale)}
                   onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, width: Number(event.target.value) } }, true)}
                   onCommit={commit}
                 />
@@ -689,42 +690,23 @@ export const LayerInspector = () => {
         {baseLayer.kind === 'shape' && shape && shape.kind === 'line' && (
           <Section title="Stroke">
             {/*
-              A linha é um corpo fechado cuja forma É o cap: round (a cápsula
-              que sempre foi), butt (caixa) ou square (caixa estendida). Não há
-              outline separado — fixture `linha` da paridade.
+              A linha é um corpo fechado cuja espessura É a altura do shape:
+              o slider "Stroke width" edita `shape.height` — a grandeza que
+              move pixels nos dois pipelines — e nunca `stroke.width`, que
+              nenhum pipeline lê para linhas. O `stroke` hospeda só o cap
+              (a forma das pontas) e espelha a altura em `width`, para o
+              validador ler uma espessura verdadeira. A cor vive no Fill.
             */}
-            <StudioColorPicker
-              label="Stroke color"
-              value={{ color: layer.stroke?.color ?? fillColor(layer.fill), alpha: 1 }}
-              showAlpha={false}
-              onChange={(next, transient) =>
-                updateLayer({
-                  stroke: {
-                    color: next.color,
-                    width: layer.stroke?.width ?? 8,
-                    alignment: 'center',
-                    cap: layer.stroke?.cap ?? 'round'
-                  }
-                }, transient)
-              }
-              onCommit={commit}
-            />
             <Slider
               variant="inline"
               label="Stroke width"
               unit="px"
-              min="0"
+              min="1"
               max="64"
-              value={Math.round(layer.stroke?.width ?? 8)}
+              value={Math.round(shape.height)}
+              valueLabel={strokeScaleNote(shape.height, layer.transform.scale)}
               onChange={(event) =>
-                updateLayer({
-                  stroke: {
-                    color: layer.stroke?.color ?? fillColor(layer.fill),
-                    width: Number(event.target.value),
-                    alignment: 'center',
-                    cap: layer.stroke?.cap ?? 'round'
-                  }
-                }, true)
+                updateShape({ height: Math.max(1, Number(event.target.value)) }, true)
               }
               onCommit={commit}
             />
@@ -735,7 +717,7 @@ export const LayerInspector = () => {
                 updateLayer({
                   stroke: {
                     color: layer.stroke?.color ?? fillColor(layer.fill),
-                    width: layer.stroke?.width ?? 8,
+                    width: Math.round(shape.height),
                     alignment: 'center',
                     cap: event.target.value as 'butt' | 'round' | 'square'
                   }

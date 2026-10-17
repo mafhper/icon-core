@@ -577,6 +577,28 @@ export const noiseActive = (effect: LayerEffect | undefined): boolean => {
   return Number(effect.params.amount ?? 0) > 0;
 };
 
+/** Cap on stacked bloom coats: the SVG cost is linear in coats, the PNG cost quadratic-ish. */
+export const BLOOM_INTENSITY_MAX = 5;
+
+/** Whether a bloom entry acts: enabled with blur and at least one coat. */
+export const bloomActive = (effect: LayerEffect | undefined): boolean => {
+  if (!effect || !effect.enabled) return false;
+  return Number(effect.params.blur ?? 0) > 0 && Math.round(Number(effect.params.intensity ?? 0)) >= 1;
+};
+
+/** Coats of a bloom entry, clamped to the proven interval. */
+export const bloomIntensity = (effect: LayerEffect): number => {
+  const raw = Math.round(Number(effect.params.intensity ?? 0));
+  return Math.min(BLOOM_INTENSITY_MAX, Math.max(1, raw));
+};
+
+/** Blur radius of one bloom coat: half the param — the same mapping the SVG side emits as `stdDeviation`. */
+export const bloomBlurPx = (effect: LayerEffect): number => Number(effect.params.blur ?? 0) / 2;
+
+/** Flood paint of the coats. */
+export const bloomFlood = (effect: LayerEffect): string =>
+  toRgba(String(effect.params.color ?? 'black'), Number(effect.params.opacity ?? 1));
+
 const NOISE_PEAK_ALPHA = 0.5;
 export const NOISE_SIZE_MIN = 1;
 export const NOISE_SIZE_MAX = 8;
@@ -747,6 +769,79 @@ const paintGlass = (
 };
 
 /**
+ * Bloom (Tier 3), pre-rendered under the layer.
+ *
+ * Recursive coats with the thin kernel, NOT stacked `drop-shadow()` filters:
+ * measured, one verbatim coat agrees with `feDropShadow` bit-for-bit, but the
+ * CSS kernel's tails are fatter — stacking re-blurs the difference and two
+ * coats already sit at 19,4% fora-tolerância against the SVG chain (the
+ * single-coat proof in SPIKE 3.1 only ever showed acceptance, not stacking).
+ * Each coat here is `blur()` + flood `source-in` — the same primitives the
+ * spread path uses, and the same math the SVG `feDropShadow` chain does —
+ * which agrees at 0% fora for 1–3 coats.
+ *
+ * The twin is the spread twin (paints whitened, opacity reset, effects
+ * stripped — the silhouette is the contour). The accumulation `G` starts
+ * transparent and each coat floods `blur(silhouette + G)` into it, so the
+ * white core never reaches the page: the caller draws `G`, then the real
+ * layer cleanly on top. Opacity rides `globalAlpha` (the SVG group opacity
+ * covers the filtered result the same way), under `source-over`, so a
+ * blended layer blends its content — not its glow — like the drop path.
+ */
+const paintBloom = async (
+  main: CanvasRenderingContext2D,
+  backend: RenderBackend,
+  canvas: Dimensions,
+  layer: ResolvedLayer,
+  effect: LayerEffect
+): Promise<void> => {
+  if (!bloomActive(effect)) return;
+  const r = bloomBlurPx(effect);
+  const flood = bloomFlood(effect);
+  const ghost = backend.createCanvas(canvas.width, canvas.height);
+  const whiteFill = layer.resolvedFill && layer.resolvedFill.kind !== 'none'
+    ? { kind: 'solid', color: '#ffffff' } as Fill
+    : layer.resolvedFill;
+  const whiteStroke = layer.resolvedStroke
+    ? { ...layer.resolvedStroke, color: '#ffffff' }
+    : undefined;
+  const twin: ResolvedLayer = {
+    ...layer,
+    resolvedFill: whiteFill,
+    resolvedStroke: whiteStroke,
+    resolvedOpacity: 1,
+    resolvedBlendMode: 'normal',
+    resolvedEffects: [],
+    imageFilter: undefined
+  };
+  await paintLayerContent(ghost, twin, canvas, backend);
+
+  const glow = backend.createCanvas(canvas.width, canvas.height);
+  const G = glow.native as CanvasRenderingContext2D;
+  for (let coat = 0; coat < bloomIntensity(effect); coat++) {
+    const step = backend.createCanvas(canvas.width, canvas.height);
+    const S = step.native as CanvasRenderingContext2D;
+    S.drawImage((ghost.native as CanvasRenderingContext2D).canvas, 0, 0);
+    S.drawImage((glow.native as CanvasRenderingContext2D).canvas, 0, 0);
+    const blurred = backend.createCanvas(canvas.width, canvas.height);
+    const B = blurred.native as CanvasRenderingContext2D;
+    B.filter = `blur(${r}px)`;
+    B.drawImage((step.native as CanvasRenderingContext2D).canvas, 0, 0);
+    B.filter = 'none';
+    B.globalCompositeOperation = 'source-in';
+    B.fillStyle = flood;
+    B.fillRect(0, 0, canvas.width, canvas.height);
+    G.drawImage((blurred.native as CanvasRenderingContext2D).canvas, 0, 0);
+  }
+
+  main.save();
+  main.globalCompositeOperation = 'source-over';
+  main.globalAlpha = layer.resolvedOpacity;
+  main.drawImage((glow.native as CanvasRenderingContext2D).canvas, 0, 0);
+  main.restore();
+};
+
+/**
  * Drop shadow with a non-zero spread, pre-rendered under the layer.
  *
  * Same contour-first order as the inner variant: the layer paints white into
@@ -890,7 +985,18 @@ export const composeLayers = async (
       paintGlass(ctxAny, ctx, backend, canvas, layer, glass!);
     }
 
-    // Combined CSS filter (image color adjustments + surface blur). Saved/restored with the context.
+    // Bloom under the content: the glow of the silhouette, laid before the
+    // layer paints (the fill clip would amputate it past the edge — the same
+    // reason spread shadows pre-render). Skips with zero work when off.
+    const bloom = layer.resolvedEffects?.find((effect) => effect.kind === 'bloom');
+    if (bloomActive(bloom)) {
+      await paintBloom(ctxAny, backend, canvas, layer, bloom!);
+    }
+
+    // Combined CSS filter (image color adjustments + surface blur). Bloom is
+    // NOT here: it rides its own silhouette pass below (`paintBloom`), for
+    // the clip reason documented on `bloomFilterCss`. Saved/restored with
+    // the context.
     const blurEffect = layer.resolvedEffects?.find((effect) => effect.kind === 'surface-blur' && effect.enabled);
     const blurPx = blurEffect ? Number(blurEffect.params.radius ?? 0) : 0;
     const filterStr = [imageFilterToCss(layer.imageFilter), blurPx > 0 ? `blur(${blurPx}px)` : ''].filter(Boolean).join(' ');

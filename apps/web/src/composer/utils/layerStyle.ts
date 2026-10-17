@@ -36,6 +36,23 @@ export const fillColor = (fill?: Fill): string =>
   fill?.kind === 'solid' ? fill.color ?? '#111827' : '#111827';
 
 /**
+ * The honest stroke label under a non-unit scale.
+ *
+ * Width × scale paints completely Figma-like in both pipelines (the transform
+ * scales the stroke, bit-identical canvas↔SVG) — so the number on the slider
+ * is NOT what paints when scale ≠ 1. This note states the effective
+ * thickness (`8 × 2 = 16px efetivos`); at scale 1 there is nothing to
+ * disclose and it stays absent. Label only: the semantics (no
+ * `vector-effect`, no decoupling) are untouched.
+ */
+export const strokeScaleNote = (width: number, scale: number): string | undefined => {
+  if (scale === 1) return undefined;
+  const w = Math.round(width);
+  const pretty = String(Number(scale.toFixed(2)));
+  return `${w} × ${pretty} = ${Math.round(width * scale)}px efetivos`;
+};
+
+/**
  * Pixel footprint of a layer on the canvas, before its transform scale.
  * Delegates to the shared renderer geometry so the editor overlay, snapping and
  * the exporter agree on every layer's size.
@@ -499,6 +516,69 @@ export const GLOW_PRESET: LayerEffect = {
   kind: 'drop-shadow',
   enabled: true,
   params: { x: 0, y: 0, blur: 24, color: '#3f6ce0', opacity: 0.65 }
+};
+
+/**
+ * Bloom (Tier 3) — the intense glow: stacked zero-offset coats. A kind of its
+ * own (not a drop preset) because the coat count is a number no drop control
+ * owns. Defaults are the SPIKE 3.1 proof (blue 18px at 0.9, two coats).
+ */
+export const BLOOM_DEFAULTS: Record<string, number | string> = {
+  color: '#66aaff',
+  opacity: 0.9,
+  blur: 18,
+  intensity: 2
+};
+
+/** Bloom slider ranges: blur rides the glow interval, coats are capped (SVG cost is linear in coats). */
+export const BLOOM_BLUR_RANGE = { min: 0, max: 80 } as const;
+export const BLOOM_INTENSITY_RANGE = { min: 1, max: 5 } as const;
+
+/** The working bloom entry for the modal: stored, else a disabled default. Reading never writes. */
+export const resolveBloom = (layer: IconLayer): LayerEffect =>
+  layer.effects?.find((effect) => effect.kind === 'bloom') ?? {
+    kind: 'bloom',
+    enabled: false,
+    params: { ...BLOOM_DEFAULTS }
+  };
+
+/** Whether the bloom row reads ON: enabled with blur and at least one coat (mirrors the engine rule). */
+export const isBloomActive = (layer: IconLayer): boolean => {
+  const bloom = layer.effects?.find((effect) => effect.kind === 'bloom');
+  if (!bloom?.enabled) return false;
+  return Number(bloom.params.blur ?? 0) > 0 && Math.round(Number(bloom.params.intensity ?? 0)) >= 1;
+};
+
+/** Enable or disable bloom without destroying params. */
+export const setBloomEnabled = (layer: IconLayer, enabled: boolean): LayerEffect[] => {
+  const entry: LayerEffect = { ...resolveBloom(layer), enabled };
+  return setEffect(layer, entry);
+};
+
+/**
+ * Edit bloom params from the modal. Materialises the entry and enables it,
+ * like every other patch: a control that moves with no visible result does
+ * not exist. Only the four v1 keys survive, clamped to their ranges — a coat
+ * count outside 1–5 cannot be smuggled into the document.
+ */
+export const patchBloom = (
+  layer: IconLayer,
+  patch: Partial<Record<'color' | 'opacity' | 'blur' | 'intensity', number | string>>
+): LayerEffect[] => {
+  const base = resolveBloom(layer);
+  const params = { ...base.params };
+  if (patch.color !== undefined) params.color = patch.color;
+  if (patch.opacity !== undefined) params.opacity = Math.max(0, Math.min(1, Number(patch.opacity)));
+  if (patch.blur !== undefined) {
+    params.blur = Math.max(BLOOM_BLUR_RANGE.min, Math.min(BLOOM_BLUR_RANGE.max, Number(patch.blur)));
+  }
+  if (patch.intensity !== undefined) {
+    params.intensity = Math.max(
+      BLOOM_INTENSITY_RANGE.min,
+      Math.min(BLOOM_INTENSITY_RANGE.max, Math.round(Number(patch.intensity)))
+    );
+  }
+  return setEffect(layer, { ...base, enabled: true, params });
 };
 
 /** Shadow paint, with the defaults the renderers assume. No bare literals upstream. */

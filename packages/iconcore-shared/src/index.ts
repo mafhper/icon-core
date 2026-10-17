@@ -207,7 +207,13 @@ export type LayerEffectKind =
   | 'translucent-fill'
   | 'noise-grain'
   | 'adaptive-stroke'
-  | 'mono-mapper';
+  | 'mono-mapper'
+  /**
+   * Bloom (Tier 3): stacked zero-offset drop shadows — an intense glow.
+   * Additive and optional like every kind here: absent/disabled paints
+   * exactly what the project always painted.
+   */
+  | 'bloom';
 
 export interface LayerEffect {
   kind: LayerEffectKind;

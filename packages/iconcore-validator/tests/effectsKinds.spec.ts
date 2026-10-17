@@ -5,7 +5,7 @@
  * nenhuma checagem sobre `layer.effects` em `src/index.ts` (só metadados,
  * camadas, contraste, safe area, traço e texto). Então "aceitar os novos"
  * é travar que continua assim: um projeto carregado de efeitos Tier 2
- * (spread ±, backdrop-blur, glass, noise-grain) mais o legado depth-shadow
+ * (spread ±, backdrop-blur, glass, noise-grain, bloom) mais o legado depth-shadow
  * audita EXATAMENTE igual ao mesmo projeto sem efeito nenhum. Se um dia um
  * check passar a olhar kinds, este teste diz quais issues novas ele criou.
  */
@@ -47,7 +47,8 @@ const TODOS: LayerEffect[] = [
     params: { tint: '#ffffff', tintOpacity: 0.2, blurRadius: 14, edgeHighlight: 0.6, frost: 0.25 }
   },
   { kind: 'noise-grain', enabled: true, params: { amount: 0.5, size: 2, monochrome: true } },
-  { kind: 'surface-blur', enabled: true, params: { radius: 8 } }
+  { kind: 'surface-blur', enabled: true, params: { radius: 8 } },
+  { kind: 'bloom', enabled: true, params: { color: '#66aaff', opacity: 0.9, blur: 18, intensity: 2 } }
 ];
 
 describe('Tier 2 (2.4) — o validador não restringe kinds de efeito', () => {

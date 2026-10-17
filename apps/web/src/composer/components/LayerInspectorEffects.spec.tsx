@@ -265,3 +265,78 @@ describe('Effects — noise (2.3) e paridade modal ↔ sidebar', () => {
     expect(svg).not.toContain('feTurbulence');
   });
 });
+
+describe('Effects — bloom (Tier 3) e paridade modal ↔ sidebar', () => {
+  afterEach(() => cleanup());
+
+  it('modal abre nos defaults e cada controle escreve no estado que a fileira lê', () => {
+    const { vistas } = montar(camadaBase());
+    expect(screen.getByRole('switch', { name: 'Bloom' })).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Bloom' }));
+    expect(screen.getByRole('slider', { name: 'Bloom blur' })).toHaveValue('18');
+    expect(screen.getByRole('slider', { name: 'Bloom intensity' })).toHaveValue('2');
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Bloom blur' }), { target: { value: '24' } });
+    fireEvent.change(screen.getByRole('slider', { name: 'Bloom intensity' }), { target: { value: '3' } });
+    const camada = ultima(vistas);
+    expect(camada.effects?.find((e) => e.kind === 'bloom')).toMatchObject({
+      enabled: true,
+      params: { blur: 24, intensity: 3 }
+    });
+    expect(screen.getByRole('switch', { name: 'Bloom' })).toBeChecked();
+    // O controle age: os coats estão no markup exportado.
+    const svg = svgDa(camada);
+    expect(svg.match(/<feDropShadow[^>]*stdDeviation="12"[^>]*>/g)).toHaveLength(3);
+  });
+
+  it('o switch liga nos defaults e desliga preservando os params', () => {
+    const { vistas } = montar(camadaBase());
+    fireEvent.click(screen.getByRole('switch', { name: 'Bloom' }));
+    expect(ultima(vistas).effects?.find((e) => e.kind === 'bloom')).toMatchObject({
+      enabled: true,
+      params: { blur: 18, intensity: 2 }
+    });
+    expect(svgDa(ultima(vistas))).toContain('feDropShadow');
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Bloom' }));
+    expect(ultima(vistas).effects?.find((e) => e.kind === 'bloom')).toMatchObject({
+      enabled: false,
+      params: { blur: 18, intensity: 2 }
+    });
+    expect(svgDa(ultima(vistas))).not.toContain('feDropShadow');
+  });
+
+  it('blur zero na sidebar lê OFF e emite markup zero', () => {
+    const { vistas } = montar(
+      camadaBase([{ kind: 'bloom', enabled: true, params: { color: '#66aaff', opacity: 0.9, blur: 0, intensity: 2 } }])
+    );
+    expect(screen.getByRole('switch', { name: 'Bloom' })).not.toBeChecked();
+    expect(svgDa(ultima(vistas))).not.toContain('feDropShadow');
+  });
+
+  it('um modal por vez: abrir o bloom fecha o glow', async () => {
+    montar(camadaBase());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Glow' }));
+    await screen.findByRole('dialog', { name: 'Glow settings' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Bloom' }));
+    await screen.findByRole('dialog', { name: 'Bloom settings' });
+    expect(screen.queryByRole('dialog', { name: 'Glow settings' })).toBeNull();
+  });
+
+  it('Esc confirma o arrasto em vez de perder: o blur sobrevive', async () => {
+    const { vistas } = montar(camadaBase());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Bloom' }));
+    fireEvent.change(await screen.findByRole('slider', { name: 'Bloom blur' }), { target: { value: '30' } });
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(ultima(vistas).effects?.find((e) => e.kind === 'bloom')).toMatchObject({
+      enabled: true,
+      params: { blur: 30 }
+    });
+    expect(svgDa(ultima(vistas))).toContain('stdDeviation="15"');
+  });
+});

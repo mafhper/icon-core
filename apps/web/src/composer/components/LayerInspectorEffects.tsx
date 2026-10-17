@@ -8,10 +8,12 @@ import {
   effectPaint,
   getEffect,
   hasPaintedShadow,
+  isBloomActive,
   isGlassActive,
   isGlowActive,
   isNoiseActive,
   patchBackdropBlur,
+  patchBloom,
   patchDropShadow,
   patchGlass,
   patchGlow,
@@ -19,22 +21,26 @@ import {
   patchLayerBlur,
   patchNoise,
   resolveBackdropBlur,
+  resolveBloom,
   resolveDropShadow,
   resolveGlass,
   resolveLayerBlur,
   resolveNoise,
   setBackdropBlurEnabled,
+  setBloomEnabled,
   setDropEnabled,
   setEffect,
   setGlassEnabled,
   setGlowEnabled,
   setLayerBlurEnabled,
   setNoiseEnabled,
+  BLOOM_BLUR_RANGE,
+  BLOOM_INTENSITY_RANGE,
   NOISE_SIZE_RANGE,
   SHADOW_SPREAD_RANGE
 } from '../utils/layerStyle';
 
-type EffectModal = 'drop' | 'inner' | 'blur' | 'glow' | 'backdrop' | 'glass' | 'noise';
+type EffectModal = 'drop' | 'inner' | 'blur' | 'glow' | 'bloom' | 'backdrop' | 'glass' | 'noise';
 
 /**
  * Move focus into an open effect modal (first tabbable surface), so keyboard
@@ -115,6 +121,9 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
   const glowAnchorRef = useRef<HTMLButtonElement>(null);
   const glowBodyRef = useRef<HTMLDivElement>(null);
   useModalFocus(openModal === 'glow', glowBodyRef);
+  const bloomAnchorRef = useRef<HTMLButtonElement>(null);
+  const bloomBodyRef = useRef<HTMLDivElement>(null);
+  useModalFocus(openModal === 'bloom', bloomBodyRef);
 
   const closeModal = (
     bodyRef: React.RefObject<HTMLDivElement | null>,
@@ -132,6 +141,7 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
   const closeInnerModal = () => closeModal(innerBodyRef, innerAnchorRef);
   const closeBlurModal = () => closeModal(blurBodyRef, blurAnchorRef);
   const closeGlowModal = () => closeModal(glowBodyRef, glowAnchorRef);
+  const closeBloomModal = () => closeModal(bloomBodyRef, bloomAnchorRef);
   const closeBackdropModal = () => closeModal(backdropBodyRef, backdropAnchorRef);
   const closeGlassModal = () => closeModal(glassBodyRef, glassAnchorRef);
   const closeNoiseModal = () => closeModal(noiseBodyRef, noiseAnchorRef);
@@ -146,6 +156,8 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
   const innerShadow = getEffect(layer, 'inner-shadow');
   const glowOn = isGlowActive(layer);
   const glow = resolveDropShadow(layer);
+  const bloomOn = isBloomActive(layer);
+  const bloom = resolveBloom(layer);
 
   return (
     <Section title="Effects">
@@ -303,6 +315,74 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
                 value={Number(glow.params.blur ?? 24)}
                 onChange={(event) =>
                   touch({ effects: patchGlow(layer, { blur: Number(event.target.value) }) })
+                }
+                onCommit={commitTouch}
+              />
+            </div>
+          )}
+        </div>
+      </Popover>
+
+      <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1">
+          <Switch
+            label="Bloom"
+            checked={bloomOn}
+            onChange={(event) => updateLayer({ effects: setBloomEnabled(layer, event.target.checked) })}
+          />
+        </div>
+        <button
+          type="button"
+          ref={bloomAnchorRef}
+          aria-label="Edit Bloom"
+          aria-haspopup="dialog"
+          aria-expanded={openModal === 'bloom'}
+          title="Edit Bloom"
+          onClick={() => setOpenModal((was) => (was === 'bloom' ? null : 'bloom'))}
+          className="shrink-0 rounded-[var(--ic-field-radius)] p-1 text-ic-text-muted hover:text-ic-text"
+        >
+          <ChevronDown size={14} aria-hidden="true" className={openModal === 'bloom' ? 'rotate-180' : ''} />
+        </button>
+      </div>
+      <Popover
+        open={openModal === 'bloom'}
+        anchorRef={bloomAnchorRef}
+        onClose={closeBloomModal}
+        aria-label="Bloom settings"
+      >
+        <div ref={bloomBodyRef} tabIndex={-1} className="outline-none">
+          {openModal === 'bloom' && (
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+              <StudioColorPicker
+                label="Bloom color"
+                value={effectPaint(bloom, 0.9)}
+                onChange={(next) =>
+                  touch({ effects: patchBloom(layer, { color: next.color, opacity: next.alpha }) })
+                }
+                onCommit={commitTouch}
+              />
+              <Slider
+                variant="inline"
+                label="Bloom blur"
+                unit="px"
+                min={String(BLOOM_BLUR_RANGE.min)}
+                max={String(BLOOM_BLUR_RANGE.max)}
+                value={Number(bloom.params.blur ?? 18)}
+                onChange={(event) =>
+                  touch({ effects: patchBloom(layer, { blur: Number(event.target.value) }) })
+                }
+                onCommit={commitTouch}
+              />
+              <Slider
+                variant="inline"
+                label="Bloom intensity"
+                unit="×"
+                step="1"
+                min={String(BLOOM_INTENSITY_RANGE.min)}
+                max={String(BLOOM_INTENSITY_RANGE.max)}
+                value={Math.round(Number(bloom.params.intensity ?? 2))}
+                onChange={(event) =>
+                  touch({ effects: patchBloom(layer, { intensity: Number(event.target.value) }) })
                 }
                 onCommit={commitTouch}
               />

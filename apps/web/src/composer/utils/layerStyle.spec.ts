@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { IconLayer, LayerEffect, ShapeKind } from '@iconcore/shared';
 import { toRgba } from '@iconcore/renderer';
-import { GLASS_DEFAULTS, GLOW_PRESET, NOISE_DEFAULTS, NOISE_SIZE_RANGE, SHADOW_SPREAD_RANGE, backdropBlurPx, borderRadiusForLayer, fillColor, fillToCss, getEffect, getShadow, isGlassActive, isGlowActive, isNoiseActive, legacyToDropParams, patchBackdropBlur, patchDropShadow, patchGlass, patchGlow, patchInnerShadow, patchNoise, resolveBackdropBlur, resolveDropShadow, resolveGlass, resolveNoise, setDropEnabled, setGlassEnabled, setGlowEnabled, setNoiseEnabled, setShadow, shadowCssForLayer } from './layerStyle';
+import { BLOOM_BLUR_RANGE, BLOOM_DEFAULTS, BLOOM_INTENSITY_RANGE, GLASS_DEFAULTS, GLOW_PRESET, NOISE_DEFAULTS, NOISE_SIZE_RANGE, SHADOW_SPREAD_RANGE, backdropBlurPx, borderRadiusForLayer, fillColor, fillToCss, getEffect, getShadow, isBloomActive, isGlassActive, isGlowActive, isNoiseActive, legacyToDropParams, patchBackdropBlur, patchBloom, patchDropShadow, patchGlass, patchGlow, patchInnerShadow, patchNoise, resolveBackdropBlur, resolveBloom, resolveDropShadow, resolveGlass, resolveNoise, setBloomEnabled, setDropEnabled, setGlassEnabled, setGlowEnabled, setNoiseEnabled, setShadow, shadowCssForLayer, strokeScaleNote } from './layerStyle';
 
 const shapeLayer = (kind: ShapeKind, cornerRadius?: number): IconLayer => ({
   id: 'l',
@@ -33,6 +33,22 @@ describe('fillColor', () => {
     expect(fillColor({ kind: 'solid', color: '#123456' })).toBe('#123456');
     expect(fillColor({ kind: 'linear-gradient' })).toBe('#111827');
     expect(fillColor(undefined)).toBe('#111827');
+  });
+});
+
+describe('strokeScaleNote', () => {
+  it('stays silent at scale 1: nothing to disclose', () => {
+    expect(strokeScaleNote(8, 1)).toBeUndefined();
+  });
+
+  it('states the effective thickness when scale differs from 1', () => {
+    expect(strokeScaleNote(8, 2)).toBe('8 × 2 = 16px efetivos');
+    expect(strokeScaleNote(8, 0.5)).toBe('8 × 0.5 = 4px efetivos');
+    expect(strokeScaleNote(8, 1.5)).toBe('8 × 1.5 = 12px efetivos');
+  });
+
+  it('rounds the painted pixels, trims the scale', () => {
+    expect(strokeScaleNote(7, 1.33)).toBe('7 × 1.33 = 9px efetivos');
   });
 });
 
@@ -277,6 +293,60 @@ describe('Tier 2 (2.3) — noise-grain com amount/size/monochrome', () => {
     expect(desligada.find((e) => e.kind === 'noise-grain')).toMatchObject({
       enabled: false,
       params: { ...NOISE_DEFAULTS }
+    });
+  });
+});
+
+describe('Tier 3 — bloom com color/opacity/blur/intensity', () => {
+  it('sem entrada abre desligado nos defaults da prova', () => {
+    const bloom = resolveBloom(shapeLayer('circle'));
+    expect(bloom.enabled).toBe(false);
+    expect(bloom.params).toEqual({ ...BLOOM_DEFAULTS });
+    expect(Object.keys(bloom.params).sort()).toEqual(['blur', 'color', 'intensity', 'opacity'].sort());
+    expect(isBloomActive(shapeLayer('circle'))).toBe(false);
+  });
+
+  it('patch aceita só as quatro chaves, aperta nos intervalos e materializa ligado', () => {
+    const base = shapeLayer('circle');
+    const efeitos = patchBloom(base, { blur: 32, intensity: 3, resto: 1 } as never);
+    const bloom = efeitos.find((e) => e.kind === 'bloom')!;
+    expect(bloom.enabled).toBe(true);
+    expect(bloom.params.blur).toBe(32);
+    expect(bloom.params.intensity).toBe(3);
+    expect('resto' in bloom.params).toBe(false);
+    expect(isBloomActive({ ...base, effects: efeitos })).toBe(true);
+  });
+
+  it('blur zero ou intensidade zero lê OFF, e os intervalos são os provados', () => {
+    const semBlur: IconLayer = {
+      ...shapeLayer('circle'),
+      effects: [{ kind: 'bloom', enabled: true, params: { ...BLOOM_DEFAULTS, blur: 0 } }]
+    };
+    expect(isBloomActive(semBlur)).toBe(false);
+    const semCoats: IconLayer = {
+      ...shapeLayer('circle'),
+      effects: [{ kind: 'bloom', enabled: true, params: { ...BLOOM_DEFAULTS, intensity: 0 } }]
+    };
+    expect(isBloomActive(semCoats)).toBe(false);
+    expect(BLOOM_BLUR_RANGE).toEqual({ min: 0, max: 80 });
+    expect(BLOOM_INTENSITY_RANGE).toEqual({ min: 1, max: 5 });
+  });
+
+  it('intensidade fora do intervalo é apertada, não contrabandeada', () => {
+    const base = shapeLayer('circle');
+    expect(patchBloom(base, { intensity: 99 }).find((e) => e.kind === 'bloom')?.params.intensity).toBe(5);
+    expect(patchBloom(base, { intensity: -2 }).find((e) => e.kind === 'bloom')?.params.intensity).toBe(1);
+    expect(patchBloom(base, { blur: 400 }).find((e) => e.kind === 'bloom')?.params.blur).toBe(80);
+  });
+
+  it('desligar preserva os params', () => {
+    const base = shapeLayer('circle');
+    const ligada = setBloomEnabled(base, true);
+    expect(isBloomActive({ ...base, effects: ligada })).toBe(true);
+    const desligada = setBloomEnabled({ ...base, effects: ligada }, false);
+    expect(desligada.find((e) => e.kind === 'bloom')).toMatchObject({
+      enabled: false,
+      params: { ...BLOOM_DEFAULTS }
     });
   });
 });

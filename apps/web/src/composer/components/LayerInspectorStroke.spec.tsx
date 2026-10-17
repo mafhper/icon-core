@@ -131,6 +131,58 @@ describe('Inspector Stroke (Fase 4)', () => {
     expect(reta).toContain('<rect');
     expect(reta).not.toContain('rx=');
   });
+
+  it('linha: Stroke width edita a altura do corpo, e o SVG carrega a espessura', async () => {
+    const vistos = montar(LINE);
+    await screen.findByLabelText('Cap');
+
+    // O slider lê a altura do corpo (32), não o campo fantasma.
+    const slider = screen.getByRole('slider', { name: 'Stroke width' }) as HTMLInputElement;
+    expect(slider.value).toBe('32');
+
+    fireEvent.change(slider, { target: { value: '24' } });
+    // A forma mexe (é ela que pinta), o fantasma nem é criado.
+    expect(camada(vistos).source.shape).toMatchObject({ width: 200, height: 24 });
+    expect(camada(vistos).stroke?.width).toBeUndefined();
+    // O markup carrega a espessura no corpo, não em stroke-width.
+    const svg = svgDaUltima(vistos);
+    expect(svg).toContain('height="24"');
+    expect(svg).not.toContain('stroke-width');
+  });
+
+  it('linha: o cap espelha a altura no stroke, sem ressuscitar o fantasma', async () => {
+    const vistos = montar(LINE);
+    await screen.findByLabelText('Cap');
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Stroke width' }), { target: { value: '24' } });
+    fireEvent.change(screen.getByLabelText('Cap'), { target: { value: 'butt' } });
+    // O espelho acompanha o corpo: o validador lê verdade.
+    expect(camada(vistos).stroke).toMatchObject({ width: 24, cap: 'butt' });
+    expect(camada(vistos).source.shape).toMatchObject({ height: 24 });
+  });
+
+  it('rótulo honesto: em scale 1 cala, em scale 2 declara os pixels efetivos', async () => {
+    const vistos = montar(ROUNDED);
+    await screen.findByRole('button', { name: 'Add stroke' });
+    fireEvent.click(screen.getByRole('button', { name: 'Add stroke' }));
+
+    // Largura 4 do Add stroke, scale 1: nada a declarar.
+    expect(screen.queryByText(/px efetivos/)).toBeNull();
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Scale' }), { target: { value: '2' } });
+    expect(camada(vistos).transform.scale).toBe(2);
+    expect(screen.getByText('4 × 2 = 8px efetivos')).toBeInTheDocument();
+  });
+
+  it('rótulo honesto na linha: a espessura efetiva parte da altura do corpo', async () => {
+    montar(LINE);
+    await screen.findByLabelText('Cap');
+
+    expect(screen.queryByText(/px efetivos/)).toBeNull();
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Scale' }), { target: { value: '2' } });
+    expect(screen.getByText('32 × 2 = 64px efetivos')).toBeInTheDocument();
+  });
 });
 
 describe('Inspector Effects (Fase 4)', () => {
