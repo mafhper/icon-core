@@ -141,4 +141,90 @@ describe('StudioColorPicker', () => {
     expect(screen.queryByRole('dialog', { name: 'Paint picker' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Choose Paint color' })).toHaveFocus();
   });
+
+  /**
+   * What jsdom can and cannot prove about the floating picker.
+   *
+   * jsdom has no layout, no compositor and no scrolling viewport: every
+   * scroll offset reads back unchanged and every scroll event is delivered
+   * synchronously. The real-browser self-dismiss race — the opening
+   * interaction's own scroll arriving a frame or two LATE, after the
+   * popover's scroll listener attaches — cannot happen here, which is why
+   * the suite stayed green while the defect existed. The tests below lock
+   * everything lockable at this level: the entry focus must not ask for
+   * scrolling, a scroll reporting unchanged offsets must be ignored, a
+   * scroll reporting changed offsets must still dismiss, and a scroll in a
+   * container that does not hold the swatch must never dismiss.
+   *
+   * Browser-only proof, re-run on every change to this behaviour: serve the
+   * built app, real-click the swatch, wait two seconds, assert the picker
+   * dialog is still visible, and capture a screenshot of the open panel.
+   */
+  it('moves the opening focus without asking for any scroll', async () => {
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+    try {
+      renderPicker();
+      fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+      await screen.findByRole('dialog', { name: 'Paint picker' });
+      await vi.waitFor(() => {
+        expect(
+          focusSpy.mock.calls.some(
+            (args) =>
+              typeof args[0] === 'object' &&
+              args[0] !== null &&
+              (args[0] as FocusOptions).preventScroll === true
+          )
+        ).toBe(true);
+      });
+    } finally {
+      focusSpy.mockRestore();
+    }
+    expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+  });
+
+  it('ignores the opening scroll but still closes on a real scroll of its own sidebar', () => {
+    const scroller = document.createElement('div');
+    document.body.appendChild(scroller);
+    try {
+      // jsdom reports no layout: declare the wrapper scrollable by hand.
+      Object.defineProperties(scroller, {
+        scrollHeight: { value: 2000, configurable: true },
+        clientHeight: { value: 500, configurable: true },
+        scrollWidth: { value: 800, configurable: true },
+        clientWidth: { value: 800, configurable: true }
+      });
+      scroller.scrollTop = 120;
+      const onChange = vi.fn();
+      render(
+        <StudioColorPicker label="Paint" value={{ color: '#3f6ce0', alpha: 1 }} onChange={onChange} />,
+        { container: scroller }
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+      expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+      // The opening interaction's own scroll, delivered late with unchanged
+      // offsets: must not dismiss what just opened.
+      fireEvent.scroll(scroller);
+      expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+      // A genuine later scroll moves the anchor under the fixed panel.
+      scroller.scrollTop = 200;
+      fireEvent.scroll(scroller);
+      expect(screen.queryByRole('dialog', { name: 'Paint picker' })).not.toBeInTheDocument();
+    } finally {
+      scroller.remove();
+    }
+  });
+
+  it('stays open when a container that does not hold the swatch scrolls', () => {
+    renderPicker();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+    expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+    const outsider = document.createElement('div');
+    document.body.appendChild(outsider);
+    try {
+      fireEvent.scroll(outsider);
+      expect(screen.getByRole('dialog', { name: 'Paint picker' })).toBeInTheDocument();
+    } finally {
+      outsider.remove();
+    }
+  });
 });

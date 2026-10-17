@@ -114,6 +114,9 @@ export const StudioColorPicker = ({
 
   // Floating-panel focus contract: move into the panel on open (the S/V area
   // group is the first tabbable surface), so keyboard dismissal can return.
+  // The move never scrolls: the panel is placed next to the trigger and
+  // already visible, and any scroll on open would read as a viewport change
+  // and dismiss the panel that just opened.
   useEffect(() => {
     if (!popoverOpen) return;
     const focusFirst = () => {
@@ -121,7 +124,7 @@ export const StudioColorPicker = ({
       const first = body?.querySelector<HTMLElement>(
         'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
       );
-      (first ?? body)?.focus?.();
+      (first ?? body)?.focus?.({ preventScroll: true });
     };
     if (typeof requestAnimationFrame !== 'function') {
       focusFirst();
