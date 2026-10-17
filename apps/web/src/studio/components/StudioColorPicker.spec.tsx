@@ -227,4 +227,74 @@ describe('StudioColorPicker', () => {
       outsider.remove();
     }
   });
+
+  it('keeps the fill-type header out of the inline body', () => {
+    render(
+      <StudioColorPicker
+        label="Paint"
+        value={{ color: '#3f6ce0', alpha: 1 }}
+        onChange={() => {}}
+        fillKind="solid"
+        onFillKindChange={() => {}}
+      />
+    );
+    // Inline already has the kind selector above it: no second switcher.
+    expect(screen.queryByRole('group', { name: 'Paint fill type' })).not.toBeInTheDocument();
+    expand();
+    expect(screen.queryByRole('group', { name: 'Paint fill type' })).not.toBeInTheDocument();
+  });
+
+  it('switches the fill kind by header icon in the floating picker', () => {
+    const onFillKindChange = vi.fn();
+    render(
+      <StudioColorPicker
+        label="Paint"
+        value={{ color: '#3f6ce0', alpha: 1 }}
+        onChange={() => {}}
+        fillKind="solid"
+        onFillKindChange={onFillKindChange}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+
+    const group = screen.getByRole('group', { name: 'Paint fill type' });
+    const solid = screen.getByRole('button', { name: 'Paint fill type: Solid color' });
+    const gradient = screen.getByRole('button', { name: 'Paint fill type: Linear gradient' });
+    expect(group.contains(solid)).toBe(true);
+    expect(group.contains(gradient)).toBe(true);
+    expect(solid).toHaveAttribute('aria-pressed', 'true');
+    expect(gradient).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(gradient);
+    expect(onFillKindChange).toHaveBeenCalledWith('linear-gradient');
+    // The pressed tab never refires: like the reference, a no-op, not an event.
+    fireEvent.click(solid);
+    expect(onFillKindChange).not.toHaveBeenCalledWith('solid');
+  });
+
+  it('reads any gradient kind as gradient and offers nothing the engine cannot paint', () => {
+    const onFillKindChange = vi.fn();
+    render(
+      <StudioColorPicker
+        label="Paint"
+        value={{ color: '#3f6ce0', alpha: 1 }}
+        onChange={() => {}}
+        fillKind="radial-gradient"
+        onFillKindChange={onFillKindChange}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Paint color' }));
+
+    expect(screen.getByRole('button', { name: 'Paint fill type: Linear gradient' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(
+      screen.getByRole('group', { name: 'Paint fill type' }).querySelectorAll('button')
+    ).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /image|shader|pattern|video/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Paint fill type: Solid color' }));
+    expect(onFillKindChange).toHaveBeenCalledWith('solid');
+  });
 });

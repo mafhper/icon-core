@@ -69,4 +69,17 @@ describe('FillEditor', () => {
     fireEvent.change(screen.getByLabelText('Color hex'), { target: { value: 'ff0000' } });
     expect(onChange).toHaveBeenCalledWith({ kind: 'solid', color: '#ff0000', alpha: 1 }, true);
   });
+
+  it('switches the fill kind from the floating picker header, seeding the gradient', () => {
+    const onChange = vi.fn();
+    render(<FillEditor label="Fill" fill={{ kind: 'solid', color: '#F8FAFC', alpha: 1 }} onChange={onChange} onCommit={noop} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose Color color' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Color fill type: Linear gradient' }));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next = onChange.mock.calls[0][0] as Fill;
+    if (next.kind !== 'linear-gradient') throw new Error('the header icon did not switch the kind');
+    expect(next.stops?.[0]?.color).toBe('#F8FAFC');
+  });
 });

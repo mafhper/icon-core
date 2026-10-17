@@ -22,6 +22,10 @@ interface FillEditorProps {
  * `solid`, the full gradient editor for the four gradient kinds, a note for
  * `none`. Switching kind converts the value (`convertFillKind`) instead of
  * discarding it, so the fill stays continuous.
+ *
+ * The solid picker's floating panel repeats the switch as icon tabs (solid +
+ * linear gradient, the reference's header minus the kinds the engine cannot
+ * paint), so the kind can change without the sidebar selector in reach.
  */
 export const FillEditor = ({ label, fill, onChange, onCommit, noneNote }: FillEditorProps) => {
   const kind = fill?.kind ?? 'solid';
@@ -49,6 +53,8 @@ export const FillEditor = ({ label, fill, onChange, onCommit, noneNote }: FillEd
           value={solid}
           onChange={(next, transient) => onChange({ kind: 'solid', color: next.color, alpha: next.alpha }, transient)}
           onCommit={onCommit}
+          fillKind={kind}
+          onFillKindChange={(next) => onChange(convertFillKind(fill, next))}
         />
       )}
     </div>

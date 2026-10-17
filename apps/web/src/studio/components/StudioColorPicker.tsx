@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { Blend, ChevronDown, Square } from 'lucide-react';
+import type { Fill } from '@iconcore/shared';
 import { Popover } from '@iconcore/ui';
 import {
   formatColor,
@@ -29,6 +30,22 @@ interface StudioColorPickerProps {
    * editing a value the document cannot store.
    */
   showAlpha?: boolean;
+  /**
+   * Fill-kind tabs in the floating panel (OpenPencil parity).
+   *
+   * When both are present, the floating body grows the reference's header:
+   * Solid first, linear gradient second, in the same row disposition. The
+   * gradient tab lands on `linear-gradient` and stays pressed for any of the
+   * four gradient kinds — the subtypes keep living in the kind selector, the
+   * way the reference keeps them in its gradient panel. Kinds the engine
+   * cannot paint (image, shader and the rest) get no button: a control that
+   * does nothing does not exist.
+   *
+   * Only the fill's own picker passes these (via `FillEditor`): stop, stroke
+   * and shadow pickers edit a colour, never a kind.
+   */
+  fillKind?: Fill['kind'];
+  onFillKindChange?: (kind: Fill['kind']) => void;
 }
 
 const FORMATS: PickerFormat[] = ['hex', 'rgb', 'hsl', 'hsb'];
@@ -62,7 +79,9 @@ export const StudioColorPicker = ({
   onChange,
   onCommit,
   disabled = false,
-  showAlpha = true
+  showAlpha = true,
+  fillKind,
+  onFillKindChange
 }: StudioColorPickerProps) => {
   const [inlineOpen, setInlineOpen] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -174,6 +193,62 @@ export const StudioColorPicker = ({
   const paintCss = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${showAlpha ? value.alpha : 1})`;
 
   /**
+   * The reference's gradient tab covers all four gradient subtypes (its swap
+   * always lands on linear); the pressed state does the same here so a radial
+   * fill reached through the kind selector still reads as gradient.
+   */
+  const isGradientKind = (kind: Fill['kind']): boolean =>
+    kind === 'linear-gradient' ||
+    kind === 'radial-gradient' ||
+    kind === 'angular-gradient' ||
+    kind === 'diamond-gradient';
+
+  /** Kind tabs never fire for the kind already showing, like the reference. */
+  const switchFillKind = (kind: Fill['kind']) => {
+    if (kind !== fillKind) onFillKindChange?.(kind);
+  };
+
+  const fillKindTabClass = (active: boolean): string =>
+    active
+      ? 'bg-ic-accent-soft text-ic-accent-text'
+      : 'text-ic-text-muted hover:text-ic-text';
+
+  /**
+   * The OpenPencil header itself: one row of kind tabs above the colour
+   * surface. Floating-only — inline already has the kind selector above it,
+   * and a second switcher there would be the same control twice.
+   */
+  const renderFillKindHeader = () =>
+    fillKind !== undefined && onFillKindChange ? (
+      <div className="mb-2 flex items-center gap-0.5" role="group" aria-label={`${label} fill type`}>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label={`${label} fill type: Solid color`}
+          title="Solid color"
+          aria-pressed={fillKind === 'solid'}
+          data-active={fillKind === 'solid' ? true : undefined}
+          onClick={() => switchFillKind('solid')}
+          className={`rounded-[var(--ic-field-radius)] p-1.5 disabled:opacity-40 ${fillKindTabClass(fillKind === 'solid')}`}
+        >
+          <Square size={14} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label={`${label} fill type: Linear gradient`}
+          title="Linear gradient"
+          aria-pressed={isGradientKind(fillKind)}
+          data-active={isGradientKind(fillKind) ? true : undefined}
+          onClick={() => switchFillKind('linear-gradient')}
+          className={`rounded-[var(--ic-field-radius)] p-1.5 disabled:opacity-40 ${fillKindTabClass(isGradientKind(fillKind))}`}
+        >
+          <Blend size={14} aria-hidden="true" />
+        </button>
+      </div>
+    ) : null;
+
+  /**
    * The OpenPencil surface itself (S/V area, hue/alpha sliders, format
    * fields): one definition, shown either embedded (chevron) or floating
    * (swatch popover). `inPopover` only changes the value field's Enter key,
@@ -181,6 +256,7 @@ export const StudioColorPicker = ({
    */
   const renderPickerBody = (inPopover: boolean) => (
     <div className="studio-picker-body">
+      {inPopover && renderFillKindHeader()}
       <div
         ref={areaRef}
         role="group"
