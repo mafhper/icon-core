@@ -3,8 +3,6 @@ import {
   ArrowUpToLine,
   Box,
   Check,
-  ChevronDown,
-  Circle,
   Keyboard,
   Monitor,
   Moon,
@@ -16,7 +14,6 @@ import {
   Sun,
   Undo2
 } from 'lucide-react';
-import type { IconVariant } from '@iconcore/shared';
 import { IconButton, Menu, MenuItem, Tooltip, withIconStroke } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
 import { AboutModal } from '../../composer/components/AboutModal';
@@ -26,13 +23,6 @@ import { StudioInsertMenu } from './StudioInsertMenu';
 import { StudioMainMenu, type StudioMenuDialog } from './StudioMainMenu';
 import { StudioNameDialog } from './StudioNameDialog';
 import { StudioPreferencesDialog } from './StudioPreferencesDialog';
-
-const VARIANTS: Array<{ id: IconVariant; label: string }> = [
-  { id: 'default', label: 'Default' },
-  { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
-  { id: 'mono', label: 'Monochrome' }
-];
 
 const THEMES: Array<{ id: StudioThemePreference; label: string }> = [
   { id: 'dark', label: 'Dark theme' },
@@ -55,7 +45,10 @@ const themeIcon = (preference: StudioThemePreference) =>
 
 /**
  * Studio top chrome (Fase 1): titlebar (brand + document + panel controls)
- * over the toolbar (undo/redo, appearance, panel toggles, theme, export).
+ * over the toolbar (undo/redo, insert, panel toggles, theme, export).
+ *
+ * Variant selection lives only in the canvas tiles (and the Inspector
+ * Preview grid, which renders the same tiles) — never in this toolbar.
  *
  * Every control acts from day one — there is no Insert menu yet (Fase 2) and
  * no rename/new-document entry points yet (Fase 5 brings the dialogs), so the
@@ -75,8 +68,6 @@ export const StudioTopBar = ({
   const project = state.project;
   const canUndo = state.historyIndex > 0;
   const canRedo = state.historyIndex < state.history.length - 1;
-  const activeVariant = state.activeVariant;
-  const activeLabel = VARIANTS.find((variant) => variant.id === activeVariant)?.label ?? 'Default';
 
   return (
     <>
@@ -146,32 +137,8 @@ export const StudioTopBar = ({
         <div className="studio-topbar-group">
           <StudioInsertMenu variant="primary" />
         </div>
-        <div className="studio-topbar-group">
-          <span className="text-xs text-ic-text-muted" aria-hidden="true">
-            Appearance
-          </span>
-          <Menu
-            label="Appearance variant"
-            trigger={
-              <button type="button" className="studio-trigger" aria-label={`Appearance: ${activeLabel}`}>
-                <span className="inline-flex items-center gap-1.5">
-                  <Circle size={12} aria-hidden="true" />
-                  {activeLabel}
-                  <ChevronDown size={12} aria-hidden="true" />
-                </span>
-              </button>
-            }
-          >
-            {VARIANTS.map((variant) => (
-              <MenuItem
-                key={variant.id}
-                label={variant.label}
-                icon={activeVariant === variant.id ? <Check size={14} /> : <Circle size={12} />}
-                onSelect={() => dispatch({ type: 'SET_ACTIVE_VARIANT', payload: variant.id })}
-              />
-            ))}
-          </Menu>
-        </div>
+        {/* Variant lives only in the canvas tiles (and the Inspector
+            Preview grid, which renders the same tiles): no topbar duplicate. */}
         <div className="studio-topbar-spacer" />
         <div className="studio-topbar-group">
           <Tooltip content={leftOpen ? 'Hide Layers panel' : 'Show Layers panel'}>

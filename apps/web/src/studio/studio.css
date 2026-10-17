@@ -268,12 +268,6 @@
   min-width: 0;
 }
 
-/* Rótulo "Appearance" (mockup `variant-selector > span` 10px — piso 11px). */
-.studio-topbar-group > span {
-  font-size: 11px;
-  color: var(--ic-text-muted);
-}
-
 .studio-topbar-spacer {
   flex: 1 1 auto;
 }
@@ -286,9 +280,9 @@
   flex: 0 0 auto;
 }
 
-/* Gatilhos de menu da topbar (mockup `variant-selector button`: 29px, 11px,
-   borda, fundo field, raio 4px). Os dois gatilhos (`Appearance`, `View options`)
-   usam esta classe; as abas do inspetor usam `.studio-tab`. */
+/* Gatilho de menu da concha (mockup `variant-selector button`: 29px, 11px,
+   borda, fundo field, raio 4px). Em uso só no `View options` do canvas: a
+   variante vive só nos tiles, sem duplicata na topbar. */
 .studio-trigger {
   display: inline-flex;
   align-items: center;
@@ -576,14 +570,20 @@
 
 /* Faixa de variantes (mockup `variant-previews`: gap 14, respiro 16/0/23,
    tiles 78×92, arte 49px raio 12, rótulo 9px — piso 11px). A faixa continua
-   ancorada embaixo (congelamento de estrutura); os tiles seguem o mockup. */
+   ancorada embaixo (congelamento de estrutura); os tiles seguem o mockup.
+   Separação no topo como no mockup (hairline) mais a sombra suave para cima
+   sobre a mesa — claro e escuro via papéis (`--ic-border`, `--ic-shadow`).
+   `position` + `z-index` para a sombra pintar sobre a mesa acima. */
 .studio-tiles {
   display: flex;
   gap: 14px;
   padding: 16px 12px 23px;
   overflow-x: auto;
   background-color: var(--ic-workspace);
-  border-top: none;
+  border-top: 1px solid var(--ic-border);
+  box-shadow: 0 -12px 24px -16px var(--ic-shadow);
+  position: relative;
+  z-index: 1;
 }
 
 .studio-tile {
@@ -685,6 +685,9 @@
   gap: 22px 16px;
   padding: 22px;
   overflow-x: hidden;
+  /* Grade do Preview não é faixa: sem a separação de topo da faixa. */
+  border-top: none;
+  box-shadow: none;
 }
 
 .studio-tiles-grid .studio-tile {
@@ -692,7 +695,10 @@
   text-align: center;
 }
 
-/* Pé do inspetor (mockup `inspector-foot`: 36px, respiro 0 14, 9px — piso 11px). */
+/* Pé do inspetor (mockup `inspector-foot`: 36px, respiro 0 14, 9px — piso 11px).
+   Hairline no topo como no mockup mais a sombra suave para cima sobre o
+   conteúdo que rola acima — claro e escuro via papéis. `position` para a
+   sombra pintar sobre a rolagem; fundo explícito para a separação ler. */
 .studio-inspector-foot {
   display: flex;
   align-items: center;
@@ -703,6 +709,9 @@
   font-size: 11px;
   color: var(--ic-text-faint);
   border-top: 1px solid var(--ic-border);
+  box-shadow: 0 -10px 22px -14px var(--ic-shadow);
+  position: relative;
+  background-color: var(--ic-bg);
 }
 
 /* --- Statusbar: three zones (mockup: 29px, gap 22, respiro 14) ------------ */
@@ -906,6 +915,7 @@
 .studio-export-preview .studio-tiles {
   background: none;
   border: none;
+  box-shadow: none;
   padding: 0;
 }
 

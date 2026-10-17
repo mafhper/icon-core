@@ -53,11 +53,13 @@ const SeededShell = ({ project }: { project: IconCoreProject }) => {
  * existe. Nenhum teste afirma cor — cor se mede no guard, não no spec.
  */
 describe('Studio FATIA 1b (mockup visual port)', () => {
-  it('usa o gatilho do mockup (29px) em Appearance e View options', () => {
+  it('a variante vive só nos tiles: sem duplicata na topbar, View options no gatilho do mockup', () => {
     renderShell(<SeededShell project={createBlankProject('Triggers', 512)} />);
 
-    expect(screen.getByRole('button', { name: 'Appearance: Default' })).toHaveClass('studio-trigger');
     expect(screen.getByRole('button', { name: 'View options' })).toHaveClass('studio-trigger');
+    // A variante não tem gatilho na topbar: os tiles do canvas a dirigem sozinhos.
+    expect(screen.queryByRole('button', { name: /^Appearance: / })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Appearance variants' })).toBeInTheDocument();
   });
 
   it('a aba Preview é a grade 2×2 dos tiles vivos do canvas', () => {
