@@ -8,20 +8,33 @@ import {
   effectPaint,
   getEffect,
   hasPaintedShadow,
+  isGlassActive,
   isGlowActive,
+  isNoiseActive,
+  patchBackdropBlur,
   patchDropShadow,
+  patchGlass,
   patchGlow,
   patchInnerShadow,
   patchLayerBlur,
+  patchNoise,
+  resolveBackdropBlur,
   resolveDropShadow,
+  resolveGlass,
   resolveLayerBlur,
+  resolveNoise,
+  setBackdropBlurEnabled,
   setDropEnabled,
   setEffect,
+  setGlassEnabled,
   setGlowEnabled,
-  setLayerBlurEnabled
+  setLayerBlurEnabled,
+  setNoiseEnabled,
+  NOISE_SIZE_RANGE,
+  SHADOW_SPREAD_RANGE
 } from '../utils/layerStyle';
 
-type EffectModal = 'drop' | 'inner' | 'blur' | 'glow';
+type EffectModal = 'drop' | 'inner' | 'blur' | 'glow' | 'backdrop' | 'glass' | 'noise';
 
 /**
  * Move focus into an open effect modal (first tabbable surface), so keyboard
@@ -90,6 +103,15 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
   const blurAnchorRef = useRef<HTMLButtonElement>(null);
   const blurBodyRef = useRef<HTMLDivElement>(null);
   useModalFocus(openModal === 'blur', blurBodyRef);
+  const backdropAnchorRef = useRef<HTMLButtonElement>(null);
+  const backdropBodyRef = useRef<HTMLDivElement>(null);
+  useModalFocus(openModal === 'backdrop', backdropBodyRef);
+  const glassAnchorRef = useRef<HTMLButtonElement>(null);
+  const glassBodyRef = useRef<HTMLDivElement>(null);
+  useModalFocus(openModal === 'glass', glassBodyRef);
+  const noiseAnchorRef = useRef<HTMLButtonElement>(null);
+  const noiseBodyRef = useRef<HTMLDivElement>(null);
+  useModalFocus(openModal === 'noise', noiseBodyRef);
   const glowAnchorRef = useRef<HTMLButtonElement>(null);
   const glowBodyRef = useRef<HTMLDivElement>(null);
   useModalFocus(openModal === 'glow', glowBodyRef);
@@ -110,10 +132,16 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
   const closeInnerModal = () => closeModal(innerBodyRef, innerAnchorRef);
   const closeBlurModal = () => closeModal(blurBodyRef, blurAnchorRef);
   const closeGlowModal = () => closeModal(glowBodyRef, glowAnchorRef);
+  const closeBackdropModal = () => closeModal(backdropBodyRef, backdropAnchorRef);
+  const closeGlassModal = () => closeModal(glassBodyRef, glassAnchorRef);
+  const closeNoiseModal = () => closeModal(noiseBodyRef, noiseAnchorRef);
 
   const drop = resolveDropShadow(layer);
   const dropOn = hasPaintedShadow(layer);
   const blur = resolveLayerBlur(layer);
+  const backdrop = resolveBackdropBlur(layer);
+  const glass = resolveGlass(layer);
+  const noise = resolveNoise(layer);
 
   const innerShadow = getEffect(layer, 'inner-shadow');
   const glowOn = isGlowActive(layer);
@@ -194,6 +222,18 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
                 value={Number(drop.params.blur ?? 16)}
                 onChange={(event) =>
                   touch({ effects: patchDropShadow(layer, { blur: Number(event.target.value) }) })
+                }
+                onCommit={commitTouch}
+              />
+              <Slider
+                variant="inline"
+                label="Drop spread"
+                unit="px"
+                min={String(SHADOW_SPREAD_RANGE.min)}
+                max={String(SHADOW_SPREAD_RANGE.max)}
+                value={Number(drop.params.spread ?? 0)}
+                onChange={(event) =>
+                  touch({ effects: patchDropShadow(layer, { spread: Number(event.target.value) }) })
                 }
                 onCommit={commitTouch}
               />
@@ -347,6 +387,18 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
                 }
                 onCommit={commitTouch}
               />
+              <Slider
+                variant="inline"
+                label="Inner spread"
+                unit="px"
+                min={String(SHADOW_SPREAD_RANGE.min)}
+                max={String(SHADOW_SPREAD_RANGE.max)}
+                value={Number(innerShadow.params.spread ?? 0)}
+                onChange={(event) =>
+                  touch({ effects: patchInnerShadow(layer, { spread: Number(event.target.value) }) })
+                }
+                onCommit={commitTouch}
+              />
             </div>
           )}
         </div>
@@ -393,6 +445,198 @@ export const LayerInspectorEffects = ({ layer, updateLayer, commit }: LayerInspe
                   touch({ effects: patchLayerBlur(layer, Number(event.target.value)) })
                 }
                 onCommit={commitTouch}
+              />
+            </div>
+          )}
+        </div>
+      </Popover>
+
+      <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1">
+          <Switch
+            label="Background blur"
+            checked={backdrop.enabled && backdrop.radius > 0}
+            onChange={(event) => updateLayer({ effects: setBackdropBlurEnabled(layer, event.target.checked) })}
+          />
+        </div>
+        <button
+          type="button"
+          ref={backdropAnchorRef}
+          aria-label="Edit Background blur"
+          aria-haspopup="dialog"
+          aria-expanded={openModal === 'backdrop'}
+          title="Edit Background blur"
+          onClick={() => setOpenModal((was) => (was === 'backdrop' ? null : 'backdrop'))}
+          className="shrink-0 rounded-[var(--ic-field-radius)] p-1 text-ic-text-muted hover:text-ic-text"
+        >
+          <ChevronDown size={14} aria-hidden="true" className={openModal === 'backdrop' ? 'rotate-180' : ''} />
+        </button>
+      </div>
+      <Popover
+        open={openModal === 'backdrop'}
+        anchorRef={backdropAnchorRef}
+        onClose={closeBackdropModal}
+        aria-label="Background blur settings"
+      >
+        <div ref={backdropBodyRef} tabIndex={-1} className="outline-none">
+          {openModal === 'backdrop' && (
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+              <Slider
+                variant="inline"
+                label="Background radius"
+                unit="px"
+                min="0"
+                max="60"
+                value={backdrop.radius}
+                onChange={(event) =>
+                  touch({ effects: patchBackdropBlur(layer, Number(event.target.value)) })
+                }
+                onCommit={commitTouch}
+              />
+            </div>
+          )}
+        </div>
+      </Popover>
+
+      <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1">
+          <Switch
+            label="Glass"
+            checked={isGlassActive(layer)}
+            onChange={(event) => updateLayer({ effects: setGlassEnabled(layer, event.target.checked) })}
+          />
+        </div>
+        <button
+          type="button"
+          ref={glassAnchorRef}
+          aria-label="Edit Glass"
+          aria-haspopup="dialog"
+          aria-expanded={openModal === 'glass'}
+          title="Edit Glass"
+          onClick={() => setOpenModal((was) => (was === 'glass' ? null : 'glass'))}
+          className="shrink-0 rounded-[var(--ic-field-radius)] p-1 text-ic-text-muted hover:text-ic-text"
+        >
+          <ChevronDown size={14} aria-hidden="true" className={openModal === 'glass' ? 'rotate-180' : ''} />
+        </button>
+      </div>
+      <Popover
+        open={openModal === 'glass'}
+        anchorRef={glassAnchorRef}
+        onClose={closeGlassModal}
+        aria-label="Glass settings"
+      >
+        <div ref={glassBodyRef} tabIndex={-1} className="outline-none">
+          {openModal === 'glass' && (
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+              <StudioColorPicker
+                label="Glass tint"
+                value={{ color: String(glass.params.tint ?? '#ffffff'), alpha: Number(glass.params.tintOpacity ?? 0.2) }}
+                onChange={(next) =>
+                  touch({
+                    effects: patchGlass(layer, { tint: next.color, tintOpacity: next.alpha })
+                  })
+                }
+                onCommit={commitTouch}
+              />
+              <Slider
+                variant="inline"
+                label="Glass blur"
+                unit="px"
+                min="0"
+                max="60"
+                value={Number(glass.params.blurRadius ?? 14)}
+                onChange={(event) =>
+                  touch({ effects: patchGlass(layer, { blurRadius: Number(event.target.value) }) })
+                }
+                onCommit={commitTouch}
+              />
+              <Slider
+                variant="inline"
+                label="Edge light"
+                unit="%"
+                min="0"
+                max="100"
+                value={Math.round(Number(glass.params.edgeHighlight ?? 0.6) * 100)}
+                onChange={(event) =>
+                  touch({ effects: patchGlass(layer, { edgeHighlight: Number(event.target.value) / 100 }) })
+                }
+                onCommit={commitTouch}
+              />
+              <Slider
+                variant="inline"
+                label="Frost"
+                unit="%"
+                min="0"
+                max="100"
+                value={Math.round(Number(glass.params.frost ?? 0.25) * 100)}
+                onChange={(event) =>
+                  touch({ effects: patchGlass(layer, { frost: Number(event.target.value) / 100 }) })
+                }
+                onCommit={commitTouch}
+              />
+            </div>
+          )}
+        </div>
+      </Popover>
+
+      <div className="flex items-center gap-1">
+        <div className="min-w-0 flex-1">
+          <Switch
+            label="Noise"
+            checked={isNoiseActive(layer)}
+            onChange={(event) => updateLayer({ effects: setNoiseEnabled(layer, event.target.checked) })}
+          />
+        </div>
+        <button
+          type="button"
+          ref={noiseAnchorRef}
+          aria-label="Edit Noise"
+          aria-haspopup="dialog"
+          aria-expanded={openModal === 'noise'}
+          title="Edit Noise"
+          onClick={() => setOpenModal((was) => (was === 'noise' ? null : 'noise'))}
+          className="shrink-0 rounded-[var(--ic-field-radius)] p-1 text-ic-text-muted hover:text-ic-text"
+        >
+          <ChevronDown size={14} aria-hidden="true" className={openModal === 'noise' ? 'rotate-180' : ''} />
+        </button>
+      </div>
+      <Popover
+        open={openModal === 'noise'}
+        anchorRef={noiseAnchorRef}
+        onClose={closeNoiseModal}
+        aria-label="Noise settings"
+      >
+        <div ref={noiseBodyRef} tabIndex={-1} className="outline-none">
+          {openModal === 'noise' && (
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+              <Slider
+                variant="inline"
+                label="Noise amount"
+                unit="%"
+                min="0"
+                max="100"
+                value={Math.round(Number(noise.params.amount ?? 0.3) * 100)}
+                onChange={(event) =>
+                  touch({ effects: patchNoise(layer, { amount: Number(event.target.value) / 100 }) })
+                }
+                onCommit={commitTouch}
+              />
+              <Slider
+                variant="inline"
+                label="Grain size"
+                unit="px"
+                min={String(NOISE_SIZE_RANGE.min)}
+                max={String(NOISE_SIZE_RANGE.max)}
+                value={Number(noise.params.size ?? 2)}
+                onChange={(event) =>
+                  touch({ effects: patchNoise(layer, { size: Number(event.target.value) }) })
+                }
+                onCommit={commitTouch}
+              />
+              <Switch
+                label="Monochrome"
+                checked={noise.params.monochrome === undefined ? true : Boolean(noise.params.monochrome)}
+                onChange={(event) => touch({ effects: patchNoise(layer, { monochrome: event.target.checked }) })}
               />
             </div>
           )}

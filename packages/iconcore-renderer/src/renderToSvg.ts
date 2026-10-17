@@ -8,8 +8,32 @@ import { smoothRectPathD } from './geometry/smoothCorners';
 import { conicStartRadians, cssAngleVector, expandStopsDetailed, sampleStops } from './gradient';
 import { parseSvgIntrinsicSize, namespaceSvgIds, setSvgViewport } from './svgSize';
 import { applySvgPaintOverrides } from './svgPaint';
+import { glassActive, noiseActive, noiseSizePx } from './composeLayers';
 import { isItalic, resolveTextPlacement } from './textLayout';
 import type { RenderBackground } from './types';
+
+/**
+ * Peak rect opacity for the glass frost coat at frost = 1.
+ *
+ * The canvas tile carries ±44/255 of variance at an alpha of
+ * `FROST_PEAK_ALPHA` (0.16); `feTurbulence` fields run hotter, so the SVG
+ * rect runs cooler to land in the same subtle band. Calibrated once against
+ * the parity fixture — both coats stay whisper-quiet and the gate absorbs
+ * the texture difference (grain positions are engine-specific by nature).
+ */
+const FROST_SVG_PEAK = 0.22;
+
+/**
+ * Peak rect opacity for the noise-grain coat at amount = 1.
+ *
+ * Same calibration story as the frost: the canvas tile carries ±44/255 of
+ * variance at `NOISE_PEAK_ALPHA` (0.5); turbulence fields run cooler per
+ * opacity point, so the rect runs hotter to land in the same band.
+ * Calibrated once against the parity fixture (mean deviation per channel:
+ * canvas 16.3, svg 15.4 at peak 0.7) — grain positions stay
+ * engine-specific, density matches.
+ */
+const NOISE_SVG_PEAK = 0.7;
 
 /**
  * A superellipse outline for the SVG clip path.
@@ -159,6 +183,12 @@ const imageFilterToSvgFilter = (filter: ImageFilter | undefined, id: string): st
  * inside the shape), then drop shadow (a glow is the same effect with zero
  * offset), then the layer blur. Mirrors the canvas stack; no enabled effect
  * produces no filter, so projects without effects keep their exact markup.
+ *
+ * Spread rides `feMorphology` before the blur on both shadows — dilate for a
+ * positive spread, erode for a negative one — the same contour-first order
+ * the canvas uses (morphology before `blur()`), which is what keeps the two
+ * renderings in agreement. A zero/absent spread emits no primitive at all,
+ * so every project written before spread existed keeps its exact markup.
  */
 const effectFilterMarkup = (effects: LayerEffect[] | undefined, id: string): string => {
   const enabled = (kind: string) => effects?.find((effect) => effect.kind === kind && effect.enabled);
@@ -168,17 +198,45 @@ const effectFilterMarkup = (effects: LayerEffect[] | undefined, id: string): str
   const blur = enabled('surface-blur');
   if (!inner && !drop && !blur) return '';
 
+  const spreadOf = (effect: LayerEffect): number => Number(effect.params.spread ?? 0);
+  /**
+   * `feMorphology` step for a non-zero spread, or empty when there is none.
+   *
+   * The sign flips for the inner shadow, and that is not a typo: a drop
+   * shadow grows by dilating the silhouette (the contour moves out), while
+   * the inner construction below casts the *shape itself* (`alpha −
+   * blurred`) — dilating it would push the shadow ring OUTSIDE the shape,
+   * where it reads as an outer halo. Eroding shrinks the caster, which grows
+   * the positive band INWARD — the CSS `inset spread` direction. Measured:
+   * with the drop sign, inner ±10 sat at 10–14% fora-tolerancia against the
+   * canvas (whose classic path agrees at ~2%); flipped, it converges back.
+   */
+  const spreadStep = (effect: LayerEffect, source: string, tag: string, flip = false): { step: string; from: string } => {
+    const raw = spreadOf(effect);
+    const spread = flip ? -raw : raw;
+    if (spread === 0) return { step: '', from: source };
+    const result = `${id}-${tag}`;
+    return {
+      step:
+        `<feMorphology in="${source}" operator="${spread > 0 ? 'dilate' : 'erode'}" ` +
+        `radius="${Math.abs(spread)}" result="${result}"/>`,
+      from: result
+    };
+  };
+
   const parts: string[] = [];
   let source = 'SourceGraphic';
 
   if (inner) {
+    const morphed = spreadStep(inner, 'SourceAlpha', 'im', true);
+    if (morphed.step) parts.push(morphed.step);
     const x = Number(inner.params.x ?? 0);
     const y = Number(inner.params.y ?? 6);
     const r = Number(inner.params.blur ?? 12) / 2;
     const color = String(inner.params.color ?? 'black');
     const opacity = Number(inner.params.opacity ?? 0.35);
     parts.push(
-      `<feOffset dx="${x}" dy="${y}" in="SourceAlpha" result="${id}-io"/>`,
+      `<feOffset dx="${x}" dy="${y}" in="${morphed.from}" result="${id}-io"/>`,
       `<feGaussianBlur stdDeviation="${r}" in="${id}-io" result="${id}-ib"/>`,
       `<feComposite in="${id}-ib" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="${id}-ic"/>`,
       `<feFlood flood-color="${color}" flood-opacity="${opacity}" result="${id}-if"/>`,
@@ -194,9 +252,32 @@ const effectFilterMarkup = (effects: LayerEffect[] | undefined, id: string): str
     const r = Number(drop.params.blur ?? 16) / 2;
     const color = String(drop.params.color ?? 'black');
     const opacity = Number(drop.params.opacity ?? 1);
-    parts.push(
-      `<feDropShadow dx="${x}" dy="${y}" stdDeviation="${r}" flood-color="${color}" flood-opacity="${opacity}" in="${source}" result="${id}-d"/>`
-    );
+    const morphed = spreadStep(drop, 'SourceAlpha', 'dm');
+    if (morphed.step) {
+      // A spread shadow is the spec's own decomposition of `feDropShadow`
+      // (blur → offset → flood → clip → merge under the source), written out
+      // by hand for one measured reason: the parity gate's rasterizer
+      // (librsvg 2.63.2, via sharp) IGNORES `feDropShadow`'s `in` attribute —
+      // a nonexistent ref, `SourceAlpha` and a morphed result all rasterize
+      // byte-identically (`.dev/tmp/fx2-dropshadow-in.mjs`). Feeding the
+      // morphed silhouette through `feDropShadow` is correct in browsers
+      // (Chromium honours `in`) and unmeasurable in the gate; the expansion
+      // below renders identically in both (it IS what `feDropShadow` means),
+      // so canvas, browser SVG and gate SVG agree three ways instead of two.
+      // Without spread the shorthand stays, byte-identical to always.
+      parts.push(
+        morphed.step,
+        `<feGaussianBlur stdDeviation="${r}" in="${morphed.from}" result="${id}-dg"/>`,
+        `<feOffset dx="${x}" dy="${y}" in="${id}-dg" result="${id}-do"/>`,
+        `<feFlood flood-color="${color}" flood-opacity="${opacity}" result="${id}-df"/>`,
+        `<feComposite in="${id}-df" in2="${id}-do" operator="in" result="${id}-ds"/>`,
+        `<feMerge result="${id}-d"><feMergeNode in="${id}-ds"/><feMergeNode in="SourceGraphic"/></feMerge>`
+      );
+    } else {
+      parts.push(
+        `<feDropShadow dx="${x}" dy="${y}" stdDeviation="${r}" flood-color="${color}" flood-opacity="${opacity}" in="${source}" result="${id}-d"/>`
+      );
+    }
     source = `${id}-d`;
   }
 
@@ -491,9 +572,54 @@ export const renderToSvgWithOptions = (
 
   let svgLayers = '';
 
-  for (const layer of visible) {
+  // The below-stack accumulator for backdrop blur (Tier 2, fatia 2.1): every
+  // finished layer's own markup lands here, starting with the background, so
+  // a backdrop-blurred layer can re-emit everything beneath it — blurred and
+  // clipped to its own footprint — before its own paint. See the decision in
+  // the backdrop block inside the loop.
+  const below: string[] = [bgMarkup];
+
+  /**
+   * One layer's own markup, without anything below it.
+   *
+   * Extracted so the backdrop block can account each layer into `below`
+   * without touching thirteen `continue` exits: every exit returns the
+   * markup built so far (empty for a skipped layer), and the loop appends
+   * and records it in one place. Emitted bytes are unchanged — same
+   * appends, same order, same ids per document without backdrop blur.
+   */
+  /**
+   * Footprint clip for blur/glass/noise coats: the shape outline, or the
+   * layer box for shapeless layers (sized when resolved, full canvas
+   * otherwise with a warning — degenerate but bounded). Returns the clip id.
+   * Shared by the base and the noise coat, which live in sibling functions.
+   */
+  const footprintClipMarkup = (layer: IconLayer, tag: string, warnLabel: string): string => {
+    const clipId = nextId(`${tag}-clip-${layer.id}`);
+    const footprint = layer.source.shape;
+    if (footprint) {
+      const ox = (canvas.width - footprint.width) / 2;
+      const oy = (canvas.height - footprint.height) / 2;
+      defs.push(`<clipPath id="${clipId}">${shapeMarkup(footprint, 'black', 1, '', '', ox, oy)}</clipPath>`);
+    } else {
+      const natural = imageSizes?.get(layer.id);
+      const box = layerBaseRect({ source: layer.source }, canvas, natural);
+      defs.push(
+        `<clipPath id="${clipId}"><rect x="${box.cx - box.w / 2}" y="${box.cy - box.h / 2}" ` +
+        `width="${box.w}" height="${box.h}"/></clipPath>`
+      );
+      if (!natural) {
+        warnings.push(
+          `Layer "${layer.name}" uses ${warnLabel} without a shape or resolvable image size: the SVG covers the whole below-stack.`
+        );
+      }
+    }
+    return clipId;
+  };
+
+  const renderLayerBase = (layer: IconLayer, transformAttr: string): string => {
+    let own = '';
     const opacity = layer.opacity;
-    const transformAttr = layerTransformAttr(canvas, layer.transform);
 
     // Build the SVG filter for this layer: the layer effects (shadows/blur)
     // take precedence, falling back to the image adjustments for image layers.
@@ -503,15 +629,158 @@ export const renderToSvgWithOptions = (
     if (filterMarkup) defs.push(filterMarkup);
     const filterAttr = filterMarkup ? ` filter="url(#${filterId})"` : '';
 
+    // The below-stack blurred inside the footprint. The transform wraps the
+    // clip, not the content: like the canvas (clip under the layer
+    // transform, snapshot drawn untransformed), the clip moves with the layer
+    // while the below-stack stays where it was.
+    const blurredBelowGroup = (tag: string, radius: number): string => {
+      const clipId = footprintClipMarkup(layer, tag, 'backdrop blur');
+      const blurId = nextId(`${tag}-blur-${layer.id}`);
+      defs.push(
+        `<filter id="${blurId}" x="-60%" y="-60%" width="220%" height="220%">` +
+        `<feGaussianBlur stdDeviation="${radius}"/></filter>`
+      );
+      return (
+        `<g transform="${transformAttr}"><g clip-path="url(#${clipId})" filter="url(#${blurId})">` +
+        `${below.join('')}</g></g>\n`
+      );
+    };
+
+    /** Clamp a 0..1 param without importing canvas colour maths for one call. */
+    const unit = (value: number): number => Math.min(1, Math.max(0, value));
+
+    /**
+     * One glass layer's coats: blurred-below, tint, inner edge, frost.
+     * Mirrors `paintGlass` coat for coat; an off coat is skipped.
+     */
+    const glassGroupMarkup = (effect: LayerEffect, outerTransform: string): string => {
+      const clipId = footprintClipMarkup(layer, 'glass', 'glass');
+      const footprint = layer.source.shape;
+      let inner = '';
+
+      const blurRadius = Number(effect.params.blurRadius ?? 0);
+      if (blurRadius > 0) {
+        const blurId = nextId(`glass-blur-${layer.id}`);
+        defs.push(
+          `<filter id="${blurId}" x="-60%" y="-60%" width="220%" height="220%">` +
+          `<feGaussianBlur stdDeviation="${blurRadius}"/></filter>`
+        );
+        inner += `<g clip-path="url(#${clipId})" filter="url(#${blurId})">${below.join('')}</g>`;
+      }
+
+      const tintOpacity = unit(Number(effect.params.tintOpacity ?? 0));
+      if (tintOpacity > 0) {
+        const paint = toRgba(String(effect.params.tint ?? '#ffffff'), tintOpacity);
+        if (footprint) {
+          const ox = (canvas.width - footprint.width) / 2;
+          const oy = (canvas.height - footprint.height) / 2;
+          inner += shapeMarkup(footprint, paint, 1, '', '', ox, oy);
+        } else {
+          const box = layerBaseRect({ source: layer.source }, canvas, imageSizes?.get(layer.id));
+          inner +=
+            `<rect x="${box.cx - box.w / 2}" y="${box.cy - box.h / 2}" ` +
+            `width="${box.w}" height="${box.h}" fill="${paint}"/>\n`;
+        }
+      }
+
+      const edge = unit(Number(effect.params.edgeHighlight ?? 0));
+      if (edge > 0 && footprint) {
+        const ox = (canvas.width - footprint.width) / 2;
+        const oy = (canvas.height - footprint.height) / 2;
+        // 6px centred stroke clipped to the footprint = 3px inner, the same
+        // coat `paintGlass` strokes on canvas (`GLASS_EDGE_PX * 2`).
+        inner += `<g clip-path="url(#${clipId})">` +
+          shapeMarkup(
+            footprint,
+            'none',
+            1,
+            '',
+            '',
+            ox,
+            oy,
+            undefined,
+            'round',
+            ` stroke="${toRgba('#ffffff', edge)}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"`
+          ) +
+          `</g>`;
+      }
+
+      const frost = unit(Number(effect.params.frost ?? 0));
+      if (frost > 0) {
+        const noiseId = nextId(`glass-noise-${layer.id}`);
+        // Fixed seed, fractal noise, desaturated: the vector cousin of the
+        // canvas grain tile (`paintGrainTile`, same fixed-seed contract).
+        // Fields differ per engine, so both sides stay subtle and the parity
+        // threshold absorbs the texture — what the gate pins is that the
+        // coat exists and is bounded, not the grain positions.
+        defs.push(
+          `<filter id="${noiseId}" x="0%" y="0%" width="100%" height="100%">` +
+          `<feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="7" stitchTiles="stitch"/>` +
+          `<feColorMatrix type="saturate" values="0"/></filter>`
+        );
+        const box = footprint
+          ? {
+              x: (canvas.width - footprint.width) / 2,
+              y: (canvas.height - footprint.height) / 2,
+              w: footprint.width,
+              h: footprint.height
+            }
+          : (() => {
+              const b = layerBaseRect({ source: layer.source }, canvas, imageSizes?.get(layer.id));
+              return { x: b.cx - b.w / 2, y: b.cy - b.h / 2, w: b.w, h: b.h };
+            })();
+        inner += `<g clip-path="url(#${clipId})">` +
+          `<rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" ` +
+          `filter="url(#${noiseId})" opacity="${(frost * FROST_SVG_PEAK).toFixed(4)}"/>\n` +
+          `</g>`;
+      }
+
+      return `<g transform="${outerTransform}">${inner}</g>\n`;
+    };
+
+    //
+    // SPIKE DECISION (fatia 2.1, recorded here because this is where it
+    // lives): SVG has no backdrop primitive, and the two candidate
+    // strategies were (a) rasterize-the-below-stack into an embedded
+    // `data:` image, or (b) re-emit the below-stack as vector markup under
+    // a blur + clip. (a) is impossible synchronously — `renderToSvg` cannot
+    // rasterize, and threading a raster through every exporter breaks "no
+    // exporter owns effect logic". (b) is pure markup, deterministic, works
+    // in every SVG reader (no `backdrop-filter` support gamble), and nests
+    // correctly when several layers blur (each sees everything below it).
+    // Cost: the below-stack markup repeats per blurred layer — linear in
+    // layers × blurred layers, trivial for icons.
+    //
+    // Mapping: canvas blurs the snapshot with `blur(radius px)`, and the
+    // kernel proof (`.dev/tmp/fx2-kernel-proof.mjs`) measured that 1:1
+    // against `feGaussianBlur stdDeviation=radius` — NOT the `/2` the
+    // Tier-1 surface-blur path uses (which disagrees with its canvas by 2×
+    // and ships no parity fixture to notice — see IC-N51, left untouched).
+    // A non-positive radius is off: zero markup, like every disabled effect.
+    const backdrop = (layer.effects ?? []).find((effect) => effect.kind === 'backdrop-blur' && effect.enabled);
+    const backdropRadius = backdrop ? Number(backdrop.params.radius ?? 0) : 0;
+    if (backdrop && backdropRadius > 0) {
+      own += blurredBelowGroup('backdrop', backdropRadius);
+    }
+
+    // Glass v1 (Tier 2, fatia 2.2): the same blurred-below plus tint, inner
+    // edge and frost — one footprint clip shared by every coat, like the
+    // canvas (see `paintGlass` in `composeLayers.ts`). A coat at zero is
+    // skipped; an enabled entry with every param at zero emits nothing.
+    const glass = (layer.effects ?? []).find((effect) => effect.kind === 'glass');
+    if (glass && glassActive(glass)) {
+      own += glassGroupMarkup(glass, transformAttr);
+    }
+
     if (layer.kind === 'text' && layer.text) {
       const fill = layer.fill;
-      if (!fill || fill.kind === 'none') continue;
+      if (!fill || fill.kind === 'none') return own;
       let paint: string;
       if (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient') {
         paint = sampleStops(fill.stops, 0);
       } else {
         const resolved = paintFor(fill, nextId(`text-${layer.id}`));
-        if (!resolved) continue;
+        if (!resolved) return own;
         if (resolved.defs) defs.push(resolved.defs);
         paint = resolved.paint;
       }
@@ -544,8 +813,8 @@ export const renderToSvgWithOptions = (
       // `white-space`, mas o **librsvg não implementa o `white-space` do SVG 2** — a
       // documentação dele diz isso textualmente. `xml:space` é hoje a única forma que
       // funciona nos dois rasterizadores, e o Illustrator emite em todo SVG que exporta.
-      svgLayers += `<text x="${place.x}" y="${place.y}" text-anchor="${place.svgAnchor}" dominant-baseline="middle" font-family="${escapeXml(layer.text.fontFamily)}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}"${styleAttr} fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr} xml:space="preserve">${escapeXml(layer.text.content)}</text>\n`;
-      continue;
+      own += `<text x="${place.x}" y="${place.y}" text-anchor="${place.svgAnchor}" dominant-baseline="middle" font-family="${escapeXml(layer.text.fontFamily)}" font-size="${layer.text.fontSize}" font-weight="${layer.text.fontWeight}"${styleAttr} fill="${paint}" opacity="${opacity}" transform="${transformAttr}"${filterAttr} xml:space="preserve">${escapeXml(layer.text.content)}</text>\n`;
+      return own;
     }
 
     if (layer.source.type === 'inline' && layer.source.data && layer.source.mimeType === 'image/svg+xml') {
@@ -571,8 +840,8 @@ export const renderToSvgWithOptions = (
         const natural = parseSvgIntrinsicSize(scoped);
         if (!natural) {
           // No intrinsic size to align with: embed as-is (previous behaviour).
-          svgLayers += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${scoped}</g>\n`;
-          continue;
+          own += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>${scoped}</g>\n`;
+          return own;
         }
         // The Canvas2D backend draws the asset into the layer rectangle, so the
         // SVG export must place it in the same rectangle: pin the document's
@@ -582,14 +851,14 @@ export const renderToSvgWithOptions = (
         const placement =
           `translate(${layerRect.cx - layerRect.w / 2},${layerRect.cy - layerRect.h / 2}) ` +
           `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
-        svgLayers +=
+        own +=
           `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>` +
           `<g transform="${placement}">${setSvgViewport(scoped, natural.width, natural.height)}</g>` +
           `</g>\n`;
       } catch {
         // Skip layers with invalid base64
       }
-      continue;
+      return own;
     }
 
     // Raster image layer (inline base64, non-SVG): embed as a data: URI when the
@@ -603,7 +872,7 @@ export const renderToSvgWithOptions = (
           `translate(${layerRect.cx - layerRect.w / 2},${layerRect.cy - layerRect.h / 2}) ` +
           `scale(${layerRect.w / natural.width},${layerRect.h / natural.height})`;
         const dataUri = `data:${layer.source.mimeType};base64,${layer.source.data}`;
-        svgLayers +=
+        own +=
           `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}>` +
           `<image x="0" y="0" width="${natural.width}" height="${natural.height}" href="${dataUri}" transform="${placement}"/>` +
           `</g>\n`;
@@ -620,16 +889,16 @@ export const renderToSvgWithOptions = (
           `Image layer "${layer.name}" could not be embedded in the SVG (no resolvable size) and was omitted.`
         );
       }
-      continue;
+      return own;
     }
 
     const shape = layer.source.shape;
-    if (!shape) continue;
+    if (!shape) return own;
 
     const fill = layer.fill;
     const stroke = layer.stroke && layer.stroke.width > 0 ? layer.stroke : undefined;
     // A shape with no paint (no fill and no stroke) is transparent.
-    if ((!fill || fill.kind === 'none') && !stroke) continue;
+    if ((!fill || fill.kind === 'none') && !stroke) return own;
 
     const ox = (canvas.width - shape.width) / 2;
     const oy = (canvas.height - shape.height) / 2;
@@ -638,7 +907,7 @@ export const renderToSvgWithOptions = (
     // always was — identical markup for every existing project).
     if (shape.kind === 'line') {
       if (fill && (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient')) {
-        svgLayers += shapeMarkup(
+        own += shapeMarkup(
           shape,
           sampleStops(fill.stops, 0),
           opacity,
@@ -651,9 +920,9 @@ export const renderToSvgWithOptions = (
         );
       } else if (fill && fill.kind !== 'none') {
         const resolved = paintFor(fill, nextId(`line-${layer.id}`));
-        if (!resolved) continue;
+        if (!resolved) return own;
         if (resolved.defs) defs.push(resolved.defs);
-        svgLayers += shapeMarkup(
+        own += shapeMarkup(
           shape,
           resolved.paint,
           opacity,
@@ -665,7 +934,7 @@ export const renderToSvgWithOptions = (
           stroke?.cap ?? 'round'
         );
       }
-      continue;
+      return own;
     }
 
     if (fill && (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient')) {
@@ -674,15 +943,15 @@ export const renderToSvgWithOptions = (
       // The approximation stands in for a conic/diamond gradient, and it inherits
       // the layer's blend mode too — otherwise a layer with both would lose the
       // blend in SVG while keeping it on canvas.
-      svgLayers += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})"${filterAttr}${blendModeAttr(layer.blendMode)}>${approximationMarkup(fill, shape)}</g>\n`;
+      own += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})"${filterAttr}${blendModeAttr(layer.blendMode)}>${approximationMarkup(fill, shape)}</g>\n`;
       if (stroke) {
-        svgLayers += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}${blendModeAttr(layer.blendMode)}>${strokeOutline(shape, stroke, ox, oy, canvas, defs, nextId)}</g>\n`;
+        own += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}${blendModeAttr(layer.blendMode)}>${strokeOutline(shape, stroke, ox, oy, canvas, defs, nextId)}</g>\n`;
       }
-      continue;
+      return own;
     }
 
     const resolved = fill && fill.kind !== 'none' ? paintFor(fill, nextId(`fill-${layer.id}`)) : null;
-    if (fill && fill.kind !== 'none' && !resolved) continue;
+    if (fill && fill.kind !== 'none' && !resolved) return own;
     if (resolved?.defs) defs.push(resolved.defs);
     // Centred like the Canvas2D compositor: `((S - w) / 2, (S - h) / 2)`.
     const fillMarkup = resolved
@@ -691,18 +960,69 @@ export const renderToSvgWithOptions = (
 
     if (!stroke) {
       // No stroke: the exact markup this pipeline always produced.
-      svgLayers += fillMarkup;
-      continue;
+      own += fillMarkup;
+      return own;
     }
 
     // Stroke present: one group carries the layer's opacity/transform/filter/
     // blend so fill + outline composite exactly like the canvas stack — two
     // siblings with their own opacity would double it where they overlap.
     const innerFill = resolved ? shapeMarkup(shape, resolved.paint, 1, '', '', ox, oy) : '';
-    svgLayers +=
+    own +=
       `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}${blendModeAttr(layer.blendMode)}>` +
       `${innerFill}${strokeOutline(shape, stroke, ox, oy, canvas, defs, nextId)}` +
       `</g>\n`;
+    return own;
+  };
+
+  /**
+   * The noise-grain coat, AFTER the layer's own paint.
+   *
+   * Grain is an overlay, not a behind-effect: emitting it inside the base
+   * (before the fill) buries it under the layer's own opaque paint — measured
+   * as 0.0 deviation in sharp while the isolated markup grained fine. The
+   * loop appends this after the base, so it sits on top in both pipelines
+   * (the canvas paints it last in `paintLayerContent` for the same reason).
+   * The coat joins `below`, so a later backdrop-blur sees grained layers —
+   * exactly what the canvas snapshot sees.
+   */
+  const renderNoiseCoat = (layer: IconLayer, transformAttr: string): string => {
+    const noise = (layer.effects ?? []).find((effect) => effect.kind === 'noise-grain');
+    if (!noiseActive(noise)) return '';
+    const amount = Math.min(1, Math.max(0, Number(noise!.params.amount ?? 0)));
+    const cell = noiseSizePx(noise!);
+    const mono = noise!.params.monochrome === undefined ? true : Boolean(noise!.params.monochrome);
+    const noiseId = nextId(`noise-${layer.id}`);
+    defs.push(
+      `<filter id="${noiseId}" x="0%" y="0%" width="100%" height="100%">` +
+      `<feTurbulence type="fractalNoise" baseFrequency="${(0.9 / cell).toFixed(3)}" numOctaves="2" seed="3" stitchTiles="stitch"/>` +
+      (mono ? `<feColorMatrix type="saturate" values="0"/>` : '') +
+      `</filter>`
+    );
+    const clipId = footprintClipMarkup(layer, 'noise', 'noise grain');
+    const footprint = layer.source.shape;
+    const box = footprint
+      ? {
+          x: (canvas.width - footprint.width) / 2,
+          y: (canvas.height - footprint.height) / 2,
+          w: footprint.width,
+          h: footprint.height
+        }
+      : (() => {
+          const b = layerBaseRect({ source: layer.source }, canvas, imageSizes?.get(layer.id));
+          return { x: b.cx - b.w / 2, y: b.cy - b.h / 2, w: b.w, h: b.h };
+        })();
+    return `<g transform="${transformAttr}"><g clip-path="url(#${clipId})">` +
+      `<rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" ` +
+      `filter="url(#${noiseId})" opacity="${(amount * NOISE_SVG_PEAK).toFixed(4)}"/>\n` +
+      `</g></g>`;
+  };
+
+  for (const layer of visible) {
+    const transformAttr = layerTransformAttr(canvas, layer.transform);
+    const own = renderLayerBase(layer, transformAttr) + renderNoiseCoat(layer, transformAttr);
+    svgLayers += own;
+    below.push(own);
   }
 
   const defsBlock = () => (defs.length > 0 ? `  <defs>\n    ${defs.join('\n    ')}\n  </defs>\n` : '');

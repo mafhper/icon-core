@@ -101,9 +101,15 @@ export const setShadow = (layer: IconLayer, shadow: LayerEffect): LayerEffect[] 
 };
 
 const SHADOW_DEFAULTS: Record<string, Record<string, number | string>> = {
-  'drop-shadow': { x: 0, y: 8, blur: 16, color: '#000000', opacity: 0.5 },
-  'inner-shadow': { x: 0, y: 6, blur: 12, color: '#000000', opacity: 0.35 }
+  // Spread is additive and optional (absent = 0): the renderers read
+  // `params.spread ?? 0`, so a `0` here only makes the new control open on
+  // the value the engine already paints — it changes no existing entry.
+  'drop-shadow': { x: 0, y: 8, blur: 16, spread: 0, color: '#000000', opacity: 0.5 },
+  'inner-shadow': { x: 0, y: 6, blur: 12, spread: 0, color: '#000000', opacity: 0.35 }
 };
+
+/** Spread slider range (px), shared by the drop and inner modals. */
+export const SHADOW_SPREAD_RANGE = { min: -20, max: 20 } as const;
 
 /** A generic shadow effect (drop/inner), or a disabled default for the inspector. */
 export const getEffect = (layer: IconLayer, kind: 'drop-shadow' | 'inner-shadow'): LayerEffect =>
@@ -292,6 +298,133 @@ export const setLayerBlurEnabled = (layer: IconLayer, enabled: boolean): LayerEf
  */
 export const patchLayerBlur = (layer: IconLayer, radius: number): LayerEffect[] =>
   setEffect(layer, { kind: 'surface-blur', enabled: true, params: { radius } });
+
+/** Background-blur radius (px) for a layer, 0 when none/disabled/off. */
+export const backdropBlurPx = (layer: IconLayer): number => {
+  const effect = layer.effects?.find((item) => item.kind === 'backdrop-blur' && item.enabled);
+  return effect ? Number(effect.params.radius ?? 0) : 0;
+};
+
+/**
+ * The working background blur for the modal: the stored entry (enabled or
+ * not), else a disabled default. Reading never writes. A non-positive radius
+ * is off in both pipelines (zero markup, zero work), so the default 12 opens
+ * on a value that visibly acts.
+ */
+export const resolveBackdropBlur = (layer: IconLayer): { enabled: boolean; radius: number } => {
+  const stored = layer.effects?.find((effect) => effect.kind === 'backdrop-blur');
+  if (stored) return { enabled: stored.enabled, radius: Number(stored.params.radius ?? 12) };
+  return { enabled: false, radius: 12 };
+};
+
+/** Enable or disable the background blur without destroying params. */
+export const setBackdropBlurEnabled = (layer: IconLayer, enabled: boolean): LayerEffect[] => {
+  const { radius } = resolveBackdropBlur(layer);
+  return setEffect(layer, { kind: 'backdrop-blur', enabled, params: { radius } });
+};
+
+/** Edit the background radius from the modal: materialises and enables. */
+export const patchBackdropBlur = (layer: IconLayer, radius: number): LayerEffect[] =>
+  setEffect(layer, { kind: 'backdrop-blur', enabled: true, params: { radius } });
+
+/** Glass defaults: the v1 taste call (white tint, soft blur, lit edge, whisper of frost). */
+export const GLASS_DEFAULTS: Record<string, number | string> = {
+  tint: '#ffffff',
+  tintOpacity: 0.2,
+  blurRadius: 14,
+  edgeHighlight: 0.6,
+  frost: 0.25
+};
+
+/** The working glass entry for the modal: stored, else a disabled default. Reading never writes. */
+export const resolveGlass = (layer: IconLayer): LayerEffect =>
+  layer.effects?.find((effect) => effect.kind === 'glass') ?? {
+    kind: 'glass',
+    enabled: false,
+    params: { ...GLASS_DEFAULTS }
+  };
+
+/** Whether the glass row reads ON: enabled with at least one live param (mirrors the engine rule). */
+export const isGlassActive = (layer: IconLayer): boolean => {
+  const glass = layer.effects?.find((effect) => effect.kind === 'glass');
+  if (!glass?.enabled) return false;
+  return (
+    Number(glass.params.blurRadius ?? 0) > 0 ||
+    Number(glass.params.tintOpacity ?? 0) > 0 ||
+    Number(glass.params.edgeHighlight ?? 0) > 0 ||
+    Number(glass.params.frost ?? 0) > 0
+  );
+};
+
+/** Enable or disable glass without destroying params. */
+export const setGlassEnabled = (layer: IconLayer, enabled: boolean): LayerEffect[] => {
+  const entry: LayerEffect = { ...resolveGlass(layer), enabled };
+  return setEffect(layer, entry);
+};
+
+/** Noise-grain defaults: whisper of monochrome film grain. */
+export const NOISE_DEFAULTS: Record<string, number | boolean> = {
+  amount: 0.3,
+  size: 2,
+  monochrome: true
+};
+
+/** Grain cell slider range (px): the proven interval — the engine clamps past it. */
+export const NOISE_SIZE_RANGE = { min: 1, max: 8 } as const;
+
+/** The working noise entry for the modal: stored, else a disabled default. Reading never writes. */
+export const resolveNoise = (layer: IconLayer): LayerEffect =>
+  layer.effects?.find((effect) => effect.kind === 'noise-grain') ?? {
+    kind: 'noise-grain',
+    enabled: false,
+    params: { ...NOISE_DEFAULTS }
+  };
+
+/** Whether the grain row reads ON: enabled with a live amount (mirrors the engine rule). */
+export const isNoiseActive = (layer: IconLayer): boolean => {
+  const noise = layer.effects?.find((effect) => effect.kind === 'noise-grain');
+  return Boolean(noise?.enabled) && Number(noise?.params.amount ?? 0) > 0;
+};
+
+/** Enable or disable grain without destroying params. */
+export const setNoiseEnabled = (layer: IconLayer, enabled: boolean): LayerEffect[] => {
+  const entry: LayerEffect = { ...resolveNoise(layer), enabled };
+  return setEffect(layer, entry);
+};
+
+/**
+ * Edit grain params from the modal. Materialises and enables. Only the three
+ * v1 keys survive; anything else is dropped.
+ */
+export const patchNoise = (
+  layer: IconLayer,
+  patch: Partial<Record<'amount' | 'size' | 'monochrome', number | boolean>>
+): LayerEffect[] => {
+  const base = resolveNoise(layer);
+  const params = { ...base.params };
+  for (const key of ['amount', 'size', 'monochrome'] as const) {
+    if (patch[key] !== undefined) params[key] = patch[key] as number | boolean;
+  }
+  return setEffect(layer, { ...base, enabled: true, params });
+};
+
+/**
+ * Edit glass params from the modal. Materialises the entry and enables it,
+ * like every other patch: a control that moves with no visible result does
+ * not exist. Only the five v1 keys survive — anything else is dropped, so a
+ * typo cannot smuggle a sixth param into the document.
+ */
+export const patchGlass = (
+  layer: IconLayer,
+  patch: Partial<Record<'tint' | 'tintOpacity' | 'blurRadius' | 'edgeHighlight' | 'frost', number | string>>
+): LayerEffect[] => {
+  const base = resolveGlass(layer);
+  const params = { ...base.params };
+  for (const key of ['tint', 'tintOpacity', 'blurRadius', 'edgeHighlight', 'frost'] as const) {
+    if (patch[key] !== undefined) params[key] = patch[key] as number | string;
+  }
+  return setEffect(layer, { ...base, enabled: true, params });
+};
 
 /**
  * Whether the layer currently wears a glow: an enabled drop shadow with zero

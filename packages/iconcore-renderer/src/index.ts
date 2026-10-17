@@ -1,4 +1,5 @@
 export { composeLayers } from './composeLayers';
+export { paintGrainTile, glassActive, noiseActive, noiseSizePx, GRAIN_TILE_PX, GRAIN_SEED, NOISE_SIZE_MIN, NOISE_SIZE_MAX } from './composeLayers';
 export { renderProject, resolveCanvasBackground } from './renderProject';
 export { parseHex, rgbToHex, toRgba, clamp01, parseRgba, toOklab, fromOklab, mixOklab } from './color';
 export type { Rgb, Oklab } from './color';

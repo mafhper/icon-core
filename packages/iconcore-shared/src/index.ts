@@ -198,6 +198,8 @@ export type LayerEffectKind =
   | 'depth-shadow'
   | 'drop-shadow'
   | 'inner-shadow'
+  | 'backdrop-blur'
+  | 'glass'
   | 'inner-lift'
   | 'edge-highlight'
   | 'soft-refraction'
