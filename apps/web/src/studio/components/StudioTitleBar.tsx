@@ -1,13 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject
-} from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   ChevronRight,
@@ -16,8 +7,8 @@ import {
   FileX2,
   Info,
   Keyboard,
+  Menu as MenuIcon,
   Moon,
-  MoreHorizontal,
   PenLine,
   Save,
   Settings2,
@@ -29,17 +20,12 @@ import { AboutModal } from '../../composer/components/AboutModal';
 import { requestExportFocus } from '../../composer/utils/exportFocus';
 import { modKey } from '../../composer/utils/platform';
 import { isDesktopRuntime } from '../../lib/desktopExport';
-import {
-  EMPTY_BAR_OVERFLOW,
-  reduceBarOverflow,
-  type StudioBarActionId,
-  type StudioBarOverflowState
-} from '../barOverflow';
 import type { StudioResolvedTheme, StudioThemePreference } from '../useStudioTheme';
 import { variantLabel } from '../variantLabels';
 import { StudioConfirmDialog } from './StudioConfirmDialog';
 import { StudioNameDialog } from './StudioNameDialog';
 import { StudioPreferencesDialog } from './StudioPreferencesDialog';
+import { StudioWindowControls } from './StudioWindowControls';
 
 type StudioMenuDialog = 'new' | 'rename' | 'preferences' | 'confirm-new' | 'confirm-close' | 'about' | null;
 
@@ -51,149 +37,35 @@ interface StudioTitleBarProps {
   onOpenShortcuts: () => void;
 }
 
-interface StudioBarAction {
-  label: string;
-  icon: ReactNode;
-  /** Display only — the binding lives in `useKeyboardShortcuts`. */
-  shortcut?: string;
-  disabled?: boolean;
-  run: () => void;
-}
-
-type StudioBarGroupId = 'document' | 'output' | 'system';
-
 /**
- * The bar's three groups, in the order they paint. Groups are a reading order,
- * not a collapse order — that one is `STUDIO_BAR_PRIORITY`, and it is what
- * decides which action leaves the bar first.
- *
- * Document and Output carry their labels (they are the high-frequency half and
- * a bare glyph for "Close" is a guess); System is icon-only, the convention the
- * window chrome already teaches.
+ * The theme row is a switch, not a menu of three: it names the state it takes
+ * you to. `system` survives as the stored default and as a choice in
+ * Preferences — it is not a third state the row could show.
  */
-const GROUPS: ReadonlyArray<{
-  id: StudioBarGroupId;
-  label: string;
-  iconOnly: boolean;
-  actions: readonly StudioBarActionId[];
-}> = [
-  { id: 'document', label: 'Document', iconOnly: false, actions: ['new', 'rename', 'close'] },
-  { id: 'output', label: 'Output', iconOnly: false, actions: ['save', 'export'] },
-  { id: 'system', label: 'System', iconOnly: true, actions: ['theme', 'shortcuts', 'preferences', 'about'] }
-];
+const themeSwitchLabel = (resolved: StudioResolvedTheme) =>
+  `Switch to ${resolved === 'light' ? 'dark' : 'light'} theme`;
 
-const GROUP_BY_ACTION: Record<StudioBarActionId, StudioBarGroupId> = {
-  new: 'document',
-  rename: 'document',
-  close: 'document',
-  save: 'output',
-  export: 'output',
-  theme: 'system',
-  shortcuts: 'system',
-  preferences: 'system',
-  about: 'system'
-};
-
-/**
- * The theme control is a toggle, not a menu: light and dark are two states, and
- * the button shows the one in force. `system` survives as the stored default and
- * as a choice in Preferences — it is not a third state the toggle could show.
- */
-const themeToggleLabel = (resolved: StudioResolvedTheme) =>
-  resolved === 'light' ? 'Light theme' : 'Dark theme';
-
-const themeToggleTarget = (resolved: StudioResolvedTheme): StudioThemePreference =>
+const themeSwitchTarget = (resolved: StudioResolvedTheme): StudioThemePreference =>
   resolved === 'light' ? 'dark' : 'light';
 
 /**
- * Measures the bar and folds one action per pass until it fits.
+ * Studio titlebar (minimal bar): four zones, left to right.
  *
- * The walk itself is `reduceBarOverflow` (pure, spec'd); this hook owns the two
- * things that are not: reading the live layout (`scrollWidth > clientWidth`) and
- * noticing that the action leaving the bar was the focused one — otherwise the
- * fold would drop the focus on `<body>`.
+ * F1 — the brand (logo + title + BETA) never truncates; F2 — one collector
+ * trigger (hamburger + "Menu") holds **every** bar action, in three groups;
+ * F3 — the document breadcrumb is elastic and only the name elides, because
+ * it reports status and is not navigation; F4 — the window controls
+ * (minimize / maximize-restore / close) belong to the desktop shell and are
+ * painted only under Tauri (`.studio-window-controls` is `display: none` on
+ * the web, where the browser owns its own chrome).
  *
- * `ResizeObserver` is the trigger the decision asks for. jsdom has none (the app
- * specs run there), so the window `resize` listener is the fallback path, and it
- * is the same walk.
- */
-const useBarOverflow = (barRef: RefObject<HTMLElement | null>) => {
-  const [state, setState] = useState<StudioBarOverflowState>(EMPTY_BAR_OVERFLOW);
-  const stateRef = useRef(state);
-  const sendFocusToOverflow = useRef(false);
-
-  const measure = useCallback(() => {
-    const bar = barRef.current;
-    if (!bar) return;
-    const width = bar.clientWidth;
-    const previous = stateRef.current;
-    const next = reduceBarOverflow(previous, { overflowing: bar.scrollWidth > width + 1, width });
-    if (next === previous) return;
-
-    const active = document.activeElement as HTMLElement | null;
-    const leaving = active?.closest('[data-bar-action]')?.getAttribute('data-bar-action') ?? null;
-    if (
-      leaving !== null &&
-      next.collapsed.includes(leaving as StudioBarActionId) &&
-      !previous.collapsed.includes(leaving as StudioBarActionId)
-    ) {
-      sendFocusToOverflow.current = true;
-    }
-
-    stateRef.current = next;
-    setState(next);
-  }, [barRef]);
-
-  // One step per committed state: the fold/unfold cascade converges and then
-  // returns the same object, so this effect stops asking.
-  useLayoutEffect(() => {
-    measure();
-  }, [state, measure]);
-
-  useEffect(() => {
-    const run = () => measure();
-    window.addEventListener('resize', run);
-
-    let observer: ResizeObserver | undefined;
-    if (typeof ResizeObserver !== 'undefined' && barRef.current) {
-      observer = new ResizeObserver(run);
-      observer.observe(barRef.current);
-    }
-
-    // Manrope settles after the first paint and label widths move with it.
-    void document.fonts?.ready.then(run).catch(() => undefined);
-
-    return () => {
-      window.removeEventListener('resize', run);
-      observer?.disconnect();
-    };
-  }, [barRef, measure]);
-
-  return { state, sendFocusToOverflow };
-};
-
-/**
- * Studio titlebar (distributed): the document, the way out and the system, in
- * one bar.
- *
- * G1 Document (New / Rename / Close) sits by the brand, the breadcrumb takes the
- * middle and shrinks with an ellipsis, and the right end carries G2 Output
- * (Save session / Export icons — the high-frequency pair, the whole point of
- * moving them out of a menu) and G3 System (Theme / Shortcuts / Preferences /
- * About).
- *
- * Preferences and About are the tail of `STUDIO_BAR_PRIORITY`: they are the
- * first actions to fold, so a bar that has to give up width shows the same
- * system row it always did (Theme, Shortcuts, More actions) and the two land
- * one click away. A bar with room shows them — there is no rule saying the
- * system row must hide what fits.
- *
- * Width is measured, never breakpointed: whenever the bar overflows, the
- * lowest-priority action folds into `More actions` — same label, same icon,
- * same shortcut hint as the button it replaced — and the fold is undone the
- * moment the bar has room again. With nothing folded the trigger is not
- * rendered at all, so `⋯` never opens an empty menu. At the extreme the menu is
- * every action plus the theme toggle, and the bar is the brand and `⋯`.
+ * There is no measured fold and no breakpoint: the bar does not fold actions
+ * by width anymore. The breadcrumb gives the slack back first, the collector
+ * keeps all nine actions in one menu — same labels, same icons, same shortcut
+ * hints they had as bar buttons, with disabled ones preserved as
+ * `aria-disabled`. The cost is deliberate: Save and Export are one conscious
+ * click away instead of a bare bar button, and their bindings (`Ctrl/Cmd+S`,
+ * `Ctrl/Cmd+E`) are untouched.
  *
  * The panel toggles stay at the canvas bar edges, Insert stays in the Layers
  * header, View options stays in the canvas bar and Export stays the Inspector
@@ -207,131 +79,24 @@ export const StudioTitleBar = ({
 }: StudioTitleBarProps) => {
   const { state, dispatch, navigate, saveProject } = useComposer();
   const [menuDialog, setMenuDialog] = useState<StudioMenuDialog>(null);
-  const barRef = useRef<HTMLElement>(null);
-  const overflowTriggerRef = useRef<HTMLButtonElement>(null);
-  const { state: overflow, sendFocusToOverflow } = useBarOverflow(barRef);
   const project = state.project;
   const hasProject = Boolean(project);
+  const desktop = isDesktopRuntime();
 
-  // The desktop shell draws its window buttons over the titlebar's right end:
-  // the reserve zone keeps the actions clear of them. Web browsers own their
-  // chrome outside the page, so the zone stays collapsed there.
+  // The desktop shell's chrome (window buttons + drag region) hangs off this
+  // attribute; the web never sets it. It is also what CSS keys
+  // `.studio-window-controls` on, so the zone lifts off `display: none` only
+  // where the shell that owns it is present.
   useEffect(() => {
-    if (isDesktopRuntime()) document.documentElement.setAttribute('data-tauri', '');
-  }, []);
-
-  // A focused control that folds must not drop the focus on `<body>`: the
-  // trigger that now holds the action takes it.
-  useLayoutEffect(() => {
-    if (!sendFocusToOverflow.current) return;
-    sendFocusToOverflow.current = false;
-    overflowTriggerRef.current?.focus();
-  }, [overflow.collapsed, sendFocusToOverflow]);
+    if (desktop) document.documentElement.setAttribute('data-tauri', '');
+  }, [desktop]);
 
   const mod = modKey();
-  const actions: Record<Exclude<StudioBarActionId, 'theme'>, StudioBarAction> = {
-    new: {
-      label: 'New document',
-      icon: <FilePlus size={14} />,
-      run: () => setMenuDialog(hasProject ? 'confirm-new' : 'new')
-    },
-    rename: {
-      label: 'Rename document',
-      icon: <PenLine size={14} />,
-      disabled: !hasProject,
-      run: () => setMenuDialog('rename')
-    },
-    close: {
-      label: 'Close document',
-      icon: <FileX2 size={14} />,
-      disabled: !hasProject,
-      run: () => setMenuDialog('confirm-close')
-    },
-    save: {
-      label: 'Save session',
-      icon: <Save size={14} />,
-      shortcut: `${mod}+S`,
-      disabled: !hasProject,
-      run: () => void saveProject()
-    },
-    export: {
-      label: 'Export icons',
-      icon: <Download size={14} />,
-      shortcut: `${mod}+E`,
-      disabled: !hasProject,
-      run: () => {
-        // Export is the Inspector tab: the bar takes the studio there.
-        navigate('edit-space');
-        requestExportFocus();
-      }
-    },
-    shortcuts: {
-      label: 'Keyboard shortcuts',
-      icon: <Keyboard size={14} />,
-      shortcut: '?',
-      run: onOpenShortcuts
-    },
-    preferences: {
-      label: 'Preferences',
-      icon: <Settings2 size={14} />,
-      run: () => setMenuDialog('preferences')
-    },
-    about: {
-      label: 'About Icon-Core',
-      icon: <Info size={14} />,
-      run: () => setMenuDialog('about')
-    }
-  };
-
-  const isFolded = (id: StudioBarActionId) => overflow.collapsed.includes(id);
-  const visible = (group: (typeof GROUPS)[number]) => group.actions.filter((id) => !isFolded(id));
-  // Menu order follows the bar, not the fold order: the person reads the menu
-  // where the action used to be.
-  const folded = GROUPS.flatMap((group) => group.actions).filter(isFolded);
-
-  const barButton = (id: Exclude<StudioBarActionId, 'theme'>, iconOnly: boolean) => {
-    const action = actions[id];
-    return (
-      <button
-        key={id}
-        type="button"
-        className={iconOnly ? 'studio-bar-action studio-bar-icon' : 'studio-bar-action'}
-        data-bar-action={id}
-        aria-label={action.label}
-        title={action.shortcut ? `${action.label} (${action.shortcut})` : action.label}
-        disabled={action.disabled}
-        onClick={action.run}
-      >
-        {action.icon}
-        {!iconOnly && <span>{action.label}</span>}
-      </button>
-    );
-  };
-
   const isLight = themeResolved === 'light';
-  const themeToggle = (iconOnly: boolean) => (
-    <button
-      key="theme"
-      type="button"
-      className={iconOnly ? 'studio-bar-action studio-bar-icon' : 'studio-bar-action'}
-      data-bar-action="theme"
-      aria-label={themeToggleLabel(themeResolved)}
-      aria-pressed={isLight}
-      title={`Switch to ${isLight ? 'dark' : 'light'} theme`}
-      onClick={() => onThemePreference(themeToggleTarget(themeResolved))}
-    >
-      {isLight ? <Sun size={16} /> : <Moon size={16} />}
-      {!iconOnly && <span>{isLight ? 'Light' : 'Dark'}</span>}
-    </button>
-  );
-
-  const documentGroup = visible(GROUPS[0]);
-  const outputGroup = visible(GROUPS[1]);
-  const systemGroup = visible(GROUPS[2]);
 
   return (
     <>
-      <header className="studio-titlebar" ref={barRef}>
+      <header className="studio-titlebar" data-tauri-drag-region={desktop ? 'deep' : undefined}>
         <button
           type="button"
           className="studio-brand studio-brand-button"
@@ -343,11 +108,77 @@ export const StudioTitleBar = ({
           <span>Icon-Core</span>
           <span className="studio-beta">BETA</span>
         </button>
-        {documentGroup.length > 0 && (
-          <div className="studio-bar-group" role="group" aria-label="Document">
-            {documentGroup.map((id) => barButton(id as Exclude<StudioBarActionId, 'theme'>, false))}
-          </div>
-        )}
+        <Menu
+          label="Menu"
+          trigger={
+            <button type="button" className="studio-bar-action" aria-label="Menu">
+              <MenuIcon size={14} />
+              <span>Menu</span>
+            </button>
+          }
+        >
+          {/* Document */}
+          <MenuItem
+            icon={<FilePlus size={14} />}
+            label="New document"
+            onSelect={() => setMenuDialog(hasProject ? 'confirm-new' : 'new')}
+          />
+          <MenuItem
+            icon={<PenLine size={14} />}
+            label="Rename document"
+            disabled={!hasProject}
+            onSelect={() => setMenuDialog('rename')}
+          />
+          <MenuItem
+            icon={<FileX2 size={14} />}
+            label="Close document"
+            disabled={!hasProject}
+            onSelect={() => setMenuDialog('confirm-close')}
+          />
+          <MenuSeparator />
+          {/* Output */}
+          <MenuItem
+            icon={<Save size={14} />}
+            label="Save session"
+            shortcut={`${mod}+S`}
+            disabled={!hasProject}
+            onSelect={() => void saveProject()}
+          />
+          <MenuItem
+            icon={<Download size={14} />}
+            label="Export icons"
+            shortcut={`${mod}+E`}
+            disabled={!hasProject}
+            onSelect={() => {
+              // Export is the Inspector tab: the bar takes the studio there.
+              navigate('edit-space');
+              requestExportFocus();
+            }}
+          />
+          <MenuSeparator />
+          {/* System */}
+          <MenuItem
+            icon={isLight ? <Moon size={14} /> : <Sun size={14} />}
+            label={themeSwitchLabel(themeResolved)}
+            onSelect={() => onThemePreference(themeSwitchTarget(themeResolved))}
+          />
+          <MenuItem
+            icon={<Keyboard size={14} />}
+            label="Keyboard shortcuts"
+            shortcut="?"
+            onSelect={onOpenShortcuts}
+          />
+          <MenuItem
+            icon={<Settings2 size={14} />}
+            label="Preferences"
+            onSelect={() => setMenuDialog('preferences')}
+          />
+          <MenuItem
+            icon={<Info size={14} />}
+            label="About Icon-Core"
+            onSelect={() => setMenuDialog('about')}
+          />
+        </Menu>
         <div className="studio-doc" aria-live="polite">
           <Box size={13} aria-hidden="true" />
           <strong>{project?.metadata.name ?? 'No document'}</strong>
@@ -355,67 +186,7 @@ export const StudioTitleBar = ({
           <ChevronRight size={12} aria-hidden="true" />
           <span>{variantLabel(state.activeVariant)}</span>
         </div>
-        <div className="studio-titlebar-actions">
-          {outputGroup.length > 0 && (
-            <div className="studio-bar-group" role="group" aria-label="Output">
-              {outputGroup.map((id) => barButton(id as Exclude<StudioBarActionId, 'theme'>, false))}
-            </div>
-          )}
-          {outputGroup.length > 0 && systemGroup.length > 0 && (
-            <span className="studio-bar-divider" aria-hidden="true" />
-          )}
-          {(systemGroup.length > 0 || folded.length > 0) && (
-            <div className="studio-bar-group" role="group" aria-label="System">
-              {systemGroup.map((id) => (id === 'theme' ? themeToggle(true) : barButton(id, true)))}
-              {folded.length > 0 && (
-                <Menu
-                  label="More actions"
-                  trigger={
-                    <button
-                      ref={overflowTriggerRef}
-                      type="button"
-                      className="studio-bar-action studio-bar-icon"
-                      aria-label="More actions"
-                      title="More actions"
-                    >
-                      <MoreHorizontal size={16} />
-                    </button>
-                  }
-                >
-                  {folded.map((id, index) => {
-                    const separator = index > 0 && GROUP_BY_ACTION[folded[index - 1]] !== GROUP_BY_ACTION[id];
-                    if (id === 'theme') {
-                      return (
-                        <Fragment key="theme">
-                          {separator && <MenuSeparator />}
-                          <MenuItem
-                            icon={isLight ? <Moon size={14} /> : <Sun size={14} />}
-                            label={`Switch to ${isLight ? 'dark' : 'light'} theme`}
-                            onSelect={() => onThemePreference(themeToggleTarget(themeResolved))}
-                          />
-                        </Fragment>
-                      );
-                    }
-                    const action = actions[id];
-                    return (
-                      <Fragment key={id}>
-                        {separator && <MenuSeparator />}
-                        <MenuItem
-                          icon={action.icon}
-                          label={action.label}
-                          shortcut={action.shortcut}
-                          disabled={action.disabled}
-                          onSelect={action.run}
-                        />
-                      </Fragment>
-                    );
-                  })}
-                </Menu>
-              )}
-            </div>
-          )}
-          <div className="studio-tauri-zone" aria-hidden="true" />
-        </div>
+        <StudioWindowControls />
       </header>
       {menuDialog === 'confirm-new' && (
         <StudioConfirmDialog

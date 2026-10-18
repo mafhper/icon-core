@@ -37,8 +37,9 @@
  * - The Inspector Design content stays the Composer `LayerInspector` (sections,
  *   fill-item, gradient stops and effect rows are not rebuilt here); it repaints
  *   via scoped tokens. Only the tabs + Export grid + session foot are ported.
- * - Dead controls are never painted: titlebar window actions stay the single
- *   real collapse/restore toggle; the tabs carry no decorative sliders icon.
+ * - Dead controls are never painted: window actions are painted only where the
+ *   OS shell owns them (the Tauri runtime, F4), and the one collapse/restore
+ *   toggle is the canvas pill's; the tabs carry no decorative sliders icon.
  */
 
 /* --- Manrope embarcada (convenção da Cal Sans) --------------------------- */
@@ -156,6 +157,10 @@
 
 /* --- Titlebar (mockup: 42px, respiro 16px, marca 12px/650, BETA 8px) ------- */
 
+/* Minimal bar, four zones left to right: brand (never truncates), the
+   collector trigger, the elastic document breadcrumb and — under the desktop
+   shell only — the window controls. Nothing folds by width anymore: the
+   breadcrumb is the slack and the collector holds every bar action. */
 .studio-titlebar {
   display: flex;
   align-items: center;
@@ -165,9 +170,7 @@
   padding: 0 16px;
   background-color: var(--ic-bg-top);
   border-bottom: 1px solid var(--ic-border-soft);
-  /* The bar is measured, not breakpointed: actions fold into `More actions`
-     instead of the bar scrolling or spilling. `overflow: hidden` is also what
-     makes `scrollWidth > clientWidth` the honest overflow signal. */
+  /* Guard only: the breadcrumb yields before anything else could spill. */
   overflow: hidden;
 }
 
@@ -200,6 +203,8 @@
   padding: 4px 6px;
   margin-left: -6px;
   border-radius: 6px;
+  /* F1: a marca nunca trunca nem encolhe — é a identidade, não uma ação. */
+  flex: 0 0 auto;
 }
 
 .studio-brand-button:hover {
@@ -218,14 +223,16 @@
   padding: 1px 4px;
 }
 
+/* F3 — breadcrumb elástico: relata o documento, não é navegação (sem botão,
+   sem tabindex). Só o nome elipsa; ícone, dot, chevron e a variante são
+   `flex: none` e mantêm a largura. */
 .studio-doc {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  /* The breadcrumb owns the slack and gives it back first: `flex-basis: 0`
-     plus `min-width: 0` means the name ellipsizes long before an action has to
-     leave the bar — which is what keeps the fold rare on a normal window. */
+  /* A faixa é a folga da barra e a devolve primeiro: `flex-basis: 0` com
+     `min-width: 0` deixa o nome ceder antes de qualquer ação sumir. */
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
@@ -238,10 +245,13 @@
 }
 
 .studio-doc > span {
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 
 .studio-doc strong {
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -258,25 +268,10 @@
   background-color: var(--ic-accent);
 }
 
-.studio-titlebar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
+/* --- Bar action (the collector trigger) ----------------------------------- */
 
-/* --- Bar actions (distributed titlebar) ---------------------------------- */
-
-/* One group per reading block (Document / Output / System). `flex: 0 0 auto`
-   is load-bearing: the group keeps its natural width so the header reports the
-   overflow instead of squeezing buttons past readability. */
-.studio-bar-group {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex: 0 0 auto;
-}
-
+/* A barra tem uma ação só: o gatilho do coletor. Métrica 26px — a mesma que
+   os botões tinham quando eram botões. */
 .studio-bar-action {
   display: inline-flex;
   align-items: center;
@@ -298,14 +293,9 @@
   flex: 0 0 auto;
 }
 
-.studio-bar-action:hover:not(:disabled) {
+.studio-bar-action:hover {
   background-color: var(--ic-elevated);
   color: var(--ic-text);
-}
-
-.studio-bar-action:disabled {
-  opacity: 0.45;
-  cursor: default;
 }
 
 .studio-bar-action:focus-visible {
@@ -317,32 +307,53 @@
   flex: 0 0 auto;
 }
 
-/* Icon-only member of the same bar: same hit area as Theme/Shortcuts. */
-.studio-bar-icon {
-  width: 26px;
-  padding: 0;
-  gap: 0;
-}
+/* --- Window controls (F4 — Tauri only) ------------------------------------ */
 
-.studio-bar-divider {
-  width: 1px;
-  height: 16px;
-  flex: 0 0 auto;
-  background-color: var(--ic-border);
-}
-
-/* Reserved Tauri window-button zone: never a functional control. Collapsed
-   on the web (browsers own their chrome outside the page); the desktop shell
-   sets `data-tauri` on `<html>` and the zone holds the buttons clear. */
-.studio-tauri-zone {
+/* Min/max-restore/close na ordem do Windows, colados à borda da janela: o
+   respiro de 16px é da barra; os botões de caption são da janela. Na web a
+   zona é `display: none` (o browser desenha o próprio chrome); o shell
+   desktop marca `[data-tauri]` no `<html>` e a zona sobe. Nunca `disabled`. */
+.studio-window-controls {
   display: none;
+  align-self: stretch;
+  flex: 0 0 auto;
+  margin-right: -16px;
 }
 
-[data-tauri] .studio-tauri-zone {
-  display: block;
-  flex: 0 0 132px;
-  width: 132px;
+[data-tauri] .studio-window-controls {
+  display: flex;
+  align-items: stretch;
+}
+
+/* 44 × 42 — a proporção de hit-area do SO nesta altura de barra. */
+.studio-window-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
   height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ic-text-muted);
+  cursor: default;
+}
+
+.studio-window-control:hover {
+  background-color: var(--ic-elevated);
+  color: var(--ic-text);
+}
+
+.studio-window-control:focus-visible {
+  outline: 2px solid var(--ic-accent-ring);
+  outline-offset: -2px;
+}
+
+/* Fechar é fechar: o hover é o vermelho da janela do SO, com o glifo no par
+   de contraste medido pelo `check-ui-contrast`. */
+.studio-window-close:hover {
+  background-color: var(--ic-danger-fill);
+  color: var(--ic-on-danger);
 }
 
 /* --- Canvas bar (mockup: 54px, respiro 16px, gap 12px, grupos gap 4px) ----

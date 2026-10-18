@@ -47,6 +47,12 @@
   --ic-success: #7fb899;
   --ic-warning: #d0a35e;
   --ic-danger: #e38686;
+  /* Solid destructive fill (the OS-style window close is the consumer): the
+     caption-button red of the desktop chrome, with its on-colour. `--ic-danger`
+     is a *text* role and never clears a fill with white, so the fill carries
+     its own measured pair in scripts/check-ui-contrast.mjs. */
+  --ic-danger-fill: #c42b1c;
+  --ic-on-danger: #ffffff;
   --ic-shadow: rgba(0, 0, 0, 0.52);
   --ic-inset-top: rgba(255, 255, 255, 0.08);
   --ic-inset-bottom: rgba(0, 0, 0, 0.42);
@@ -98,6 +104,9 @@
   --ic-success: #2f6e4a;
   --ic-warning: #8f6b2f;
   --ic-danger: #b3453f;
+  /* Solid destructive fill; theme-independent (see the dark block note). */
+  --ic-danger-fill: #c42b1c;
+  --ic-on-danger: #ffffff;
   --ic-shadow: rgba(20, 21, 24, 0.14);
   --ic-inset-top: rgba(255, 255, 255, 0.9);
   --ic-inset-bottom: rgba(0, 0, 0, 0.06);

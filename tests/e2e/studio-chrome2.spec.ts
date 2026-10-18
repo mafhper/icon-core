@@ -76,18 +76,38 @@ for (const theme of ['dark', 'light'] as const) {
     );
   });
 
-  test(`[${theme}] titlebar: documento, saída e sistema distribuídos; painéis ficam fora`, async ({ page }) => {
+  test(`[${theme}] titlebar: marca, coletor e breadcrumb em quatro zonas; painéis ficam fora`, async ({ page }) => {
     await preparar(page, theme);
     const banner = page.getByRole('banner');
 
-    await expect(banner.getByRole('button', { name: 'Go to workspaces' })).toBeVisible();
-    await expect(banner.getByRole('group', { name: 'Document' })).toBeVisible();
-    await expect(banner.getByRole('button', { name: 'New document' })).toBeVisible();
-    await expect(banner.getByText('Default')).toBeVisible();
-    await expect(banner.getByRole('group', { name: 'Output' }).getByRole('button', { name: 'Export icons' })).toBeVisible();
-    // The theme control is a toggle: it names the state in force, per run.
-    await expect(banner.getByRole('button', { name: /^(Dark|Light) theme$/ })).toBeVisible();
-    await expect(banner.getByRole('button', { name: 'Keyboard shortcuts' })).toBeVisible();
+    // Zona 1 — a marca (logo + título) nunca trunca.
+    const brand = banner.getByRole('button', { name: 'Go to workspaces' });
+    await expect(brand).toBeVisible();
+    await expect(brand).toContainText('Icon-Core');
+    // Zona 2 — o gatilho coletor (hamburger + "Menu"), nunca um ⋯.
+    const trigger = banner.getByRole('button', { name: 'Menu' });
+    await expect(trigger).toBeVisible();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(banner.locator('svg.lucide-more-horizontal')).toHaveCount(0);
+    // Zona 3 — o breadcrumb relata; só o nome elipsa, o resto fica rígido.
+    const doc = banner.locator('.studio-doc');
+    await expect(doc).toHaveAttribute('aria-live', 'polite');
+    await expect(doc.getByText('Default')).toBeVisible();
+    await expect(doc.getByRole('button')).toHaveCount(0);
+    expect(await doc.locator('strong').evaluate((el) => getComputedStyle(el).textOverflow)).toBe('ellipsis');
+    expect(await doc.locator('span').last().evaluate((el) => getComputedStyle(el).flexShrink)).toBe('0');
+    // Zona 4 — controles de janela: só Tauri; na web a zona é `display: none`.
+    await expect(banner.locator('.studio-window-controls')).toHaveCSS('display', 'none');
+    await expect(page.getByRole('button', { name: 'Minimize' })).toHaveCount(0);
+    // E o fundo não é região de arrasto no browser (isso é do shell desktop).
+    await expect(banner).not.toHaveAttribute('data-tauri-drag-region', 'deep');
+
+    // A ordem das zonas é a da decisão: marca → coletor → breadcrumb.
+    const brandBox = (await brand.boundingBox())!;
+    const triggerBox = (await trigger.boundingBox())!;
+    const docBox = (await doc.boundingBox())!;
+    expect(brandBox.x).toBeLessThan(triggerBox.x);
+    expect(triggerBox.x).toBeLessThan(docBox.x);
 
     // Nothing from the canvas column leaks up: no panel toggles, no Insert, no
     // View options.
@@ -96,38 +116,51 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(banner.getByRole('button', { name: /Layers panel|Inspector panel/ })).toHaveCount(0);
   });
 
-  test(`[${theme}] titlebar mede a própria largura: ação dobra em More actions e volta`, async ({ page }) => {
+  test(`[${theme}] coletor: 9 ações em 3 grupos, Esc devolve o foco; sem ⋯ em nenhuma largura`, async ({ page }) => {
     await preparar(page, theme);
     const banner = page.getByRole('banner');
+    const trigger = banner.getByRole('button', { name: 'Menu' });
 
-    // Larga: o conjunto inteiro cabe e o gatilho de excedentes não existe.
-    await expect(banner.getByRole('button', { name: 'About Icon-Core' })).toBeVisible();
-    await expect(banner.getByRole('button', { name: 'More actions' })).toHaveCount(0);
-
-    // Estreita: o rabo da prioridade dobra — About sai primeiro — e o gatilho
-    // aparece dizendo o que faz e se está aberto.
+    // Não existe mais dobra por medida: nenhuma largura rende um ⋯.
+    await expect(banner.locator('svg.lucide-more-horizontal')).toHaveCount(0);
     await page.setViewportSize({ width: 760, height: 900 });
-    await expect(banner.getByRole('button', { name: 'About Icon-Core' })).toHaveCount(0);
-    const trigger = banner.getByRole('button', { name: 'More actions' });
     await expect(trigger).toBeVisible();
-    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
-    // A saída continua na barra: é o topo da prioridade, o último a dobrar.
-    await expect(banner.getByRole('button', { name: 'Save session' })).toBeVisible();
-    await expect(banner.getByRole('button', { name: 'Export icons' })).toBeVisible();
-
-    // O item que saiu está no menu com o mesmo nome, e Esc devolve o foco.
     await trigger.click();
-    await expect(page.getByRole('menuitem', { name: 'About Icon-Core' })).toBeVisible();
-    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    await page.keyboard.press('Escape');
-    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    await expect(trigger).toBeFocused();
+    const menu = page.getByRole('menu', { name: 'Menu' });
 
-    // De volta à largura: a ação volta para a barra e o gatilho some.
+    // 9/9 em três grupos, dois separadores.
+    await expect(menu.getByRole('menuitem')).toHaveCount(9);
+    await expect(menu.getByRole('separator')).toHaveCount(2);
+
+    // Os mesmos rótulos e atalhos dos botões que saíram da barra. A linha do
+    // tema nomeia a virada a partir do tema em vigor do run.
+    const flip = theme === 'dark' ? 'light' : 'dark';
+    const items = await menu.getByRole('menuitem').evaluateAll((els) => els.map((el) => el.textContent ?? ''));
+    expect(items).toEqual([
+      'New document',
+      'Rename document',
+      'Close document',
+      'Save sessionCtrl+S',
+      'Export iconsCtrl+E',
+      `Switch to ${flip} theme`,
+      'Keyboard shortcuts?',
+      'Preferences',
+      'About Icon-Core'
+    ]);
+    await expect(menu.getByRole('menuitem', { name: 'Save session' })).toContainText('Ctrl+S');
+    await expect(menu.getByRole('menuitem', { name: 'Export icons' })).toContainText('Ctrl+E');
+
+    // Esc fecha o coletor e devolve o foco ao gatilho.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu', { name: 'Menu' })).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    // De volta à largura cheia: os grupos distribuídos de antes não voltam.
     await page.setViewportSize({ width: 1440, height: 900 });
-    await expect(banner.getByRole('button', { name: 'About Icon-Core' })).toBeVisible();
-    await expect(banner.getByRole('button', { name: 'More actions' })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Document' })).toHaveCount(0);
+    await expect(banner.locator('svg.lucide-more-horizontal')).toHaveCount(0);
   });
 
   test(`[${theme}] barra do canvas: recolher, desfazer, refazer, view options, recolher`, async ({ page }) => {

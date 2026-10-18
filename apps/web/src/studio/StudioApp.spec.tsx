@@ -50,6 +50,18 @@ const SeededShell = ({ project }: { project: IconCoreProject }) => {
   return <StudioShell />;
 };
 
+/** Opens the collector: Radix dropdowns open on pointer-down, not on click. */
+const openBarMenu = () => {
+  fireEvent.pointerDown(screen.getByRole('button', { name: 'Menu' }));
+  return screen.getByRole('menu', { name: 'Menu' });
+};
+
+/** Picks one bar action from the collector (the bar's only action surface). */
+const clickBarAction = (name: string | RegExp) => {
+  const menu = openBarMenu();
+  fireEvent.click(within(menu).getByRole('menuitem', { name }));
+};
+
 describe('Studio layers + insert + shortcuts (Fase 2)', () => {
   it('inserts an ellipse through the Layers header Insert menu', () => {
     renderShell(<SeededShell project={createBlankProject('Insert', 512)} />);
@@ -92,13 +104,12 @@ describe('Studio layers + insert + shortcuts (Fase 2)', () => {
   it('opens the real shortcut list and switches tools from the keyboard', () => {
     renderShell(<SeededShell project={createBlankProject('Keys', 512)} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }));
+    clickBarAction(/Keyboard shortcuts/);
     const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' });
     expect(within(dialog).getByText('Duplicate selected layer')).toBeInTheDocument();
     expect(within(dialog).getByText('Select tool')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeInTheDocument();
-
     fireEvent.keyDown(window, { key: 'h' });
     expect(screen.getByRole('contentinfo', { name: 'Status bar' })).toHaveTextContent('Hand');
     fireEvent.keyDown(window, { key: 'v' });
@@ -264,11 +275,7 @@ describe('Studio inspector panel (Fase 4)', () => {
   });
 });
 
-describe('Studio export in the Inspector + distributed titlebar (Fase 5)', () => {
-  // The actions are bar buttons now, not rows in a main menu: the document and
-  // the way out live in the titlebar itself.
-  const clickBarAction = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
-
+describe('Studio export in the Inspector + collector titlebar (Fase 5)', () => {
   it('opens the three-stage export from the Export tab, gated by validation', () => {
     renderShell(<SeededShell project={createBlankProject('Export', 512)} />);
 
@@ -312,9 +319,9 @@ describe('Studio export in the Inspector + distributed titlebar (Fase 5)', () =>
       expect(exportTab()).toHaveAttribute('aria-selected', 'true');
       expect(screen.queryByRole('dialog', { name: 'Export icons' })).not.toBeInTheDocument();
 
-      // O botão Export do titlebar leva à mesma aba.
+      // O item Export do coletor leva à mesma aba.
       fireEvent.click(designTab());
-      clickBarAction('Export icons');
+      clickBarAction(/Export icons/);
       expect(exportTab()).toHaveAttribute('aria-selected', 'true');
 
       // A paleta converte o comando na mesma aba.
@@ -421,28 +428,43 @@ describe('StudioApp shell (Fase 1)', () => {
     expect(screen.getAllByText('Studio One')).toHaveLength(2);
   });
 
-  it('keeps the document breadcrumb in the titlebar and the column bar over the canvas', () => {
+  it('keeps the document breadcrumb in the titlebar and the collector as the only action surface', () => {
     renderShell(<SeededShell project={createBlankProject('Studio One', 1024)} />);
 
     const titlebar = screen.getByRole('banner');
     expect(within(titlebar).getByText('Studio One')).toBeInTheDocument();
     expect(within(titlebar).getByText('Default')).toBeInTheDocument();
 
-    // Distributed titlebar: the document, the way out and the system share the
-    // bar, each in its own named group.
-    const document = within(titlebar).getByRole('group', { name: 'Document' });
-    expect(within(document).getByRole('button', { name: 'New document' })).toBeEnabled();
-    expect(within(document).getByRole('button', { name: 'Rename document' })).toBeEnabled();
-    expect(within(document).getByRole('button', { name: 'Close document' })).toBeEnabled();
-    const output = within(titlebar).getByRole('group', { name: 'Output' });
-    expect(within(output).getByRole('button', { name: 'Save session' })).toBeEnabled();
-    expect(within(output).getByRole('button', { name: 'Export icons' })).toBeEnabled();
-    const system = within(titlebar).getByRole('group', { name: 'System' });
-    // The theme control is a toggle that names the state in force, not a menu.
-    expect(within(system).getByRole('button', { name: 'Dark theme' })).toBeInTheDocument();
-    expect(within(system).getByRole('button', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
-    // Nothing folded at this width: the overflow trigger is not rendered.
+    // The breadcrumb reports the document — it is not navigation.
+    const doc = titlebar.querySelector('.studio-doc') as HTMLElement;
+    expect(doc).toHaveAttribute('aria-live', 'polite');
+    expect(within(doc).queryByRole('button')).not.toBeInTheDocument();
+
+    // The bar's one control is the collector trigger, and the menu holds every
+    // action in the three groups.
+    const trigger = within(titlebar).getByRole('button', { name: 'Menu' });
+    expect(trigger.querySelector('svg.lucide-menu')).not.toBeNull();
+    const menu = openBarMenu();
+    for (const name of [
+      'New document',
+      'Rename document',
+      'Close document',
+      /Save session/,
+      /Export icons/,
+      'Switch to light theme',
+      /Keyboard shortcuts/,
+      'Preferences',
+      'About Icon-Core'
+    ]) {
+      expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument();
+    }
+    expect(within(menu).getAllByRole('separator')).toHaveLength(2);
+    fireEvent.keyDown(menu, { key: 'Escape' });
+
+    // The old measured fold, its groups and the ⋯ trigger are gone.
     expect(within(titlebar).queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+    expect(within(titlebar).queryByRole('group', { name: 'Document' })).not.toBeInTheDocument();
+    expect(titlebar.querySelector('svg.lucide-more-horizontal')).toBeNull();
     // The panel toggles and View options stay out of the titlebar.
     expect(within(titlebar).queryByRole('button', { name: /panel/i })).not.toBeInTheDocument();
     expect(within(titlebar).queryByRole('button', { name: 'Insert layer' })).not.toBeInTheDocument();
@@ -544,23 +566,25 @@ describe('StudioApp shell (Fase 1)', () => {
   });
 
   it('starts from the system theme and writes no preference', () => {
-    renderShell();
+    renderShell(<SeededShell project={createBlankProject('System', 512)} />);
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     expect(window.localStorage.getItem('iconcore-theme-preference')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Dark theme' })).toHaveAttribute('aria-pressed', 'false');
+    // The collector row names the flip, not the state: system resolves dark,
+    // so it offers the way to light.
+    expect(within(openBarMenu()).getByRole('menuitem', { name: 'Switch to light theme' })).toBeInTheDocument();
   });
 
   it('follows a light system theme', () => {
     stubSystemTheme(true);
-    renderShell();
+    renderShell(<SeededShell project={createBlankProject('System light', 512)} />);
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    expect(screen.getByRole('button', { name: 'Light theme' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(openBarMenu()).getByRole('menuitem', { name: 'Switch to dark theme' })).toBeInTheDocument();
   });
 
   it('toggles, persists the explicit choice and restores it on the next mount', () => {
     stubSystemTheme(true);
-    renderShell();
-    fireEvent.click(screen.getByRole('button', { name: 'Light theme' }));
+    renderShell(<SeededShell project={createBlankProject('Toggle', 512)} />);
+    fireEvent.click(within(openBarMenu()).getByRole('menuitem', { name: 'Switch to dark theme' }));
 
     expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
@@ -568,9 +592,9 @@ describe('StudioApp shell (Fase 1)', () => {
     // A reload is a fresh mount: the stored choice wins over the OS.
     cleanup();
     stubSystemTheme(true);
-    renderShell();
+    renderShell(<SeededShell project={createBlankProject('Toggle', 512)} />);
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    fireEvent.click(screen.getByRole('button', { name: 'Dark theme' }));
+    fireEvent.click(within(openBarMenu()).getByRole('menuitem', { name: 'Switch to light theme' }));
 
     expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('light');
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');

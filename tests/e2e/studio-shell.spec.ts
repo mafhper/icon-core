@@ -42,13 +42,14 @@ test('studio monta as cinco regioes com o chrome do documento', async ({ page })
 
   await expect(page.getByText('Icon-Core').first()).toBeVisible();
 
-  // Export lives at the end of the Inspector Export tab. The titlebar carries
-  // its entry point (Export icons, in the Output group) but no second export
-  // surface; the canvas bar carries neither.
+  // Export lives at the end of the Inspector Export tab. The collector holds
+  // its entry point (Export icons, in the menu) but no second export surface;
+  // the canvas bar carries neither.
   const inspector = page.getByRole('region', { name: 'Inspector panel' });
   await inspector.getByRole('tab', { name: 'Export' }).click();
   await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
   await expect(page.getByRole('banner').getByRole('button', { name: 'Export', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Export icons' })).toHaveCount(0);
   const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
   await expect(toolbar.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0);
   await expect(toolbar.getByRole('button', { name: 'Insert layer' })).toHaveCount(0);
@@ -119,7 +120,7 @@ test('studio: paineis recolhem e reabrem; atalhos listam os vinculos reais', asy
   await page.getByRole('button', { name: 'Show Layers panel' }).click();
   await expect(page.getByRole('region', { name: 'Layers panel' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Keyboard shortcuts' }).click();
+  await clickBarAction(page, 'Keyboard shortcuts');
   const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('Duplicate selected layer');

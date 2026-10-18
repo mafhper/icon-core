@@ -116,6 +116,8 @@ const PAIRS = [
   ['--ic-accent-text', '--ic-elevated', 4.5, 'accent foreground on controls'],
   ['--ic-accent', '--ic-bg', 3.0, 'accent glyph/border only; foreground uses --ic-accent-text'],
   ['--ic-danger', '--ic-bg', 3.0, 'danger as text (large/bold only)'],
+  ['--ic-danger-fill', '--ic-bg', 3.0, 'solid destructive fill vs the page'],
+  ['--ic-on-danger', '--ic-danger-fill', 4.5, 'glyph on the solid destructive fill'],
   ['--ic-success', '--ic-bg', 3.0, 'success as text (large/bold only)'],
   ['--ic-warning', '--ic-bg', 3.0, 'warning as text (large/bold only)']
 ];

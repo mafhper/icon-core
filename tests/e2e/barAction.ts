@@ -1,19 +1,13 @@
 import type { Page } from '@playwright/test';
 
 /**
- * Clicks a titlebar action wherever it currently is.
+ * Clicks a titlebar action where it lives now: inside the collector menu.
  *
- * The bar distributes its actions and folds the tail into `More actions` when
- * it measures an overflow — there is no breakpoint to pin. The action is the
- * same one either way, so the spec follows it instead of assuming a width.
+ * The bar keeps one entry point — "Menu" — holding the document, output and
+ * system actions in three separator-bound groups. Every action is one
+ * deliberate click away; there is no width-dependent fold to follow anymore.
  */
 export const clickBarAction = async (page: Page, name: string) => {
-  const banner = page.getByRole('banner');
-  const direct = banner.getByRole('button', { name, exact: true });
-  if (await direct.isVisible().catch(() => false)) {
-    await direct.click();
-    return;
-  }
-  await banner.getByRole('button', { name: 'More actions' }).click();
-  await page.getByRole('menuitem', { name, exact: true }).click();
+  await page.getByRole('banner').getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('menuitem', { name }).click();
 };
