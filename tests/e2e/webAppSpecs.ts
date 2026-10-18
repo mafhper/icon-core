@@ -49,7 +49,8 @@ export const WEB_APP_SPECS = [
   'studio-shell',
   'studio-chrome2',
   'studio-export',
-  'bg-fidelity'
+  'bg-fidelity',
+  'export-fidelity'
 ] as const;
 
 /**
