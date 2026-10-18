@@ -16,9 +16,9 @@ const OPTIONS: Array<{ value: StudioThemePreference; label: string }> = [
 /**
  * Studio preferences (Fase 5): the settings that exist, nothing decorative.
  *
- * Today that is the theme preference — the same setting the titlebar toggle
- * flips, persisted to the same key so the two stay one setting. This dialog is
- * also the way back to `System`: the toggle is binary and cannot express it.
+ * Today that is the theme preference — the same setting the Exibir menu's
+ * radio sets, persisted to the same key so the two stay one setting. This
+ * dialog is the settings home; the menu is the quick door to the same value.
  */
 export const StudioPreferencesDialog = ({
   preference,

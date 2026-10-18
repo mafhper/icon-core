@@ -229,3 +229,14 @@ export const MenubarRadioItem = ({ value, label, disabled = false, className }: 
     <span className="truncate">{label}</span>
   </MenubarPrimitive.RadioItem>
 );
+
+/**
+ * Divider between groups of menubar items — the menubar twin of
+ * `MenuSeparator`.
+ *
+ * `role="separator"` is what a screen reader announces when arrowing across
+ * it; a styled `<hr>` with the same visual would be silent about the grouping.
+ */
+export const MenubarSeparator = ({ className }: { className?: string }) => (
+  <MenubarPrimitive.Separator className={cn('my-1 h-px bg-ic-border', className)} />
+);

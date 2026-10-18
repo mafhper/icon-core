@@ -9,6 +9,7 @@ import {
   MenubarContent,
   MenubarItem,
   MenubarLabel,
+  MenubarSeparator,
   MenubarRadioGroup,
   MenubarRadioItem
 } from '../src/index';
@@ -100,6 +101,24 @@ describe('Menubar', () => {
 
     await user.keyboard('{ArrowDown}');
     expect(screen.getByRole('menuitem', { name: 'Save' })).toHaveFocus();
+  }, 10_000);
+
+  it('separates groups with a divider that is not an item', async () => {
+    const user = userEvent.setup();
+    renderFileMenu(
+      <>
+        <MenubarItem label="Save" onSelect={() => {}} />
+        <MenubarSeparator />
+        <MenubarItem label="Export" onSelect={() => {}} />
+      </>
+    );
+
+    await user.click(screen.getByRole('menuitem', { name: 'File' }));
+    expect(await screen.findByRole('separator')).toBeInTheDocument();
+
+    // A separator is a boundary, not a row: the collection is the trigger plus
+    // the two items, and the divider never joins it.
+    expect(screen.getAllByRole('menuitem')).toHaveLength(3);
   }, 10_000);
 
   it('marks the checked option of a radio group and reports a change', async () => {

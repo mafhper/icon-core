@@ -52,7 +52,10 @@ export const StudioShell = () => {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('design');
   const [themePreference, setThemePreference] = useState<StudioThemePreference>(readThemePreference);
   useKeyboardShortcuts();
-  const themeResolved = useStudioTheme(themePreference);
+  // The hook owns the `[data-theme]` attribute; since the titlebar's theme
+  // control is the Exibir menu's radio (which reads the preference itself),
+  // the resolved value no longer has a consumer up here.
+  useStudioTheme(themePreference);
   const {
     isLarge,
     leftWidth,
@@ -124,7 +127,6 @@ export const StudioShell = () => {
     <div className="studio">
       <StudioTitleBar
         themePreference={themePreference}
-        themeResolved={themeResolved}
         onThemePreference={changeTheme}
         onOpenShortcuts={() => setShortcutsOpen(true)}
       />

@@ -4,14 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IconCoreProject } from '@iconcore/shared';
 import { TooltipProvider } from '@iconcore/ui';
 import { ComposerProvider, useComposer } from '../../composer/ComposerContext';
-import { modKey } from '../../composer/utils/platform';
 import { ToastProvider } from '../../composer/toast/ToastContext';
+import { ToastViewport } from '../../composer/toast/ToastViewport';
+import { modKey } from '../../composer/utils/platform';
 import { createBlankProject } from '../../composer/utils/projectFactory';
+import { FakeIDBFactory } from '../../test/fakeIndexedDb';
 import { StudioShell } from '../StudioApp';
 
 afterEach(() => {
   cleanup();
   delete (window as Window & { __TAURI__?: unknown }).__TAURI__;
+  delete (window as unknown as { indexedDB?: unknown }).indexedDB;
   document.documentElement.removeAttribute('data-tauri');
 });
 
@@ -32,6 +35,22 @@ beforeEach(() => {
   }
 });
 
+/** The provider takes IndexedDB when it exists; the fake makes the list real. */
+const useStore = (): FakeIDBFactory => {
+  const factory = new FakeIDBFactory();
+  (window as unknown as { indexedDB?: unknown }).indexedDB = factory;
+  return factory;
+};
+
+const seedStored = (
+  factory: FakeIDBFactory,
+  id: string,
+  name: string,
+  updatedAt: number
+) => {
+  factory.db.data.set(id, { id, name, updatedAt, project: createBlankProject(name, 512) });
+};
+
 const SeededShell = ({ project }: { project: IconCoreProject }) => {
   const { dispatch } = useComposer();
   useEffect(() => {
@@ -41,27 +60,38 @@ const SeededShell = ({ project }: { project: IconCoreProject }) => {
 };
 
 const renderShell = (node: ReactNode) => {
-  // The provider reads the hash on mount: with an empty one it normalizes to
-  // `workspaces` and the welcome (`aria-modal`) mounts over the shell. An open
-  // document, which is where the titlebar actions live, is `#/edit-space`.
+  // The provider reads the hash on mount: an open document is `#/edit-space`,
+  // which is where the titlebar menus act on a real project.
   window.location.hash = '#/edit-space';
   return render(
     <TooltipProvider delayDuration={400}>
       <ToastProvider>
         <ComposerProvider>{node}</ComposerProvider>
+        <ToastViewport />
       </ToastProvider>
     </TooltipProvider>
   );
 };
 
-/** Opens the collector: Radix dropdowns open on pointer-down, not on click. */
-const openMenu = () => {
-  fireEvent.pointerDown(screen.getByRole('button', { name: 'Menu' }));
-  return screen.getByRole('menu', { name: 'Menu' });
+/** Menubar items open on pointer-down; the trigger itself is a `menuitem`. */
+const openMenu = (name: string) => {
+  const trigger = screen.getByRole('menuitem', { name });
+  fireEvent.pointerDown(trigger);
+  return { trigger, menu: screen.getByRole('menu') };
 };
 
-describe('Studio titlebar — minimal bar, collector menu, elastic breadcrumb, window controls', () => {
-  it('lays out the four zones left to right: brand, collector, breadcrumb, window controls', () => {
+const closeMenu = async (menu: HTMLElement) => {
+  fireEvent.keyDown(menu, { key: 'Escape' });
+  await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+};
+
+const itemTexts = (menu: HTMLElement) =>
+  within(menu)
+    .getAllByRole('menuitem')
+    .map((item) => item.textContent);
+
+describe('Studio titlebar — menu bar, breadcrumb, window controls', () => {
+  it('lays out the four zones left to right: brand, menu bar, breadcrumb, window controls', () => {
     renderShell(<SeededShell project={createBlankProject('Zones', 512)} />);
     const banner = screen.getByRole('banner');
 
@@ -70,11 +100,17 @@ describe('Studio titlebar — minimal bar, collector menu, elastic breadcrumb, w
     expect(brand).toHaveTextContent('Icon-Core');
     expect(brand).toHaveTextContent('BETA');
 
-    // F2: the single collector trigger — hamburger + "Menu", 26px, no ⋯.
-    const trigger = within(banner).getByRole('button', { name: 'Menu' });
-    expect(trigger.querySelector('svg.lucide-menu')).not.toBeNull();
+    // F2: the menu bar — four PT slots, in the plan's order.
+    const menubar = within(banner).getByRole('menubar', { name: 'Main menu' });
+    expect(
+      within(menubar)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent)
+    ).toEqual(['Arquivo', 'Editar', 'Exibir', 'Sobre']);
+    // The collector trigger this bar used to have is gone, not duplicated.
+    expect(within(banner).queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument();
+    expect(banner.querySelector('svg.lucide-menu')).toBeNull();
     expect(banner.querySelector('svg.lucide-more-horizontal')).toBeNull();
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
     // F3: the breadcrumb is status, not navigation.
     const doc = banner.querySelector('.studio-doc');
@@ -89,94 +125,182 @@ describe('Studio titlebar — minimal bar, collector menu, elastic breadcrumb, w
     const zones = Array.from(banner.children);
     expect(zones).toHaveLength(4);
     expect(zones[0]).toBe(brand);
-    expect(zones[1]).toBe(trigger);
+    expect(zones[1]).toBe(menubar);
     expect(zones[2]).toBe(doc);
     expect(zones[3]).toBe(controls);
   });
 
-  it('holds the nine actions in three separator-bound groups, with the same labels, icons and shortcuts', () => {
-    renderShell(<SeededShell project={createBlankProject('Collector', 512)} />);
-    const menu = openMenu();
+  it('opens Arquivo with the closed PT set, one group break and honest recents', () => {
+    renderShell(<SeededShell project={createBlankProject('Arquivo', 512)} />);
+    const { menu } = openMenu('Arquivo');
 
-    // No measured fold exists anymore: no trigger of overflow anywhere.
-    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
-
-    const items = within(menu).getAllByRole('menuitem');
-    expect(items).toHaveLength(9);
-    // Reading order, three groups, two separators between them.
-    expect(items.map((item) => item.textContent)).toEqual([
-      'New document',
-      'Rename document',
-      'Close document',
-      `Save session${modKey()}+S`,
-      `Export icons${modKey()}+E`,
-      'Switch to light theme',
-      'Keyboard shortcuts?',
-      'Preferences',
-      'About Icon-Core'
+    expect(itemTexts(menu)).toEqual([
+      'Novo',
+      `Abrir${modKey()}+O`,
+      'Nenhum projeto recente',
+      'Renomear',
+      'Fechar',
+      `Salvar${modKey()}+S`,
+      `Salvar como${modKey()}+Shift+S`,
+      `Exportar${modKey()}+E`
     ]);
-    expect(within(menu).getAllByRole('separator')).toHaveLength(2);
-
-    // Labels keep the glyphs the bar buttons had.
-    expect(items[0].querySelector('svg.lucide-file-plus')).not.toBeNull();
-    expect(items[1].querySelector('svg.lucide-pen-line')).not.toBeNull();
-    expect(items[2].querySelector('svg.lucide-file-x-2')).not.toBeNull();
-    expect(items[3].querySelector('svg.lucide-save')).not.toBeNull();
-    expect(items[4].querySelector('svg.lucide-download')).not.toBeNull();
-    // System resolves dark here, so the theme row names the flip to light.
-    expect(items[5].querySelector('svg.lucide-sun')).not.toBeNull();
-    expect(items[6].querySelector('svg.lucide-keyboard')).not.toBeNull();
+    // One separator: document actions above, output below. Recentes is a
+    // label, never a submenu.
+    expect(within(menu).getAllByRole('separator')).toHaveLength(1);
+    expect(within(menu).getByText('Recentes')).toBeInTheDocument();
+    expect(within(menu).queryByRole('menu')).not.toBeInTheDocument();
+    // "Abrir pasta" is not in the app, so the menu does not promise it.
+    expect(within(menu).queryByText(/pasta|folder/i)).not.toBeInTheDocument();
   });
 
-  it('closes the collector on Escape and gives the focus back to the trigger', async () => {
+  it('opens Editar, Exibir and Sobre with the planned rows', async () => {
+    renderShell(<SeededShell project={createBlankProject('Menus', 512)} />);
+
+    const edit = openMenu('Editar').menu;
+    expect(itemTexts(edit)).toEqual([
+      `Desfazer${modKey()}+Z`,
+      `Refazer${modKey()}+Shift+Z`,
+      `Duplicar${modKey()}+D`
+    ]);
+    await closeMenu(edit);
+
+    const view = openMenu('Exibir').menu;
+    expect(itemTexts(view)).toEqual([
+      'Grade — DesligadaG',
+      `Aproximar${modKey()}+=`,
+      `Afastar${modKey()}+−`,
+      `Zoom 100%${modKey()}+0`
+    ]);
+    // The radios are options, not plain items, and they carry the plan's set.
+    // Variant identities keep their one spelling (variantLabels) — the module
+    // header documents why they are not localized inside the menu.
+    expect(
+      within(view)
+        .getAllByRole('menuitemradio')
+        .map((item) => item.textContent)
+    ).toEqual(['Default', 'Light', 'Dark', 'Monochrome', 'Claro', 'Escuro', 'Sistema']);
+    expect(within(view).getByText('Variantes')).toBeInTheDocument();
+    expect(within(view).getByText('Tema')).toBeInTheDocument();
+    expect(within(view).getAllByRole('separator')).toHaveLength(2);
+    await closeMenu(view);
+
+    const about = openMenu('Sobre').menu;
+    expect(itemTexts(about)).toEqual(['Atalhos?', 'Preferências', 'Sobre o Icon-Core']);
+    await closeMenu(about);
+  });
+
+  it('keeps disabled actions honest with aria-disabled, never DOM disabled', () => {
+    // No project: the welcome is over the shell, and the document half is
+    // honest about having nothing to act on.
+    renderShell(<StudioShell />);
+
+    const file = openMenu('Arquivo').menu;
+    for (const name of ['Nenhum projeto recente', 'Renomear', 'Fechar', /^SalvarCtrl/, /^Salvar como/, /^Exportar/]) {
+      const item = within(file).getByRole('menuitem', { name });
+      expect(item).toHaveAttribute('aria-disabled', 'true');
+      expect(item).not.toHaveAttribute('disabled');
+    }
+    for (const name of ['Novo', /^Abrir/]) {
+      expect(within(file).getByRole('menuitem', { name })).not.toHaveAttribute('aria-disabled');
+    }
+    fireEvent.keyDown(file, { key: 'Escape' });
+
+    // No history and no selection: nothing to undo, redo or duplicate.
+    fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Editar' }));
+    const edit = screen.getByRole('menu');
+    for (const name of [/Desfazer/, /Refazer/, /Duplicar/]) {
+      expect(within(edit).getByRole('menuitem', { name })).toHaveAttribute('aria-disabled', 'true');
+    }
+    fireEvent.keyDown(edit, { key: 'Escape' });
+
+    // The view flags exist independently of the document, so Exibir acts.
+    fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Exibir' }));
+    const view = screen.getByRole('menu');
+    expect(within(view).getByRole('menuitem', { name: /Grade — Desligada/ })).not.toHaveAttribute('aria-disabled');
+    expect(within(view).getByRole('menuitem', { name: /Aproximar/ })).not.toHaveAttribute('aria-disabled');
+    fireEvent.keyDown(view, { key: 'Escape' });
+
+    // Sobre is always available.
+    fireEvent.pointerDown(screen.getByRole('menuitem', { name: 'Sobre' }));
+    const about = screen.getByRole('menu');
+    for (const name of ['Atalhos?', 'Preferências', 'Sobre o Icon-Core']) {
+      expect(within(about).getByRole('menuitem', { name })).not.toHaveAttribute('aria-disabled');
+    }
+  });
+
+  it('lists the five newest stored projects — and opens the one clicked', async () => {
+    const factory = useStore();
+    // Insertion order is not recency order: the menu owns its contract.
+    seedStored(factory, 'p-alpha', 'Alpha', 1000);
+    seedStored(factory, 'p-foxtrot', 'Foxtrot', 1050);
+    seedStored(factory, 'p-charlie', 'Charlie', 1020);
+    seedStored(factory, 'p-echo', 'Echo', 1040);
+    seedStored(factory, 'p-bravo', 'Bravo', 1010);
+    seedStored(factory, 'p-delta', 'Delta', 1030);
+
+    renderShell(<StudioShell />);
+    const { menu } = openMenu('Arquivo');
+    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Foxtrot' })).toBeInTheDocument());
+
+    const recentNames = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot'];
+    expect(
+      itemTexts(menu).filter((text): text is string => recentNames.includes(text ?? ''))
+    ).toEqual(['Foxtrot', 'Echo', 'Delta', 'Charlie', 'Bravo']);
+    // The oldest of six is the one the cap drops.
+    expect(within(menu).queryByRole('menuitem', { name: 'Alpha' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Echo' }));
+    await waitFor(() => expect(screen.getByRole('banner')).toHaveTextContent('Echo'));
+    expect(screen.queryByRole('dialog', { name: 'Start a new icon' })).not.toBeInTheDocument();
+  });
+
+  it('answers a vanished recent with a toast instead of silence', async () => {
+    const factory = useStore();
+    seedStored(factory, 'p-gone', 'Gone', 500);
+
+    renderShell(<StudioShell />);
+    const { menu } = openMenu('Arquivo');
+    await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Gone' })).toBeInTheDocument());
+
+    // The record disappears between the list being drawn and the click.
+    factory.db.data.delete('p-gone');
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Gone' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Could not open that project.')).toBeInTheDocument()
+    );
+    // Nothing opened: the welcome is still the surface.
+    expect(screen.getByRole('dialog', { name: 'Start a new icon' })).toBeInTheDocument();
+  });
+
+  it('sets the theme from the Exibir radio and reports the current choice', () => {
+    renderShell(<SeededShell project={createBlankProject('Tema', 512)} />);
+
+    const first = openMenu('Exibir').menu;
+    expect(within(first).getByRole('menuitemradio', { name: 'Sistema' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(within(first).getByRole('menuitemradio', { name: 'Claro' }));
+    expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+
+    const second = openMenu('Exibir').menu;
+    expect(within(second).getByRole('menuitemradio', { name: 'Claro' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(within(second).getByRole('menuitemradio', { name: 'Escuro' }));
+    expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
+  it('closes a menu on Escape and gives the focus back to its trigger', async () => {
     renderShell(<SeededShell project={createBlankProject('Escape', 512)} />);
-    const trigger = screen.getByRole('button', { name: 'Menu' });
-    const menu = openMenu();
-    expect(within(menu).getByRole('menuitem', { name: 'About Icon-Core' })).toBeInTheDocument();
+    const { trigger, menu } = openMenu('Sobre');
+    expect(within(menu).getByRole('menuitem', { name: 'Sobre o Icon-Core' })).toBeInTheDocument();
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
 
     fireEvent.keyDown(menu, { key: 'Escape' });
 
-    expect(screen.queryByRole('menu', { name: 'Menu' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     // Radix restores the focus when the content unmounts, which is after the
     // close animation frame — the same as in the browser.
     await waitFor(() => expect(trigger).toHaveFocus());
-  });
-
-  it('preserves disabled actions as aria-disabled, never as DOM disabled', () => {
-    // No seeded project: the welcome is over the shell, and the document half
-    // of the collector is honest about having nothing to act on.
-    renderShell(<StudioShell />);
-    const menu = openMenu();
-
-    for (const name of ['Rename document', 'Close document', /Save session/, /Export icons/]) {
-      const item = within(menu).getByRole('menuitem', { name });
-      expect(item).toHaveAttribute('aria-disabled', 'true');
-      expect(item).not.toHaveAttribute('disabled');
-    }
-    for (const name of ['New document', /Keyboard shortcuts/, 'Preferences', 'About Icon-Core']) {
-      expect(within(menu).getByRole('menuitem', { name })).not.toHaveAttribute('aria-disabled');
-    }
-  });
-
-  it('switches the theme from the collector row; system stays a Preferences choice', () => {
-    renderShell(<SeededShell project={createBlankProject('Theme', 512)} />);
-
-    // System is the stored default and resolves dark here, so the row offers
-    // the flip to light — and `system` is nowhere in the menu.
-    const first = openMenu();
-    expect(within(first).queryByRole('menuitem', { name: /System theme/ })).not.toBeInTheDocument();
-    fireEvent.click(within(first).getByRole('menuitem', { name: 'Switch to light theme' }));
-
-    expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-
-    const second = openMenu();
-    expect(within(second).getByRole('menuitem', { name: 'Switch to dark theme' })).toBeInTheDocument();
-    fireEvent.click(within(second).getByRole('menuitem', { name: 'Switch to dark theme' }));
-
-    expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
   it('renders the window controls in Windows order and never disables them', () => {

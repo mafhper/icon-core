@@ -157,10 +157,10 @@
 
 /* --- Titlebar (mockup: 42px, respiro 16px, marca 12px/650, BETA 8px) ------- */
 
-/* Minimal bar, four zones left to right: brand (never truncates), the
-   collector trigger, the elastic document breadcrumb and — under the desktop
-   shell only — the window controls. Nothing folds by width anymore: the
-   breadcrumb is the slack and the collector holds every bar action. */
+/* Minimal bar, four zones left to right: brand (never truncates), the menu
+   bar (Arquivo/Editar/Exibir/Sobre), the elastic document breadcrumb and —
+   under the desktop shell only — the window controls. Nothing folds by
+   width anymore: the breadcrumb is the slack. */
 .studio-titlebar {
   display: flex;
   align-items: center;
@@ -266,45 +266,6 @@
   flex: 0 0 5px;
   border-radius: 50%;
   background-color: var(--ic-accent);
-}
-
-/* --- Bar action (the collector trigger) ----------------------------------- */
-
-/* A barra tem uma ação só: o gatilho do coletor. Métrica 26px — a mesma que
-   os botões tinham quando eram botões. */
-.studio-bar-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 7px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: none;
-  color: var(--ic-text-muted);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: 0;
-  white-space: nowrap;
-  cursor: pointer;
-  flex: 0 0 auto;
-}
-
-.studio-bar-action:hover {
-  background-color: var(--ic-elevated);
-  color: var(--ic-text);
-}
-
-.studio-bar-action:focus-visible {
-  outline: 2px solid var(--ic-accent-ring);
-  outline-offset: -1px;
-}
-
-.studio-bar-action > svg {
-  flex: 0 0 auto;
 }
 
 /* --- Window controls (F4 — Tauri only) ------------------------------------ */

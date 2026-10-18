@@ -6,7 +6,7 @@ import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 
 export const useKeyboardShortcuts = () => {
-  const { state, dispatch, navigate, saveProject } = useComposer();
+  const { state, dispatch, navigate, saveProject, saveProjectAs, openProjectFile } = useComposer();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -20,19 +20,39 @@ export const useKeyboardShortcuts = () => {
 
       if (isInput) return;
 
-      if (isMod && e.key === 'z' && !e.shiftKey) {
+      /**
+       * `e.key` arrives SHIFT-transformed — `Ctrl+Shift+Z` reports `"Z"`, not
+       * `"z"` — so every letter comparison normalizes case. The first version
+       * compared lowercase and the redo branch could never fire in a real
+       * browser (a jsdom event can spell `{ key: 'z', shiftKey: true }`, which
+       * hid it). The menu and this dialog show these combinations, so the
+       * binding has to match what a keyboard actually produces.
+       */
+      if (isMod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         dispatch({ type: 'UNDO' });
         return;
       }
 
-      if (isMod && e.key === 'z' && e.shiftKey) {
+      if (isMod && e.key.toLowerCase() === 'z' && e.shiftKey) {
         e.preventDefault();
         dispatch({ type: 'REDO' });
         return;
       }
 
-      if (isMod && e.key === 's') {
+      /**
+       * `Ctrl/Cmd+Shift+S` — o `Salvar como`.
+       *
+       * Vem antes do `Ctrl+S` e exige `shiftKey`: a combinação é distinta de
+       * "salvar no aberto", e o atalho que a promete tem de ser ela.
+       */
+      if (isMod && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        void saveProjectAs();
+        return;
+      }
+
+      if (isMod && e.key.toLowerCase() === 's') {
         e.preventDefault();
         /**
          * `Ctrl/Ctrl+S` e o `Salvar` — e o `Salvar` grava no arquivo **aberto**.
@@ -47,6 +67,17 @@ export const useKeyboardShortcuts = () => {
          * segunda foi o `Salvar como` herdando o `Salvar`.
          */
         void saveProject();
+        return;
+      }
+
+      /**
+       * `Ctrl/Cmd+O` — Abrir. O navegador reserva a combinação para o próprio
+       * seletor de arquivos; `preventDefault` é o que impede os dois de
+       * abrirem, e é por isso que ele vem antes do trabalho.
+       */
+      if (isMod && !e.shiftKey && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        void openProjectFile();
         return;
       }
 
@@ -73,7 +104,7 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
-      if (isMod && e.key === '=') {
+      if (isMod && (e.key === '=' || e.key === '+')) {
         e.preventDefault();
         dispatch({ type: 'SET_ZOOM', payload: Math.min(ZOOM_MAX, state.zoom + ZOOM_STEP) });
         return;
@@ -149,5 +180,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state, dispatch, navigate, saveProject]);
+  }, [state, dispatch, navigate, saveProject, saveProjectAs, openProjectFile]);
 };

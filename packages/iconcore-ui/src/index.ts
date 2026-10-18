@@ -39,6 +39,7 @@ export {
   MenubarContent,
   MenubarItem,
   MenubarLabel,
+  MenubarSeparator,
   MenubarRadioGroup,
   MenubarRadioItem,
   type MenubarProps,

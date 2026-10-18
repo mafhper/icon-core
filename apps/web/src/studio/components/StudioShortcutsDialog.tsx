@@ -7,61 +7,65 @@ interface ShortcutGroup {
 }
 
 /**
- * Studio keyboard shortcuts (Fase 2): the real list.
+ * Studio keyboard shortcuts (Fase 2): the real list, in Portuguese.
  *
  * Every row names a binding the app actually installs — the Composer's
- * `useKeyboardShortcuts` plus the studio tool keys (`V`/`H`) owned by the
- * shell. `Menu` shortcut labels point here, and this dialog is the proof
- * they do not lie.
+ * `useKeyboardShortcuts` plus the studio tool keys (`V`/`H`) and `?`, owned
+ * by the shell. The menu shortcut labels point here, and this dialog is the
+ * proof they do not lie: `Ctrl+O` (Abrir) and `Ctrl+Shift+S` (Salvar como)
+ * were added with their bindings, and `Ctrl+N` is absent because nothing is
+ * bound to it.
  */
 const GROUPS: ShortcutGroup[] = [
   {
-    title: 'Tools',
+    title: 'Ferramentas',
     rows: [
-      { keys: ['V'], action: 'Select tool' },
-      { keys: ['H'], action: 'Hand tool (pan)' }
+      { keys: ['V'], action: 'Selecionar ferramenta' },
+      { keys: ['H'], action: 'Ferramenta mão (pan)' }
     ]
   },
   {
-    title: 'Layers',
+    title: 'Camadas',
     rows: [
-      { keys: ['Delete', 'Backspace'], action: 'Delete selected layer' },
-      { keys: ['Ctrl', 'D'], action: 'Duplicate selected layer' },
-      { keys: ['↑', '↓', '←', '→'], action: 'Nudge selected layer (Shift: ×10)' }
+      { keys: ['Delete', 'Backspace'], action: 'Excluir camada selecionada' },
+      { keys: ['Ctrl', 'D'], action: 'Duplicar camada selecionada' },
+      { keys: ['↑', '↓', '←', '→'], action: 'Mover camada (Shift: ×10)' }
     ]
   },
   {
-    title: 'History',
+    title: 'Histórico',
     rows: [
-      { keys: ['Ctrl', 'Z'], action: 'Undo' },
-      { keys: ['Ctrl', 'Shift', 'Z'], action: 'Redo' }
+      { keys: ['Ctrl', 'Z'], action: 'Desfazer' },
+      { keys: ['Ctrl', 'Shift', 'Z'], action: 'Refazer' }
     ]
   },
   {
-    title: 'View',
+    title: 'Exibir',
     rows: [
-      { keys: ['Ctrl', '+'], action: 'Zoom in' },
-      { keys: ['Ctrl', '−'], action: 'Zoom out' },
-      { keys: ['Ctrl', '0'], action: 'Reset zoom' },
-      { keys: ['G'], action: 'Toggle grid' },
-      { keys: ['1', '2', '3'], action: 'Default / Light / Dark variant' }
+      { keys: ['Ctrl', '+'], action: 'Aproximar' },
+      { keys: ['Ctrl', '−'], action: 'Afastar' },
+      { keys: ['Ctrl', '0'], action: 'Redefinir zoom' },
+      { keys: ['G'], action: 'Alternar grade' },
+      { keys: ['1', '2', '3'], action: 'Variantes padrão / claro / escuro' }
     ]
   },
   {
-    title: 'Document',
+    title: 'Documento',
     rows: [
-      { keys: ['Ctrl', 'S'], action: 'Save' },
-      { keys: ['Ctrl', 'E'], action: 'Open export' },
-      { keys: ['Ctrl', 'L'], action: 'Add circle layer' },
-      { keys: ['Esc'], action: 'Deselect layer / close dialog' },
-      { keys: ['?'], action: 'Open this list' }
+      { keys: ['Ctrl', 'O'], action: 'Abrir projeto' },
+      { keys: ['Ctrl', 'S'], action: 'Salvar' },
+      { keys: ['Ctrl', 'Shift', 'S'], action: 'Salvar como' },
+      { keys: ['Ctrl', 'E'], action: 'Abrir exportação' },
+      { keys: ['Ctrl', 'L'], action: 'Adicionar camada de círculo' },
+      { keys: ['Esc'], action: 'Desmarcar camada / fechar diálogo' },
+      { keys: ['?'], action: 'Abrir esta lista' }
     ]
   }
 ];
 
 export const StudioShortcutsDialog = ({ onClose }: { onClose: () => void }) => {
   return (
-    <StudioDialog title="Keyboard shortcuts" onClose={onClose}>
+    <StudioDialog title="Atalhos de teclado" onClose={onClose}>
       {GROUPS.map((group) => (
         <section key={group.title} aria-label={group.title}>
           <h3 className="text-xs font-semibold text-ic-text-muted mt-3 mb-1">{group.title}</h3>
