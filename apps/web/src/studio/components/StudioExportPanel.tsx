@@ -57,9 +57,9 @@ class ExportCancelledError extends Error {}
  *   — it is the only exit while a run is in flight, aborting cooperatively
  *   back to configure without letting the late result land.
  *
- * Transparency defaults OFF and rides the PNG/ICO artifacts — the export
- * carries the canvas background unless the person asks for alpha (WYSIWYG),
- * the same contract the dialog held. The panel's tiles follow the switch, so
+ * Transparency defaults OFF and rides every artifact — the export carries the
+ * canvas background unless the person asks for alpha (WYSIWYG), the same
+ * contract the dialog held. The panel's tiles follow the switch, so
  * Preview/Export is the file — frame included: every SVG/PNG artifact carries
  * the resolved canvas shape (`maskShape`), the same precedence the tiles use,
  * and only a container keeps full bleed (Windows/macOS mask at display time).
@@ -96,7 +96,18 @@ export const StudioExportPanel = () => {
     const maskShape: CanvasMaskShape = project.canvas.maskShape ?? state.maskShape ?? 'rounded-rectangle';
     const artifacts: ExportArtifact[] = [];
     if (formats.includes('svg')) {
-      artifacts.push({ id: 'studio-svg', format: 'svg', path: '{name}-{variant}.svg', enabled: true, size: project.canvas.size, maskShape });
+      artifacts.push({
+        id: 'studio-svg',
+        format: 'svg',
+        path: '{name}-{variant}.svg',
+        enabled: true,
+        size: project.canvas.size,
+        maskShape,
+        // Same contract as the PNG/ICO below: with the switch off the file
+        // carries the variant's resolved background (WYSIWYG); with it on the
+        // artifact says nothing and the encoder exports alpha.
+        ...(background ? { background } : {})
+      });
     }
     for (const size of [...sizes].sort((a, b) => a - b)) {
       if (!formats.includes('png')) break;

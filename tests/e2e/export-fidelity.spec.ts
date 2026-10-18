@@ -30,7 +30,9 @@ import zlib from 'node:zlib';
  *    escuro da dark o sinal seria fraco demais para um limiar honesto;
  * 3. o ZIP carrega os 8 caminhos, e o PNG lá dentro é **byte a byte** o do
  *    download individual — o transporte não reencoda nem troca blob;
- * 4. o SVG carrega `<text>` (a layer de texto) e `feDropShadow` (a sombra).
+ * 4. o SVG carrega o fundo resolvido da variante (o `<rect>` full-canvas,
+ *    inclusive o branco-sobre-branco do mono), o `<text>` (a layer de texto) e
+ *    `feDropShadow` (a sombra).
  *
  * O PNG é decodificado aqui mesmo (zlib builtin) e o ZIP é lido pelo diretório
  * central + `inflateRaw`: o arquivo que o app gera é um contrato público o
@@ -282,26 +284,30 @@ const png256DoIco = (bytes: Buffer): Raster => {
   return decodificarPng(bytes.subarray(maior.offset, maior.offset + maior.tamanho));
 };
 
-test('forma + texto + sombra: o fundo de cada variante chega ao PNG e ao ICO, e o SVG carrega o texto e a sombra', async ({
+test('forma + texto + sombra: o fundo de cada variante chega ao PNG, ao ICO e ao SVG, e o SVG carrega o texto e a sombra', async ({
   page
 }) => {
-  // Cinco downloads em série + export de 8 artefatos: o teto default de 30s
+  // Sete downloads em série + export de 12 artefatos: o teto default de 30s
   // do runner é apertado para o teste mais longo da suíte.
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   await abrirComFixture(page);
   const painel = await abrirExport(page);
 
-  // ICO liga (SVG/PNG já vêm ligados); a segunda variante entra porque o fundo
-  // por variante precisa de dois valores para significar alguma coisa.
+  // ICO liga (SVG/PNG já vêm ligados); Dark e Monochrome entram porque o fundo
+  // por variante precisa de valores distintos para significar alguma coisa — e
+  // o mono é o caso-limite: fundo branco com a silhueta branca por cima.
   await painel.getByRole('checkbox', { name: 'ICO' }).click();
   await painel.getByRole('checkbox', { name: 'Dark' }).click();
+  await painel.getByRole('checkbox', { name: 'Monochrome' }).click();
   await executarExport(page, painel);
 
-  // 4 artefatos (svg, png256, png512, ico) × 2 variantes.
-  await expect(painel.locator('.studio-export-files li')).toHaveCount(8);
+  // 4 artefatos (svg, png256, png512, ico) × 3 variantes.
+  await expect(painel.locator('.studio-export-files li')).toHaveCount(12);
 
-  const svg = await baixarArquivo(page, painel, /-default\.svg/);
+  const svgDefault = await baixarArquivo(page, painel, /-default\.svg/);
+  const svgDark = await baixarArquivo(page, painel, /-dark\.svg/);
+  const svgMono = await baixarArquivo(page, painel, /-mono\.svg/);
   const pngDefault = await baixarArquivo(page, painel, /-default-512px\.png/);
   const pngDark = await baixarArquivo(page, painel, /-dark-512px\.png/);
   const icoDefault = await baixarArquivo(page, painel, /-default\.ico/);
@@ -347,14 +353,33 @@ test('forma + texto + sombra: o fundo de cada variante chega ao PNG e ao ICO, e 
   // sai aqui com o fundo puro — Windows/macOS aplicam a máscara na exibição.
   expect(dentroDoIco.em(2, 2), 'o ICO foi mascarado — container vence').toEqual([248, 250, 252, 255]);
 
+  // ── SVG: o fundo de cada variante chega ao vetor — o mesmo contrato do PNG.
+  // A sonda é o `<rect>` full-canvas com o fill resolvido da variante: nenhum
+  // outro elemento do fixture produz esse markup (as formas são gradiente, o
+  // texto é `<text>`), e `fill="rgb(17, 24, 39)"` sozinho não serviria — é a
+  // cor do texto em todas as variantes. Os literais são as sementes do
+  // projectFactory (default #f8fafc, dark #111827, mono #ffffff); se o export
+  // ignorasse a variante, os três arquivos carregariam o mesmo fill, e se
+  // ignorasse o switch desligado, nenhum. O mono é o caso-limite: o fundo
+  // #ffffff sob a silhueta branca (branco-sobre-branco) ainda prova que o fundo
+  // chegou ao arquivo.
+  const markup = svgDefault.bytes.toString('utf8');
+  const fundo = (cor: string) => `<rect width="512" height="512" fill="${cor}"/>`;
+  expect(markup, 'o SVG default não carrega o fundo da variante (#f8fafc)').toContain(fundo('rgb(248, 250, 252)'));
+  expect(svgDark.bytes.toString('utf8'), 'o SVG dark não carrega o fundo da variante (#111827)').toContain(
+    fundo('rgb(17, 24, 39)')
+  );
+  expect(svgMono.bytes.toString('utf8'), 'o SVG mono não carrega o fundo branco (#ffffff)').toContain(
+    fundo('rgb(255, 255, 255)')
+  );
+
   // ── SVG: o texto e a sombra do fixture chegaram ao vetor.
-  const markup = svg.bytes.toString('utf8');
   expect(markup, 'sem <text>: a layer de texto não chegou ao SVG').toMatch(/<text\b/);
   expect(markup, 'o texto default "Icon" não está no SVG').toContain('Icon');
   expect(markup, 'sem feDropShadow: a sombra da forma não chegou ao SVG').toContain('feDropShadow');
 });
 
-test('transparência ligada: PNG e ICO saem com o fundo transparente', async ({ page }) => {
+test('transparência ligada: PNG, ICO e SVG saem com o fundo transparente', async ({ page }) => {
   await abrirComFixture(page);
   const painel = await abrirExport(page);
 
@@ -364,6 +389,7 @@ test('transparência ligada: PNG e ICO saem com o fundo transparente', async ({ 
   await painel.getByRole('checkbox', { name: 'ICO' }).click();
   await executarExport(page, painel);
 
+  const svg = await baixarArquivo(page, painel, /-default\.svg/);
   const png = await baixarArquivo(page, painel, /-default-512px\.png/);
   const ico = await baixarArquivo(page, painel, /-default\.ico/);
 
@@ -373,6 +399,12 @@ test('transparência ligada: PNG e ICO saem com o fundo transparente', async ({ 
   expect(raster.em(256, 256)[3], 'a arte perdeu o alpha junto com o fundo').toBe(255);
 
   expect(png256DoIco(ico.bytes).fundo, 'o ICO ignorou o switch: o fundo veio pintado').toEqual([0, 0, 0, 0]);
+
+  // O mesmo contrato no vetor: sem o `<rect>` full-canvas do fundo, e a arte
+  // (o texto) segue no documento.
+  const markup = svg.bytes.toString('utf8');
+  expect(markup, 'o SVG ainda pinta o fundo com o switch ligado').not.toContain('<rect width="512" height="512" fill="');
+  expect(markup, 'o switch levou a arte junto: o texto sumiu do SVG').toContain('<text');
 });
 
 test('zip: carrega os 8 caminhos e o PNG dentro é byte a byte o do download individual', async ({ page }) => {

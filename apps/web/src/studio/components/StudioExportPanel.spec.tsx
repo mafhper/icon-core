@@ -134,6 +134,34 @@ describe('Studio export panel — S1 (configure)', () => {
     expect(porId.get('studio-ico')?.maskShape).toBeUndefined();
   });
 
+  it('o switch de transparência desligado entrega background "opaque" a svg/png/ico', () => {
+    vi.mocked(executePlan).mockImplementationOnce(() => new Promise<never>(() => {}));
+    const inspector = openExport();
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: 'ICO' }));
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Export 4 files' }));
+
+    const [plan] = vi.mocked(executePlan).mock.calls[0] ?? [];
+    const porId = new Map(plan!.artifacts.map((a) => [a.id, a]));
+    // WYSIWYG: com o switch desligado o arquivo carrega o fundo da variante —
+    // o mesmo contrato nos três formatos (o defeito era o SVG sair de fora).
+    for (const id of ['studio-svg', 'studio-png-256', 'studio-png-512', 'studio-ico']) {
+      expect(porId.get(id)?.background, id).toBe('opaque');
+    }
+  });
+
+  it('com o switch ligado, nenhum artefato carrega background (alpha)', () => {
+    vi.mocked(executePlan).mockImplementationOnce(() => new Promise<never>(() => {}));
+    const inspector = openExport();
+    fireEvent.click(within(inspector).getByRole('switch', { name: 'Transparent background' }));
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: 'ICO' }));
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Export 4 files' }));
+
+    const [plan] = vi.mocked(executePlan).mock.calls[0] ?? [];
+    for (const artifact of plan!.artifacts) {
+      expect(artifact.background, artifact.id).toBeUndefined();
+    }
+  });
+
   it('S1 não oferece Cancel: o rodapé tem só o Export N files', () => {
     const inspector = openExport();
 
