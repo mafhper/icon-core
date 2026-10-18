@@ -10,7 +10,7 @@ import zlib from 'node:zlib';
  * base enquanto canvas, tiles e export leem o override da variante ativa —
  * ajustar com light/dark/mono ativo commitava e nao mudava um pixel. E o
  * Preview/Export mostrava o fundo mesmo com a transparencia ligada, mentindo
- * sobre o arquivo. Medido antes do fix em `.dev/tmp/bg-repro.mjs`:
+ * sobre o arquivo. Medido antes do fix com uma sonda de browser descartável:
  * canvas `#f8fafc → #ff0000` ok no default, tiles light/dark/mono parados
  * nas sementes, PNG exportado `[0,0,0,0]` (transparente) com o switch ligado.
  */
@@ -237,19 +237,14 @@ test('arquivo exportado carrega o fundo ajustado (switch desligado = WYSIWYG)', 
 
   const inspector = page.getByRole('region', { name: 'Inspector panel' });
   await inspector.getByRole('tab', { name: 'Export' }).click();
-  await inspector.getByRole('button', { name: 'Export' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Export icons' });
-  await expect(dialog).toBeVisible();
-
-  // Default do dialogo: o arquivo honra o fundo que se ve.
-  await expect(dialog.getByRole('switch', { name: 'Transparent background' })).not.toBeChecked();
-  await dialog.getByRole('checkbox', { name: 'SVG' }).click();
-  await dialog.getByRole('button', { name: /Export \d+ files?/ }).click();
-  await expect(page.getByRole('button', { name: 'Download all (.zip)' })).toBeVisible({ timeout: 30000 });
+  await expect(inspector.getByRole('switch', { name: 'Transparent background' })).not.toBeChecked();
+  await inspector.getByRole('checkbox', { name: 'SVG' }).click();
+  await inspector.getByRole('button', { name: /Export \d+ files?/ }).click();
+  await expect(inspector.getByRole('button', { name: 'Download all (.zip)' })).toBeVisible({ timeout: 30000 });
 
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 15000 }),
-    dialog.getByRole('button', { name: 'Download' }).first().click()
+    inspector.getByRole('button', { name: 'Download' }).first().click()
   ]);
   const caminho = await download.path();
   if (!caminho) throw new Error('download sem caminho em disco');
@@ -266,16 +261,12 @@ test('switch ligado: Preview/Export mostra alpha e o arquivo sai transparente', 
 
   const inspector = page.getByRole('region', { name: 'Inspector panel' });
   await inspector.getByRole('tab', { name: 'Export' }).click();
-  await inspector.getByRole('button', { name: 'Export' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Export icons' });
-  await expect(dialog).toBeVisible();
-
-  await dialog.getByRole('switch', { name: 'Transparent background' }).click();
-  // O preview do dialogo e o arquivo, nao o editor: espera o canto alpha.
+  await inspector.getByRole('switch', { name: 'Transparent background' }).click();
+  // O preview do painel é o arquivo, não o editor: espera o canto alpha.
   await page.waitForFunction(
     () => {
-      const dlg = document.querySelector('[role="dialog"]')!;
-      const img = dlg.querySelector('.studio-tile img') as HTMLImageElement | null;
+      const panel = document.querySelector('[aria-label="Inspector panel"]')!;
+      const img = panel.querySelector('.studio-tile img') as HTMLImageElement | null;
       if (!img || !img.naturalWidth) return false;
       const c = document.createElement('canvas');
       c.width = img.naturalWidth;
@@ -289,12 +280,12 @@ test('switch ligado: Preview/Export mostra alpha e o arquivo sai transparente', 
     { timeout: 15000 }
   );
 
-  await dialog.getByRole('checkbox', { name: 'SVG' }).click();
-  await dialog.getByRole('button', { name: /Export \d+ files?/ }).click();
-  await expect(page.getByRole('button', { name: 'Download all (.zip)' })).toBeVisible({ timeout: 30000 });
+  await inspector.getByRole('checkbox', { name: 'SVG' }).click();
+  await inspector.getByRole('button', { name: /Export \d+ files?/ }).click();
+  await expect(inspector.getByRole('button', { name: 'Download all (.zip)' })).toBeVisible({ timeout: 30000 });
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 15000 }),
-    dialog.getByRole('button', { name: 'Download' }).first().click()
+    inspector.getByRole('button', { name: 'Download' }).first().click()
   ]);
   const caminho = await download.path();
   if (!caminho) throw new Error('download sem caminho em disco');

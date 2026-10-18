@@ -1,7 +1,7 @@
 /**
  * Studio shell styles (FATIA 1b: porte integral do sistema visual do mockup).
  *
- * Source of truth: `.dev/investigations/2026-10-sprint-UI/mockup/main/src/styles.css`
+ * Source of truth: the approved mockup's `styles.css`
  * (Icon-Core blocks: oklch palette, `--radius: 0.375rem`, densities 10/11/12px,
  * dark-first) + `editor.tsx`/`inspector.tsx` (chrome furniture). Owner override:
  * the mockup look wins over the previous blue/Cal Sans remap, Export tab included.
@@ -340,8 +340,13 @@
   white-space: nowrap;
 }
 
-.studio-export-button:hover {
+.studio-export-button:hover:not(:disabled) {
   background-color: var(--ic-accent-hover);
+}
+
+.studio-export-button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* --- Body: three regions ------------------------------------------------ */
@@ -763,9 +768,84 @@
   text-align: center;
 }
 
-/* Pé de export da aba: a ação mora no fim da aba, em largura total. */
+/* Tiles do export no painel: cartões-checkbox multi-seleção (mínimo 1) sobre a
+   mesma grade 2×2, mais o **anel de variante ativa** — um controle separado
+   (SET_ACTIVE_VARIANT): clicar o cartão marca/desmarca a variante no export;
+   clicar o anel troca a variante que o canvas edita. O cartão preenche a
+   célula da grade. */
+.studio-export-tile {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.studio-export-tile .studio-tile {
+  flex: 1 1 auto;
+  width: 100%;
+  text-align: center;
+}
+
+.studio-export-tile-card[aria-checked='true'] {
+  border-color: var(--ic-accent);
+  background-color: var(--ic-bg);
+  color: var(--ic-text);
+}
+
+/* Inertes em S2: nada de hover nem clique enquanto o pipeline corre. */
+.studio-export-tile-card:disabled,
+.studio-export-ring:disabled {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Selo de marcado: irmão do cartão (não aninhado), decorativo — o estado
+   acessível mora no `aria-checked` do próprio cartão. */
+.studio-export-tile-check {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  color: var(--ic-accent-text);
+  pointer-events: none;
+}
+
+.studio-export-ring {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1.5px solid var(--ic-border);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.studio-export-ring:hover:not(:disabled) {
+  border-color: var(--ic-text-muted);
+}
+
+.studio-export-ring[data-active='true'] {
+  border-color: var(--ic-accent);
+}
+
+.studio-export-ring[data-active='true']::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background-color: var(--ic-accent);
+}
+
+/* Pé de export da aba: container único que morfa por estágio (S1 Cancel +
+   Export N files; S2 Cancel + Exporting…; S3 Export more/Close + Download all
+   (.zip); erro Back). O primário estica e os fantasmas dimensionam pelo
+   conteúdo; em painel estreito o primário desce para a própria linha. */
 .studio-export-foot {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   flex: 0 0 auto;
   padding: 12px 14px;
   border-top: 1px solid var(--ic-border);
@@ -776,6 +856,29 @@
   flex: 1 1 auto;
   justify-content: center;
   height: 32px;
+}
+
+/* Fantasma do rodapé (Cancel/Close/Export more/Back): a densidade do botão de
+   export sem o preenchimento de acento. */
+.studio-export-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ic-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.studio-export-ghost:hover {
+  color: var(--ic-text);
+  background-color: var(--ic-elevated);
 }
 
 /* Pé do inspetor (mockup `inspector-foot`: 36px, respiro 0 14, 9px — piso 11px).
@@ -982,6 +1085,22 @@
   background-color: var(--ic-accent);
 }
 
+/* Seções do export no painel: o respiro lateral dos tiles (22px) para a
+   coluna não encostar na borda; `lead` dá o topo quando não há grade acima. */
+.studio-export-settings {
+  padding: 0 22px 22px;
+}
+
+.studio-export-lead {
+  padding-top: 18px;
+}
+
+.studio-export-note {
+  margin: 0 0 14px;
+  font-size: 11px;
+  color: var(--ic-text-muted);
+}
+
 /* Prévia do export (adaptação: o diálogo genérico da concha não tem o layout
    em duas colunas do mockup; a prévia vira um painel embutido na mesa). */
 .studio-export-preview {
@@ -1033,9 +1152,19 @@
   border-bottom: none;
 }
 
+/* O caminho trunca: o painel é estreito e o nome pode ser longo. */
+.studio-export-files li > span:first-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .studio-export-files .studio-export-size {
+  flex: 0 0 auto;
   margin-left: auto;
   color: var(--ic-text-muted);
+  white-space: nowrap;
 }
 
 /* --- OpenPencil-style color picker --------------------------------------- */

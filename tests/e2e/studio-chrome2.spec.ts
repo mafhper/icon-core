@@ -118,7 +118,7 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(page.getByRole('region', { name: 'Layers panel' })).toBeVisible();
   });
 
-  test(`[${theme}] aba Export: grade viva + ação no fim que abre o export`, async ({ page }) => {
+  test(`[${theme}] aba Export: grade viva + ação no fim que exporta de verdade`, async ({ page }) => {
     await preparar(page, theme);
     const inspector = page.getByRole('region', { name: 'Inspector panel' });
 
@@ -127,7 +127,7 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(page.locator('.studio-tiles-grid')).toBeVisible();
     await expect(page.locator('.studio-tiles-grid .studio-tile')).toHaveCount(4);
 
-    const action = inspector.getByRole('button', { name: 'Export' });
+    const action = inspector.getByRole('button', { name: /Export \d+ files?/ });
     await expect(action).toBeVisible();
     const atEnd = await inspector.evaluate((el) => {
       const grid = el.querySelector('.studio-tiles-grid');
@@ -138,8 +138,9 @@ for (const theme of ['dark', 'light'] as const) {
     });
     expect(atEnd).toBe(true);
 
+    // A ação roda o pipeline de verdade: o estágio final oferece o zip.
     await action.click();
-    await expect(page.getByRole('dialog', { name: 'Export icons' })).toBeVisible();
+    await expect(inspector.getByRole('button', { name: 'Download all (.zip)' })).toBeVisible({ timeout: 30000 });
   });
 
   test(`[${theme}] sem scroll horizontal em viewport larga`, async ({ page }) => {

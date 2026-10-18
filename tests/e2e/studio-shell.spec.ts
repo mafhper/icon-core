@@ -45,7 +45,7 @@ test('studio monta as cinco regioes com o chrome do documento', async ({ page })
   // titlebar, never in the canvas bar.
   const inspector = page.getByRole('region', { name: 'Inspector panel' });
   await inspector.getByRole('tab', { name: 'Export' }).click();
-  await expect(inspector.getByRole('button', { name: 'Export' })).toBeVisible();
+  await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
   await expect(page.getByRole('banner').getByRole('button', { name: 'Export' })).toHaveCount(0);
   const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
   await expect(toolbar.getByRole('button', { name: 'Export' })).toHaveCount(0);

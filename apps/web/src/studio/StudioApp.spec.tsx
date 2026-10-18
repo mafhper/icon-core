@@ -224,13 +224,13 @@ describe('Studio inspector panel (Fase 4)', () => {
     expect(within(inspector).getByRole('tab', { name: 'Design' })).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
-    const tiles = within(inspector).getByRole('group', { name: 'Appearance variants' });
+    const tiles = within(inspector).getByRole('group', { name: 'Variants' });
     for (const name of ['Default', 'Light', 'Dark', 'Monochrome']) {
-      expect(within(tiles).getByRole('button', { name })).toBeInTheDocument();
+      expect(within(tiles).getByRole('checkbox', { name })).toBeInTheDocument();
     }
     // The export action lives at the end of the tab — not in the titlebar,
     // not in the canvas bar.
-    expect(within(inspector).getByRole('button', { name: 'Export' })).toBeInTheDocument();
+    expect(within(inspector).getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
     expect(within(screen.getByRole('banner')).queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
     expect(
       within(screen.getByRole('toolbar', { name: 'Studio toolbar' })).queryByRole('button', { name: 'Export' })
@@ -267,29 +267,24 @@ describe('Studio export dialog + main menu (Fase 5)', () => {
   it('opens the three-stage export from the Export tab, gated by validation', () => {
     renderShell(<SeededShell project={createBlankProject('Export', 512)} />);
 
-    // The export action lives at the end of the Inspector Export tab: open
-    // the tab, then run it. Navigation runs on the URL hash: setting it only
-    // navigates when the `hashchange` fires, which jsdom never does on its
-    // own (a real browser does). Emit it, like the browser would.
+    // The export stages live in the Inspector Export tab itself: open the tab
+    // and the panel is the surface — no dialog, no navigation. (The dialog
+    // route survives the cut until P2; this is the surface that owns export.)
     const inspector = screen.getByRole('region', { name: 'Inspector panel' });
     fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
-    fireEvent.click(within(inspector).getByRole('button', { name: 'Export' }));
-    fireEvent(window, new Event('hashchange'));
-    const dialog = screen.getByRole('dialog', { name: 'Export icons' });
-    expect(within(dialog).getByText('SVG')).toBeInTheDocument();
-    expect(within(dialog).getByText('PNG')).toBeInTheDocument();
-    expect(within(dialog).getByText('ICO')).toBeInTheDocument();
+    expect(within(inspector).getByText('SVG')).toBeInTheDocument();
+    expect(within(inspector).getByText('PNG')).toBeInTheDocument();
+    expect(within(inspector).getByText('ICO')).toBeInTheDocument();
 
     // Deselecting every format leaves nothing to render: no export.
     // (Re-query between clicks: each toggle re-renders the inputs.)
-    const box = (name: string) => within(dialog).getByRole('checkbox', { name: name });
-    const exportName = () => within(dialog).getByRole('button', { name: /Export/ }).textContent;
+    const box = (name: string) => within(inspector).getByRole('checkbox', { name: name });
+    const exportButton = () => within(inspector).getByRole('button', { name: /^Export/ });
     fireEvent.click(box('SVG'));
-    const afterSvg = exportName();
+    expect(exportButton().textContent).toBe('Export 2 files');
     fireEvent.click(box('PNG'));
-    const afterPng = exportName();
-    expect([afterSvg, afterPng]).toEqual(['Export 2 files', 'Export ']);
-    expect(within(dialog).getByRole('button', { name: 'Export' })).toBeDisabled();
+    expect(exportButton().textContent?.trim()).toBe('Export');
+    expect(exportButton()).toBeDisabled();
   });
 
   it('renames the document through the menu form', () => {

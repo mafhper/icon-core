@@ -67,10 +67,10 @@ describe('Studio FATIA 1b (mockup visual port)', () => {
     const inspector = screen.getByRole('region', { name: 'Inspector panel' });
 
     fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
-    const grid = within(inspector).getByRole('group', { name: 'Appearance variants' });
+    const grid = within(inspector).getByRole('group', { name: 'Variants' });
     expect(grid).toHaveClass('studio-tiles-grid');
     for (const name of ['Default', 'Light', 'Dark', 'Monochrome']) {
-      expect(within(grid).getByRole('button', { name })).toBeInTheDocument();
+      expect(within(grid).getByRole('checkbox', { name })).toBeInTheDocument();
     }
   });
 

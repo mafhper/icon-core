@@ -38,7 +38,7 @@ import zlib from 'node:zlib';
  * ## O que este spec NÃO cobre, de propósito
  *
  * **Saída em pasta (folder).** Não existe transporte de pasta no web app: o
- * diálogo do Studio entrega arquivo a arquivo e o ZIP. O gravador de pasta é o
+ * painel do Studio entrega arquivo a arquivo e o ZIP. O gravador de pasta é o
  * shell Tauri (`save_generated_files`, via `exportToDesktop` em
  * `apps/web/src/lib/desktopExport.ts`), que **não tem chamador nesta branch** —
  * e `ExportDestination = 'zip' | 'folder' | 'files'` existe só no modelo.
@@ -233,22 +233,21 @@ const abrirComFixture = async (page: Page) => {
 };
 
 const abrirExport = async (page: Page): Promise<Locator> => {
+  // Export lives in the Inspector Export tab — the panel itself is the surface.
   const inspector = page.getByRole('region', { name: 'Inspector panel' });
   await inspector.getByRole('tab', { name: 'Export' }).click();
-  await inspector.getByRole('button', { name: 'Export' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Export icons' });
-  await expect(dialog).toBeVisible();
-  return dialog;
+  await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
+  return inspector;
 };
 
-const executarExport = async (page: Page, dialog: Locator) => {
-  await dialog.getByRole('button', { name: /Export \d+ files?/ }).click();
-  await expect(page.getByRole('button', { name: 'Download all (.zip)' })).toBeVisible({ timeout: 30000 });
+const executarExport = async (page: Page, painel: Locator) => {
+  await painel.getByRole('button', { name: /Export \d+ files?/ }).click();
+  await expect(painel.getByRole('button', { name: 'Download all (.zip)' })).toBeVisible({ timeout: 30000 });
 };
 
 /** Baixa o arquivo cuja linha da lista casa o sufixo, por role e nome — nunca por `.first()`. */
-const baixarArquivo = async (page: Page, dialog: Locator, sufixo: RegExp) => {
-  const linha = dialog.locator('.studio-export-files li').filter({ hasText: sufixo });
+const baixarArquivo = async (page: Page, painel: Locator, sufixo: RegExp) => {
+  const linha = painel.locator('.studio-export-files li').filter({ hasText: sufixo });
   await expect(linha, `um único arquivo casando ${sufixo}`).toHaveCount(1);
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 15000 }),
@@ -282,22 +281,22 @@ test('forma + texto + sombra: o fundo de cada variante chega ao PNG e ao ICO, e 
   test.setTimeout(60_000);
 
   await abrirComFixture(page);
-  const dialog = await abrirExport(page);
+  const painel = await abrirExport(page);
 
   // ICO liga (SVG/PNG já vêm ligados); a segunda variante entra porque o fundo
   // por variante precisa de dois valores para significar alguma coisa.
-  await dialog.getByRole('checkbox', { name: 'ICO' }).click();
-  await dialog.getByRole('checkbox', { name: 'dark', exact: true }).click();
-  await executarExport(page, dialog);
+  await painel.getByRole('checkbox', { name: 'ICO' }).click();
+  await painel.getByRole('checkbox', { name: 'Dark' }).click();
+  await executarExport(page, painel);
 
   // 4 artefatos (svg, png256, png512, ico) × 2 variantes.
-  await expect(dialog.locator('.studio-export-files li')).toHaveCount(8);
+  await expect(painel.locator('.studio-export-files li')).toHaveCount(8);
 
-  const svg = await baixarArquivo(page, dialog, /-default\.svg/);
-  const pngDefault = await baixarArquivo(page, dialog, /-default-512px\.png/);
-  const pngDark = await baixarArquivo(page, dialog, /-dark-512px\.png/);
-  const icoDefault = await baixarArquivo(page, dialog, /-default\.ico/);
-  const icoDark = await baixarArquivo(page, dialog, /-dark\.ico/);
+  const svg = await baixarArquivo(page, painel, /-default\.svg/);
+  const pngDefault = await baixarArquivo(page, painel, /-default-512px\.png/);
+  const pngDark = await baixarArquivo(page, painel, /-dark-512px\.png/);
+  const icoDefault = await baixarArquivo(page, painel, /-default\.ico/);
+  const icoDark = await baixarArquivo(page, painel, /-dark\.ico/);
 
   // ── PNG: o canto (2%,2%) é fundo puro — forma (220px) e texto ficam no centro.
   // Os literais são as sementes do projectFactory (default #f8fafc, dark #111827).
@@ -339,16 +338,16 @@ test('forma + texto + sombra: o fundo de cada variante chega ao PNG e ao ICO, e 
 
 test('transparência ligada: PNG e ICO saem com o canto alpha 0', async ({ page }) => {
   await abrirComFixture(page);
-  const dialog = await abrirExport(page);
+  const painel = await abrirExport(page);
 
-  const transparente = dialog.getByRole('switch', { name: 'Transparent background' });
+  const transparente = painel.getByRole('switch', { name: 'Transparent background' });
   await expect(transparente, 'o default do diálogo mudou: era para o fundo estar pintado').not.toBeChecked();
   await transparente.click();
-  await dialog.getByRole('checkbox', { name: 'ICO' }).click();
-  await executarExport(page, dialog);
+  await painel.getByRole('checkbox', { name: 'ICO' }).click();
+  await executarExport(page, painel);
 
-  const png = await baixarArquivo(page, dialog, /-default-512px\.png/);
-  const ico = await baixarArquivo(page, dialog, /-default\.ico/);
+  const png = await baixarArquivo(page, painel, /-default-512px\.png/);
+  const ico = await baixarArquivo(page, painel, /-default\.ico/);
 
   const raster = decodificarPng(png.bytes);
   expect(raster.canto, 'o canto ainda carrega o fundo — o switch não chegou ao arquivo').toEqual([0, 0, 0, 0]);
@@ -360,17 +359,17 @@ test('transparência ligada: PNG e ICO saem com o canto alpha 0', async ({ page 
 
 test('zip: carrega os 8 caminhos e o PNG dentro é byte a byte o do download individual', async ({ page }) => {
   await abrirComFixture(page);
-  const dialog = await abrirExport(page);
+  const painel = await abrirExport(page);
 
-  await dialog.getByRole('checkbox', { name: 'ICO' }).click();
-  await dialog.getByRole('checkbox', { name: 'dark', exact: true }).click();
-  await executarExport(page, dialog);
+  await painel.getByRole('checkbox', { name: 'ICO' }).click();
+  await painel.getByRole('checkbox', { name: 'Dark' }).click();
+  await executarExport(page, painel);
 
-  const pngDefault = await baixarArquivo(page, dialog, /-default-512px\.png/);
+  const pngDefault = await baixarArquivo(page, painel, /-default-512px\.png/);
 
   const [downloadZip] = await Promise.all([
     page.waitForEvent('download', { timeout: 15000 }),
-    dialog.getByRole('button', { name: 'Download all (.zip)' }).click()
+    painel.getByRole('button', { name: 'Download all (.zip)' }).click()
   ]);
   expect(downloadZip.suggestedFilename()).toMatch(/\.zip$/);
   const caminho = await downloadZip.path();

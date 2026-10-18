@@ -44,6 +44,29 @@ export const StudioVariantTiles = ({ grid = false, background = 'canvas' }: { gr
 /** Side of `.studio-tile img` / `.studio-tile-empty`, in `studio.css`. */
 const TILE_SIDE = 49;
 
+/**
+ * The tile's artwork, shared by the canvas strip and the export panel's
+ * card-checkbox tiles: the real pipeline bitmap (or the honest empty frame)
+ * clipped to the document's own frame. One renderer for every surface that
+ * shows a variant, so no surface can disagree about what the file looks like.
+ */
+export const VariantTileBody = ({ variant, background }: { variant: IconVariant; background: RenderBackground }) => {
+  const { state } = useComposer();
+  const project = state.project;
+  // The document's shape wins; the toolbar's choice covers a project that
+  // never declared one — the same precedence the central frame uses.
+  const maskShape: CanvasMaskShape = project?.canvas.maskShape ?? state.maskShape ?? 'rounded-rectangle';
+  const radius = project ? resolveMaskRadius({ ...project.canvas, maskShape }) : 0;
+  const canvasSize = project?.canvas.size ?? 0;
+  const tileRadius = canvasSize > 0 ? (radius / canvasSize) * TILE_SIDE : 0;
+  const url = useStudioPreview(project, variant, background, maskShape);
+  return url ? (
+    <img src={url} alt="" draggable={false} style={{ borderRadius: tileRadius }} />
+  ) : (
+    <span className="studio-tile-empty" aria-hidden="true" style={{ borderRadius: tileRadius }} />
+  );
+};
+
 const VariantTile = ({
   variant,
   label,
@@ -56,25 +79,10 @@ const VariantTile = ({
   active: boolean;
   background: RenderBackground;
   onSelect: () => void;
-}) => {
-  const { state } = useComposer();
-  const project = state.project;
-  // The document's shape wins; the toolbar's choice covers a project that
-  // never declared one — the same precedence the central frame uses.
-  const maskShape: CanvasMaskShape = project?.canvas.maskShape ?? state.maskShape ?? 'rounded-rectangle';
-  const radius = project ? resolveMaskRadius({ ...project.canvas, maskShape }) : 0;
-  const canvasSize = project?.canvas.size ?? 0;
-  const tileRadius = canvasSize > 0 ? (radius / canvasSize) * TILE_SIDE : 0;
-  const url = useStudioPreview(project, variant, background, maskShape);
-  return (
-    <button type="button" className="studio-tile" data-active={active} onClick={onSelect} aria-pressed={active}>
-      {url ? (
-        <img src={url} alt="" draggable={false} style={{ borderRadius: tileRadius }} />
-      ) : (
-        <span className="studio-tile-empty" aria-hidden="true" style={{ borderRadius: tileRadius }} />
-      )}
-      <span>{label}</span>
-      {active && <span className="studio-tile-dot" aria-hidden="true" />}
-    </button>
-  );
-};
+}) => (
+  <button type="button" className="studio-tile" data-active={active} onClick={onSelect} aria-pressed={active}>
+    <VariantTileBody variant={variant} background={background} />
+    <span>{label}</span>
+    {active && <span className="studio-tile-dot" aria-hidden="true" />}
+  </button>
+);

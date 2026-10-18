@@ -296,17 +296,16 @@ const SURFACES: Array<{
     }
   },
   {
-    name: 'export dialog',
-    selector: '.studio-dialog',
+    name: 'export panel',
+    selector: '.studio-panel-right',
     needsProject: true,
     // Through the Inspector Export tab: the old plan-editor view left with
-    // the Composer chrome (Fase 6 cut); the dialog is the surface now, held
-    // to the same polish contract.
+    // the Composer chrome (Fase 6 cut) and the dialog left with the P2 cut;
+    // the panel is the surface now, held to the same polish contract.
     open: async (page) => {
       const inspector = page.getByRole('region', { name: 'Inspector panel' });
       await inspector.getByRole('tab', { name: 'Export' }).click();
-      await inspector.getByRole('button', { name: 'Export' }).click();
-      await expect(page.locator('.studio-dialog')).toBeVisible();
+      await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
     }
   }
 ];
@@ -490,13 +489,13 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
   await expect(page.locator('.ic-variant-panel')).toBeVisible();
   await audit('.ic-variant-panel', 'variant panel');
 
-  // Export dialog (the plan editor left with the Composer chrome; the dialog
-  // is the surface now). Reached through the Inspector Export tab.
+  // Export panel (the plan editor left with the Composer chrome and the
+  // dialog left with the P2 cut; the panel is the surface now). Reached
+  // through the Inspector Export tab.
   const inspector = page.getByRole('region', { name: 'Inspector panel' });
   await inspector.getByRole('tab', { name: 'Export' }).click();
-  await inspector.getByRole('button', { name: 'Export' }).click();
-  await audit('body', 'export dialog open');
-  await expect(page.getByRole('heading', { name: 'Export icons' })).toBeVisible();
+  await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
+  await audit('body', 'export panel open');
   await audit('body', 'export');
 
   // About modal (portalled to <body>; audited last, so it need not be dismissed).

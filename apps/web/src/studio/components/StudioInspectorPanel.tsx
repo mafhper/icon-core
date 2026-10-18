@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { ArrowUpToLine } from 'lucide-react';
-import { useComposer } from '../../composer/ComposerContext';
 import { LayerInspector } from '../../composer/components/LayerInspector';
-import { StudioVariantTiles } from './StudioVariantTiles';
+import { StudioExportPanel } from './StudioExportPanel';
 
 type InspectorTab = 'design' | 'export';
 
@@ -15,13 +13,13 @@ type InspectorTab = 'design' | 'export';
  * width and color besides Cap), Effects — then Text only with text selected,
  * and, with nothing selected, the document sections. Layer meta and Delete
  * come last. Constraints/Layout/Mask do not exist in the model and are marked
- * as an explicit deferral, not invented. Export renders the four variants
- * live through the same tiles the canvas stage uses (one implementation, so
- * the grid and the strip can never disagree), with the export action at the
- * end of the tab — the topbar Export button is gone, this is its home.
+ * as an explicit deferral, not invented.
+ *
+ * Export is `StudioExportPanel`: the export stages (configure → progress →
+ * done/error) live in this tab, with the morphing footer at the end — the
+ * topbar Export button is gone, this is its home.
  */
 export const StudioInspectorPanel = () => {
-  const { navigate } = useComposer();
   const [tab, setTab] = useState<InspectorTab>('design');
 
   return (
@@ -46,17 +44,7 @@ export const StudioInspectorPanel = () => {
           <LayerInspector />
         </div>
       ) : (
-        <div className="studio-panel-scroll">
-          <StudioVariantTiles grid />
-        </div>
-      )}
-      {tab === 'export' && (
-        <div className="studio-export-foot">
-          <button type="button" className="studio-export-button" onClick={() => navigate('export-utilities')}>
-            <ArrowUpToLine size={14} aria-hidden="true" />
-            <span>Export</span>
-          </button>
-        </div>
+        <StudioExportPanel />
       )}
       {/* Mockup `inspector-foot`: static session line, no behaviour. */}
       <div className="studio-inspector-foot">

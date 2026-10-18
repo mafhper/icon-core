@@ -50,11 +50,12 @@ describe('CommandPalette (accessible name + modal focus)', () => {
   });
 });
 
-describe('StudioExportDialog (accessible names)', () => {
+describe('Studio export panel (accessible names)', () => {
   /**
-   * The Composer plan editor left with the Fase 6 cut; the dialog is the
-   * export surface now. Same contract, new surface: every group named, every
-   * toggle named, the export action labelled with its file count.
+   * Export lives at the end of the Inspector Export tab — the dialog left with
+   * the P2 cut, and the panel keeps the same contract the dialog held: every
+   * group named, every toggle named, the export action labelled with its file
+   * count.
    */
   const SeededShell = ({ project }: { project: IconCoreProject }) => {
     const { dispatch } = useComposer();
@@ -74,30 +75,26 @@ describe('StudioExportDialog (accessible names)', () => {
         </ToastProvider>
       </TooltipProvider>
     );
-    // The export action lives at the end of the Inspector Export tab.
-    // Navigation runs on the URL hash; jsdom never fires `hashchange` on its
-    // own, so the test emits what the browser would.
+    // The export surface is the Inspector Export tab itself.
     const inspector = screen.getByRole('region', { name: 'Inspector panel' });
     fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
-    fireEvent.click(within(inspector).getByRole('button', { name: 'Export' }));
-    fireEvent(window, new Event('hashchange'));
-    return screen.getByRole('dialog', { name: 'Export icons' });
+    return inspector;
   };
 
   it('names the format, size and variant groups and every toggle', () => {
-    openExport();
+    const inspector = openExport();
 
     for (const name of ['File format', 'PNG sizes', 'Variants']) {
-      expect(screen.getByRole('group', { name })).toBeInTheDocument();
+      expect(within(inspector).getByRole('group', { name })).toBeInTheDocument();
     }
     for (const name of ['SVG', 'PNG', 'ICO']) {
-      expect(screen.getByRole('checkbox', { name })).toHaveAccessibleName();
+      expect(within(inspector).getByRole('checkbox', { name })).toHaveAccessibleName();
     }
   });
 
   it('labels the export action with its file count', () => {
-    openExport();
+    const inspector = openExport();
 
-    expect(screen.getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
+    expect(within(inspector).getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
   });
 });
