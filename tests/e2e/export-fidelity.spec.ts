@@ -17,10 +17,13 @@ import zlib from 'node:zlib';
  * Nenhum dos dois abre o ICO ou o ZIP, nem prova que texto e sombra
  * atravessam o pipeline **junto** do fundo. Este spec é essa prova:
  *
- * 1. o fundo por variante chega ao PNG **e** ao PNG dentro do ICO — canto
- *    (2%,2%) medido contra os literais das sementes do `projectFactory`
- *    (#f8fafc no default, #111827 na dark). Fundo ignorado reprova com alpha
- *    0; variante ignorada reprova com os dois cantos iguais;
+ * 1. o fundo por variante chega ao PNG **e** ao PNG dentro do ICO — medido em
+ *    (50%,2%), topo-centro interior à moldura, contra os literais das sementes
+ *    do `projectFactory` (#f8fafc no default, #111827 na dark). Fundo ignorado
+ *    reprova com alpha 0; variante ignorada reprova com os dois pontos iguais.
+ *    O canto cru (2%,2%) fecha a moldura: alpha 0 no PNG exportado (o
+ *    rounded-rectangle default recorta) e fundo puro no ICO, que não leva
+ *    forma — container vence;
  * 2. a sombra default da forma (y+18, blur 34) pinta **fora** da silhueta,
  *    logo abaixo dela — o pixel que o recorte do fill amputava (a classe
  *    `sombraLonga` do `check-svg-parity`). Só no default: sobre o fundo
@@ -48,14 +51,20 @@ import zlib from 'node:zlib';
 
 type Cor = [number, number, number, number];
 
-/** Fração do canto: nas duas bordas o desenho é fundo puro (a arte é centrada). */
-const FRACAO_DO_CANTO = 0.02;
+/**
+ * Ponto de fundo: (50%,2%) — topo-centro, **interior** à moldura e fora da arte
+ * (que é centrada). O canto cru (2%,2%) não serve mais de sonda de fundo: o
+ * export espelha a moldura do editor (rounded-rectangle, raio default 24) e o
+ * canto é recortado — o corte é provado à parte, com `em(2, 2)`.
+ */
+const FRACAO_X_DO_FUNDO = 0.5;
+const FRACAO_Y_DO_FUNDO = 0.02;
 
 interface Raster {
   width: number;
   height: number;
-  /** RGBA no canto (2%,2%). */
-  canto: Cor;
+  /** RGBA em (50%,2%): topo-centro, interior à moldura — fundo puro fora da arte. */
+  fundo: Cor;
   /** RGBA num pixel absoluto. */
   em: (x: number, y: number) => Cor;
 }
@@ -129,7 +138,7 @@ const decodificarPng = (bytes: Buffer): Raster => {
     const o = y * stride + x * ch;
     return [px[o], px[o + 1], px[o + 2], ch === 4 ? px[o + 3] : 255];
   };
-  return { width, height, canto: em(Math.floor(width * FRACAO_DO_CANTO), Math.floor(height * FRACAO_DO_CANTO)), em };
+  return { width, height, fundo: em(Math.floor(width * FRACAO_X_DO_FUNDO), Math.floor(height * FRACAO_Y_DO_FUNDO)), em };
 };
 
 const luminancia = ([r, g, b]: Cor): number => 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -258,7 +267,7 @@ const baixarArquivo = async (page: Page, painel: Locator, sufixo: RegExp) => {
   return { nome: download.suggestedFilename(), bytes: fs.readFileSync(caminho) };
 };
 
-/** Extrai o PNG de 256 do ICO e devolve o raster — o mesmo canto, dentro do container. */
+/** Extrai o PNG de 256 do ICO e devolve o raster — o mesmo fundo, dentro do container. */
 const png256DoIco = (bytes: Buffer): Raster => {
   const entradas = entradasIco(bytes);
   expect(entradas.length, 'entradas do ICO').toBe(6);
@@ -298,19 +307,24 @@ test('forma + texto + sombra: o fundo de cada variante chega ao PNG e ao ICO, e 
   const icoDefault = await baixarArquivo(page, painel, /-default\.ico/);
   const icoDark = await baixarArquivo(page, painel, /-dark\.ico/);
 
-  // ── PNG: o canto (2%,2%) é fundo puro — forma (220px) e texto ficam no centro.
-  // Os literais são as sementes do projectFactory (default #f8fafc, dark #111827).
-  // Se o export ignorar o fundo, o canto sai [0,0,0,0]; se ignorar a variante,
-  // os dois cantos empatam.
+  // ── PNG: o fundo de cada variante chega ao arquivo em (50%,2%) — topo-centro,
+  // interior à moldura e fora da arte (a forma tem 220px e o texto fica no
+  // centro). Os literais são as sementes do projectFactory (default #f8fafc,
+  // dark #111827). Se o export ignorar o fundo, o ponto sai [0,0,0,0]; se
+  // ignorar a variante, os dois fundos empatam.
   const rasterDefault = decodificarPng(pngDefault.bytes);
   const rasterDark = decodificarPng(pngDark.bytes);
   expect(rasterDefault.width, 'largura do PNG de 512').toBe(512);
-  expect(rasterDefault.canto, 'canto do PNG default').toEqual([248, 250, 252, 255]);
-  expect(rasterDark.canto, 'canto do PNG dark').toEqual([17, 24, 39, 255]);
-  expect(rasterDefault.canto, 'as variantes não se diferenciam no arquivo').not.toEqual(rasterDark.canto);
+  expect(rasterDefault.fundo, 'fundo do PNG default').toEqual([248, 250, 252, 255]);
+  expect(rasterDark.fundo, 'fundo do PNG dark').toEqual([17, 24, 39, 255]);
+  expect(rasterDefault.fundo, 'as variantes não se diferenciam no arquivo').not.toEqual(rasterDark.fundo);
 
-  // Tinta no centro: a forma + o texto pintaram (o canto é fundo; o centro não).
-  expect(rasterDefault.em(256, 256), 'sem tinta no centro: forma/texto sumiram').not.toEqual(rasterDefault.canto);
+  // O canto cru (2%,2%) é recortado: o export espelha a moldura do editor
+  // (rounded-rectangle, raio default 24) — a máscara chegou ao arquivo.
+  expect(rasterDefault.em(2, 2)[3], 'o canto não foi recortado: a moldura do canvas não chegou ao PNG').toBe(0);
+
+  // Tinta no centro: a forma + o texto pintaram (o fundo é fundo; o centro não).
+  expect(rasterDefault.em(256, 256), 'sem tinta no centro: forma/texto sumiram').not.toEqual(rasterDefault.fundo);
 
   // A sombra (y+18, blur 34) pinta FORA da silhueta, logo abaixo da forma —
   // o pixel que o recorte do fill amputava (sombraLonga). Só no default: sobre
@@ -321,13 +335,17 @@ test('forma + texto + sombra: o fundo de cada variante chega ao PNG e ao ICO, e 
     maisEscuro = Math.min(maisEscuro, luminancia(rasterDefault.em(Math.floor(rasterDefault.width / 2), y)));
   }
   expect(
-    luminancia(rasterDefault.canto) - maisEscuro,
+    luminancia(rasterDefault.fundo) - maisEscuro,
     'a sombra não pinta abaixo da forma — o clip do fill pode ter voltado'
   ).toBeGreaterThan(20);
 
   // ── ICO: o mesmo fundo, no PNG de 256 que o container carrega.
-  expect(png256DoIco(icoDefault.bytes).canto, 'canto do PNG dentro do ICO default').toEqual([248, 250, 252, 255]);
-  expect(png256DoIco(icoDark.bytes).canto, 'canto do PNG dentro do ICO dark').toEqual([17, 24, 39, 255]);
+  const dentroDoIco = png256DoIco(icoDefault.bytes);
+  expect(dentroDoIco.fundo, 'fundo do PNG dentro do ICO default').toEqual([248, 250, 252, 255]);
+  expect(png256DoIco(icoDark.bytes).fundo, 'fundo do PNG dentro do ICO dark').toEqual([17, 24, 39, 255]);
+  // O container não leva a moldura: o mesmo canto que o PNG exportado recorta
+  // sai aqui com o fundo puro — Windows/macOS aplicam a máscara na exibição.
+  expect(dentroDoIco.em(2, 2), 'o ICO foi mascarado — container vence').toEqual([248, 250, 252, 255]);
 
   // ── SVG: o texto e a sombra do fixture chegaram ao vetor.
   const markup = svg.bytes.toString('utf8');
@@ -336,7 +354,7 @@ test('forma + texto + sombra: o fundo de cada variante chega ao PNG e ao ICO, e 
   expect(markup, 'sem feDropShadow: a sombra da forma não chegou ao SVG').toContain('feDropShadow');
 });
 
-test('transparência ligada: PNG e ICO saem com o canto alpha 0', async ({ page }) => {
+test('transparência ligada: PNG e ICO saem com o fundo transparente', async ({ page }) => {
   await abrirComFixture(page);
   const painel = await abrirExport(page);
 
@@ -350,11 +368,11 @@ test('transparência ligada: PNG e ICO saem com o canto alpha 0', async ({ page 
   const ico = await baixarArquivo(page, painel, /-default\.ico/);
 
   const raster = decodificarPng(png.bytes);
-  expect(raster.canto, 'o canto ainda carrega o fundo — o switch não chegou ao arquivo').toEqual([0, 0, 0, 0]);
+  expect(raster.fundo, 'o fundo ainda aparece no arquivo — o switch não chegou').toEqual([0, 0, 0, 0]);
   // O switch tira o fundo, não a arte: o centro continua opaco.
   expect(raster.em(256, 256)[3], 'a arte perdeu o alpha junto com o fundo').toBe(255);
 
-  expect(png256DoIco(ico.bytes).canto, 'o ICO ignorou o switch: o canto veio opaco').toEqual([0, 0, 0, 0]);
+  expect(png256DoIco(ico.bytes).fundo, 'o ICO ignorou o switch: o fundo veio pintado').toEqual([0, 0, 0, 0]);
 });
 
 test('zip: carrega os 8 caminhos e o PNG dentro é byte a byte o do download individual', async ({ page }) => {
@@ -396,5 +414,5 @@ test('zip: carrega os 8 caminhos e o PNG dentro é byte a byte o do download ind
   if (!dentro) throw new Error('o zip não tem o PNG default de 512');
   expect(dentro.equals(pngDefault.bytes), 'o PNG do zip difere do download individual').toBe(true);
   // ...e carrega o fundo da variante, como o arquivo solto.
-  expect(decodificarPng(dentro).canto, 'canto do PNG dentro do zip').toEqual([248, 250, 252, 255]);
+  expect(decodificarPng(dentro).fundo, 'fundo do PNG dentro do zip').toEqual([248, 250, 252, 255]);
 });

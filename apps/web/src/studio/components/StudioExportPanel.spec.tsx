@@ -116,6 +116,24 @@ describe('Studio export panel — S1 (configure)', () => {
     expect(within(inspector).getByText('3 files · 1 variant')).toBeInTheDocument();
   });
 
+  it('o plano leva a moldura resolvida nos artefatos svg/png — o ICO fica de fora (container vence)', () => {
+    vi.mocked(executePlan).mockImplementationOnce(() => new Promise<never>(() => {}));
+    const inspector = openExport();
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: 'ICO' }));
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Export 4 files' }));
+
+    const [plan] = vi.mocked(executePlan).mock.calls[0] ?? [];
+    const porId = new Map(plan!.artifacts.map((a) => [a.id, a]));
+    // Default do editor (documento sem shape nem radius): a moldura que as tiles
+    // mostram — rounded-rectangle — é a que o arquivo carrega.
+    expect(porId.get('studio-svg')?.maskShape).toBe('rounded-rectangle');
+    expect(porId.get('studio-png-256')?.maskShape).toBe('rounded-rectangle');
+    expect(porId.get('studio-png-512')?.maskShape).toBe('rounded-rectangle');
+    // Container: Windows/macOS aplicam a máscara na exibição; o artefato não
+    // carrega forma (e `maskModeFor` responderia 'none' se carregasse).
+    expect(porId.get('studio-ico')?.maskShape).toBeUndefined();
+  });
+
   it('S1 não oferece Cancel: o rodapé tem só o Export N files', () => {
     const inspector = openExport();
 

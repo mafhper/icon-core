@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, Download, FileDown, TriangleAlert } from 'lucide-react';
-import type { ExportArtifact, ExportPlan, IconVariant } from '@iconcore/shared';
+import type { CanvasMaskShape, ExportArtifact, ExportPlan, IconVariant } from '@iconcore/shared';
 import { createCanvasBackend } from '@iconcore/renderer';
 import { executePlan, validatePlan, type PlanProgress } from '@iconcore/exporters';
 import type { GeneratedFile } from '@iconcore/exporters';
@@ -60,7 +60,9 @@ class ExportCancelledError extends Error {}
  * Transparency defaults OFF and rides the PNG/ICO artifacts — the export
  * carries the canvas background unless the person asks for alpha (WYSIWYG),
  * the same contract the dialog held. The panel's tiles follow the switch, so
- * Preview/Export is the file.
+ * Preview/Export is the file — frame included: every SVG/PNG artifact carries
+ * the resolved canvas shape (`maskShape`), the same precedence the tiles use,
+ * and only a container keeps full bleed (Windows/macOS mask at display time).
  */
 export const StudioExportPanel = () => {
   const { state, dispatch } = useComposer();
@@ -87,9 +89,14 @@ export const StudioExportPanel = () => {
   const plan: ExportPlan | null = useMemo(() => {
     if (!project) return null;
     const background = transparent ? undefined : ('opaque' as const);
+    // The file mirrors the editor's frame, with the same precedence the tiles
+    // use (`VariantTileBody`): the document's shape wins, the toolbar's covers
+    // a project that never declared one. The encoders resolve it through
+    // `maskModeFor`; desktop containers ignore it (see the ICO below).
+    const maskShape: CanvasMaskShape = project.canvas.maskShape ?? state.maskShape ?? 'rounded-rectangle';
     const artifacts: ExportArtifact[] = [];
     if (formats.includes('svg')) {
-      artifacts.push({ id: 'studio-svg', format: 'svg', path: '{name}-{variant}.svg', enabled: true, size: project.canvas.size });
+      artifacts.push({ id: 'studio-svg', format: 'svg', path: '{name}-{variant}.svg', enabled: true, size: project.canvas.size, maskShape });
     }
     for (const size of [...sizes].sort((a, b) => a - b)) {
       if (!formats.includes('png')) break;
@@ -99,6 +106,7 @@ export const StudioExportPanel = () => {
         path: `{name}-{variant}-${size}px.png`,
         enabled: true,
         size,
+        maskShape,
         ...(background ? { background } : {})
       });
     }
@@ -109,11 +117,15 @@ export const StudioExportPanel = () => {
         path: `{name}-{variant}.ico`,
         enabled: true,
         entries: ICO_ENTRIES,
+        // No `maskShape` here: container wins (`maskModeFor` answers 'none' for
+        // a container even when a shape is declared). Windows/macOS pick the
+        // size they want from one file and mask at display time — a clipped
+        // `.ico` would lose a ring of pixels the OS clips identically.
         ...(background ? { background } : {})
       });
     }
     return { artifacts, attachments: [] };
-  }, [project, formats, sizes, transparent]);
+  }, [project, formats, sizes, transparent, state.maskShape]);
 
   const validation = useMemo(
     () =>
