@@ -57,6 +57,7 @@ export const MenubarTrigger = forwardRef<HTMLButtonElement, MenubarTriggerProps>
         ref={ref}
         className={cn(
           'flex h-[26px] cursor-pointer items-center gap-1.5 rounded-ic-sm px-2.5 text-[13px] text-ic-text outline-none select-none',
+          'focus-visible:ring-2 focus-visible:ring-ic-accent-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ic-bg',
           'hover:bg-ic-elevated data-[highlighted]:bg-ic-elevated data-[state=open]:bg-ic-elevated',
           className
         )}

@@ -270,6 +270,14 @@
   background-color: var(--ic-elevated);
 }
 
+/* Inset como o foco dos controles de janela (mesma barra): a zona
+   `.studio-menus` tem `overflow: hidden` e recortaria um anel externo na
+   própria caixa de 26px do gatilho. */
+.studio-menu-hamburger:focus-visible {
+  outline: 2px solid var(--ic-accent-ring);
+  outline-offset: -2px;
+}
+
 /* F3 — breadcrumb elástico: relata o documento, não é navegação (sem botão,
    sem tabindex). Só o nome elipsa; ícone, dot, chevron e a variante são
    `flex: none` e mantêm a largura. */
