@@ -37,10 +37,18 @@ export {
   MenubarMenu,
   MenubarTrigger,
   MenubarContent,
+  MenubarItem,
+  MenubarLabel,
+  MenubarRadioGroup,
+  MenubarRadioItem,
   type MenubarProps,
   type MenubarMenuProps,
   type MenubarTriggerProps,
-  type MenubarContentProps
+  type MenubarContentProps,
+  type MenubarItemProps,
+  type MenubarLabelProps,
+  type MenubarRadioGroupProps,
+  type MenubarRadioItemProps
 } from './components/Menubar';
 export { Popover, type PopoverProps } from './components/Popover';
 export {

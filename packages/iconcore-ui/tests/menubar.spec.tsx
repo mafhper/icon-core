@@ -1,7 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
-import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent } from '../src/index';
+import { type ReactNode } from 'react';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  Menubar,
+  MenubarMenu,
+  MenubarTrigger,
+  MenubarContent,
+  MenubarItem,
+  MenubarLabel,
+  MenubarRadioGroup,
+  MenubarRadioItem
+} from '../src/index';
 
 const renderBar = () =>
   render(
@@ -12,6 +22,16 @@ const renderBar = () =>
           <MenubarContent />
         </MenubarMenu>
       ))}
+    </Menubar>
+  );
+
+const renderFileMenu = (content: ReactNode) =>
+  render(
+    <Menubar aria-label="Main menu">
+      <MenubarMenu>
+        <MenubarTrigger>File</MenubarTrigger>
+        <MenubarContent>{content}</MenubarContent>
+      </MenubarMenu>
     </Menubar>
   );
 
@@ -46,5 +66,83 @@ describe('Menubar', () => {
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  }, 10_000);
+
+  it('selects an item and closes the menu', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderFileMenu(<MenubarItem label="Save" onSelect={onSelect} />);
+
+    await user.click(screen.getByRole('menuitem', { name: 'File' }));
+    expect(await screen.findByRole('menu')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('menuitem', { name: 'Save' }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  }, 10_000);
+
+  it('treats a label as a heading, never as an item', async () => {
+    const user = userEvent.setup();
+    renderFileMenu(
+      <>
+        <MenubarLabel>Sessions</MenubarLabel>
+        <MenubarItem label="Save" onSelect={() => {}} />
+      </>
+    );
+
+    await user.click(screen.getByRole('menuitem', { name: 'File' }));
+    expect(await screen.findByText('Sessions')).toBeInTheDocument();
+
+    // A heading arrows can land on is a trap: it is not part of the item set,
+    // so the first arrow-down stop is the first selectable item.
+    expect(screen.queryByRole('menuitem', { name: 'Sessions' })).not.toBeInTheDocument();
+    expect(screen.getByText('Sessions')).not.toHaveAttribute('tabindex');
+
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: 'Save' })).toHaveFocus();
+  }, 10_000);
+
+  it('marks the checked option of a radio group and reports a change', async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    renderFileMenu(
+      <MenubarRadioGroup value="system" onValueChange={onValueChange}>
+        <MenubarRadioItem value="light" label="Light" />
+        <MenubarRadioItem value="dark" label="Dark" />
+        <MenubarRadioItem value="system" label="System" />
+      </MenubarRadioGroup>
+    );
+
+    await user.click(screen.getByRole('menuitem', { name: 'File' }));
+    expect(await screen.findByRole('menuitemradio', { name: 'System' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menuitemradio', { name: 'Light' })).toHaveAttribute('aria-checked', 'false');
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Light' }));
+    expect(onValueChange).toHaveBeenCalledWith('light');
+  }, 10_000);
+
+  it('shows a shortcut as display-only text and never binds it', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderFileMenu(<MenubarItem label="Save" shortcut="Ctrl+S" onSelect={onSelect} />);
+
+    // Closed menu: the kit installs no global listener, so the combination
+    // does nothing — only the app that shows the label owns the binding.
+    await user.keyboard('{Control>}s{/Control}');
+    expect(onSelect).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('menuitem', { name: 'File' }));
+    const item = await screen.findByRole('menuitem', { name: /Save/ });
+
+    // The shortcut is display: visible text in the row.
+    expect(item).toHaveTextContent('Ctrl+S');
+
+    // …and still not a binding: pressing it selects nothing.
+    await user.keyboard('{Control>}s{/Control}');
+    expect(onSelect).not.toHaveBeenCalled();
+
+    // The row itself is what selects.
+    await user.click(item);
+    expect(onSelect).toHaveBeenCalledTimes(1);
   }, 10_000);
 });
