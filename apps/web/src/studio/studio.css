@@ -456,7 +456,9 @@
   position: relative;
   /* A coluna inteira é mesa (mockup `workspace`): palco, legenda, faixa e
      toolbar assentam no mesmo pano — sem ela a legenda e a faixa cairiam no
-     fundo do app. */
+     fundo do app. A cor escolhida pinta inline (palco, faixa e tira
+     inferior); esta regra é a mesa padrão e a base opaca sobre a qual o alpha
+     da tinta compõe. */
   background-color: var(--ic-workspace);
 }
 
@@ -626,6 +628,21 @@
    anterior dos dois como itens da coluna. Sem cartão, borda, hairline ou
    sombra: só a tinta e o fluxo, como no mockup. */
 .studio-variant-band {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Tira inferior da bancada (decisão do dono): o pano da coluna abaixo da
+   faixa — em volta e atrás da pillbar, até a statusbar — carrega a mesma
+   tinta do palco e da faixa, inline (`deskColor`). A pillbar segue chrome
+   flutuante por cima: fundo, borda e sombra são dela. O pano é um **irmão**
+   do palco e da faixa, não o fundo do `section`: pintar a coluna faria os
+   dois filhos receberem a mesma tinta semi-transparente sobre si mesmos, e
+   com alpha o empilhamento deixaria palco e faixa mais densos que a tira que
+   os acompanha. `display: flex` em coluna preserva o `align-self: center` da
+   pillbar, e `flex-shrink: 0` mantém a altura dela como item da coluna. */
+.studio-desk-tail {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;

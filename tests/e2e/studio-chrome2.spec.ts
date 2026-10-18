@@ -204,6 +204,85 @@ for (const theme of ['dark', 'light'] as const) {
     expect(await tinta('.studio-stage .ic-edit-stage')).toBe(mesa);
   });
 
+  test(`[${theme}] tira inferior: coluna abaixo da faixa pinta a mesma mesa; pill e status são chrome`, async ({
+    page
+  }) => {
+    await preparar(page, theme);
+
+    const tinta = (selector: string) =>
+      page.locator(selector).evaluate((el) => getComputedStyle(el).backgroundColor);
+    const coluna = () => tinta('.studio-canvas');
+    const palco = () => tinta('.studio-stage');
+    const faixa = () => tinta('.studio-variant-band');
+    const tira = () => tinta('.studio-desk-tail');
+    const pill = () => tinta('.studio-pillbar');
+    const status = () => tinta('.studio-statusbar');
+
+    // Chrome dos readouts capturado antes de qualquer escolha: pintar a mesa
+    // não pode lavar a toolbar flutuante nem o pé.
+    const pill0 = await pill();
+    const status0 = await status();
+
+    // Sem cor, os quatro sítios de mesa são o workspace do tema.
+    const mesa = await coluna();
+    expect(await palco()).toBe(mesa);
+    expect(await faixa()).toBe(mesa);
+    expect(await tira()).toBe(mesa);
+
+    // A cor do aceite: nenhum dos dois temas a tem, então o igual entre os
+    // sítios não pode vir de coincidência com a mesa.
+    await page.keyboard.press('Escape');
+    const campo = page.getByLabel('Work area color hex');
+    await expect(campo).toBeVisible();
+    await campo.fill('B2B2B2');
+    await campo.press('Enter');
+
+    // Cor escolhida: palco, faixa e a tira inferior (em volta/atrás da pillbar
+    // até a statusbar) computam igual — o mesmo binding, não três tintas. A
+    // coluna segue na mesa do tema: ela é a base opaca sob o alpha, não um
+    // quarto sítio de tinta.
+    await expect.poll(tira).toBe('rgb(178, 178, 178)');
+    expect(await palco()).toBe('rgb(178, 178, 178)');
+    expect(await faixa()).toBe('rgb(178, 178, 178)');
+
+    // Alpha: o `color-mix` do mesmo binding casa nos três sítios.
+    await page.getByLabel('Work area color alpha percent').fill('50');
+    await expect.poll(tira).not.toBe('rgb(178, 178, 178)');
+    expect(await palco()).toBe(await tira());
+    expect(await faixa()).toBe(await tira());
+
+    // Follow the theme: os três voltam à mesa juntos.
+    await page.getByRole('button', { name: 'Follow the theme' }).click();
+    await expect.poll(tira).toBe(mesa);
+    expect(await palco()).toBe(mesa);
+    expect(await faixa()).toBe(mesa);
+
+    // Os readouts não foram repintados em passo nenhum.
+    expect(await pill()).toBe(pill0);
+    expect(await status()).toBe(status0);
+
+    // A tira é da coluna e fecha nela: começa na faixa (sem costura), é
+    // full-bleed, termina na statusbar, e a pillbar assenta dentro dela.
+    const geometria = await page.evaluate(() => {
+      const colunaRect = document.querySelector('.studio-canvas')!.getBoundingClientRect();
+      const faixaRect = document.querySelector('.studio-variant-band')!.getBoundingClientRect();
+      const tiraRect = document.querySelector('.studio-desk-tail')!.getBoundingClientRect();
+      const pillRect = document.querySelector('.studio-pillbar')!.getBoundingClientRect();
+      const statusRect = document.querySelector('.studio-statusbar')!.getBoundingClientRect();
+      return {
+        costura: tiraRect.top - faixaRect.bottom,
+        fullBleed:
+          Math.abs(tiraRect.left - colunaRect.left) < 1 && Math.abs(tiraRect.right - colunaRect.right) < 1,
+        ateStatus: Math.abs(tiraRect.bottom - statusRect.top),
+        pillDentro: pillRect.top >= tiraRect.top - 0.5 && pillRect.bottom <= tiraRect.bottom + 0.5
+      };
+    });
+    expect(geometria.costura).toBeLessThan(1);
+    expect(geometria.fullBleed).toBe(true);
+    expect(geometria.ateStatus).toBeLessThan(1);
+    expect(geometria.pillDentro).toBe(true);
+  });
+
   test(`[${theme}] sem scroll horizontal em viewport larga`, async ({ page }) => {
     await preparar(page, theme);
     const sizes = await page.evaluate(() => ({

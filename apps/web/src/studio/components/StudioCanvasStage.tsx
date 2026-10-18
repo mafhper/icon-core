@@ -50,10 +50,18 @@ interface StudioCanvasStageProps {
  * Faixa das variantes (decisão do dono): a legenda e os tiles vivem numa
  * seção própria (`studio-variant-band`) logo abaixo do palco, full-bleed e
  * in-flow, com a **mesma** tinta do palco (`deskColor` — um binding só, usado
- * pelos dois): cor escolhida pintava o palco e deixava a legenda e os tiles
+ * pelos três): cor escolhida pintava o palco e deixava a legenda e os tiles
  * na mesa, e a costura reaparecia embaixo. Sem cartão, borda, hairline ou
  * sombra; legenda e tiles não repintam — a cor aqui é tinta de fundo, e os
  * respiros (legenda 34/0/0, tiles 16/0/23) são os dos componentes.
+ *
+ * Tira inferior (decisão do dono): o pano da coluna abaixo da faixa — em
+ * volta e atrás da pillbar até a statusbar — carrega a mesma tinta
+ * (`studio-desk-tail`), e a toolbar continua chrome flutuante por cima. O
+ * pano é um irmão do palco e da faixa, nunca o fundo do `section`: pintar a
+ * coluna faria os filhos receberem a mesma tinta semi-transparente sobre si
+ * mesmos, e com alpha o empilhamento deixaria o palco e a faixa mais densos
+ * que a tira que os acompanha.
  */
 const DESK_FALLBACK = 'var(--ic-workspace)';
 
@@ -75,9 +83,9 @@ export const StudioCanvasStage = ({
   const dragRef = useRef<{ x: number; y: number; pan: { x: number; y: number } } | null>(null);
   const movedRef = useRef(false);
 
-  // A tinta da bancada: palco e faixa das variantes pintam **esta** expressão —
-  // cor escolhida pinta os dois igual, e "Follow the theme" volta à mesa nos
-  // dois. Duas chamadas seriam duas verdades.
+  // A tinta da bancada: palco, faixa das variantes e tira inferior pintam
+  // **esta** expressão — cor escolhida pinta os três igual, e "Follow the
+  // theme" volta à mesa nos três. Duas chamadas seriam duas verdades.
   const deskColor = workAreaToCss(state.workAreaColor, DESK_FALLBACK);
 
   const trackCursor = (event: React.PointerEvent) => {
@@ -144,7 +152,9 @@ export const StudioCanvasStage = ({
         <StudioCanvasCaption />
         <StudioVariantTiles />
       </div>
-      <StudioPillBar tool={tool} onTool={onTool} onFit={onResetView} />
+      <div className="studio-desk-tail" style={{ backgroundColor: deskColor }}>
+        <StudioPillBar tool={tool} onTool={onTool} onFit={onResetView} />
+      </div>
     </section>
   );
 };

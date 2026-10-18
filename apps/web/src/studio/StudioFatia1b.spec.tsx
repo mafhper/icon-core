@@ -91,28 +91,33 @@ describe('Studio FATIA 1b (mockup visual port)', () => {
     expect(within(canvas).getByText('Default appearance')).toBeInTheDocument();
 
     // A ordem é a do mockup: barra da coluna, palco, faixa das variantes
-    // (a seção que carrega a legenda e os tiles) e toolbar — sem flutuação.
+    // (a seção que carrega a legenda e os tiles) e a tira inferior da bancada
+    // (o pano que carrega a toolbar) — sem flutuação.
     const ordem = Array.from(canvas.children).map((el) => el.getAttribute('class'));
-    expect(ordem).toEqual(['studio-canvasbar', 'studio-stage-wrap', 'studio-variant-band', 'studio-pillbar']);
+    expect(ordem).toEqual(['studio-canvasbar', 'studio-stage-wrap', 'studio-variant-band', 'studio-desk-tail']);
     const faixa = canvas.querySelector('.studio-variant-band') as HTMLElement;
     expect(Array.from(faixa.children).map((el) => el.getAttribute('class'))).toEqual([
       'studio-caption',
       'studio-tiles'
     ]);
+    const tira = canvas.querySelector('.studio-desk-tail') as HTMLElement;
+    expect(Array.from(tira.children).map((el) => el.getAttribute('class'))).toEqual(['studio-pillbar']);
   });
 
   it('a mesa padrão é o workspace: palco e faixa no mesmo pano, sem banda', () => {
-    // Sem cor escolhida, os inlines da mesa (palco, superfície de edição e a
-    // faixa das variantes) caem na mesa do mockup — não no fundo do app, que
-    // era o que pintava o palco de um fundo e a faixa de outro. Cor se mede no
-    // guard; aqui fica o papel que pinta: o token da mesa, não um valor
-    // resolvido.
+    // Sem cor escolhida, os inlines da mesa (palco, superfície de edição, a
+    // faixa das variantes e a tira inferior que carrega a toolbar) caem na
+    // mesa do mockup — não no fundo do app, que era o que pintava o palco de
+    // um fundo e a faixa de outro. Cor se mede no guard; aqui fica o papel que
+    // pinta: o token da mesa, não um valor resolvido.
     renderShell(<SeededShell project={createBlankProject('Mesa', 512)} />);
     const stage = document.querySelector('.studio-stage') as HTMLElement | null;
     const edit = document.querySelector('.studio-stage .ic-edit-stage') as HTMLElement | null;
     const faixa = document.querySelector('.studio-variant-band') as HTMLElement | null;
+    const tira = document.querySelector('.studio-desk-tail') as HTMLElement | null;
     expect(stage?.style.backgroundColor).toContain('--ic-workspace');
     expect(edit?.style.backgroundColor).toContain('--ic-workspace');
     expect(faixa?.style.backgroundColor).toContain('--ic-workspace');
+    expect(tira?.style.backgroundColor).toContain('--ic-workspace');
   });
 });
