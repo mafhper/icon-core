@@ -116,25 +116,12 @@ describe('Studio export panel — S1 (configure)', () => {
     expect(within(inspector).getByText('3 files · 1 variant')).toBeInTheDocument();
   });
 
-  it('Cancel reseta os defaults: formatos, tamanhos, variantes e transparência', () => {
+  it('S1 não oferece Cancel: o rodapé tem só o Export N files', () => {
     const inspector = openExport();
-    const tiles = within(inspector).getByRole('group', { name: 'Variants' });
 
-    fireEvent.click(within(tiles).getByRole('checkbox', { name: 'Light' }));
-    fireEvent.click(within(tiles).getByRole('button', { name: 'Set Dark active' }));
-    fireEvent.click(within(inspector).getByRole('checkbox', { name: '1024' }));
-    fireEvent.click(within(inspector).getByRole('checkbox', { name: 'PNG' }));
-    fireEvent.click(within(inspector).getByRole('switch', { name: 'Transparent background' }));
-
-    fireEvent.click(within(inspector).getByRole('button', { name: 'Cancel' }));
-
-    expect(within(inspector).getByRole('checkbox', { name: 'PNG' })).toBeChecked();
-    expect(within(inspector).getByRole('checkbox', { name: '1024' })).not.toBeChecked();
-    expect(within(inspector).getByRole('switch', { name: 'Transparent background' })).not.toBeChecked();
-    // Variantes: o reset volta à ativa — que o anel acabou de mudar para dark.
-    expect(within(tiles).getByRole('checkbox', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true');
-    expect(within(tiles).getByRole('checkbox', { name: 'Light' })).toHaveAttribute('aria-checked', 'false');
-    expect(within(inspector).getByText('3 files · 1 variant')).toBeInTheDocument();
+    // Decisão do dono: o ghost em S1 só resetava defaults e não fechava nada.
+    // O reset mora no Close (S3) — coberto no describe de S2/S3/S-err.
+    expect(within(inspector).queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
     expect(within(inspector).getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
   });
 });
@@ -222,6 +209,39 @@ describe('Studio export panel — S2/S3/S-err', () => {
     fireEvent.click(within(inspector).getByRole('button', { name: 'Export more' }));
     expect(within(inspector).getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
     expect(within(inspector).getByText('3 files · 1 variant')).toBeInTheDocument();
+  });
+
+  it('Close (S3) reseta os defaults: formatos, tamanhos, variantes e transparência', async () => {
+    vi.mocked(executePlan).mockResolvedValueOnce({
+      files: [arquivo('Icon-dark.svg', 512)],
+      warnings: [],
+      planned: []
+    });
+    const inspector = openExport();
+    const tiles = within(inspector).getByRole('group', { name: 'Variants' });
+
+    fireEvent.click(within(tiles).getByRole('checkbox', { name: 'Light' }));
+    fireEvent.click(within(tiles).getByRole('button', { name: 'Set Dark active' }));
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: '1024' }));
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: 'PNG' }));
+    fireEvent.click(within(inspector).getByRole('switch', { name: 'Transparent background' }));
+
+    // PNG fora ⇒ 1 artefato × 2 variantes.
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Export 2 files' }));
+    expect(await within(inspector).findByText(/1 file ready\./)).toBeInTheDocument();
+
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Close' }));
+
+    // Re-query: a grade de S2/S3 desmontou; S1 volta com defaults frescos.
+    const tilesReset = within(inspector).getByRole('group', { name: 'Variants' });
+    expect(within(inspector).getByRole('checkbox', { name: 'PNG' })).toBeChecked();
+    expect(within(inspector).getByRole('checkbox', { name: '1024' })).not.toBeChecked();
+    expect(within(inspector).getByRole('switch', { name: 'Transparent background' })).not.toBeChecked();
+    // Variantes: o reset volta à ativa — que o anel acabou de mudar para dark.
+    expect(within(tilesReset).getByRole('checkbox', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(tilesReset).getByRole('checkbox', { name: 'Light' })).toHaveAttribute('aria-checked', 'false');
+    expect(within(inspector).getByText('3 files · 1 variant')).toBeInTheDocument();
+    expect(within(inspector).getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
   });
 
   it('erro do pipeline vira S-err com role=alert, e Back volta a S1', async () => {

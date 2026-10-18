@@ -837,10 +837,10 @@
   background-color: var(--ic-accent);
 }
 
-/* Pé de export da aba: container único que morfa por estágio (S1 Cancel +
-   Export N files; S2 Cancel + Exporting…; S3 Export more/Close + Download all
-   (.zip); erro Back). O primário estica e os fantasmas dimensionam pelo
-   conteúdo; em painel estreito o primário desce para a própria linha. */
+/* Pé de export da aba: container único que morfa por estágio (S1 Export N
+   files; S2 Cancel + Exporting…; S3 Export more/Close + Download all (.zip);
+   erro Back). O primário estica e os fantasmas dimensionam pelo conteúdo; em
+   painel estreito o primário desce para a própria linha. */
 .studio-export-foot {
   display: flex;
   align-items: center;

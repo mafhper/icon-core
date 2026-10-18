@@ -51,9 +51,11 @@ class ExportCancelledError extends Error {}
  * - the **active ring** is a separate control: it marks the variant the canvas
  *   edits and dispatches `SET_ACTIVE_VARIANT`, independent from the export
  *   selection;
- * - Cancel resets the selection to the defaults (the dialog had nothing to
- *   close here), and Cancel during progress aborts cooperatively back to
- *   configure without letting the late result land.
+ * - configure has **no Cancel** (owner decision: the ghost next to
+ *   `Export N files` reset a form that had nothing to close); the reset to
+ *   defaults lives on **Close** (done stage). The **Cancel in progress** stays
+ *   — it is the only exit while a run is in flight, aborting cooperatively
+ *   back to configure without letting the late result land.
  *
  * Transparency defaults OFF and rides the PNG/ICO artifacts — the export
  * carries the canvas background unless the person asks for alpha (WYSIWYG),
@@ -347,14 +349,9 @@ export const StudioExportPanel = () => {
       {/* Single morphing footer: the actions of every stage live here. */}
       <div className="studio-export-foot">
         {stage === 'configure' && (
-          <>
-            <button type="button" className="studio-export-ghost" onClick={resetSession}>
-              Cancel
-            </button>
-            <button type="button" className="studio-export-button" onClick={runExport} disabled={!canExport}>
-              Export {fileCount > 0 ? `${fileCount} ${fileCount === 1 ? 'file' : 'files'}` : ''}
-            </button>
-          </>
+          <button type="button" className="studio-export-button" onClick={runExport} disabled={!canExport}>
+            Export {fileCount > 0 ? `${fileCount} ${fileCount === 1 ? 'file' : 'files'}` : ''}
+          </button>
         )}
         {stage === 'progress' && (
           <>
