@@ -680,10 +680,13 @@
   color: var(--ic-text);
 }
 
+/* O raio do frame do tile **nao** mora aqui: o componente calcula
+   `raioDoCanvas / ladoDoCanvas * 49` (o mesmo resolver do export) e aplica
+   inline no bitmap e na moldura vazia, para os dois estados apresentarem o
+   mesmo frame. Um `border-radius` fixo aqui seria uma segunda verdade. */
 .studio-tile img {
   width: 49px;
   height: 49px;
-  border-radius: 12px;
   object-fit: cover;
   background-color: var(--ic-elevated);
   pointer-events: none;
@@ -692,7 +695,6 @@
 .studio-tile-empty {
   width: 49px;
   height: 49px;
-  border-radius: 12px;
   background-color: var(--ic-elevated);
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { IconCoreProject, IconVariant } from '@iconcore/shared';
+import type { CanvasMaskShape, IconCoreProject, IconVariant } from '@iconcore/shared';
 import { resolveSize } from '@iconcore/shared';
 import { createCanvasBackend, renderProject, type RenderBackground } from '@iconcore/renderer';
 
@@ -24,12 +24,16 @@ import { createCanvasBackend, renderProject, type RenderBackground } from '@icon
  * `background` is the `renderProject` mode: `'canvas'` (the default) paints
  * what the editor shows; the export dialog passes `'transparent'` while its
  * transparency switch is on, so its preview is the file, not the editor.
+ * `mask` clips the finished blob to the canvas outline (the shape the export
+ * reads); absent — the default — keeps full bleed, which is what the canvas
+ * itself projects with a CSS frame instead of carved pixels.
  */
 export const useRenderedProject = (
   project: IconCoreProject | null,
   variant: IconVariant,
   enabled = true,
-  background: RenderBackground = 'canvas'
+  background: RenderBackground = 'canvas',
+  mask?: CanvasMaskShape
 ): string | null => {
   const [url, setUrl] = useState<string | null>(null);
   const urlRef = useRef<string | null>(null);
@@ -44,7 +48,7 @@ export const useRenderedProject = (
     const backend = createCanvasBackend();
     const raf = requestAnimationFrame(async () => {
       try {
-        const blob = await renderProject(project, variant, resolveSize(project.canvas), backend, { background });
+        const blob = await renderProject(project, variant, resolveSize(project.canvas), backend, { background, mask });
         if (cancelled) return;
         const next = URL.createObjectURL(blob);
         if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -60,7 +64,7 @@ export const useRenderedProject = (
       cancelAnimationFrame(raf);
       backend.destroy();
     };
-  }, [project, variant, enabled, background]);
+  }, [project, variant, enabled, background, mask]);
 
   useEffect(
     () => () => {

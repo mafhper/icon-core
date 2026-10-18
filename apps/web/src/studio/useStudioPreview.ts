@@ -1,4 +1,4 @@
-import type { IconCoreProject, IconVariant } from '@iconcore/shared';
+import type { CanvasMaskShape, IconCoreProject, IconVariant } from '@iconcore/shared';
 import type { RenderBackground } from '@iconcore/renderer';
 import { useRenderedProject } from '../composer/hooks/useRenderedProject';
 
@@ -13,9 +13,14 @@ import { useRenderedProject } from '../composer/hooks/useRenderedProject';
  * Inspector grid always show the editor picture (`'canvas'`); the export
  * dialog follows its own transparency switch, so its preview is the file the
  * switch will produce rather than the editor behind it.
+ *
+ * `mask` is the canvas frame shape the tile is clipped to: the tiles always
+ * show the file, so the shape the document declares is the shape the thumbnail
+ * (and the export) carries, never a square approximation.
  */
 export const useStudioPreview = (
   project: IconCoreProject | null,
   variant: IconVariant,
-  background: RenderBackground = 'canvas'
-): string | null => useRenderedProject(project, variant, true, background);
+  background: RenderBackground = 'canvas',
+  mask?: CanvasMaskShape
+): string | null => useRenderedProject(project, variant, true, background, mask);

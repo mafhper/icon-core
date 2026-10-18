@@ -1180,7 +1180,7 @@ const clipToShape = (
   native: CanvasRenderingContext2D,
   target: { width: number; height: number },
   shape: CanvasMaskShape,
-  projectCanvas: { size: number; height?: number; maskRadius?: number }
+  projectCanvas: { size: number; height?: number; maskRadius?: number; maskShape?: CanvasMaskShape }
 ): void => {
   const { width, height } = target;
   const radius = Math.min(

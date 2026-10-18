@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import type { IconLayer } from '@iconcore/shared';
-import { defaultMaskRadius, resolveSize } from '@iconcore/shared';
+import { resolveMaskRadius, resolveSize } from '@iconcore/shared';
 import { layerBaseRect } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
 import { useRenderedProject } from '../hooks/useRenderedProject';
@@ -71,13 +71,17 @@ export const PreviewCanvas = (
   // below stays square-first (that is a UI surface, not the export model).
   const canvas = resolveSize(project.canvas);
   const displaySize = canvasSize * state.zoom;
-  // One resolver in `@iconcore/shared` owns the shape → radius rule. The old
-  // inline ternary handled three of the four shapes, so `squircle` silently got
-  // the square's 4px instead of the superellipse the keylines draw at.
+  // One resolver in `@iconcore/shared` owns the shape → radius rule — the same
+  // one the export mask reads, so frame and file cannot drift apart. The
+  // document's shape wins; the toolbar's choice covers a project that never
+  // declared one. The old inline ternary handled three of the four shapes, so
+  // `squircle` silently got the square's 4px instead of the superellipse the
+  // keylines draw at.
   // The mask preview flag rounds the frame; off shows the square frame.
   // The export always masks — this is the preview comparison, not the output.
+  const frameShape = project.canvas.maskShape ?? state.maskShape;
   const frameRadiusPx = state.showMask
-    ? (project.canvas.maskRadius ?? defaultMaskRadius(state.maskShape, canvasSize))
+    ? resolveMaskRadius({ ...project.canvas, maskShape: frameShape })
     : 0;
   const frameRadius = `${frameRadiusPx}px`;
 

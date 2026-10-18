@@ -150,6 +150,21 @@ describe('Studio canvas stage (Fase 3)', () => {
     expect(frame.style.borderRadius).toBe('0px');
   });
 
+  it('o frame segue a forma declarada no documento, não o default da barra', () => {
+    const project = createBlankProject('Forma', 512);
+    project.canvas.maskShape = 'circle';
+    project.layers = [prism()];
+    renderShell(<SeededShell project={project} />);
+
+    const canvas = screen.getByRole('region', { name: 'Canvas' });
+    const frame = canvas.querySelector('.ic-canvas-frame') as HTMLElement;
+    // O documento declara `circle` e não fixa raio: o raio é o default da
+    // forma (512 / 2), não os 24px do rounded-rectangle do estado da barra.
+    // Mesmo resolver do export (`resolveMaskRadius`), para frame e arquivo
+    // não divergirem quando um projeto carregado declara outra forma.
+    expect(frame.style.borderRadius).toBe('256px');
+  });
+
   it('switches variant tiles without losing the selection', () => {
     const project = createBlankProject('Tiles', 512);
     project.layers = [prism()];
