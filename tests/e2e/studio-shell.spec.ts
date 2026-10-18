@@ -42,14 +42,19 @@ test('studio monta as cinco regioes com o chrome do documento', async ({ page })
 
   await expect(page.getByText('Icon-Core').first()).toBeVisible();
 
-  // Export lives at the end of the Inspector Export tab. The collector holds
-  // its entry point (Export icons, in the menu) but no second export surface;
-  // the canvas bar carries neither.
+  // Export lives at the end of the Inspector Export tab. The Arquivo menu
+  // holds its entry point (Exportar) but no second export surface; the canvas
+  // bar carries neither.
   const inspector = page.getByRole('region', { name: 'Inspector panel' });
   await inspector.getByRole('tab', { name: 'Export' }).click();
   await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
-  await expect(page.getByRole('banner').getByRole('button', { name: 'Export', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('banner').getByRole('button', { name: 'Export icons' })).toHaveCount(0);
+  const banner = page.getByRole('banner');
+  // The four PT slots are the only menubar triggers in the bar — an export
+  // button never took a slot.
+  expect(
+    await banner.getByRole('menuitem').evaluateAll((els) => els.map((el) => el.textContent ?? ''))
+  ).toEqual(['Arquivo', 'Editar', 'Exibir', 'Sobre']);
+  await expect(banner.getByRole('button', { name: /Export/ })).toHaveCount(0);
   const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
   await expect(toolbar.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0);
   await expect(toolbar.getByRole('button', { name: 'Insert layer' })).toHaveCount(0);
@@ -120,10 +125,11 @@ test('studio: paineis recolhem e reabrem; atalhos listam os vinculos reais', asy
   await page.getByRole('button', { name: 'Show Layers panel' }).click();
   await expect(page.getByRole('region', { name: 'Layers panel' })).toBeVisible();
 
-  await clickBarAction(page, 'Keyboard shortcuts');
-  const dialog = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
+  await clickBarAction(page, 'Sobre', 'Atalhos');
+  const dialog = page.getByRole('dialog', { name: 'Atalhos de teclado' });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText('Duplicate selected layer');
+  await expect(dialog).toContainText('Duplicar camada selecionada');
+  await expect(dialog).toContainText('Selecionar ferramenta');
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
 
@@ -134,10 +140,11 @@ test('studio: paineis recolhem e reabrem; atalhos listam os vinculos reais', asy
 test('studio: fechar o documento pede confirmacao e volta a lista', async ({ page }) => {
   await preparar(page);
 
-  await clickBarAction(page, 'Close document');
+  await clickBarAction(page, 'Arquivo', 'Fechar');
   const confirm = page.getByRole('dialog', { name: 'Close this document?' });
   await expect(confirm).toBeVisible();
-  // O botao da barra tem o mesmo nome: o confirmar e lido dentro do dialogo.
+  // O item do menu se chama "Fechar"; o confirmar (EN, como os demais diálogos)
+  // é lido dentro do diálogo.
   await confirm.getByRole('button', { name: 'Close document' }).click();
   await expect(page.getByRole('dialog', { name: 'Start a new icon' })).toBeVisible();
   await expect(page.getByText('No document')).toBeVisible();

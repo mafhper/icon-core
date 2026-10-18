@@ -2,9 +2,10 @@ import { expect, test, type Page } from '@playwright/test';
 
 /**
  * Chrome slice 2: tiles + grade follow geometry, two bars with exact
- * addresses, Export tab with grid + end action, the variant band in the
- * work-area paint, no page-level horizontal scroll at wide viewports — in
- * dark and light.
+ * addresses, the titlebar's PT menubar (and its measured hamburger) in four
+ * zones, Export tab with grid + end action, the variant band in the
+ * work-area paint, no page-level horizontal scroll at wide viewports — and
+ * the narrow contract at 320px / zoom 200% — in dark and light.
  *
  * Every address below is a role/name the person reaches, never a selector
  * detail: if a control moves, this file moves with it instead of going green
@@ -43,6 +44,48 @@ const preparar = async (page: Page, theme: 'dark' | 'light') => {
 const shot = (page: Page, selector: string, index: number) =>
   page.locator(selector).nth(index).screenshot();
 
+/**
+ * The narrow contract, asserted at any effective width the shell must fit in —
+ * a 320px viewport, or a 640px physical window at 200% browser zoom (the same
+ * 320 CSS px of layout): the page never scrolls horizontally, the measured
+ * zone hands the four slots over to the hamburger, and the breadcrumb name
+ * elides instead of pushing the bar wide.
+ */
+const expectNarrowBar = async (page: Page) => {
+  const banner = page.getByRole('banner');
+
+  const sizes = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth
+  }));
+  expect(sizes.scroll, `scrollWidth ${sizes.scroll} passou de clientWidth ${sizes.client}`).toBeLessThanOrEqual(
+    sizes.client
+  );
+
+  // A própria barra cabe: o `overflow: hidden` do título é guarda, não licença
+  // para vazar conteúdo por baixo dela.
+  const barra = await banner.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+  expect(barra.scroll, `titlebar overflow: ${barra.scroll} > ${barra.client}`).toBeLessThanOrEqual(barra.client + 1);
+
+  // A zona medida entrega o hambúrguer: nunca um ⋯, e nunca as duas formas juntas.
+  const hamburger = banner.getByRole('button', { name: 'Main menu' });
+  await expect(hamburger).toBeVisible();
+  await expect(banner.getByRole('menubar')).toHaveCount(0);
+  await expect(banner.locator('svg.lucide-more-horizontal')).toHaveCount(0);
+
+  // O breadcrumb cede primeiro: nesta largura o nome está de fato truncado —
+  // elipse declarada e clipping real — e o breadcrumb todo segue na janela.
+  const nome = banner.locator('.studio-doc strong');
+  expect(await nome.evaluate((el) => getComputedStyle(el).textOverflow)).toBe('ellipsis');
+  expect(
+    await nome.evaluate((el) => el.scrollWidth > el.clientWidth),
+    'o nome devia estar truncado nesta largura'
+  ).toBe(true);
+  const docBox = (await banner.locator('.studio-doc').boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(docBox.x + docBox.width).toBeLessThanOrEqual(viewport.width + 1);
+};
+
 for (const theme of ['dark', 'light'] as const) {
   test(`[${theme}] raio muda → tiles e grade atualizam`, async ({ page }) => {
     await preparar(page, theme);
@@ -76,7 +119,7 @@ for (const theme of ['dark', 'light'] as const) {
     );
   });
 
-  test(`[${theme}] titlebar: marca, coletor e breadcrumb em quatro zonas; painéis ficam fora`, async ({ page }) => {
+  test(`[${theme}] titlebar: marca, menubar e breadcrumb em quatro zonas; painéis ficam fora`, async ({ page }) => {
     await preparar(page, theme);
     const banner = page.getByRole('banner');
 
@@ -84,11 +127,19 @@ for (const theme of ['dark', 'light'] as const) {
     const brand = banner.getByRole('button', { name: 'Go to workspaces' });
     await expect(brand).toBeVisible();
     await expect(brand).toContainText('Icon-Core');
-    // Zona 2 — o gatilho coletor (hamburger + "Menu"), nunca um ⋯.
-    const trigger = banner.getByRole('button', { name: 'Menu' });
-    await expect(trigger).toBeVisible();
-    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    // Zona 2 — o menubar PT: os quatro slots na ordem do plano, e nenhum ⋯.
+    const menubar = banner.getByRole('menubar', { name: 'Main menu' });
+    await expect(menubar).toBeVisible();
+    expect(await menubar.getByRole('menuitem').evaluateAll((els) => els.map((el) => el.textContent ?? ''))).toEqual([
+      'Arquivo',
+      'Editar',
+      'Exibir',
+      'Sobre'
+    ]);
     await expect(banner.locator('svg.lucide-more-horizontal')).toHaveCount(0);
+    // Nesta largura os quatro slots cabem: o hambúrguer é do transbordo medido,
+    // nunca de um breakpoint — então aqui ele não existe.
+    await expect(banner.getByRole('button', { name: 'Main menu' })).toHaveCount(0);
     // Zona 3 — o breadcrumb relata; só o nome elipsa, o resto fica rígido.
     const doc = banner.locator('.studio-doc');
     await expect(doc).toHaveAttribute('aria-live', 'polite');
@@ -102,12 +153,12 @@ for (const theme of ['dark', 'light'] as const) {
     // E o fundo não é região de arrasto no browser (isso é do shell desktop).
     await expect(banner).not.toHaveAttribute('data-tauri-drag-region', 'deep');
 
-    // A ordem das zonas é a da decisão: marca → coletor → breadcrumb.
+    // A ordem das zonas é a da decisão: marca → menubar → breadcrumb.
     const brandBox = (await brand.boundingBox())!;
-    const triggerBox = (await trigger.boundingBox())!;
+    const barBox = (await menubar.boundingBox())!;
     const docBox = (await doc.boundingBox())!;
-    expect(brandBox.x).toBeLessThan(triggerBox.x);
-    expect(triggerBox.x).toBeLessThan(docBox.x);
+    expect(brandBox.x).toBeLessThan(barBox.x);
+    expect(barBox.x).toBeLessThan(docBox.x);
 
     // Nothing from the canvas column leaks up: no panel toggles, no Insert, no
     // View options.
@@ -116,51 +167,116 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(banner.getByRole('button', { name: /Layers panel|Inspector panel/ })).toHaveCount(0);
   });
 
-  test(`[${theme}] coletor: 9 ações em 3 grupos, Esc devolve o foco; sem ⋯ em nenhuma largura`, async ({ page }) => {
+  test(`[${theme}] menubar PT: mesmas linhas nas duas apresentações; Esc devolve o foco`, async ({ page }) => {
     await preparar(page, theme);
     const banner = page.getByRole('banner');
-    const trigger = banner.getByRole('button', { name: 'Menu' });
 
-    // Não existe mais dobra por medida: nenhuma largura rende um ⋯.
+    // Nenhuma largura rende um ⋯: o coletor não voltou com outro nome.
     await expect(banner.locator('svg.lucide-more-horizontal')).toHaveCount(0);
-    await page.setViewportSize({ width: 760, height: 900 });
-    await expect(trigger).toBeVisible();
 
-    await trigger.click();
-    const menu = page.getByRole('menu', { name: 'Menu' });
+    /** As linhas acionáveis do menu aberto — itens e opções, na ordem do DOM. */
+    const linhas = () =>
+      page
+        .locator('[role="menu"] [role="menuitem"], [role="menu"] [role="menuitemradio"]')
+        .evaluateAll((els) => els.map((el) => el.textContent ?? ''));
 
-    // 9/9 em três grupos, dois separadores.
-    await expect(menu.getByRole('menuitem')).toHaveCount(9);
-    await expect(menu.getByRole('separator')).toHaveCount(2);
-
-    // Os mesmos rótulos e atalhos dos botões que saíram da barra. A linha do
-    // tema nomeia a virada a partir do tema em vigor do run.
-    const flip = theme === 'dark' ? 'light' : 'dark';
-    const items = await menu.getByRole('menuitem').evaluateAll((els) => els.map((el) => el.textContent ?? ''));
-    expect(items).toEqual([
-      'New document',
-      'Rename document',
-      'Close document',
-      'Save sessionCtrl+S',
-      'Export iconsCtrl+E',
-      `Switch to ${flip} theme`,
-      'Keyboard shortcuts?',
-      'Preferences',
-      'About Icon-Core'
+    // Larga: os quatro slots PT, na ordem do plano.
+    const menubar = banner.getByRole('menubar', { name: 'Main menu' });
+    await expect(menubar).toBeVisible();
+    expect(await menubar.getByRole('menuitem').evaluateAll((els) => els.map((el) => el.textContent ?? ''))).toEqual([
+      'Arquivo',
+      'Editar',
+      'Exibir',
+      'Sobre'
     ]);
-    await expect(menu.getByRole('menuitem', { name: 'Save session' })).toContainText('Ctrl+S');
-    await expect(menu.getByRole('menuitem', { name: 'Export icons' })).toContainText('Ctrl+E');
 
-    // Esc fecha o coletor e devolve o foco ao gatilho.
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('menu', { name: 'Menu' })).toHaveCount(0);
-    await expect(trigger).toBeFocused();
-    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    // O conjunto fechado de linhas de cada menu — o mesmo que a spec de
+    // componente fixa, agora lido da build real. A paridade PT não é
+    // "parecido": é a lista exata, com os atalhos que os bindings instalam
+    // (Ctrl nesta plataforma de teste; o rótulo do zoom leva o sinal −, U+2212).
+    const fechado: Array<[string, string[]]> = [
+      [
+        'Arquivo',
+        [
+          'Novo',
+          'AbrirCtrl+O',
+          'Nenhum projeto recente',
+          'Renomear',
+          'Fechar',
+          'SalvarCtrl+S',
+          'Salvar comoCtrl+Shift+S',
+          'ExportarCtrl+E'
+        ]
+      ],
+      ['Editar', ['DesfazerCtrl+Z', 'RefazerCtrl+Shift+Z', 'DuplicarCtrl+D']],
+      [
+        'Exibir',
+        [
+          'Grade — DesligadaG',
+          'AproximarCtrl+=',
+          'AfastarCtrl+−',
+          'Zoom 100%Ctrl+0',
+          'Default',
+          'Light',
+          'Dark',
+          'Monochrome',
+          'Claro',
+          'Escuro',
+          'Sistema'
+        ]
+      ],
+      ['Sobre', ['Atalhos?', 'Preferências', 'Sobre o Icon-Core']]
+    ];
 
-    // De volta à largura cheia: os grupos distribuídos de antes não voltam.
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await expect(page.getByRole('group', { name: 'Document' })).toHaveCount(0);
+    const largas: string[] = [];
+    for (const [menu, esperado] of fechado) {
+      const trigger = menubar.getByRole('menuitem', { name: menu });
+      await trigger.click();
+      await expect(page.getByRole('menu')).toBeVisible();
+      const lidas = await linhas();
+      expect(lidas, `menu ${menu} na apresentação larga`).toEqual(esperado);
+      largas.push(...lidas);
+
+      // Esc fecha e devolve o foco ao gatilho.
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu')).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+      await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    }
+
+    // Estreita de verdade: em 320px os quatro slots não cabem, e a zona medida
+    // entrega o hambúrguer — o mesmo modelo, outra apresentação.
+    await page.setViewportSize({ width: 320, height: 900 });
+    const hamburger = banner.getByRole('button', { name: 'Main menu' });
+    await expect(hamburger).toBeVisible();
+    await expect(banner.getByRole('menubar')).toHaveCount(0);
     await expect(banner.locator('svg.lucide-more-horizontal')).toHaveCount(0);
+
+    await hamburger.click();
+    await expect(hamburger).toHaveAttribute('aria-expanded', 'true');
+    const painel = page.getByRole('menu', { name: 'Main menu' });
+    await expect(painel).toBeVisible();
+
+    // Paridade de verdade: as linhas do painel estreito são as MESMAS da barra
+    // larga, na mesma ordem — um modelo, duas apresentações.
+    expect(await linhas(), 'o painel estreito repete as linhas da barra larga').toEqual(largas);
+
+    // Aqui as seções são cabeçalhos (rótulo, não item): "Arquivo" não é clicável.
+    for (const secao of ['Arquivo', 'Editar', 'Exibir', 'Sobre']) {
+      await expect(painel.getByText(secao, { exact: true })).toBeVisible();
+      await expect(painel.getByRole('menuitem', { name: secao, exact: true })).toHaveCount(0);
+    }
+
+    // Esc fecha o painel e devolve o foco ao hambúrguer.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+    await expect(hamburger).toBeFocused();
+    await expect(hamburger).toHaveAttribute('aria-expanded', 'false');
+
+    // De volta à largura cheia: os quatro slots retornam e o hambúrguer sai.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(banner.getByRole('menubar', { name: 'Main menu' })).toBeVisible();
+    await expect(banner.getByRole('button', { name: 'Main menu' })).toHaveCount(0);
   });
 
   test(`[${theme}] barra do canvas: recolher, desfazer, refazer, view options, recolher`, async ({ page }) => {
@@ -363,5 +479,27 @@ for (const theme of ['dark', 'light'] as const) {
     expect(sizes.scroll, `scrollWidth ${sizes.scroll} passou de clientWidth ${sizes.client}`).toBeLessThanOrEqual(
       sizes.client
     );
+  });
+
+  test(`[${theme}] 320px: sem scroll horizontal, hambúrguer visível e breadcrumb elipsa`, async ({ page }) => {
+    await preparar(page, theme);
+    // Larga → estreita de verdade: a troca de forma é medida em runtime, então
+    // a resize exercita o caminho por onde a janela pequena passa.
+    await page.setViewportSize({ width: 320, height: 900 });
+    await expectNarrowBar(page);
+  });
+
+  test.describe(`[${theme}] zoom 200%`, () => {
+    // Zoom de navegador a 200% numa janela física de 640px: o layout vê 320 CSS
+    // px (a largura efetiva) e o raster sobe para 2×. É a mesma largura efetiva
+    // do teste de 320px — e por isso ele repete as MESMAS asserções.
+    test.use({ viewport: { width: 320, height: 900 }, deviceScaleFactor: 2 });
+
+    test(`mesmas garantias na largura efetiva`, async ({ page }) => {
+      await preparar(page, theme);
+      expect(await page.evaluate(() => window.devicePixelRatio)).toBe(2);
+      await page.setViewportSize({ width: 320, height: 900 });
+      await expectNarrowBar(page);
+    });
   });
 }
