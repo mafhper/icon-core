@@ -33,9 +33,11 @@ const systemTheme = (): StudioResolvedTheme =>
  * colour properties are suppressed for the swap (the same reason the Composer's
  * `useTheme` does it) — otherwise the switch smears instead of snapping.
  *
- * Returns the **resolved** theme because the titlebar toggle is binary: it shows
- * the theme in force and flips it, which is a question only the resolution can
- * answer while the preference is still `system`.
+ * Returns the **resolved** theme — the value `[data-theme]` carries: `system`
+ * resolves through the OS, so the attribute always holds a concrete light or
+ * dark. The titlebar's theme control is the Exibir menu's ternary radio and
+ * reads the preference, not this value; the resolved half exists for the
+ * attribute the whole shell themes off.
  */
 export const useStudioTheme = (preference: StudioThemePreference): StudioResolvedTheme => {
   const resolve = useCallback(

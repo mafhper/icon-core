@@ -9,6 +9,17 @@ const LEFT_MAX = 380;
 const RIGHT_MIN = 205;
 const RIGHT_MAX = 380;
 
+// Shell window classes: one boundary each, spelled once. The three queries
+// derive from these numbers, so the small/medium and medium/large pairs can
+// never drift apart — the same boundary written twice is a defect waiting to
+// happen. (F2 does not live here: the menu zone is measured, not a breakpoint.)
+const SMALL_MAX_PX = 899;
+const MEDIUM_MAX_PX = 1179;
+
+const SMALL_QUERY = `(max-width: ${SMALL_MAX_PX}px)`;
+const MEDIUM_QUERY = `(min-width: ${SMALL_MAX_PX + 1}px) and (max-width: ${MEDIUM_MAX_PX}px)`;
+const LARGE_QUERY = `(min-width: ${MEDIUM_MAX_PX + 1}px)`;
+
 const readStored = (key: string, fallback: number): number => {
   try {
     const raw = window.localStorage.getItem(key);
@@ -42,9 +53,9 @@ const writeStored = (key: string, value: number): void => {
  * localStorage.
  */
 export const usePanelLayout = () => {
-  const isSmall = useMediaQuery('(max-width: 899px)');
-  const isMedium = useMediaQuery('(min-width: 900px) and (max-width: 1179px)');
-  const isLarge = useMediaQuery('(min-width: 1180px)');
+  const isSmall = useMediaQuery(SMALL_QUERY);
+  const isMedium = useMediaQuery(MEDIUM_QUERY);
+  const isLarge = useMediaQuery(LARGE_QUERY);
 
   const [leftWidth, setLeftWidth] = useState<number>(() => readStored(LEFT_KEY, 240));
   const [rightWidth, setRightWidth] = useState<number>(() => readStored(RIGHT_KEY, 288));

@@ -157,10 +157,12 @@
 
 /* --- Titlebar (mockup: 42px, respiro 16px, marca 12px/650, BETA 8px) ------- */
 
-/* Minimal bar, four zones left to right: brand (never truncates), the menu
-   bar (Arquivo/Editar/Exibir/Sobre), the elastic document breadcrumb and —
-   under the desktop shell only — the window controls. Nothing folds by
-   width anymore: the breadcrumb is the slack. */
+/* Minimal bar, four zones left to right: a marca (nunca trunca), a zona de
+   menus (medida — os quatro gatilhos dão lugar ao hambúrguer no transbordo
+   real, nunca num breakpoint de janela; ver `StudioMenus`), o breadcrumb
+   elástico do documento e — só sob o shell desktop — os controles de janela.
+   O breadcrumb cede primeiro: é a folga que a zona de menus recupera antes de
+   entregar os gatilhos. */
 .studio-titlebar {
   display: flex;
   align-items: center;
@@ -221,6 +223,51 @@
   border: 1px solid var(--ic-border);
   border-radius: 3px;
   padding: 1px 4px;
+}
+
+/* F2 — a zona de menus é medida, nunca um breakpoint (ver `StudioMenus`): a
+   largura natural dos quatro gatilhos é o que a zona reporta, e o transbordo
+   real — fonte ampliada, locale longa, controles de janela do Tauri — é o que
+   troca a apresentação pelo hambúrguer. O hambúrguer mantém a métrica de
+   altura do `MenubarTrigger` (26px, raio do kit) e o mesmo tratamento de
+   hover/aberto. Só esta zona troca: a marca (F1) e os controles de janela
+   (F4) nunca colapsam. */
+.studio-menus {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Larga: cede com a janela — `min-width: 0` permite encolher abaixo do
+   conteúdo, e é esse transbordo que o observador lê (`scrollWidth` >
+   `clientWidth`). Estreita: o hambúrguer é fixo — a zona não encolhe. */
+.studio-menus[data-narrow='false'] {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.studio-menus[data-narrow='true'] {
+  flex: 0 0 auto;
+}
+
+.studio-menu-hamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ic-radius-sm);
+  background: none;
+  color: var(--ic-text);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.studio-menu-hamburger:hover,
+.studio-menu-hamburger[data-state='open'] {
+  background-color: var(--ic-elevated);
 }
 
 /* F3 — breadcrumb elástico: relata o documento, não é navegação (sem botão,

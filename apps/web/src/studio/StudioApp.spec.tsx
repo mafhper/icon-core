@@ -12,11 +12,14 @@ afterEach(cleanup);
 
 /**
  * jsdom has no `matchMedia`: the OS preference is exactly what the spec says.
- * `system` is the stored default, so this stub is what tells dark from light.
+ * `system` is the stored default, so this stub is what tells dark from light —
+ * it answers the OS colour-scheme query, and only it: width queries stay
+ * false, and the menu zone measures its way to its shape like everywhere
+ * else (the titlebar spec declares the boxes).
  */
 const stubSystemTheme = (light: boolean) => {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches: light,
+    matches: light && query.includes('prefers-color-scheme'),
     media: query,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
