@@ -7,7 +7,12 @@ import { QualityWarnings } from './QualityWarnings';
 import { LayerContextMenu } from './LayerContextMenu';
 import { groupLayers } from '../utils/layerGroups';
 
-/** Drag-and-drop and rename both need the flat, display-ordered list. */
+/**
+ * Drag-and-drop and rename both need the flat, display-ordered list.
+ *
+ * The panel heading ("Layers" + count + Insert) belongs to the host that
+ * mounts this list; a second one rendered here read as a duplicate.
+ */
 export const LayerList = ({ onDeleteRequest }: { onDeleteRequest?: (id: string) => void } = {}) => {
   const { state, dispatch } = useComposer();
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -77,12 +82,6 @@ export const LayerList = ({ onDeleteRequest }: { onDeleteRequest?: (id: string) 
 
   return (
     <aside className="ic-layer-list">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-sm font-semibold tracking-tight text-ic-accent-text">
-          Layers
-        </h2>
-      </div>
-
       <div className="flex-1 overflow-y-auto space-y-3">
         {layers.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
