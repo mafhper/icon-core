@@ -109,6 +109,7 @@ const PAIRS = [
   ['--ic-text-muted', '--ic-bg', 4.5, 'secondary text'],
   ['--ic-text-muted', '--ic-surface', 4.5, 'secondary text on panels'],
   ['--ic-text-muted', '--ic-elevated', 4.5, 'secondary text on controls'],
+  ['--ic-text-muted', '--ic-overlay', 4.5, 'secondary text on overlays (menu label, item shortcut)'],
   ['--ic-text-faint', '--ic-bg', 3.0, 'decorative only (labels carry text via stronger tokens)'],
   ['--ic-on-accent', '--ic-accent', 4.5, 'text on accent fills'],
   ['--ic-accent-text', '--ic-bg', 4.5, 'accent foreground on the page'],

@@ -22,10 +22,26 @@ export { SegmentedControl, type SegmentedControlProps, type SegmentedOption } fr
 export {
   Menu,
   MenuItem,
+  MenuLabel,
+  MenuRadioGroup,
+  MenuRadioItem,
   MenuSeparator,
   type MenuProps,
-  type MenuItemProps
+  type MenuItemProps,
+  type MenuLabelProps,
+  type MenuRadioGroupProps,
+  type MenuRadioItemProps
 } from './components/Menu';
+export {
+  Menubar,
+  MenubarMenu,
+  MenubarTrigger,
+  MenubarContent,
+  type MenubarProps,
+  type MenubarMenuProps,
+  type MenubarTriggerProps,
+  type MenubarContentProps
+} from './components/Menubar';
 export { Popover, type PopoverProps } from './components/Popover';
 export {
   COLOR_LIBRARY,
