@@ -618,6 +618,19 @@
   color: var(--ic-text);
 }
 
+/* Faixa das variantes (decisão do dono): a seção full-bleed in-flow abaixo do
+   palco que carrega a legenda e os tiles, com a mesma tinta do palco pintada
+   inline pelo componente. A coluna em flex é o que mantém a legenda
+   centralizada (`align-self: center` é propriedade de item flex) e a faixa
+   de tiles com os respiros dela; `flex-shrink: 0` preserva o comportamento
+   anterior dos dois como itens da coluna. Sem cartão, borda, hairline ou
+   sombra: só a tinta e o fluxo, como no mockup. */
+.studio-variant-band {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
 /* Legenda do canvas (mockup `canvas-caption`: fileira com ponto, sRGB, LxA e
    variante; respiro superior 34px, respiros internos 8px, 9px — piso 11px).
    Só leitura, sem comportamento; a tinta é o papel apagado do mockup. */

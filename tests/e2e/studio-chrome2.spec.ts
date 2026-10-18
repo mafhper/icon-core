@@ -2,8 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 
 /**
  * Chrome slice 2: tiles + grade follow geometry, two bars with exact
- * addresses, Export tab with grid + end action, no page-level horizontal
- * scroll at wide viewports — in dark and light.
+ * addresses, Export tab with grid + end action, the variant band in the
+ * work-area paint, no page-level horizontal scroll at wide viewports — in
+ * dark and light.
  *
  * Every address below is a role/name the person reaches, never a selector
  * detail: if a control moves, this file moves with it instead of going green
@@ -141,6 +142,66 @@ for (const theme of ['dark', 'light'] as const) {
     // A ação roda o pipeline de verdade: o estágio final oferece o zip.
     await action.click();
     await expect(inspector.getByRole('button', { name: 'Download all (.zip)' })).toBeVisible({ timeout: 30000 });
+  });
+
+  test(`[${theme}] faixa das variantes segue a cor da work area: palco e faixa no mesmo pano`, async ({ page }) => {
+    await preparar(page, theme);
+
+    // Sem seleção, o Design mostra o painel da bancada (Work area). O branco é
+    // o exemplo do aceite: uma cor que nenhum tema tem, para o igual entre
+    // palco e faixa não poder vir de coincidência com a mesa.
+    await page.keyboard.press('Escape');
+    const campo = page.getByLabel('Work area color hex');
+    await expect(campo).toBeVisible();
+    await campo.fill('FFFFFF');
+    await campo.press('Enter');
+
+    const tinta = (selector: string) =>
+      page.locator(selector).evaluate((el) => getComputedStyle(el).backgroundColor);
+    const palco = () => tinta('.studio-stage');
+    const faixa = () => tinta('.studio-variant-band');
+
+    // Cor escolhida: os três sítios do mesmo binding (palco, superfície de
+    // edição e faixa) computam igual.
+    await expect.poll(palco).toBe('rgb(255, 255, 255)');
+    expect(await faixa()).toBe('rgb(255, 255, 255)');
+    expect(await tinta('.studio-stage .ic-edit-stage')).toBe('rgb(255, 255, 255)');
+
+    // Os tiles não repintam: o tile ativo mantém o chip dele (--ic-bg + borda
+    // + dot + aria-pressed) sobre a faixa branca, como manda o contrato.
+    const tileAtivo = page.locator('.studio-tile[data-active="true"]');
+    await expect(tileAtivo).toHaveAttribute('aria-pressed', 'true');
+    const chip = await tileAtivo.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(chip).not.toBe('rgb(255, 255, 255)');
+    expect(chip).toBe(await tinta('.studio-canvasbar'));
+
+    // A faixa é a seção colada no palco e full-bleed: a costura não volta
+    // por geometria (gap) nem por sobra lateral.
+    const costura = await page.evaluate(() => {
+      const palcoRect = document.querySelector('.studio-stage')!.getBoundingClientRect();
+      const faixaRect = document.querySelector('.studio-variant-band')!.getBoundingClientRect();
+      const colunaRect = document.querySelector('.studio-canvas')!.getBoundingClientRect();
+      return {
+        gap: faixaRect.top - palcoRect.bottom,
+        fullBleed: Math.abs(faixaRect.left - colunaRect.left) < 1 && Math.abs(faixaRect.right - colunaRect.right) < 1
+      };
+    });
+    expect(costura.gap).toBeLessThan(1);
+    expect(costura.fullBleed).toBe(true);
+
+    // Alpha: o `color-mix` do mesmo binding casa nos dois (aqui a prova é o
+    // igual entre palco e faixa — o valor resolvido é do browser, não do spec).
+    await page.getByLabel('Work area color alpha percent').fill('50');
+    await expect.poll(palco).not.toBe('rgb(255, 255, 255)');
+    expect(await faixa()).toBe(await palco());
+
+    // Follow the theme: a escolha sai e os dois voltam à mesa juntos.
+    await page.getByRole('button', { name: 'Follow the theme' }).click();
+    const mesa = await tinta('.studio-canvas');
+    expect(mesa).not.toBe('rgb(255, 255, 255)');
+    await expect.poll(faixa).toBe(mesa);
+    expect(await palco()).toBe(mesa);
+    expect(await tinta('.studio-stage .ic-edit-stage')).toBe(mesa);
   });
 
   test(`[${theme}] sem scroll horizontal em viewport larga`, async ({ page }) => {

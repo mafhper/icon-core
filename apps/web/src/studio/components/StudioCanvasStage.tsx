@@ -46,6 +46,14 @@ interface StudioCanvasStageProps {
  * concha pinta `var(--ic-workspace)`: o palco lia um fundo e a faixa outro, e
  * a costura aparecia. Aqui o caimento padrão é a mesa do mockup; cor
  * escolhida continua pintando igual nos dois (via `workAreaFallback`).
+ *
+ * Faixa das variantes (decisão do dono): a legenda e os tiles vivem numa
+ * seção própria (`studio-variant-band`) logo abaixo do palco, full-bleed e
+ * in-flow, com a **mesma** tinta do palco (`deskColor` — um binding só, usado
+ * pelos dois): cor escolhida pintava o palco e deixava a legenda e os tiles
+ * na mesa, e a costura reaparecia embaixo. Sem cartão, borda, hairline ou
+ * sombra; legenda e tiles não repintam — a cor aqui é tinta de fundo, e os
+ * respiros (legenda 34/0/0, tiles 16/0/23) são os dos componentes.
  */
 const DESK_FALLBACK = 'var(--ic-workspace)';
 
@@ -66,6 +74,11 @@ export const StudioCanvasStage = ({
   panRef.current = pan;
   const dragRef = useRef<{ x: number; y: number; pan: { x: number; y: number } } | null>(null);
   const movedRef = useRef(false);
+
+  // A tinta da bancada: palco e faixa das variantes pintam **esta** expressão —
+  // cor escolhida pinta os dois igual, e "Follow the theme" volta à mesa nos
+  // dois. Duas chamadas seriam duas verdades.
+  const deskColor = workAreaToCss(state.workAreaColor, DESK_FALLBACK);
 
   const trackCursor = (event: React.PointerEvent) => {
     const frame = event.currentTarget.getBoundingClientRect();
@@ -93,7 +106,7 @@ export const StudioCanvasStage = ({
             {
               '--pan-x': `${pan.x}px`,
               '--pan-y': `${pan.y}px`,
-              backgroundColor: workAreaToCss(state.workAreaColor, DESK_FALLBACK)
+              backgroundColor: deskColor
             } as React.CSSProperties
           }
           onPointerDownCapture={(event) => {
@@ -127,8 +140,10 @@ export const StudioCanvasStage = ({
           <PreviewCanvas interactionMode={tool} workAreaFallback={DESK_FALLBACK} />
         </div>
       </div>
-      <StudioCanvasCaption />
-      <StudioVariantTiles />
+      <div className="studio-variant-band" style={{ backgroundColor: deskColor }}>
+        <StudioCanvasCaption />
+        <StudioVariantTiles />
+      </div>
       <StudioPillBar tool={tool} onTool={onTool} onFit={onResetView} />
     </section>
   );
