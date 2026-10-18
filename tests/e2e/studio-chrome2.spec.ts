@@ -76,20 +76,57 @@ for (const theme of ['dark', 'light'] as const) {
     );
   });
 
-  test(`[${theme}] titlebar: marca, documento, tema e atalhos — nada funcional a mais`, async ({ page }) => {
+  test(`[${theme}] titlebar: documento, saída e sistema distribuídos; painéis ficam fora`, async ({ page }) => {
     await preparar(page, theme);
     const banner = page.getByRole('banner');
 
     await expect(banner.getByRole('button', { name: 'Go to workspaces' })).toBeVisible();
-    await expect(banner.getByRole('button', { name: 'Main menu' })).toBeVisible();
+    await expect(banner.getByRole('group', { name: 'Document' })).toBeVisible();
+    await expect(banner.getByRole('button', { name: 'New document' })).toBeVisible();
     await expect(banner.getByText('Default')).toBeVisible();
+    await expect(banner.getByRole('group', { name: 'Output' }).getByRole('button', { name: 'Export icons' })).toBeVisible();
     await expect(banner.getByRole('button', { name: /^Theme: / })).toBeVisible();
     await expect(banner.getByRole('button', { name: 'Keyboard shortcuts' })).toBeVisible();
 
-    await expect(banner.getByRole('button', { name: 'Export' })).toHaveCount(0);
+    // Nothing from the canvas column leaks up: no panel toggles, no Insert, no
+    // View options.
     await expect(banner.getByRole('button', { name: 'Insert layer' })).toHaveCount(0);
     await expect(banner.getByRole('button', { name: 'View options' })).toHaveCount(0);
     await expect(banner.getByRole('button', { name: /Layers panel|Inspector panel/ })).toHaveCount(0);
+  });
+
+  test(`[${theme}] titlebar mede a própria largura: ação dobra em More actions e volta`, async ({ page }) => {
+    await preparar(page, theme);
+    const banner = page.getByRole('banner');
+
+    // Larga: o conjunto inteiro cabe e o gatilho de excedentes não existe.
+    await expect(banner.getByRole('button', { name: 'About Icon-Core' })).toBeVisible();
+    await expect(banner.getByRole('button', { name: 'More actions' })).toHaveCount(0);
+
+    // Estreita: o rabo da prioridade dobra — About sai primeiro — e o gatilho
+    // aparece dizendo o que faz e se está aberto.
+    await page.setViewportSize({ width: 760, height: 900 });
+    await expect(banner.getByRole('button', { name: 'About Icon-Core' })).toHaveCount(0);
+    const trigger = banner.getByRole('button', { name: 'More actions' });
+    await expect(trigger).toBeVisible();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    // A saída continua na barra: é o topo da prioridade, o último a dobrar.
+    await expect(banner.getByRole('button', { name: 'Save session' })).toBeVisible();
+    await expect(banner.getByRole('button', { name: 'Export icons' })).toBeVisible();
+
+    // O item que saiu está no menu com o mesmo nome, e Esc devolve o foco.
+    await trigger.click();
+    await expect(page.getByRole('menuitem', { name: 'About Icon-Core' })).toBeVisible();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('Escape');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toBeFocused();
+
+    // De volta à largura: a ação volta para a barra e o gatilho some.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(banner.getByRole('button', { name: 'About Icon-Core' })).toBeVisible();
+    await expect(banner.getByRole('button', { name: 'More actions' })).toHaveCount(0);
   });
 
   test(`[${theme}] barra do canvas: recolher, desfazer, refazer, view options, recolher`, async ({ page }) => {

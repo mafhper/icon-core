@@ -258,11 +258,10 @@ describe('Studio inspector panel (Fase 4)', () => {
   });
 });
 
-describe('Studio export in the Inspector + main menu (Fase 5)', () => {
-  const openMenu = (name: string) => {
-    fireEvent.pointerDown(screen.getByRole('button', { name: 'Main menu' }));
-    fireEvent.click(screen.getByRole('menuitem', { name }));
-  };
+describe('Studio export in the Inspector + distributed titlebar (Fase 5)', () => {
+  // The actions are bar buttons now, not rows in a main menu: the document and
+  // the way out live in the titlebar itself.
+  const clickBarAction = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
 
   it('opens the three-stage export from the Export tab, gated by validation', () => {
     renderShell(<SeededShell project={createBlankProject('Export', 512)} />);
@@ -307,9 +306,9 @@ describe('Studio export in the Inspector + main menu (Fase 5)', () => {
       expect(exportTab()).toHaveAttribute('aria-selected', 'true');
       expect(screen.queryByRole('dialog', { name: 'Export icons' })).not.toBeInTheDocument();
 
-      // Menu principal: "Export icons…" leva à mesma aba.
+      // O botão Export do titlebar leva à mesma aba.
       fireEvent.click(designTab());
-      openMenu('Export icons…');
+      clickBarAction('Export icons');
       expect(exportTab()).toHaveAttribute('aria-selected', 'true');
 
       // A paleta converte o comando na mesma aba.
@@ -342,7 +341,7 @@ describe('Studio export in the Inspector + main menu (Fase 5)', () => {
 
   it('renames the document through the menu form', () => {
     renderShell(<SeededShell project={createBlankProject('Old', 512)} />);
-    openMenu('Rename document…');
+    clickBarAction('Rename document');
 
     const field = screen.getByLabelText('Name');
     fireEvent.change(field, { target: { value: 'Renamed' } });
@@ -353,7 +352,7 @@ describe('Studio export in the Inspector + main menu (Fase 5)', () => {
   it('asks before a new document destroys the old one', () => {
     const project = createBlankProject('Keep', 512);
     renderShell(<SeededShell project={project} />);
-    openMenu('New document…');
+    clickBarAction('New document');
 
     expect(screen.getByRole('dialog', { name: 'New document?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Discard and continue' }));
@@ -366,17 +365,19 @@ describe('Studio export in the Inspector + main menu (Fase 5)', () => {
     expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('1');
   });
 
-  it('closes the document through the menu confirm, back to the workspace list', () => {
+  it('closes the document through the bar confirm, back to the workspace list', () => {
     const project = createBlankProject('Open', 512);
     // The provider navigates from the URL hash on mount: leaving `#/workspaces`
     // behind would open the welcome (and its banner) under the next test.
     const prevHash = window.location.hash;
     try {
       renderShell(<SeededShell project={project} />);
-      openMenu('Close document');
+      clickBarAction('Close document');
 
-      expect(screen.getByRole('dialog', { name: 'Close this document?' })).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Close document' }));
+      const confirm = screen.getByRole('dialog', { name: 'Close this document?' });
+      // The bar button carries the same name: the confirm is scoped to its own
+      // dialog, which is also how a person reads it.
+      fireEvent.click(within(confirm).getByRole('button', { name: 'Close document' }));
       expect(screen.queryByRole('dialog', { name: 'Close this document?' })).not.toBeInTheDocument();
       // No project: the welcome owns the screen and the doc chrome reports it.
       expect(screen.getByRole('dialog', { name: 'Start a new icon' })).toBeInTheDocument();
@@ -388,7 +389,7 @@ describe('Studio export in the Inspector + main menu (Fase 5)', () => {
 
   it('persists the theme preference from the preferences dialog', () => {
     renderShell(<SeededShell project={createBlankProject('Prefs', 512)} />);
-    openMenu('Preferences…');
+    clickBarAction('Preferences');
 
     fireEvent.click(screen.getByRole('button', { name: 'System' }));
     expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('system');
@@ -420,11 +421,24 @@ describe('StudioApp shell (Fase 1)', () => {
     const titlebar = screen.getByRole('banner');
     expect(within(titlebar).getByText('Studio One')).toBeInTheDocument();
     expect(within(titlebar).getByText('Default')).toBeInTheDocument();
-    // The titlebar carries only theme + shortcuts on the right: no panel
-    // toggles, no Insert, no Export, no View options.
+
+    // Distributed titlebar: the document, the way out and the system share the
+    // bar, each in its own named group.
+    const document = within(titlebar).getByRole('group', { name: 'Document' });
+    expect(within(document).getByRole('button', { name: 'New document' })).toBeEnabled();
+    expect(within(document).getByRole('button', { name: 'Rename document' })).toBeEnabled();
+    expect(within(document).getByRole('button', { name: 'Close document' })).toBeEnabled();
+    const output = within(titlebar).getByRole('group', { name: 'Output' });
+    expect(within(output).getByRole('button', { name: 'Save session' })).toBeEnabled();
+    expect(within(output).getByRole('button', { name: 'Export icons' })).toBeEnabled();
+    const system = within(titlebar).getByRole('group', { name: 'System' });
+    expect(within(system).getByRole('button', { name: /^Theme: / })).toBeInTheDocument();
+    expect(within(system).getByRole('button', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
+    // Nothing folded at this width: the overflow trigger is not rendered.
+    expect(within(titlebar).queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+    // The panel toggles and View options stay out of the titlebar.
     expect(within(titlebar).queryByRole('button', { name: /panel/i })).not.toBeInTheDocument();
     expect(within(titlebar).queryByRole('button', { name: 'Insert layer' })).not.toBeInTheDocument();
-    expect(within(titlebar).queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
     expect(within(titlebar).queryByRole('button', { name: 'View options' })).not.toBeInTheDocument();
 
     // The canvas bar scopes undo/redo + View options to the canvas column,
@@ -442,14 +456,13 @@ describe('StudioApp shell (Fase 1)', () => {
       'Hide Inspector panel'
     ]);
     expect(within(bar).queryByRole('button', { name: 'Insert layer' })).not.toBeInTheDocument();
-    expect(within(bar).queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+    expect(within(bar).queryByRole('button', { name: 'Export icons' })).not.toBeInTheDocument();
 
     // The canvas carries no creation bar: the Layers header Insert is the
     // one entry point.
     for (const name of ['Add shape', 'Add text layer', 'Add background fill layer', 'Upload image']) {
       expect(within(canvas).queryByRole('button', { name })).not.toBeInTheDocument();
     }
-    expect(screen.getByRole('button', { name: 'Main menu' })).toBeInTheDocument();
   });
 
   it('runs the pill in mockup order with every tool acting', () => {

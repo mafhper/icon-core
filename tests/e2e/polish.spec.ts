@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { clickBarAction } from './barAction';
 
 /**
  * Polish contract, derived from the `better-ui` rules (see
@@ -500,8 +501,7 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
 
   // About modal (portalled to <body>; audited last, so it need not be dismissed).
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Main menu' }).click();
-  await page.getByRole('menuitem', { name: 'About Icon-Core' }).click();
+  await clickBarAction(page, 'About Icon-Core');
   await expect(page.locator('.ic-about-modal')).toBeVisible();
   await audit('.ic-about-modal', 'about modal');
 
@@ -518,8 +518,7 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
  */
 test('modal overlays cover the viewport', async ({ page }) => {
   await openInspector(page, false);
-  await page.getByRole('button', { name: 'Main menu' }).click();
-  await page.getByRole('menuitem', { name: 'About Icon-Core' }).click();
+  await clickBarAction(page, 'About Icon-Core');
   await expect(page.locator('.ic-about-modal')).toBeVisible();
 
   const viewport = page.viewportSize()!;

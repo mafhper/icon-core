@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { clickBarAction } from './barAction';
 
 /**
  * Studio shell (Fase 2): the five regions mount over the real engine, the
@@ -41,14 +42,15 @@ test('studio monta as cinco regioes com o chrome do documento', async ({ page })
 
   await expect(page.getByText('Icon-Core').first()).toBeVisible();
 
-  // Export lives at the end of the Inspector Export tab — never in the
-  // titlebar, never in the canvas bar.
+  // Export lives at the end of the Inspector Export tab. The titlebar carries
+  // its entry point (Export icons, in the Output group) but no second export
+  // surface; the canvas bar carries neither.
   const inspector = page.getByRole('region', { name: 'Inspector panel' });
   await inspector.getByRole('tab', { name: 'Export' }).click();
   await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
-  await expect(page.getByRole('banner').getByRole('button', { name: 'Export' })).toHaveCount(0);
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Export', exact: true })).toHaveCount(0);
   const toolbar = page.getByRole('toolbar', { name: 'Studio toolbar' });
-  await expect(toolbar.getByRole('button', { name: 'Export' })).toHaveCount(0);
+  await expect(toolbar.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0);
   await expect(toolbar.getByRole('button', { name: 'Insert layer' })).toHaveCount(0);
 });
 
@@ -131,10 +133,11 @@ test('studio: paineis recolhem e reabrem; atalhos listam os vinculos reais', asy
 test('studio: fechar o documento pede confirmacao e volta a lista', async ({ page }) => {
   await preparar(page);
 
-  await page.getByRole('button', { name: 'Main menu' }).click();
-  await page.getByRole('menuitem', { name: 'Close document' }).click();
-  await expect(page.getByRole('dialog', { name: 'Close this document?' })).toBeVisible();
-  await page.getByRole('button', { name: 'Close document' }).click();
+  await clickBarAction(page, 'Close document');
+  const confirm = page.getByRole('dialog', { name: 'Close this document?' });
+  await expect(confirm).toBeVisible();
+  // O botao da barra tem o mesmo nome: o confirmar e lido dentro do dialogo.
+  await confirm.getByRole('button', { name: 'Close document' }).click();
   await expect(page.getByRole('dialog', { name: 'Start a new icon' })).toBeVisible();
   await expect(page.getByText('No document')).toBeVisible();
 });
