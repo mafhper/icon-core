@@ -133,10 +133,10 @@ describe('Studio titlebar — distributed groups, measured overflow', () => {
     expect(saveItem).toHaveTextContent('Ctrl+S');
     expect(saveItem.querySelector('svg.lucide-save')).not.toBeNull();
 
-    // The theme choices come with the theme trigger when it folds.
-    expect(within(menu).getByRole('menuitem', { name: 'Dark theme' })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitem', { name: 'Light theme' })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitem', { name: 'System theme' })).toBeInTheDocument();
+    // The theme is a toggle, not a three-way menu: what folds is the one action
+    // that flips the state in force (system resolves dark in this environment).
+    expect(within(menu).getByRole('menuitem', { name: 'Switch to light theme' })).toBeInTheDocument();
+    expect(within(menu).queryByRole('menuitem', { name: 'System theme' })).not.toBeInTheDocument();
   });
 
   it('sends the focus to More actions when the focused action is the one that folds', () => {

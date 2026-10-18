@@ -16,9 +16,9 @@ const OPTIONS: Array<{ value: StudioThemePreference; label: string }> = [
 /**
  * Studio preferences (Fase 5): the settings that exist, nothing decorative.
  *
- * Today that is the theme preference — the same Light/Dark/System the
- * toolbar menu switches, persisted to the same key so the two stay one
- * setting. A preference that does not act would be worse than no dialog.
+ * Today that is the theme preference — the same setting the titlebar toggle
+ * flips, persisted to the same key so the two stay one setting. This dialog is
+ * also the way back to `System`: the toggle is binary and cannot express it.
  */
 export const StudioPreferencesDialog = ({
   preference,
@@ -45,7 +45,8 @@ export const StudioPreferencesDialog = ({
         }}
       />
       <p className="text-xs text-ic-text-muted mt-2">
-        System follows the operating system; the studio itself is dark-first.
+        System follows the operating system and is the default. Light and Dark are explicit choices
+        and stay until changed.
       </p>
       <div className="studio-dialog-actions mt-4">
         <Button variant="primary" onClick={onClose}>

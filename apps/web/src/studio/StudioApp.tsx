@@ -36,7 +36,7 @@ import './studio.css';
  * view options), resizable side panels (205–380px, independently collapsible
  * with an always-visible way back), the canvas stage (Hand pan, pill, live
  * variant tiles) and the three-zone statusbar, all under the `[data-theme]`
- * contract, dark-first.
+ * contract — system-first, with an explicit choice persisted.
  *
  * Project-independent surfaces keep their contracts: `#/ui` renders the
  * gallery alone (never under the welcome modal), and export is the Inspector
@@ -52,7 +52,7 @@ export const StudioShell = () => {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>('design');
   const [themePreference, setThemePreference] = useState<StudioThemePreference>(readThemePreference);
   useKeyboardShortcuts();
-  useStudioTheme(themePreference);
+  const themeResolved = useStudioTheme(themePreference);
   const {
     isLarge,
     leftWidth,
@@ -124,6 +124,7 @@ export const StudioShell = () => {
     <div className="studio">
       <StudioTitleBar
         themePreference={themePreference}
+        themeResolved={themeResolved}
         onThemePreference={changeTheme}
         onOpenShortcuts={() => setShortcutsOpen(true)}
       />

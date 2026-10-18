@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export type StudioThemePreference = 'dark' | 'light' | 'system';
 
@@ -11,9 +11,9 @@ const readStored = (): StudioThemePreference => {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw === 'dark' || raw === 'light' || raw === 'system') return raw;
   } catch {
-    // Storage may be unavailable (private mode); fall through to dark-first.
+    // Storage may be unavailable (private mode); fall through to system.
   }
-  return 'dark';
+  return 'system';
 };
 
 const fromQuery = (): StudioResolvedTheme | null => {
@@ -27,18 +27,27 @@ const systemTheme = (): StudioResolvedTheme =>
 /**
  * Studio theme (Fase 1: Light/Dark/System completos).
  *
- * The shell is dark-first: without a stored preference the OS decides only
- * between light and dark, and anything unreadable resolves to dark. A theme
- * flip repaints nearly every element at once, so transitions on colour
- * properties are suppressed for the swap (the same reason the Composer's
+ * The shell follows the OS by default (`system`): without a stored preference
+ * the OS decides between light and dark, and anything unreadable resolves to
+ * dark. A theme flip repaints nearly every element at once, so transitions on
+ * colour properties are suppressed for the swap (the same reason the Composer's
  * `useTheme` does it) — otherwise the switch smears instead of snapping.
+ *
+ * Returns the **resolved** theme because the titlebar toggle is binary: it shows
+ * the theme in force and flips it, which is a question only the resolution can
+ * answer while the preference is still `system`.
  */
-export const useStudioTheme = (preference: StudioThemePreference): void => {
+export const useStudioTheme = (preference: StudioThemePreference): StudioResolvedTheme => {
+  const resolve = useCallback(
+    (): StudioResolvedTheme => fromQuery() ?? (preference === 'system' ? systemTheme() : preference),
+    [preference]
+  );
+  const [resolved, setResolved] = useState<StudioResolvedTheme>(resolve);
+
   useEffect(() => {
     const root = document.documentElement;
     const apply = () => {
-      const resolved: StudioResolvedTheme =
-        fromQuery() ?? (preference === 'system' ? systemTheme() : preference);
+      const next = resolve();
       const swap = document.createElement('style');
       swap.appendChild(
         document.createTextNode('*,*::before,*::after{transition:none !important}')
@@ -46,7 +55,8 @@ export const useStudioTheme = (preference: StudioThemePreference): void => {
       document.head.appendChild(swap);
       // Reading layout flushes the suppression above before the swap paints.
       void document.body.offsetHeight;
-      root.setAttribute('data-theme', resolved);
+      root.setAttribute('data-theme', next);
+      setResolved(next);
       requestAnimationFrame(() => swap.remove());
     };
 
@@ -57,7 +67,9 @@ export const useStudioTheme = (preference: StudioThemePreference): void => {
     const onChange = () => apply();
     media.addEventListener('change', onChange);
     return () => media.removeEventListener('change', onChange);
-  }, [preference]);
+  }, [preference, resolve]);
+
+  return resolved;
 };
 
 export const readThemePreference = readStored;

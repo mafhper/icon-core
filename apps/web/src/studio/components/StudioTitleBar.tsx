@@ -10,14 +10,12 @@ import {
 } from 'react';
 import {
   Box,
-  Check,
   ChevronRight,
   Download,
   FilePlus,
   FileX2,
   Info,
   Keyboard,
-  Monitor,
   Moon,
   MoreHorizontal,
   PenLine,
@@ -37,22 +35,18 @@ import {
   type StudioBarActionId,
   type StudioBarOverflowState
 } from '../barOverflow';
-import type { StudioThemePreference } from '../useStudioTheme';
+import type { StudioResolvedTheme, StudioThemePreference } from '../useStudioTheme';
 import { variantLabel } from '../variantLabels';
 import { StudioConfirmDialog } from './StudioConfirmDialog';
 import { StudioNameDialog } from './StudioNameDialog';
 import { StudioPreferencesDialog } from './StudioPreferencesDialog';
 
-const THEMES: Array<{ id: StudioThemePreference; label: string }> = [
-  { id: 'dark', label: 'Dark theme' },
-  { id: 'light', label: 'Light theme' },
-  { id: 'system', label: 'System theme' }
-];
-
 type StudioMenuDialog = 'new' | 'rename' | 'preferences' | 'confirm-new' | 'confirm-close' | 'about' | null;
 
 interface StudioTitleBarProps {
   themePreference: StudioThemePreference;
+  /** The theme in force — `system` already resolved by the OS. */
+  themeResolved: StudioResolvedTheme;
   onThemePreference: (preference: StudioThemePreference) => void;
   onOpenShortcuts: () => void;
 }
@@ -100,8 +94,16 @@ const GROUP_BY_ACTION: Record<StudioBarActionId, StudioBarGroupId> = {
   about: 'system'
 };
 
-const themeIcon = (preference: StudioThemePreference) =>
-  preference === 'light' ? <Sun size={16} /> : preference === 'system' ? <Monitor size={16} /> : <Moon size={16} />;
+/**
+ * The theme control is a toggle, not a menu: light and dark are two states, and
+ * the button shows the one in force. `system` survives as the stored default and
+ * as a choice in Preferences — it is not a third state the toggle could show.
+ */
+const themeToggleLabel = (resolved: StudioResolvedTheme) =>
+  resolved === 'light' ? 'Light theme' : 'Dark theme';
+
+const themeToggleTarget = (resolved: StudioResolvedTheme): StudioThemePreference =>
+  resolved === 'light' ? 'dark' : 'light';
 
 /**
  * Measures the bar and folds one action per pass until it fits.
@@ -191,13 +193,18 @@ const useBarOverflow = (barRef: RefObject<HTMLElement | null>) => {
  * same shortcut hint as the button it replaced — and the fold is undone the
  * moment the bar has room again. With nothing folded the trigger is not
  * rendered at all, so `⋯` never opens an empty menu. At the extreme the menu is
- * every action plus the theme choices, and the bar is the brand and `⋯`.
+ * every action plus the theme toggle, and the bar is the brand and `⋯`.
  *
  * The panel toggles stay at the canvas bar edges, Insert stays in the Layers
  * header, View options stays in the canvas bar and Export stays the Inspector
  * Export tab: this bar duplicates none of them.
  */
-export const StudioTitleBar = ({ themePreference, onThemePreference, onOpenShortcuts }: StudioTitleBarProps) => {
+export const StudioTitleBar = ({
+  themePreference,
+  themeResolved,
+  onThemePreference,
+  onOpenShortcuts
+}: StudioTitleBarProps) => {
   const { state, dispatch, navigate, saveProject } = useComposer();
   const [menuDialog, setMenuDialog] = useState<StudioMenuDialog>(null);
   const barRef = useRef<HTMLElement>(null);
@@ -301,32 +308,21 @@ export const StudioTitleBar = ({ themePreference, onThemePreference, onOpenShort
     );
   };
 
-  const themeTrigger = (iconOnly: boolean) => (
-    <Menu
+  const isLight = themeResolved === 'light';
+  const themeToggle = (iconOnly: boolean) => (
+    <button
       key="theme"
-      label="Theme"
-      trigger={
-        <button
-          type="button"
-          className={iconOnly ? 'studio-bar-action studio-bar-icon' : 'studio-bar-action'}
-          data-bar-action="theme"
-          aria-label={`Theme: ${themePreference}`}
-          title="Theme"
-        >
-          {themeIcon(themePreference)}
-          {!iconOnly && <span>Theme</span>}
-        </button>
-      }
+      type="button"
+      className={iconOnly ? 'studio-bar-action studio-bar-icon' : 'studio-bar-action'}
+      data-bar-action="theme"
+      aria-label={themeToggleLabel(themeResolved)}
+      aria-pressed={isLight}
+      title={`Switch to ${isLight ? 'dark' : 'light'} theme`}
+      onClick={() => onThemePreference(themeToggleTarget(themeResolved))}
     >
-      {THEMES.map((theme) => (
-        <MenuItem
-          key={theme.id}
-          label={theme.label}
-          icon={themePreference === theme.id ? <Check size={14} /> : undefined}
-          onSelect={() => onThemePreference(theme.id)}
-        />
-      ))}
-    </Menu>
+      {isLight ? <Sun size={16} /> : <Moon size={16} />}
+      {!iconOnly && <span>{isLight ? 'Light' : 'Dark'}</span>}
+    </button>
   );
 
   const documentGroup = visible(GROUPS[0]);
@@ -370,7 +366,7 @@ export const StudioTitleBar = ({ themePreference, onThemePreference, onOpenShort
           )}
           {(systemGroup.length > 0 || folded.length > 0) && (
             <div className="studio-bar-group" role="group" aria-label="System">
-              {systemGroup.map((id) => (id === 'theme' ? themeTrigger(true) : barButton(id, true)))}
+              {systemGroup.map((id) => (id === 'theme' ? themeToggle(true) : barButton(id, true)))}
               {folded.length > 0 && (
                 <Menu
                   label="More actions"
@@ -392,14 +388,11 @@ export const StudioTitleBar = ({ themePreference, onThemePreference, onOpenShort
                       return (
                         <Fragment key="theme">
                           {separator && <MenuSeparator />}
-                          {THEMES.map((theme) => (
-                            <MenuItem
-                              key={theme.id}
-                              label={theme.label}
-                              icon={themePreference === theme.id ? <Check size={14} /> : undefined}
-                              onSelect={() => onThemePreference(theme.id)}
-                            />
-                          ))}
+                          <MenuItem
+                            icon={isLight ? <Moon size={14} /> : <Sun size={14} />}
+                            label={`Switch to ${isLight ? 'dark' : 'light'} theme`}
+                            onSelect={() => onThemePreference(themeToggleTarget(themeResolved))}
+                          />
                         </Fragment>
                       );
                     }

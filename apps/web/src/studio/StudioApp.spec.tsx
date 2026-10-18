@@ -10,20 +10,26 @@ import { StudioShell } from './StudioApp';
 
 afterEach(cleanup);
 
+/**
+ * jsdom has no `matchMedia`: the OS preference is exactly what the spec says.
+ * `system` is the stored default, so this stub is what tells dark from light.
+ */
+const stubSystemTheme = (light: boolean) => {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: light,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn()
+  }));
+};
+
 beforeEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute('data-theme');
-  if (!window.matchMedia) {
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn()
-    }));
-  }
+  stubSystemTheme(false);
 });
 
 const renderShell = (node?: ReactNode) =>
@@ -432,7 +438,8 @@ describe('StudioApp shell (Fase 1)', () => {
     expect(within(output).getByRole('button', { name: 'Save session' })).toBeEnabled();
     expect(within(output).getByRole('button', { name: 'Export icons' })).toBeEnabled();
     const system = within(titlebar).getByRole('group', { name: 'System' });
-    expect(within(system).getByRole('button', { name: /^Theme: / })).toBeInTheDocument();
+    // The theme control is a toggle that names the state in force, not a menu.
+    expect(within(system).getByRole('button', { name: 'Dark theme' })).toBeInTheDocument();
     expect(within(system).getByRole('button', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
     // Nothing folded at this width: the overflow trigger is not rendered.
     expect(within(titlebar).queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
@@ -536,9 +543,37 @@ describe('StudioApp shell (Fase 1)', () => {
     expect(inspector).toHaveAttribute('data-open', 'true');
   });
 
-  it('resolves the theme through data-theme, dark-first', () => {
+  it('starts from the system theme and writes no preference', () => {
     renderShell();
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(window.localStorage.getItem('iconcore-theme-preference')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Dark theme' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('follows a light system theme', () => {
+    stubSystemTheme(true);
+    renderShell();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(screen.getByRole('button', { name: 'Light theme' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('toggles, persists the explicit choice and restores it on the next mount', () => {
+    stubSystemTheme(true);
+    renderShell();
+    fireEvent.click(screen.getByRole('button', { name: 'Light theme' }));
+
+    expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+
+    // A reload is a fresh mount: the stored choice wins over the OS.
+    cleanup();
+    stubSystemTheme(true);
+    renderShell();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    fireEvent.click(screen.getByRole('button', { name: 'Dark theme' }));
+
+    expect(window.localStorage.getItem('iconcore-theme-preference')).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 
   it('keeps Layers, Canvas and Inspector synchronised on selection', () => {

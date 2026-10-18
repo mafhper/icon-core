@@ -212,9 +212,9 @@ test('ajuste na variante dark fica na dark: canvas, tile dark e default intacto'
   await page.waitForTimeout(800);
 
   await page.getByRole('button', { name: 'Dark', exact: true }).click();
-  // `exact`: sem ele, "Theme: dark" casa por substring e o clique troca o
-  // TEMA em vez da variante — o ajuste cairia na base e o teste mediria verde
-  // no tile errado, parecendo que o escopo quebrou.
+  // `exact`: sem ele, "Dark theme" (o toggle de tema) casa por substring e o
+  // clique troca o TEMA em vez da variante — o ajuste cairia na base e o teste
+  // mediria verde no tile errado, parecendo que o escopo quebrou.
   await expect(page.getByRole('region', { name: 'Canvas' })).toContainText('Dark appearance');
   await page.waitForTimeout(800);
   await pintarFundo(page, '#00FF00');

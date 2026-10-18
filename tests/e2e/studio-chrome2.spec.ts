@@ -85,7 +85,8 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(banner.getByRole('button', { name: 'New document' })).toBeVisible();
     await expect(banner.getByText('Default')).toBeVisible();
     await expect(banner.getByRole('group', { name: 'Output' }).getByRole('button', { name: 'Export icons' })).toBeVisible();
-    await expect(banner.getByRole('button', { name: /^Theme: / })).toBeVisible();
+    // The theme control is a toggle: it names the state in force, per run.
+    await expect(banner.getByRole('button', { name: /^(Dark|Light) theme$/ })).toBeVisible();
     await expect(banner.getByRole('button', { name: 'Keyboard shortcuts' })).toBeVisible();
 
     // Nothing from the canvas column leaks up: no panel toggles, no Insert, no
