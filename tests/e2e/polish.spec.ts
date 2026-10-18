@@ -16,12 +16,14 @@ const openInspector = async (page: Page, withShape: boolean) => {
   await page.getByRole('button', { name: /^Create$/i }).first().click();
   await expect(page.locator('.ic-inspector')).toBeVisible();
   if (!withShape) return;
-  // The layers empty state owns the only shape CTA now: it dispatches
-  // ADD_LAYER directly, so there is no menu step after the click. The old
-  // canvas-toolbar Add menu left with the Composer chrome and is not coming
-  // back; the list assertion below is the sync point for the re-render.
-  await page.getByRole('button', { name: 'Add a shape' }).click();
-  await expect(page.locator('.ic-layer-list')).not.toContainText('No layers yet');
+  // Arquivo novo ja traz o handle de Background, entao o estado vazio da
+  // lista ("Add a shape") nao existe na criacao — a forma entra pelo Insert,
+  // o unico ponto de criacao. O clique abaixo e o ponto de sincronia para o
+  // re-render; a lista ja tem o Background, entao "No layers yet" nunca aparece.
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
+  // "2": a forma mais o Background — o ponto de sincronia para o re-render.
+  await expect(page.locator('.ic-layer-row')).toHaveCount(2);
 };
 
 const collect = (page: Page, scope: string, fn: (root: Element, pill: number) => string[], pill = PILL_RADIUS) =>

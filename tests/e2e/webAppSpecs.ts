@@ -48,7 +48,8 @@ export const WEB_APP_SPECS = [
   'storage-isolation',
   'studio-shell',
   'studio-chrome2',
-  'studio-export'
+  'studio-export',
+  'bg-fidelity'
 ] as const;
 
 /**

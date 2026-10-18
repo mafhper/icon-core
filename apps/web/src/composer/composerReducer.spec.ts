@@ -19,6 +19,14 @@ const asset = {
   height: 128
 };
 
+/**
+ * A primeira layer de conteudo. `NEW_PROJECT` semeia o handle de Background
+ * em `layers[0]`, entao `layers[0]` e o fundo, nao a forma — os overrides de
+ * variante moram na layer de conteudo.
+ */
+const primeiraConteudo = (state: ReturnType<typeof composerReducer>) =>
+  state.project!.layers.find((layer) => layer.role !== 'background')!;
+
 describe('Icon Core workspaces state', () => {
   it('creates a v3 project from an uploaded asset', () => {
     const project = createProjectFromAsset(asset);
@@ -75,12 +83,12 @@ describe('Icon Core workspaces state', () => {
     });
 
     const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
-    expect(generated.project!.layers[0].variantOverrides?.dark?.fill).toBeDefined();
+    expect(primeiraConteudo(generated).variantOverrides?.dark?.fill).toBeDefined();
     const darkBg = generated.project!.variants.dark?.canvas?.background;
     expect(darkBg?.kind === 'solid' ? darkBg.color : undefined).toBe('#0f172a');
 
     const cleared = composerReducer(generated, { type: 'CLEAR_VARIANT', payload: { variant: 'dark' } });
-    expect(cleared.project!.layers[0].variantOverrides?.dark).toBeUndefined();
+    expect(primeiraConteudo(cleared).variantOverrides?.dark).toBeUndefined();
   });
 
   it('drops the variant key entirely when clearing, so it stops reading as existing', () => {
@@ -114,7 +122,7 @@ describe('Icon Core workspaces state', () => {
     // key, so promotion removes it and `projectVariants` stops offering a slot
     // for it — there is nothing left of that variant to show.
     expect(Object.keys(promoted.project!.variants)).not.toContain('mono');
-    expect(promoted.project!.layers[0].variantOverrides?.mono).toBeUndefined();
+    expect(primeiraConteudo(promoted).variantOverrides?.mono).toBeUndefined();
   });
 
   it('keeps sibling variants when one is cleared', () => {

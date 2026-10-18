@@ -193,7 +193,7 @@ export type ComposerAction =
   | { type: 'PROMOTE_VARIANT'; payload: { variant: IconVariant } }
   | { type: 'TOGGLE_COMPARE_DEFAULT' }
   | { type: 'SET_ACTIVE_TARGET'; payload: { target: IconTarget; enabled: boolean } }
-  | { type: 'SET_CANVAS_BACKGROUND'; payload: { background: Fill; transient?: boolean } }
+  | { type: 'SET_CANVAS_BACKGROUND'; payload: { background: Fill; variant?: IconVariant; transient?: boolean } }
   | { type: 'SET_CANVAS_IMPORT_MARGIN'; payload: { margin: number; transient?: boolean } }
   | {
       type: 'SET_CANVAS_MASK_RADIUS';
@@ -461,9 +461,18 @@ const moveLayer = (layers: IconLayer[], id: string, direction: 'forward' | 'back
 export const composerReducer = (state: ComposerState, action: ComposerAction): ComposerState => {
   switch (action.type) {
     case 'NEW_PROJECT': {
+      const blank = createBlankProject(action.payload.name, action.payload.size);
+      // A new file is born WITH the default Background handle: the image
+      // background (`canvas.background`) is only adjustable through that
+      // handle, so a file born without it shows a background colour with no
+      // visible control that owns it. The handle never paints (the renderer
+      // skips `role: 'background'`), carries the lowest zIndex, and leaves
+      // `activeLayerId` to the content rule in `setProject` (null here — a
+      // newborn has no content, so the inspector opens on the Canvas panel).
+      const background = createBackgroundLayer(blank.canvas.size, -1);
       return setProject(
         state,
-        createBlankProject(action.payload.name, action.payload.size),
+        { ...blank, layers: [background] },
         action.payload.view ?? 'edit-space'
       );
     }
@@ -639,7 +648,11 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
     case 'DUPLICATE_LAYER': {
       if (!state.project) return state;
       const source = state.project.layers.find((layer) => layer.id === action.payload.id);
-      if (!source) return state;
+      // The Background handle is a singleton: duplicating it would mint a
+      // second `role: 'background'`, and `ADD_LAYER` would keep re-selecting
+      // the first while the copy sat in the list doing nothing. New files are
+      // born with the handle, so this is two clicks away, not a corner.
+      if (!source || source.role === 'background') return state;
       const layer: IconLayer = {
         ...source,
         id: `layer-${crypto.randomUUID()}`,
@@ -808,11 +821,45 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
         : commitProject(state, project);
     }
 
+    /**
+     * The image background, scoped to the edited variant.
+     *
+     * One source (`project.canvas.background`, ADR-011 — the Background layer
+     * with `role: 'background'` is only its selectable handle and never
+     * paints), but TWO slots: the base and the active variant's
+     * `variants[v].canvas.background` override, which wins wherever the
+     * renderer resolves it (`resolveCanvasBackground`: override, else base).
+     * Writing every edit to the base while a non-default variant is active
+     * committed fine and changed nothing on screen — canvas, tiles and export
+     * all read the override — which is exactly "background adjustments are
+     * not respected". So the payload carries the variant, mirroring
+     * `UPDATE_LAYER_VARIANT`: base edits stay global, variant edits stay in
+     * their slot, and clearing a variant falls back to the base by
+     * construction. The work area (`state.workAreaColor`) is not a third
+     * slot: it is bench paint, never in the model, never exported.
+     */
     case 'SET_CANVAS_BACKGROUND': {
       if (!state.project) return state;
+      const variant = action.payload.variant ?? 'default';
+      if (variant === 'default') {
+        const project = {
+          ...state.project,
+          canvas: { ...state.project.canvas, background: action.payload.background }
+        };
+        return action.payload.transient
+          ? { ...state, project, isDirty: true }
+          : commitProject(state, project);
+      }
+      const previous = state.project.variants[variant];
       const project = {
         ...state.project,
-        canvas: { ...state.project.canvas, background: action.payload.background }
+        variants: {
+          ...state.project.variants,
+          [variant]: {
+            ...previous,
+            canvas: { ...previous?.canvas, background: action.payload.background }
+          }
+        }
       };
       return action.payload.transient
         ? { ...state, project, isDirty: true }

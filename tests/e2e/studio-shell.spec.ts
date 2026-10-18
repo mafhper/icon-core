@@ -58,12 +58,14 @@ test('studio: Insert cria uma elipse e a exclusao pede confirmacao', async ({ pa
   // Insert lives only in the Layers header — the canvas bar carries none.
   await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: 'Insert layer' }).click();
   await page.getByRole('menuitem', { name: 'Ellipse' }).click();
-  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
+  // "2": a elipse mais o handle de Background que todo arquivo novo traz.
+  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('2');
 
   await page.getByRole('button', { name: /^Delete / }).first().click();
   await expect(page.getByRole('dialog', { name: 'Delete layer?' })).toBeVisible();
   await page.getByRole('button', { name: 'Delete layer' }).click();
-  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('0');
+  // "1": a elipse saiu, o Background fica.
+  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
 });
 
 test('studio stage: tiles trocam a variante e View options alterna a mascara', async ({ page }) => {
@@ -71,13 +73,14 @@ test('studio stage: tiles trocam a variante e View options alterna a mascara', a
 
   await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: 'Insert layer' }).click();
   await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
-  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
+  // "2": o retangulo mais o handle de Background que todo arquivo novo traz.
+  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('2');
 
   // Tiles com preview vivo: trocar nao perde a camada.
   const canvas = page.getByRole('region', { name: 'Canvas' });
   await canvas.getByRole('button', { name: 'Monochrome' }).click();
   await expect(canvas).toContainText('Monochrome');
-  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
+  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('2');
 
   // View options: desligar a mascara quadra o frame (o export continua mascarado).
   const frame = page.locator('.ic-canvas-frame');

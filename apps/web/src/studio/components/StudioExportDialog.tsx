@@ -36,9 +36,16 @@ const VARIANTS: IconVariant[] = ['default', 'light', 'dark', 'mono'];
  * with real downloads. Variant expansion uses `{variant}` paths, so three
  * variants never overwrite each other (the IC55 rule, by construction).
  *
- * Transparency defaults ON (IC-N22: transparent unless asked opaque), and the
- * background flag rides on PNG/ICO artifacts — the export asks for alpha
- * unless the artifact requires opaque.
+ * Transparency defaults OFF, and the background flag rides on PNG/ICO
+ * artifacts — the export carries the canvas background unless the person
+ * asks for alpha or the artifact requires opaque.
+ *
+ * Default OFF is deliberate, and the opposite of the preset pipeline's
+ * default: this dialog exports a human's design, so the file honours the
+ * canvas background they see (WYSIWYG) unless they ask for alpha. The preset
+ * pipeline (web-favicon, PWA…) keeps the transparent default from #187 —
+ * browser-facing artifacts where alpha is expected. The preview tiles follow
+ * the switch for the same reason, so Preview/Export is the file.
  */
 export const StudioExportDialog = ({ onClose }: { onClose: () => void }) => {
   const { state } = useComposer();
@@ -48,7 +55,7 @@ export const StudioExportDialog = ({ onClose }: { onClose: () => void }) => {
   const [formats, setFormats] = useState<FormatId[]>(['svg', 'png']);
   const [sizes, setSizes] = useState<number[]>([256, 512]);
   const [variants, setVariants] = useState<IconVariant[]>([state.activeVariant]);
-  const [transparent, setTransparent] = useState(true);
+  const [transparent, setTransparent] = useState(false);
   const [progress, setProgress] = useState<PlanProgress>({ phase: 'planning', completed: 0, total: 0, done: false });
   const [files, setFiles] = useState<GeneratedFile[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -156,7 +163,7 @@ export const StudioExportDialog = ({ onClose }: { onClose: () => void }) => {
       {stage === 'configure' && (
         <>
           <div className="studio-export-preview">
-            <StudioVariantTiles />
+            <StudioVariantTiles background={transparent ? 'transparent' : 'canvas'} />
           </div>
           <h3 className="text-xs font-semibold text-ic-text-muted mt-3 mb-1">File format</h3>
           <div className="flex flex-wrap gap-2" role="group" aria-label="File format">

@@ -103,8 +103,14 @@ export const LayerInspector = () => {
   }
 
   if (baseLayer?.role === 'background') {
+    // The effective background for the variant being edited: the override
+    // wins where one exists, else the base — the same rule the renderer
+    // resolves (`resolveCanvasBackground`). Reading only the base while a
+    // non-default variant is active showed one colour and painted another.
+    const effective =
+      state.project.variants[activeVariant]?.canvas?.background ?? state.project.canvas.background;
     const setCanvasBg = (next: Fill, transient = false) =>
-      dispatch({ type: 'SET_CANVAS_BACKGROUND', payload: { background: next, transient } });
+      dispatch({ type: 'SET_CANVAS_BACKGROUND', payload: { background: next, variant: activeVariant, transient } });
     return (
       <aside className="ic-inspector">
         <div className="ic-inspector-head">
@@ -113,9 +119,14 @@ export const LayerInspector = () => {
             <h2>Background</h2>
           </div>
         </div>
+        {activeVariant !== 'default' && (
+          <p className="ic-variant-scope-note">
+            Editing the <strong>{activeVariant}</strong> variant — changes stay here, not the default.
+          </p>
+        )}
         <div className="ic-field-stack">
           <BackgroundFillSection
-            background={state.project.canvas.background}
+            background={effective}
             onChange={setCanvasBg}
             onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
           />

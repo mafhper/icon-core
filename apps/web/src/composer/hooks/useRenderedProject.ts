@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { IconCoreProject, IconVariant } from '@iconcore/shared';
 import { resolveSize } from '@iconcore/shared';
-import { createCanvasBackend, renderProject } from '@iconcore/renderer';
+import { createCanvasBackend, renderProject, type RenderBackground } from '@iconcore/renderer';
 
 /**
  * The single live-render subscription for the project pipeline.
@@ -21,11 +21,15 @@ import { createCanvasBackend, renderProject } from '@iconcore/renderer';
  * project *download*, an `<img>` just shows the old pixels until the new URL
  * arrives — but holding every render would leak a blob per keystroke).
  * `enabled` lets callers skip a render (the canvas compare ghost).
+ * `background` is the `renderProject` mode: `'canvas'` (the default) paints
+ * what the editor shows; the export dialog passes `'transparent'` while its
+ * transparency switch is on, so its preview is the file, not the editor.
  */
 export const useRenderedProject = (
   project: IconCoreProject | null,
   variant: IconVariant,
-  enabled = true
+  enabled = true,
+  background: RenderBackground = 'canvas'
 ): string | null => {
   const [url, setUrl] = useState<string | null>(null);
   const urlRef = useRef<string | null>(null);
@@ -40,7 +44,7 @@ export const useRenderedProject = (
     const backend = createCanvasBackend();
     const raf = requestAnimationFrame(async () => {
       try {
-        const blob = await renderProject(project, variant, resolveSize(project.canvas), backend);
+        const blob = await renderProject(project, variant, resolveSize(project.canvas), backend, { background });
         if (cancelled) return;
         const next = URL.createObjectURL(blob);
         if (urlRef.current) URL.revokeObjectURL(urlRef.current);
@@ -56,7 +60,7 @@ export const useRenderedProject = (
       cancelAnimationFrame(raf);
       backend.destroy();
     };
-  }, [project, variant, enabled]);
+  }, [project, variant, enabled, background]);
 
   useEffect(
     () => () => {

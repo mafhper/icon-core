@@ -32,7 +32,8 @@ const preparar = async (page: Page, theme: 'dark' | 'light') => {
 
   await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: 'Insert layer' }).click();
   await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
-  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
+  // "2": o retangulo mais o handle de Background que todo arquivo novo traz.
+  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('2');
   await expect(page.locator('.studio-tiles:not(.studio-tiles-grid) .studio-tile img')).toHaveCount(4, {
     timeout: 15000
   });

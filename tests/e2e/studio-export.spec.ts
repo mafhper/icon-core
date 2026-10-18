@@ -31,7 +31,8 @@ const preparar = async (page: Page) => {
 
   await page.getByRole('region', { name: 'Layers panel' }).getByRole('button', { name: 'Insert layer' }).click();
   await page.getByRole('menuitem', { name: 'Ellipse' }).click();
-  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('1');
+  // "2": a elipse mais o handle de Background que todo arquivo novo traz.
+  await expect(page.getByRole('region', { name: 'Layers panel' })).toContainText('2');
 };
 
 const abrirExport = async (page: Page) => {

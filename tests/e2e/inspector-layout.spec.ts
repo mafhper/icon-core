@@ -69,7 +69,7 @@ for (const width of WIDTHS) {
 
 test('inspector fits with the Background layer selected', async ({ page }) => {
   await openEditor(page, 288, true);
-  // The Background layer is a handle created on demand, not part of a blank project.
+  // O arquivo novo ja traz o handle; o item o reseleciona em vez de duplicar.
   await page.getByRole('button', { name: 'Insert layer' }).first().click();
   await page.getByRole('menuitem', { name: 'Background' }).click();
   await page.locator('.ic-layer-row', { hasText: /background/i }).first().click();

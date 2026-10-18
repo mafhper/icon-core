@@ -299,7 +299,8 @@ describe('Studio export dialog + main menu (Fase 5)', () => {
     fireEvent.change(within(form).getByLabelText('Name'), { target: { value: 'Fresh' } });
     fireEvent.click(within(form).getByRole('button', { name: 'Create document' }));
     expect(screen.getAllByText('Fresh').length).toBeGreaterThan(0);
-    expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('0');
+    // "1": arquivo novo nasce com o handle de Background, sem conteudo.
+    expect(screen.getByRole('region', { name: 'Layers panel' })).toHaveTextContent('1');
   });
 
   it('closes the document through the menu confirm, back to the workspace list', () => {

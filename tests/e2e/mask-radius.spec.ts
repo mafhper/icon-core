@@ -15,9 +15,10 @@ import { expect, test } from '@playwright/test';
 test('frame radius: o raio computado muda quando o slider muda', async ({ page }) => {
   await page.goto('/icon-core/app/?theme=dark');
 
-  // Um projeto **com uma camada**: um projeto novo mostra o `DropZone`, que nao tem
-  // `.ic-canvas-frame` — o frame so existe quando ha algo para compor. A primeira versao
-  // deste teste parou aqui e o dono nunca veria o slider do mesmo jeito.
+  // Um projeto **com uma camada de conteudo**: arquivo novo ja nasce com o
+  // handle de Background (que nao pinta), entao o frame existe desde a
+  // criacao — o `DropZone` so aparece sem nenhuma layer. A camada de texto
+  // abaixo garante conteudo para compor e medir o raio do frame.
   /**
    * Limpa o storage antes de o app montar. O contexto sobrevive ao `goto`, entao o
    * storage tambem: com um projeto salvo, a dialog mostra a **lista** em vez do botao
