@@ -7,13 +7,13 @@ import { PanelResizer } from '../composer/components/PanelResizer';
 import { WelcomeModal } from '../composer/components/WelcomeModal';
 import { useKeyboardShortcuts } from '../composer/hooks/useKeyboardShortcuts';
 import { usePanelLayout } from '../composer/hooks/usePanelLayout';
+import { EXPORT_FOCUS_EVENT } from '../composer/utils/exportFocus';
 import { ToastProvider } from '../composer/toast/ToastContext';
 import { ToastViewport } from '../composer/toast/ToastViewport';
 import { StudioLayersPanel } from './components/StudioLayersPanel';
 import { StudioCanvasStage } from './components/StudioCanvasStage';
 import { StudioTitleBar } from './components/StudioTitleBar';
-import { StudioExportDialog } from './components/StudioExportDialog';
-import { StudioInspectorPanel } from './components/StudioInspectorPanel';
+import { StudioInspectorPanel, type InspectorTab } from './components/StudioInspectorPanel';
 import { StudioShortcutsDialog } from './components/StudioShortcutsDialog';
 import { StudioStatusBar, type StudioTool } from './components/StudioStatusBar';
 import {
@@ -39,15 +39,17 @@ import './studio.css';
  * contract, dark-first.
  *
  * Project-independent surfaces keep their contracts: `#/ui` renders the
- * gallery alone (never under the welcome modal), and the export-utilities
- * view stays reachable until Fase 5 replaces it with the studio dialog.
+ * gallery alone (never under the welcome modal), and export is the Inspector
+ * Export tab alone — the old `export-utilities` route is a documented fallback
+ * that lands here with the tab focused (the promo still links it).
  */
 export const StudioShell = () => {
-  const { state, dispatch, navigate } = useComposer();
+  const { state, dispatch } = useComposer();
   const [tool, setTool] = useState<StudioTool>('select');
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>('design');
   const [themePreference, setThemePreference] = useState<StudioThemePreference>(readThemePreference);
   useKeyboardShortcuts();
   useStudioTheme(themePreference);
@@ -59,9 +61,23 @@ export const StudioShell = () => {
     inspectorOpen,
     toggleLeft,
     toggleInspector,
+    showInspector,
     startLeftResize,
     startRightResize
   } = usePanelLayout();
+
+  // Export entries (main menu, `Ctrl+E`, palette, welcome upload, legacy
+  // deep-link) all signal through one event; the shell answers by revealing the
+  // Inspector and selecting its Export tab. The tab state lives here — beside
+  // the panel's open state — because this is what owns both halves.
+  useEffect(() => {
+    const onExportFocus = () => {
+      setInspectorTab('export');
+      showInspector();
+    };
+    document.addEventListener(EXPORT_FOCUS_EVENT, onExportFocus);
+    return () => document.removeEventListener(EXPORT_FOCUS_EVENT, onExportFocus);
+  }, [showInspector]);
 
   // Figma tool keys the Composer never owned: `V` returns to Select, `H`
   // takes the Hand (pan). The Composer hook owns every other binding.
@@ -144,15 +160,12 @@ export const StudioShell = () => {
             data-open={inspectorOpen}
             style={{ width: inspectorOpen ? rightWidth : 0 }}
           >
-            <StudioInspectorPanel />
+            <StudioInspectorPanel tab={inspectorTab} onTab={setInspectorTab} />
           </section>
       </div>
-      {state.view === 'export-utilities' && state.project && (
-        <StudioExportDialog onClose={() => navigate('edit-space')} />
-      )}
       <StudioStatusBar tool={tool} cursor={cursor} />
       {shortcutsOpen && <StudioShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
-      {state.view !== 'export-utilities' && <CommandPalette />}
+      <CommandPalette />
       {showWelcome && <WelcomeModal dismissible={Boolean(state.project)} />}
       <span className="sr-only" role="status">
         {state.isDirty ? 'You have unsaved changes' : ''}

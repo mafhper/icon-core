@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { X, PenTool, CloudUpload, Layers2, ArrowRight, MonitorDown, FolderOpen, Trash2, Check } from 'lucide-react';
 import { useComposer } from '../ComposerContext';
+import { requestExportFocus } from '../utils/exportFocus';
 import { fileToLayerAsset, isSupportedLayerFile } from '../utils/fileLayers';
 import { createProjectFromAsset } from '../utils/projectFactory';
 import {
@@ -108,9 +109,12 @@ export const WelcomeModal = ({ dismissible }: { dismissible: boolean }) => {
     try {
       const asset = await fileToLayerAsset(file);
       const project = createProjectFromAsset(asset);
-      const view = uploadMode.current === 'export' ? 'export-utilities' : 'edit-space';
-      dispatch({ type: 'LOAD_PROJECT', payload: { project, view } });
-      navigate(view);
+      const wantsExport = uploadMode.current === 'export';
+      // As duas vias abrem o studio em `edit-space`; a de export **foca a aba**,
+      // que é a superfície única desde o P2 — sem view própria, sem modal.
+      dispatch({ type: 'LOAD_PROJECT', payload: { project, view: 'edit-space' } });
+      navigate('edit-space');
+      if (wantsExport) requestExportFocus();
     } finally {
       setIsImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

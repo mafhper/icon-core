@@ -22,7 +22,7 @@ import {
   DEFAULT_TARGETS
 } from './utils/projectFactory';
 
-export type PublicRoute = 'workspaces' | 'edit-space' | 'export-utilities' | 'ui';
+export type PublicRoute = 'workspaces' | 'edit-space' | 'ui';
 export type WorkspaceId = 'create-edit' | 'upload-export' | 'upload-edit-export';
 export type ComposerView = PublicRoute;
 
@@ -263,8 +263,13 @@ export const initialState: ComposerState = {
 
 export const normalizeRoute = (value: string): ComposerView => {
   if (value === 'composer' || value === 'compose' || value === 'start') return 'edit-space';
-  if (value === 'export') return 'export-utilities';
-  if (value === 'edit-space' || value === 'export-utilities' || value === 'workspaces' || value === 'ui') return value;
+  // `export`/`export-utilities` são rotas **legadas** e continuam reconhecidas:
+  // o modal saiu com o P2 e a superfície vive na aba Export do Inspector, então
+  // a rota cai no studio — o `ComposerProvider` foca a aba pelo
+  // `EXPORT_FOCUS_EVENT`. O promo ainda linka `#/export-utilities`, e um link
+  // publicado não pode virar uma tela de boas-vindas.
+  if (value === 'export' || value === 'export-utilities') return 'edit-space';
+  if (value === 'edit-space' || value === 'workspaces' || value === 'ui') return value;
   return 'workspaces';
 };
 

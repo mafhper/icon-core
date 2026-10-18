@@ -19,7 +19,7 @@ import { variantTiles } from '../variantLabels';
  * state (no bitmap yet) and the loaded image present one frame, not two.
  *
  * `background` is the `renderProject` mode the tiles paint. The stage and the
- * grid default to the editor picture (`'canvas'`); the export dialog passes
+ * grid default to the editor picture (`'canvas'`); the Export panel passes
  * the mode its transparency switch selects, so Preview/Export is the file,
  * not the editor.
  */

@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { LayerInspector } from '../../composer/components/LayerInspector';
 import { StudioExportPanel } from './StudioExportPanel';
 
-type InspectorTab = 'design' | 'export';
+export type InspectorTab = 'design' | 'export';
 
 /**
  * Studio Inspector panel: Design and Export tabs.
@@ -18,10 +17,13 @@ type InspectorTab = 'design' | 'export';
  * Export is `StudioExportPanel`: the export stages (configure → progress →
  * done/error) live in this tab, with the morphing footer at the end — the
  * topbar Export button is gone, this is its home.
+ *
+ * The tab is **controlled**: the shell owns the selection so every export entry
+ * (main menu, `Ctrl+E`, command palette, welcome upload, legacy deep-link) can
+ * land here through `EXPORT_FOCUS_EVENT` — one surface, and no dialog or
+ * parallel view to keep in sync.
  */
-export const StudioInspectorPanel = () => {
-  const [tab, setTab] = useState<InspectorTab>('design');
-
+export const StudioInspectorPanel = ({ tab, onTab }: { tab: InspectorTab; onTab: (tab: InspectorTab) => void }) => {
   return (
     <>
       <div className="studio-tabs" role="tablist" aria-label="Inspector">
@@ -33,7 +35,7 @@ export const StudioInspectorPanel = () => {
             aria-selected={tab === id}
             data-active={tab === id}
             className="studio-tab"
-            onClick={() => setTab(id)}
+            onClick={() => onTab(id)}
           >
             {id === 'design' ? 'Design' : 'Export'}
           </button>

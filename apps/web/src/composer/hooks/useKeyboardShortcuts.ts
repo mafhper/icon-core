@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useComposer } from '../ComposerContext';
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from '../constants';
+import { requestExportFocus } from '../utils/exportFocus';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 
@@ -65,7 +66,10 @@ export const useKeyboardShortcuts = () => {
 
       if (isMod && e.key === 'e') {
         e.preventDefault();
-        navigate('export-utilities');
+        // Export é a aba do Inspector: o atalho garante o studio e foca a aba,
+        // nunca uma view/dialog paralela.
+        navigate('edit-space');
+        requestExportFocus();
         return;
       }
 

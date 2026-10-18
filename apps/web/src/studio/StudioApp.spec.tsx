@@ -258,7 +258,7 @@ describe('Studio inspector panel (Fase 4)', () => {
   });
 });
 
-describe('Studio export dialog + main menu (Fase 5)', () => {
+describe('Studio export in the Inspector + main menu (Fase 5)', () => {
   const openMenu = (name: string) => {
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Main menu' }));
     fireEvent.click(screen.getByRole('menuitem', { name }));
@@ -268,8 +268,8 @@ describe('Studio export dialog + main menu (Fase 5)', () => {
     renderShell(<SeededShell project={createBlankProject('Export', 512)} />);
 
     // The export stages live in the Inspector Export tab itself: open the tab
-    // and the panel is the surface — no dialog, no navigation. (The dialog
-    // route survives the cut until P2; this is the surface that owns export.)
+    // and the panel is the surface — no dialog, no navigation. Since the P2
+    // cut this is the only export surface there is.
     const inspector = screen.getByRole('region', { name: 'Inspector panel' });
     fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
     expect(within(inspector).getByText('SVG')).toBeInTheDocument();
@@ -285,6 +285,59 @@ describe('Studio export dialog + main menu (Fase 5)', () => {
     fireEvent.click(box('PNG'));
     expect(exportButton().textContent?.trim()).toBe('Export');
     expect(exportButton()).toBeDisabled();
+  });
+
+  it('as entradas de export focam a aba Export — atalho, menu e paleta — sem diálogo', () => {
+    // O provider lê o hash no mount: com `#` vazio ele normaliza para
+    // `workspaces` e o welcome (aria-modal) monta sobre o shell — barrando os
+    // atalhos, que respeitam modal aberto. `#/edit-space` é o estado real de um
+    // documento aberto no studio, que é onde as entradas de export vivem.
+    const prevHash = window.location.hash;
+    window.location.hash = '#/edit-space';
+    try {
+      renderShell(<SeededShell project={createBlankProject('Entries', 512)} />);
+      const inspector = screen.getByRole('region', { name: 'Inspector panel' });
+      const exportTab = () => within(inspector).getByRole('tab', { name: 'Export' });
+      const designTab = () => within(inspector).getByRole('tab', { name: 'Design' });
+
+      // Ctrl+E primeiro, de propósito: o atalho respeita menu aberto (guard
+      // real), e aqui não há menu nenhum para o guard encontrar. A superfície é
+      // só a aba — nunca um diálogo paralelo.
+      fireEvent.keyDown(window, { key: 'e', ctrlKey: true });
+      expect(exportTab()).toHaveAttribute('aria-selected', 'true');
+      expect(screen.queryByRole('dialog', { name: 'Export icons' })).not.toBeInTheDocument();
+
+      // Menu principal: "Export icons…" leva à mesma aba.
+      fireEvent.click(designTab());
+      openMenu('Export icons…');
+      expect(exportTab()).toHaveAttribute('aria-selected', 'true');
+
+      // A paleta converte o comando na mesma aba.
+      fireEvent.click(designTab());
+      fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+      const palette = screen.getByRole('dialog', { name: 'Command palette' });
+      fireEvent.click(within(palette).getByRole('button', { name: /Export icons/ }));
+      expect(exportTab()).toHaveAttribute('aria-selected', 'true');
+    } finally {
+      window.location.hash = prevHash;
+    }
+  });
+
+  it('o deep-link legado #/export-utilities cai no studio com a aba Export focada', () => {
+    const prevHash = window.location.hash;
+    try {
+      window.location.hash = '#/export-utilities';
+      renderShell(<SeededShell project={createBlankProject('Deep', 512)} />);
+
+      // Sem welcome: a rota antiga abre o studio, não a lista de projetos.
+      expect(screen.queryByRole('dialog', { name: 'Start a new icon' })).not.toBeInTheDocument();
+      const inspector = screen.getByRole('region', { name: 'Inspector panel' });
+      expect(within(inspector).getByRole('tab', { name: 'Export' })).toHaveAttribute('aria-selected', 'true');
+      // O hash velho é canonicalizado para a rota que o app realmente tem.
+      expect(window.location.hash).toBe('#/edit-space');
+    } finally {
+      window.location.hash = prevHash;
+    }
   });
 
   it('renames the document through the menu form', () => {

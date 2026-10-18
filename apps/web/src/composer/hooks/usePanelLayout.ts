@@ -53,6 +53,13 @@ export const usePanelLayout = () => {
 
   const toggleLeft = useCallback(() => setLeftOpen((open) => !open), []);
   const toggleInspector = useCallback(() => setInspectorOpen((open) => !open), []);
+  /**
+   * Reopens the Inspector. Exists beside `toggleInspector` because the export
+   * entries (menu, `Ctrl+E`, palette, welcome upload, legacy deep-link) must
+   * *reveal* the tab they focus — a toggle would hide it when it is already
+   * open, which is the opposite of the intent.
+   */
+  const showInspector = useCallback(() => setInspectorOpen(true), []);
 
   const startResize = useCallback(
     (side: 'left' | 'right') =>
@@ -96,6 +103,7 @@ export const usePanelLayout = () => {
     inspectorOpen,
     toggleLeft,
     toggleInspector,
+    showInspector,
     startLeftResize: startResize('left'),
     startRightResize: startResize('right')
   };

@@ -7,7 +7,7 @@ import { createCanvasBackend, renderProject, type RenderBackground } from '@icon
  * The single live-render subscription for the project pipeline.
  *
  * The canvas (`PreviewCanvas`) and every variant thumbnail (canvas strip,
- * Inspector grid, export dialog preview) render through this hook — the same
+ * Inspector grid, Export tab) render through this hook — the same
  * project object, the same Canvas2D pipeline the export uses — so the surfaces
  * can only disagree by a renderer defect, never by a stale subscription. A
  * second copy of this RAF/blob logic lived in the studio tiles; any future
@@ -22,7 +22,7 @@ import { createCanvasBackend, renderProject, type RenderBackground } from '@icon
  * arrives — but holding every render would leak a blob per keystroke).
  * `enabled` lets callers skip a render (the canvas compare ghost).
  * `background` is the `renderProject` mode: `'canvas'` (the default) paints
- * what the editor shows; the export dialog passes `'transparent'` while its
+ * what the editor shows; the Export panel passes `'transparent'` while its
  * transparency switch is on, so its preview is the file, not the editor.
  * `mask` clips the finished blob to the canvas outline (the shape the export
  * reads); absent — the default — keeps full bleed, which is what the canvas

@@ -194,11 +194,14 @@ glob pick up the class names, so a token that is not mapped into the app's
 **`apps/web`** — the editor. All logic lives in `src/composer/`: a reducer
 (`composerReducer.ts`) holding the project, selection, variants and history;
 a context that adds `localStorage` restore, a debounced autosave, and hash
-routing (`#/workspaces`, `#/edit-space`, `#/export-utilities`, `#/ui`); the
+routing (`#/workspaces`, `#/edit-space`, `#/ui`); the
 studio shell in `src/studio/` (titlebar, toolbar, layers, canvas stage,
 inspector, statusbar) over the reused panels and viewport; and the `#/ui`
-component gallery. Export runs `executePlan` against a canvas backend, then ships
-the files as a zip, as individual saves, or to a folder on desktop.
+component gallery. Export lives in the Inspector Export tab (no route of its
+own): `#/export` and `#/export-utilities` remain as legacy deep-links that land
+in the studio with the tab focused. Export runs `executePlan` against a canvas
+backend, then ships the files as a zip, as individual saves, or to a folder on
+desktop.
 
 **`apps/promo`** — the landing page. It imports nothing from `@iconcore/*` on
 purpose; its icon pack in `public/branding/` is real generated output, not

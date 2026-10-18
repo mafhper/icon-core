@@ -1,6 +1,7 @@
 import { Download, FilePlus, FileX2, Info, Keyboard, PenLine, Save, Settings2 } from 'lucide-react';
 import { IconButton, Menu, MenuItem, MenuSeparator, Tooltip } from '@iconcore/ui';
 import { useComposer } from '../../composer/ComposerContext';
+import { requestExportFocus } from '../../composer/utils/exportFocus';
 
 export type StudioMenuDialog = 'new' | 'rename' | 'preferences' | 'shortcuts' | 'confirm-new' | 'confirm-close' | 'about' | null;
 
@@ -42,7 +43,16 @@ export const StudioMainMenu = ({ onDialog }: { onDialog: (dialog: Exclude<Studio
         onSelect={() => onDialog('confirm-close')}
       />
       <MenuItem icon={<Save size={14} />} label="Save session" shortcut="Ctrl+S" disabled={!hasProject} onSelect={() => void saveProject()} />
-      <MenuItem icon={<Download size={14} />} label="Export icons…" disabled={!hasProject} onSelect={() => navigate('export-utilities')} />
+      <MenuItem
+        icon={<Download size={14} />}
+        label="Export icons…"
+        disabled={!hasProject}
+        onSelect={() => {
+          // A export é a aba do Inspector: o menu leva o studio para ela.
+          navigate('edit-space');
+          requestExportFocus();
+        }}
+      />
       <MenuSeparator />
       <MenuItem icon={<Settings2 size={14} />} label="Preferences…" onSelect={() => onDialog('preferences')} />
       <MenuItem icon={<Keyboard size={14} />} label="Keyboard shortcuts" shortcut="?" onSelect={() => onDialog('shortcuts')} />

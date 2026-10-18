@@ -1066,25 +1066,6 @@
   border-bottom: none;
 }
 
-/* --- Export dialog stages ------------------------------------------------ */
-
-.studio-export-stages {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-
-.studio-export-stage {
-  flex: 1 1 auto;
-  height: 4px;
-  border-radius: 2px;
-  background-color: var(--ic-elevated);
-}
-
-.studio-export-stage[data-done="true"] {
-  background-color: var(--ic-accent);
-}
-
 /* Seções do export no painel: o respiro lateral dos tiles (22px) para a
    coluna não encostar na borda; `lead` dá o topo quando não há grade acima. */
 .studio-export-settings {
@@ -1099,21 +1080,6 @@
   margin: 0 0 14px;
   font-size: 11px;
   color: var(--ic-text-muted);
-}
-
-/* Prévia do export (adaptação: o diálogo genérico da concha não tem o layout
-   em duas colunas do mockup; a prévia vira um painel embutido na mesa). */
-.studio-export-preview {
-  background-color: var(--ic-workspace);
-  border: 1px solid var(--ic-border);
-  border-radius: 6px;
-  padding: 20px;
-  margin-bottom: 14px;
-}
-
-.studio-export-preview .studio-tiles {
-  margin: 0;
-  justify-content: flex-start;
 }
 
 .studio-export-progress {
