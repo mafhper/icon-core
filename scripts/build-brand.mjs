@@ -3,8 +3,9 @@
  * Deriva a marca a partir de `assets/brand/`.
  *
  * ```bash
- * node scripts/build-brand.mjs           # gera os derivados
- * node scripts/build-brand.mjs --check   # reprova se a copia estiver desatualizada
+ * node scripts/build-brand.mjs                 # gera os derivados
+ * node scripts/build-brand.mjs --check         # reprova se a copia estiver desatualizada
+ * node scripts/build-brand.mjs --from-template # regenera a ARTE (release.webp) do template
  * ```
  *
  * ## Por que este script existe
@@ -58,6 +59,19 @@ const DERIVADOS = {
     'apps/promo/public/branding/logo.svg',
     'apps/web/public/branding/logo.svg'
   ],
+  /**
+   * As variantes da identidade (placa escura/clara). Vão para os `branding/` dos
+   * dois apps porque o conjunto de ícones de app (Tauri/PWA) é gerado a partir
+   * delas e o gate precisa comparar cada derivado com a fonte, como os demais.
+   */
+  'logo-dark.svg': [
+    'apps/promo/public/branding/logo-dark.svg',
+    'apps/web/public/branding/logo-dark.svg'
+  ],
+  'logo-light.svg': [
+    'apps/promo/public/branding/logo-light.svg',
+    'apps/web/public/branding/logo-light.svg'
+  ],
   'release.webp': [
     'apps/promo/public/branding/release.webp',
     'apps/web/public/branding/release.webp',
@@ -67,7 +81,34 @@ const DERIVADOS = {
 };
 
 const CHECK_ONLY = process.argv.includes('--check');
+const FROM_TEMPLATE = process.argv.includes('--from-template');
 const sha256 = (abs) => crypto.createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+
+/**
+ * `--from-template` — o passo de **raster**, separado do passo de cópia.
+ *
+ * `assets/brand/release.webp` era um PNG composto à mão. Agora ele é gerado do
+ * template `release-art.iconcore.json` pelo motor Canvas num Chromium headless
+ * (ADR-017) — a implementação mora em `release-art.mjs`, ao lado deste arquivo.
+ * A geração é o passo caro e deliberado; a cópia para os derivados é barata e
+ * roda sem browser. Por isso são dois comandos, na ordem:
+ *
+ * ```bash
+ * node scripts/build-brand.mjs --from-template   # gera a fonte (release.webp)
+ * node scripts/build-brand.mjs                  # copia os derivados
+ * ```
+ *
+ * Este comando **só** escreve a fonte: os derivados continuam velhos (e o
+ * `check-brand` acusa) até o passo de cópia rodar — o que é o desejado, porque
+ * arte nova é decisão declarada, não efeito colateral de um copia-e-cola.
+ */
+if (FROM_TEMPLATE) {
+  const { renderReleaseArt } = await import('./release-art.mjs');
+  await renderReleaseArt();
+  console.log('\nFonte atualizada. Agora copie os derivados: node scripts/build-brand.mjs');
+  process.exit(0);
+}
+
 
 /** O caminho absoluto da fonte de um derivado: arte em `assets/brand/`, fonte em `assets/fonts/`. */
 const fonteDe = (nome) =>

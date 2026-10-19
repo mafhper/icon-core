@@ -129,6 +129,17 @@ const DERIVADOS = {
       'apps/promo/public/branding/logo.svg',
       'apps/web/public/branding/logo.svg'
     ],
+    // As variantes da identidade (placa escura/clara). Derivadas como as demais:
+    // quem gera o conjunto de ícones de app (Tauri/PWA) parte delas, e o gate
+    // compara cada cópia com a fonte por conteúdo.
+    'logo-dark.svg': [
+      'apps/promo/public/branding/logo-dark.svg',
+      'apps/web/public/branding/logo-dark.svg'
+    ],
+    'logo-light.svg': [
+      'apps/promo/public/branding/logo-light.svg',
+      'apps/web/public/branding/logo-light.svg'
+    ],
     'release.webp': [
       'apps/promo/public/branding/release.webp',
       'apps/web/public/branding/release.webp',
