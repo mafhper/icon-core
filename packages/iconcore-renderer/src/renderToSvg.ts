@@ -331,8 +331,9 @@ const effectFilterMarkup = (effects: LayerEffect[] | undefined, id: string): str
  *
  * `offsetX/offsetY` place the shape's top-left corner. The Canvas2D compositor
  * centres a shape at `((S - w) / 2, (S - h) / 2)` (`composeLayers`), so layer
- * markup must pass that; the `clipPath` reuse must pass `0, 0` because it
- * shares a coordinate space with `approximationMarkup`.
+ * markup must pass that. A `clipPath` reuse must pass the same pair as the
+ * content it clips — `0, 0` for the canvas background (its rect already sits at
+ * the origin), the centring offsets for a layer's gradient approximation.
  */
 const shapeMarkup = (
   shape: ShapeDefinition,
@@ -479,16 +480,27 @@ const strokeOutline = (
  * Approximate an angular (conic) or diamond gradient with primitive shapes.
  * Used because SVG has no conic gradient; the caller clips the result to the
  * shape (or the canvas rect).
+ *
+ * `offsetX/offsetY` translate the approximation into the caller's coordinate
+ * space. Layer markup passes the compositor's centring offsets — the same pair
+ * `shapeMarkup` gets — while the canvas background passes none, because its
+ * rect already sits at the origin.
  */
-const approximationMarkup = (fill: GradientFill, shape: ShapeDefinition, steps = 180): string => {
+const approximationMarkup = (
+  fill: GradientFill,
+  shape: ShapeDefinition,
+  offsetX = 0,
+  offsetY = 0,
+  steps = 180
+): string => {
   const w = shape.width;
   const h = shape.height;
-  const cx = w * ((fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient' ? fill.centerX : 0.5) ?? 0.5);
-  const cy = h * ((fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient' ? fill.centerY : 0.5) ?? 0.5);
+  const cx = offsetX + w * ((fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient' ? fill.centerX : 0.5) ?? 0.5);
+  const cy = offsetY + h * ((fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient' ? fill.centerY : 0.5) ?? 0.5);
 
   if (fill.kind === 'diamond-gradient') {
     const reach = Math.max(w, h) * (fill.radius ?? 0.5);
-    let out = `<rect x="0" y="0" width="${w}" height="${h}" fill="${sampleStops(fill.stops, 1)}"/>`;
+    let out = `<rect x="${offsetX}" y="${offsetY}" width="${w}" height="${h}" fill="${sampleStops(fill.stops, 1)}"/>`;
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const r = reach * (1 - t);
@@ -976,11 +988,15 @@ export const renderToSvgWithOptions = (
 
     if (fill && (fill.kind === 'angular-gradient' || fill.kind === 'diamond-gradient')) {
       const clipId = nextId(`clip-${layer.id}`);
-      defs.push(`<clipPath id="${clipId}">${shapeMarkup(shape, '#000000', 1, '')}</clipPath>`);
+      // Clip and approximation share one coordinate space, centred like the
+      // compositor: the same `((S - w) / 2, (S - h) / 2)` offsets every other
+      // branch passes. Without them the whole group sat at the local origin
+      // and the artwork exported shifted by `-ox * scale`.
+      defs.push(`<clipPath id="${clipId}">${shapeMarkup(shape, '#000000', 1, '', '', ox, oy)}</clipPath>`);
       // The approximation stands in for a conic/diamond gradient, and it inherits
       // the layer's blend mode too — otherwise a layer with both would lose the
       // blend in SVG while keeping it on canvas.
-      own += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})"${filterAttr}${blendModeAttr(layer.blendMode)}>${approximationMarkup(fill, shape)}</g>\n`;
+      own += `<g opacity="${opacity}" transform="${transformAttr}" clip-path="url(#${clipId})"${filterAttr}${blendModeAttr(layer.blendMode)}>${approximationMarkup(fill, shape, ox, oy)}</g>\n`;
       if (stroke) {
         own += `<g opacity="${opacity}" transform="${transformAttr}"${filterAttr}${blendModeAttr(layer.blendMode)}>${strokeOutline(shape, stroke, ox, oy, canvas, defs, nextId)}</g>\n`;
       }
