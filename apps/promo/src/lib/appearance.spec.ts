@@ -93,19 +93,20 @@ describe('page shader follows the appearance', () => {
 });
 
 /**
- * A thumb is not a miniature of the file: the mockup draws its 22 px previews at `radii={20}`
- * instead of the canvas radius. The numbers are the design decision as literals — 20 % of 512 is a
- * 102.4 corner, and the three sizes the promo previews the icon at are 38, 34 and 22 px.
+ * A thumb is not a miniature of the file: the mockup draws its 22 px previews at a fixed small
+ * radius instead of the canvas radius, and the port sets that at 12 %. The numbers are the design
+ * decision as literals — 12 % of 512 is a 61.44 corner, and the three sizes the promo previews the
+ * icon at are 38, 34 and 22 px.
  */
 describe('thumb radius', () => {
-  it('keeps a fifth of the plate, whatever the icon radius is', () => {
-    expect(THUMB_RADIUS).toBe(20);
-    expect((THUMB_RADIUS / 100) * 512).toBeCloseTo(102.4);
+  it('keeps 12 % of the plate, whatever the icon radius is', () => {
+    expect(THUMB_RADIUS).toBe(12);
+    expect((THUMB_RADIUS / 100) * 512).toBeCloseTo(61.44);
   });
 
-  it('puts 7.6 px of corner on the hero dock, 6.8 on the editor dock, 4.4 on a layer row', () => {
-    expect((THUMB_RADIUS / 100) * 38).toBeCloseTo(7.6);
-    expect((THUMB_RADIUS / 100) * 34).toBeCloseTo(6.8);
-    expect((THUMB_RADIUS / 100) * 22).toBeCloseTo(4.4);
+  it('puts 4.56 px of corner on the hero dock, 4.08 on the editor dock, 2.64 on a layer row', () => {
+    expect((THUMB_RADIUS / 100) * 38).toBeCloseTo(4.56);
+    expect((THUMB_RADIUS / 100) * 34).toBeCloseTo(4.08);
+    expect((THUMB_RADIUS / 100) * 22).toBeCloseTo(2.64);
   });
 });

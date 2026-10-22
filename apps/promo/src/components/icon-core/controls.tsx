@@ -165,8 +165,8 @@ function RadiusTick({ preset, radius, onSelect }: PresetProps) {
  * own `radius` (`controls.tsx`, `radii={radius}`), which at the dock's 38 px is a 9.65 px corner —
  * 23 % of the 42 px tile the hero leaves it in at 360 px, 2 px from the tile's own 16 px corner, so
  * the two shapes merge. The mockup's own answer for a small preview is next door: its 22 px layer
- * thumbs are drawn at a fixed `radii={20}`, never at the canvas radius. A tile is that same kind of
- * thumb, so it takes `THUMB_RADIUS` (7.6 px at 38 px) and the dock stops enlarging the icon's
+ * thumbs are drawn at a fixed small radius, never at the canvas radius. A tile is that same kind of
+ * thumb, so it takes `THUMB_RADIUS` (4.56 px at 38 px) and the dock stops enlarging the icon's
  * curvature as the tile shrinks. The frame keeps its own radius on the canvas, where it belongs.
  */
 export function AppearanceDock({ className, size = 44 }: { className?: string; size?: number }) {

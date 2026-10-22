@@ -53,7 +53,7 @@ export const RADIUS_PRESETS = [
 export const DEFAULT_RADIUS = (130 / CANVAS_PX) * 100;
 
 /**
- * Radius of a **thumb**: the plate under a preview of the icon, fixed at a fifth of its own box.
+ * Radius of a **thumb**: the plate under a preview of the icon, fixed at 12 % of its own box.
  *
  * A preview is not a miniature of the file. The 512 px icon carries 130 px of corner (25.39 %), and
  * at 22–38 px that same share leaves so little straight edge that the plate reads as a blob — and
@@ -63,9 +63,11 @@ export const DEFAULT_RADIUS = (130 / CANVAS_PX) * 100;
  * layer thumbs), independent of the `radii={radius}` its 260 px canvas uses.
  *
  * Written once here so both thumb surfaces — the appearance dock and the editor's layer rows —
- * read the same number: 20 % of 38 px is 7.6 px, of 34 px 6.8 px, of 22 px 4.4 px.
+ * read the same number: 12 % of 38 px is 4.56 px, of 34 px 4.08 px, of 22 px 2.64 px. The port
+ * first copied the mockup's 20 and the owner read the plate as still too curved, so the number is
+ * 12: the mockup is where the idea came from, not the value that binds it.
  */
-export const THUMB_RADIUS = 20;
+export const THUMB_RADIUS = 12;
 
 /* ---------- Geometry (viewBox 0 0 512 512) ---------- */
 

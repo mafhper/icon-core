@@ -29,9 +29,9 @@ import { test, expect, type Page } from '@playwright/test';
  *   - the tile metrics, at the mockup's values when the dock has the mockup's width and at the
  *     compressed ones (10 px label, 4 px horizontal padding, the mockup's 4 px gap) when the card
  *     squeezes it;
- *   - the plate inside each tile is a **thumb**: the mockup's `radii={20}` — 102.4 of the 512
- *     viewBox, i.e. 7.6 px on the hero's 38 px plate and 6.8 px on the editor's 34 px one — and
- *     never the frame's 130/512 (25.39 %) that would paint 9.65 / 8.63 px;
+ *   - the plate inside each tile is a **thumb**: `THUMB_RADIUS` — 12 % of the 512 viewBox, written
+ *     `61.4` by the path formatter, i.e. 4.56 px on the hero's 38 px plate and 4.08 px on the
+ *     editor's 34 px one — and never the frame's 130/512 (25.39 %) that would paint 9.65 / 8.63 px;
  *   - the four preset ticks sit where the thumb sits for that radius, and Enter on a focused tick
  *     sets the radius — the keyboard path a visitor has instead of the mouse.
  *
@@ -59,12 +59,12 @@ const THUMB = 16;
 const PRESET_FRACTIONS = [0, 0.09375, 0.45, 1];
 
 /**
- * The mockup's thumb radius, `radii={20}` on every small preview: 20 % of the 512 viewBox is a
- * 102.4 corner. At the two plate sizes the page draws, that is 7.6 px in the hero and 6.8 px in the
- * editor — where the frame's own 130/512 would be 9.65 and 8.63 px.
+ * The thumb radius, `THUMB_RADIUS` at 12 % of the 512 viewBox: a 61.44 corner, written `61.4` by
+ * the path formatter's single decimal. At the two plate sizes the page draws, that is 4.56 px in the
+ * hero and 4.08 px in the editor — where the frame's own 130/512 would be 9.65 and 8.63 px.
  */
-const PLATE_ARC = 102.4;
-const PLATE_PX: Record<string, number> = { top: 7.6, interface: 6.8 };
+const PLATE_ARC = 61.4;
+const PLATE_PX: Record<string, number> = { top: 4.56, interface: 4.08 };
 
 type Tile = {
   name: string;
@@ -264,10 +264,10 @@ for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) 
       const gap = minLabelGap(dock.tiles);
       if (gap <= 1) report.push(`[${dock.instance}] labels on the same row are ${gap.toFixed(1)}px apart`);
 
-      // 4. The plate is a thumb, not a miniature of the file: the mockup's `radii={20}` — a 102.4
-      // corner of the viewBox, 7.6 px on the hero's 38 px plate and 6.8 px on the editor's 34 px
-      // one. The frame's 130/512 would paint 9.65 / 8.63 px and, at 360 px, sit on the tile's own
-      // corner.
+      // 4. The plate is a thumb, not a miniature of the file: `THUMB_RADIUS` at 12 % — a 61.44
+      // corner of the viewBox, written `61.4`, 4.56 px on the hero's 38 px plate and 4.08 px on
+      // the editor's 34 px one. The frame's 130/512 would paint 9.65 / 8.63 px and, at 360 px, sit
+      // on the tile's own corner.
       const platePx = PLATE_PX[dock.instance];
       for (const tile of dock.tiles) {
         if (tile.plate.arc !== PLATE_ARC) {
