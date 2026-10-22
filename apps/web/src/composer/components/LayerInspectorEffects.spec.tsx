@@ -285,9 +285,11 @@ describe('Effects — bloom (Tier 3) e paridade modal ↔ sidebar', () => {
       params: { blur: 24, intensity: 3 }
     });
     expect(screen.getByRole('switch', { name: 'Bloom' })).toBeChecked();
-    // O controle age: os coats estão no markup exportado.
+    // O controle age: os coats estão no markup exportado, contados por varredura —
+    // `/<feDropShadow[^>]*stdDeviation="12"[^>]*>/g` é polinomial (js/polynomial-redos).
     const svg = svgDa(camada);
-    expect(svg.match(/<feDropShadow[^>]*stdDeviation="12"[^>]*>/g)).toHaveLength(3);
+    expect(svg.split('<feDropShadow').length - 1).toBe(3);
+    expect(svg.split('stdDeviation="12"').length - 1).toBe(3);
   });
 
   it('o switch liga nos defaults e desliga preservando os params', () => {

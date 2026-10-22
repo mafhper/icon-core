@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 import type { IconCoreProject, IconLayer } from '@iconcore/shared';
 import { bloomActive, bloomBlurPx, bloomFlood, bloomIntensity } from '../src/composeLayers';
 import { renderToSvgWithOptions } from '../src/renderToSvg';
+import { tagsOf } from './svgScan';
 
 const bloom = (params: Record<string, number | string>) => ({
   kind: 'bloom' as const,
@@ -69,9 +70,9 @@ describe('bloom — contrato de markup (SVG)', () => {
     const { svg, warnings } = renderToSvgWithOptions(projectWith([bloom({})]), 'default');
     expect(warnings).toEqual([]);
     // Intensidade 2 = dois coats; blur 18 vira stdDeviation 9 (o mesmo
-    // mapeamento do ramo drop: um número, uma suavidade).
-    const coats = svg.match(/<feDropShadow[^>]*stdDeviation="9"[^>]*>/g);
-    expect(coats).toHaveLength(2);
+    // mapeamento do ramo drop: um número, uma suavidade). Os dois coats com o
+    // número, lidos como tags (`tagsOf`) e não por regex de backtracking.
+    expect(tagsOf(svg, 'feDropShadow').map((tag) => tag.attrs.stdDeviation)).toEqual(['9', '9']);
     expect(svg).toContain('flood-color="#66aaff"');
     expect(svg).toContain('flood-opacity="0.9"');
     // Encadeados: o segundo coat bebe do primeiro (o prefixo do id do
@@ -86,7 +87,7 @@ describe('bloom — contrato de markup (SVG)', () => {
 
   it('a intensidade manda no número de coats', () => {
     const { svg } = renderToSvgWithOptions(projectWith([bloom({ intensity: 3 })]), 'default');
-    expect(svg.match(/<feDropShadow[^>]*>/g)).toHaveLength(3);
+    expect(tagsOf(svg, 'feDropShadow')).toHaveLength(3);
   });
 
   it('compõe depois do drop: os dois marcam presença', () => {
