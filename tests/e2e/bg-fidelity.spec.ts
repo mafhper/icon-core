@@ -224,7 +224,11 @@ test('ajuste na variante dark fica na dark: canvas, tile dark e default intacto'
   await esperarCantoDoTile(page, 'Dark', [0, 255, 0, 255]);
   expect(await cantoDoImg(page, 'img.ic-canvas-render')).toEqual([0, 255, 0, 255]);
   expect(await cantoDoTile(page, 'Dark')).toEqual([0, 255, 0, 255]);
-  // As demais variantes guardam o desenho delas — escopo, nao vazamento.
+  // As demais variantes guardam o desenho delas — escopo, nao vazamento. A espera vem
+  // antes da leitura: trocar de variante re-renderiza os thumbs, e o `<img>` do tile
+  // inativo fica sem `naturalWidth` enquanto decodifica — foi o "tile Default sem pixels"
+  // do CI, que passava local. As leituras vizinhas (linhas acima) ja esperavam; esta nao.
+  await esperarCantoDoTile(page, 'Default', [248, 250, 252, 255]);
   expect(await cantoDoTile(page, 'Default')).toEqual([248, 250, 252, 255]);
 });
 
