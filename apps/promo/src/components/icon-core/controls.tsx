@@ -52,6 +52,12 @@ export function RadiusControl({ className, id = 'frame-radius' }: { className?: 
 /**
  * The four appearances as a radio group. Roving tabindex keeps one stop for the whole dock
  * and the arrow keys walk it, which is the expected keyboard model for radios.
+ *
+ * Two per row below `sm`: the label, not the glyph, is the long pole. Four tiles in a ~270px
+ * dock leave ~46px of content box each, and `truncate` cannot shrink the span — as a flex
+ * item its `min-width: auto` is the nowrap text itself (~67px for "Monochrome"), so the
+ * labels paint over the padding and touch their neighbours ("DefaultLightDarkonochrome")
+ * instead of ellipsing. From `sm` up there is room for one row and the layout is unchanged.
  */
 export function AppearanceDock({ className, size = 44 }: { className?: string; size?: number }) {
   const { appearance, setAppearance, radius } = useStudio();
@@ -73,7 +79,11 @@ export function AppearanceDock({ className, size = 44 }: { className?: string; s
   };
 
   return (
-    <div role="radiogroup" aria-label="Aparência do ícone e do site" className={cn('flex gap-1', className)}>
+    <div
+      role="radiogroup"
+      aria-label="Aparência do ícone e do site"
+      className={cn('grid grid-cols-2 gap-1 sm:flex', className)}
+    >
       {APPEARANCES.map((item, index) => {
         const active = item.id === appearance;
         return (
