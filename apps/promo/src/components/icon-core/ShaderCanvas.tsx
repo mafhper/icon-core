@@ -13,15 +13,17 @@ type Props = {
 };
 
 const VEC_KEYS = ['base', 'c1', 'c2', 'c3'] as const;
-const NUM_KEYS = ['iri', 'light', 'grain', 'scale', 'sat', 'vig'] as const;
+const NUM_KEYS = ['iri', 'light', 'grain', 'scale', 'sat', 'vig', 'flow', 'warp', 'detail'] as const;
 
 const fixed = (n: number) => n.toFixed(3);
 
 /**
  * The values a drawn frame depends on, at the precision the field is read at. Reduced
- * motion repaints only when this changes, so every uniform the loop writes has to be in
- * here: a channel left out freezes a transition on a frame that was never drawn. The
+ * motion repaints only when this changes, so every preset channel the loop consumes has to
+ * be in here: a channel left out freezes a transition on a frame that was never drawn. The
  * lists below are the same ones the lerp walks, so a new channel enters both or neither.
+ * `flow` is a rate, not a uniform, and it belongs here all the same — it decides how fast
+ * the next frame stops looking like this one.
  */
 // eslint-disable-next-line react-refresh/only-export-components -- Pure helper for the frame loop; the spec imports it directly.
 export function frameSignature(
@@ -39,6 +41,17 @@ export function frameSignature(
   ].join('|');
 }
 
+/**
+ * The field's clock is integrated, never `u_time * flow`: `flow` is a rate, and multiplying an
+ * absolute time by it would run the noise backwards for a moment every time the appearance
+ * slows down — a visible rewind exactly during the transition. Integrating keeps the field
+ * moving forward while its pace converges.
+ */
+// eslint-disable-next-line react-refresh/only-export-components -- Pure helper for the frame loop; the spec imports it directly.
+export function advanceFieldTime(time: number, dt: number, flow: number): number {
+  return time + dt * flow;
+}
+
 type Uniforms = {
   res: WebGLUniformLocation | null;
   time: WebGLUniformLocation | null;
@@ -53,6 +66,8 @@ type Uniforms = {
   scale: WebGLUniformLocation | null;
   sat: WebGLUniformLocation | null;
   vig: WebGLUniformLocation | null;
+  warp: WebGLUniformLocation | null;
+  detail: WebGLUniformLocation | null;
 };
 
 type GLResources = {
@@ -135,6 +150,8 @@ function createResources(gl: WebGLRenderingContext): GLResources | null {
     scale: u('u_scale'),
     sat: u('u_sat'),
     vig: u('u_vig'),
+    warp: u('u_warp'),
+    detail: u('u_detail'),
   };
   return { prog, vs, fs, buf, U };
 }
@@ -235,7 +252,7 @@ export function ShaderCanvas({ preset, className, renderScale = 0.5 }: Props) {
 
       // Reduced motion freezes time and skips frames that would repeat the last one.
       const reduced = motionRef.current;
-      if (!reduced) time += dt;
+      if (!reduced) time = advanceFieldTime(time, dt, cur.flow);
 
       const r = res;
       if (!r || gl.isContextLost()) return;
@@ -268,6 +285,8 @@ export function ShaderCanvas({ preset, className, renderScale = 0.5 }: Props) {
       gl.uniform1f(U.scale, cur.scale);
       gl.uniform1f(U.sat, cur.sat);
       gl.uniform1f(U.vig, cur.vig);
+      gl.uniform1f(U.warp, cur.warp);
+      gl.uniform1f(U.detail, cur.detail);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
     raf = requestAnimationFrame(frame);

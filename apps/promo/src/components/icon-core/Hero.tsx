@@ -26,6 +26,11 @@ export function Hero() {
 
   return (
     <section id="top" className="relative isolate flex min-h-svh flex-col overflow-hidden pt-20">
+      {/*
+        The backdrop is the page's atmosphere, so it carries the dock's appearance: palette and
+        motion both come from the preset, and the dock's four variations each get their own field.
+        Reduced motion freezes it; a browser without WebGL falls back to the same palette.
+      */}
       <ShaderCanvas
         preset={pagePresetFor(appearance, dark)}
         renderScale={0.45}

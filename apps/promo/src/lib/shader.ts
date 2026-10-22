@@ -31,6 +31,8 @@ uniform float u_grain;
 uniform float u_scale;
 uniform float u_sat;
 uniform float u_vig;
+uniform float u_warp;
+uniform float u_detail;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -60,7 +62,7 @@ float fbm(vec2 p) {
 
 float field(vec2 p, float t) {
   vec2 q = vec2(fbm(p + vec2(0.0, t * 0.05)), fbm(p + vec2(5.2, 1.3) - t * 0.04));
-  return fbm(p + 2.6 * q + vec2(1.7, 9.2) + t * 0.025);
+  return fbm(p + u_warp * 2.6 * q + vec2(1.7, 9.2) + t * 0.025);
 }
 
 void main() {
@@ -83,6 +85,11 @@ void main() {
   vec3 col = mix(u_base, u_c1, smoothstep(0.22, 0.6, fg));
   col = mix(col, u_c2, smoothstep(0.45, 0.78, fr) * 0.85);
   col = mix(col, u_c3, smoothstep(0.5, 0.85, fb) * 0.7);
+
+  // A slower second sheet of structure over the dispersion: what makes the field read as depth
+  // instead of a flat wash. u_detail is the amplitude the appearance allows itself.
+  float sheet = smoothstep(0.42, 0.88, fbm(p * 1.45 + vec2(-2.3, 4.1) - t * 0.02));
+  col = mix(col, u_c3, sheet * u_detail * 0.35);
 
   // thin-film iridescence where the dispersed channels disagree
   float edge = clamp(abs(fr - fb) * 16.0, 0.0, 1.0);

@@ -150,6 +150,12 @@ export type ShaderPreset = {
   scale: number;
   sat: number;
   vig: number;
+  /** Clock multiplier of the field's drift. 1 is the reference pace; 0 would freeze it. */
+  flow: number;
+  /** Domain-warp strength: how far the noise folds over itself, which is what reads as depth. */
+  warp: number;
+  /** Amplitude of the slow second sheet that gives the field structure instead of a flat wash. */
+  detail: number;
 };
 
 function hex(h: string): Vec3 {
@@ -157,6 +163,11 @@ function hex(h: string): Vec3 {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
+// Page presets are the atmosphere behind the hero, and each appearance carries its own field:
+// the palette says what it is, `flow` / `warp` / `detail` say how it moves and how deep it reads.
+// Light is quick and airy, dark drifts slowly over a heavier warp, mono is nearly still. "default"
+// only splits by page theme, because it follows the OS -- same motion, two palettes.
+//
 // Default follows the silver tile: steel greys with cyan + mint chroma, in both page themes.
 // Dark is near-black with a deep, quiet teal, so the two never read as the same scene.
 export const PAGE_PRESETS = {
@@ -171,6 +182,9 @@ export const PAGE_PRESETS = {
     scale: 1.25,
     sat: 1,
     vig: 0.5,
+    flow: 1,
+    warp: 1,
+    detail: 0.35,
   },
   defaultDark: {
     base: hex('#1b2024'),
@@ -183,6 +197,9 @@ export const PAGE_PRESETS = {
     scale: 1.25,
     sat: 1,
     vig: 0.6,
+    flow: 1,
+    warp: 1,
+    detail: 0.35,
   },
   light: {
     base: hex('#f4f7ee'),
@@ -195,6 +212,9 @@ export const PAGE_PRESETS = {
     scale: 1.4,
     sat: 1,
     vig: 0.4,
+    flow: 1.55,
+    warp: 0.85,
+    detail: 0.6,
   },
   dark: {
     base: hex('#040506'),
@@ -207,6 +227,9 @@ export const PAGE_PRESETS = {
     scale: 1.6,
     sat: 1,
     vig: 1.15,
+    flow: 0.55,
+    warp: 1.4,
+    detail: 0.45,
   },
   mono: {
     base: hex('#ececec'),
@@ -219,9 +242,17 @@ export const PAGE_PRESETS = {
     scale: 1.4,
     sat: 0,
     vig: 0.5,
+    flow: 0.22,
+    warp: 0.55,
+    detail: 0.15,
   },
 } satisfies Record<string, ShaderPreset>;
 
+/**
+ * The tile behind the icon artwork. It paints the icon, not the page, so it keeps the reference
+ * field (flow 1, warp 1, no detail sheet): the appearance changes its colors, and the richer
+ * motion belongs to the page backdrop only.
+ */
 export const TILE_PRESETS: Record<Appearance, ShaderPreset> = {
   default: {
     base: hex('#c3c6c8'),
@@ -234,6 +265,9 @@ export const TILE_PRESETS: Record<Appearance, ShaderPreset> = {
     scale: 1.1,
     sat: 1,
     vig: 1.5,
+    flow: 1,
+    warp: 1,
+    detail: 0,
   },
   light: {
     base: hex('#a9e47a'),
@@ -246,6 +280,9 @@ export const TILE_PRESETS: Record<Appearance, ShaderPreset> = {
     scale: 1.1,
     sat: 1,
     vig: 0.8,
+    flow: 1,
+    warp: 1,
+    detail: 0,
   },
   dark: {
     base: hex('#151517'),
@@ -258,6 +295,9 @@ export const TILE_PRESETS: Record<Appearance, ShaderPreset> = {
     scale: 1.1,
     sat: 1,
     vig: 1.6,
+    flow: 1,
+    warp: 1,
+    detail: 0,
   },
   mono: {
     base: hex('#dedede'),
@@ -270,6 +310,9 @@ export const TILE_PRESETS: Record<Appearance, ShaderPreset> = {
     scale: 1.1,
     sat: 0,
     vig: 1.2,
+    flow: 1,
+    warp: 1,
+    detail: 0,
   },
 };
 
