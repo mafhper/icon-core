@@ -230,8 +230,13 @@ function main() {
         );
       }
 
-      texto = texto.replace(/<\?xml[^>]*\?>\s*/g, '');
-      texto = texto.replace(/<!--[\s\S]*?-->/g, '');
+      // Remoção **completa** das duas coisas que não podem sobrar no derivado. O
+      // terminador pode faltar (`<!--` sem `-->`, `<?xml` sem `?>`), e um padrão que só
+      // casa o caso terminado deixa o marcador passar — era o que o CodeQL apontava em
+      // `js/incomplete-multi-character-sanitization`. O `(?:-->|$)` (e o `(?:\?>|$)`)
+      // fecham no fim do arquivo quando o terminador não existe.
+      texto = texto.replace(/<\?xml[\s\S]*?(?:\?>|$)\s*/g, '');
+      texto = texto.replace(/<!--[\s\S]*?(?:-->|$)/g, '');
       texto = texto.replace(raiz, raiz.replace(/\s+(?:width|height)="[^"]*"/g, ''));
       texto = texto.replaceAll('stroke="black"', 'stroke="currentColor"');
       texto = texto.replaceAll('fill="black"', 'fill="currentColor"');
