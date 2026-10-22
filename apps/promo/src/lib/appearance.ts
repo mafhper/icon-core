@@ -10,6 +10,14 @@ export const APPEARANCES: { id: Appearance; label: string }[] = [
   { id: 'mono', label: 'Monochrome' },
 ];
 
+/**
+ * Page theme for an appearance. "default" follows the OS; every explicit appearance
+ * overrides it (mono renders its own greyscale tokens, so it is a light page too).
+ */
+export function resolveDarkTheme(appearance: Appearance, systemDark: boolean): boolean {
+  return appearance === 'dark' || (appearance === 'default' && systemDark);
+}
+
 export const CANVAS_PX = 512;
 
 /** Frame radius is stored as % of the icon size (0 = square, 50 = circle). */

@@ -1,6 +1,8 @@
 // Prismatic glass fragment shader: domain-warped fbm field, chromatic dispersion,
 // thin-film iridescence on gradient edges, pointer as a light source, film grain.
 
+import type { ShaderPreset, Vec3 } from './appearance';
+
 export const VERTEX_SRC = `
 attribute vec2 a_pos;
 varying vec2 v_uv;
@@ -101,3 +103,17 @@ void main() {
   col += (hash(uv * u_res) - 0.5) * u_grain;
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
+
+/* ---------- CSS fallback ---------- */
+
+function rgb(v: Vec3) {
+  return `rgb(${v.map((c) => Math.round(c * 255)).join(' ')})`;
+}
+
+/**
+ * Static stand-in for the WebGL field: the same three anchor colors as a CSS gradient.
+ * Used when the browser gives no usable WebGL context, so the hero never goes flat.
+ */
+export function shaderFallbackBackground(preset: ShaderPreset): string {
+  return `radial-gradient(circle at 50% 38%, ${rgb(preset.c2)}, ${rgb(preset.c1)} 45%, ${rgb(preset.base)})`;
+}

@@ -928,6 +928,42 @@ main {
   }
 }
 
+/* --- Icon artwork motion ---
+   The core glow breathes and the core pulses. IconArt drops the SVG
+   <animateTransform> when the provider reports reduced motion; these rules
+   cover the CSS keyframes for the same preference. */
+@keyframes ic-core-glow {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes ic-core-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+.ic-core-glow {
+  animation: ic-core-glow 3.2s ease-in-out infinite;
+}
+
+.ic-core-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ic-core-pulse 3.2s ease-in-out infinite;
+}
+
 /* --- Keyboard focus visibility --- */
 a:focus-visible,
 button:focus-visible {
@@ -944,5 +980,10 @@ button:focus-visible {
   .button,
   .text-link {
     transition: none;
+  }
+
+  .ic-core-glow,
+  .ic-core-pulse {
+    animation: none;
   }
 }
