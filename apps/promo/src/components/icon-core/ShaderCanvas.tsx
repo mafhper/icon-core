@@ -39,16 +39,120 @@ export function frameSignature(
   ].join('|');
 }
 
+type Uniforms = {
+  res: WebGLUniformLocation | null;
+  time: WebGLUniformLocation | null;
+  mouse: WebGLUniformLocation | null;
+  base: WebGLUniformLocation | null;
+  c1: WebGLUniformLocation | null;
+  c2: WebGLUniformLocation | null;
+  c3: WebGLUniformLocation | null;
+  iri: WebGLUniformLocation | null;
+  light: WebGLUniformLocation | null;
+  grain: WebGLUniformLocation | null;
+  scale: WebGLUniformLocation | null;
+  sat: WebGLUniformLocation | null;
+  vig: WebGLUniformLocation | null;
+};
+
+type GLResources = {
+  prog: WebGLProgram;
+  vs: WebGLShader;
+  fs: WebGLShader;
+  buf: WebGLBuffer;
+  U: Uniforms;
+};
+
+/**
+ * The context belongs to the canvas element, not to this effect: React StrictMode in
+ * development, and HMR, run the effect twice on the same element. Whatever the cleanup
+ * does to the context, the next mount inherits -- so the context is never lost here.
+ */
+function getGL(canvas: HTMLCanvasElement): WebGLRenderingContext | null {
+  const options: WebGLContextAttributes = { antialias: false, premultipliedAlpha: false };
+  return (
+    canvas.getContext('webgl', options) ??
+    (canvas.getContext('experimental-webgl', options) as WebGLRenderingContext | null)
+  );
+}
+
 function compile(gl: WebGLRenderingContext, type: number, src: string) {
   const shader = gl.createShader(type);
   if (!shader) return null;
   gl.shaderSource(shader, src);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.warn(gl.getShaderInfoLog(shader));
+    // A lost context fails every compile; that is a context event, not a shader bug, and it
+    // would log a meaningless info log for each of the two sources.
+    if (!gl.isContextLost()) console.warn(gl.getShaderInfoLog(shader));
+    gl.deleteShader(shader);
     return null;
   }
   return shader;
+}
+
+/** Builds the program on a live context, freeing whatever it created if any step fails. */
+function createResources(gl: WebGLRenderingContext): GLResources | null {
+  const vs = compile(gl, gl.VERTEX_SHADER, VERTEX_SRC);
+  const fs = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT_SRC);
+  const prog = gl.createProgram();
+  const buf = gl.createBuffer();
+  const bail = () => {
+    if (vs) gl.deleteShader(vs);
+    if (fs) gl.deleteShader(fs);
+    if (prog) gl.deleteProgram(prog);
+    if (buf) gl.deleteBuffer(buf);
+    return null;
+  };
+  if (!vs || !fs || !prog || !buf) return bail();
+
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    if (!gl.isContextLost()) console.warn(gl.getProgramInfoLog(prog));
+    return bail();
+  }
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+  const u = (name: string) => gl.getUniformLocation(prog, name);
+  const U: Uniforms = {
+    res: u('u_res'),
+    time: u('u_time'),
+    mouse: u('u_mouse'),
+    base: u('u_base'),
+    c1: u('u_c1'),
+    c2: u('u_c2'),
+    c3: u('u_c3'),
+    iri: u('u_iri'),
+    light: u('u_light'),
+    grain: u('u_grain'),
+    scale: u('u_scale'),
+    sat: u('u_sat'),
+    vig: u('u_vig'),
+  };
+  return { prog, vs, fs, buf, U };
+}
+
+/**
+ * Frees the GPU objects but keeps the context alive, so a remount (StrictMode, HMR) finds a
+ * usable context instead of a permanently lost one. A lost context owns nothing to free.
+ */
+function destroyResources(gl: WebGLRenderingContext, res: GLResources | null) {
+  if (!res || gl.isContextLost()) return;
+  gl.useProgram(null);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  gl.detachShader(res.prog, res.vs);
+  gl.detachShader(res.prog, res.fs);
+  gl.deleteShader(res.vs);
+  gl.deleteShader(res.fs);
+  gl.deleteProgram(res.prog);
+  gl.deleteBuffer(res.buf);
 }
 
 export function ShaderCanvas({ preset, className, renderScale = 0.5 }: Props) {
@@ -63,49 +167,33 @@ export function ShaderCanvas({ preset, className, renderScale = 0.5 }: Props) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const gl = canvas.getContext('webgl', { antialias: false, premultipliedAlpha: false });
+    const gl = getGL(canvas);
     if (!gl) {
       setFailed(true);
       return;
     }
-    const vs = compile(gl, gl.VERTEX_SHADER, VERTEX_SRC);
-    const fs = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT_SRC);
-    const prog = gl.createProgram();
-    if (!vs || !fs || !prog) {
-      setFailed(true);
-      return;
-    }
-    gl.attachShader(prog, vs);
-    gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      setFailed(true);
-      return;
-    }
-    gl.useProgram(prog);
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(prog, 'a_pos');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    const u = (name: string) => gl.getUniformLocation(prog, name);
-    const U = {
-      res: u('u_res'),
-      time: u('u_time'),
-      mouse: u('u_mouse'),
-      base: u('u_base'),
-      c1: u('u_c1'),
-      c2: u('u_c2'),
-      c3: u('u_c3'),
-      iri: u('u_iri'),
-      light: u('u_light'),
-      grain: u('u_grain'),
-      scale: u('u_scale'),
-      sat: u('u_sat'),
-      vig: u('u_vig'),
+    let res: GLResources | null = null;
+    let lastSig = '';
+
+    const init = () => {
+      // A lost context is not a failure: it comes back through "webglcontextrestored".
+      if (gl.isContextLost()) return;
+      res = createResources(gl);
+      if (!res && !gl.isContextLost()) setFailed(true);
     };
+
+    const onLost = (event: Event) => {
+      event.preventDefault(); // tells the browser the context is wanted back
+      res = null;
+    };
+    const onRestored = () => {
+      // Nothing drew while the context was gone, so the previous frame is not a repeat.
+      lastSig = '';
+      init();
+    };
+    canvas.addEventListener('webglcontextlost', onLost, false);
+    canvas.addEventListener('webglcontextrestored', onRestored, false);
 
     const cur: ShaderPreset = JSON.parse(JSON.stringify(targetRef.current));
     const mouse = { x: 0.5, y: 0.55 };
@@ -113,7 +201,8 @@ export function ShaderCanvas({ preset, className, renderScale = 0.5 }: Props) {
     let raf = 0;
     let time = 8;
     let last = performance.now();
-    let lastSig = '';
+
+    init();
 
     // The field only renders while the canvas is on screen.
     const io = new IntersectionObserver((entries) => {
@@ -148,6 +237,9 @@ export function ShaderCanvas({ preset, className, renderScale = 0.5 }: Props) {
       const reduced = motionRef.current;
       if (!reduced) time += dt;
 
+      const r = res;
+      if (!r || gl.isContextLost()) return;
+
       const w = Math.max(1, Math.round(canvas.clientWidth * renderScale));
       const h = Math.max(1, Math.round(canvas.clientHeight * renderScale));
       const sig = frameSignature(w, h, mouse, cur);
@@ -157,8 +249,12 @@ export function ShaderCanvas({ preset, className, renderScale = 0.5 }: Props) {
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
-        gl.viewport(0, 0, w, h);
       }
+      const { U } = r;
+      // Rebinding every frame is what makes a restored context draw again: the old bindings
+      // and the viewport went away with the context.
+      gl.useProgram(r.prog);
+      gl.viewport(0, 0, w, h);
       gl.uniform2f(U.res, w, h);
       gl.uniform1f(U.time, time);
       gl.uniform2f(U.mouse, mouse.x, mouse.y);
@@ -179,7 +275,12 @@ export function ShaderCanvas({ preset, className, renderScale = 0.5 }: Props) {
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
-      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      canvas.removeEventListener('webglcontextlost', onLost, false);
+      canvas.removeEventListener('webglcontextrestored', onRestored, false);
+      // Never force loseContext() here: the canvas element survives a StrictMode/HMR remount
+      // and getContext() would hand back the same, permanently lost context.
+      destroyResources(gl, res);
+      res = null;
     };
   }, [pointer, renderScale]);
 

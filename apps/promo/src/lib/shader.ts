@@ -12,7 +12,11 @@ void main() {
 }`;
 
 export const FRAGMENT_SRC = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#else
+precision mediump float;
+#endif
 varying vec2 v_uv;
 uniform vec2 u_res;
 uniform float u_time;
