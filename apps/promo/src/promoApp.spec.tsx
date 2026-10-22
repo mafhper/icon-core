@@ -107,6 +107,51 @@ describe('promo sections', () => {
   });
 });
 
+describe('legacy band in pt-BR', () => {
+  it('narrates the three workspaces and the FAQ in pt-BR', () => {
+    const page = renderToStaticMarkup(createElement(PromoApp));
+
+    const copy = [
+      'Escolha o workspace que combina com o seu fluxo de ícones.',
+      'Comece do zero, exporte direto ou ajuste antes de empacotar.',
+      'Edição em camadas',
+      'Exportação rápida',
+      'Fluxo único',
+      'O Edit Space é para ajuste preciso do ícone.',
+      'Camadas arrastáveis',
+      'O Export Utilities empacota os assets sem esconder os detalhes.',
+      'Feito em aberto.',
+      'O Icon Core é grátis?',
+      'Preciso subir arquivos para um servidor?',
+      'Posso contribuir?',
+    ];
+
+    for (const text of copy) expect(page, text).toContain(text);
+  });
+
+  it('keeps the workspace names the app itself shows', () => {
+    const page = renderToStaticMarkup(createElement(PromoApp));
+
+    for (const name of ['Create in Edit Space', 'Upload to Export Utilities', 'Upload, Adjust, Export']) {
+      expect(page, name).toContain(name);
+    }
+  });
+
+  it('leaves no English copy of the old band behind', () => {
+    const page = renderToStaticMarkup(createElement(PromoApp));
+
+    for (const text of [
+      'Choose the workspace',
+      'Built in the open.',
+      'Is Icon Core free?',
+      'Can I contribute?',
+      'Join on GitHub',
+    ]) {
+      expect(page, text).not.toContain(text);
+    }
+  });
+});
+
 describe('download fallback without a user agent', () => {
   it('offers the neutral label when navigator is missing', () => {
     vi.stubGlobal('navigator', undefined);

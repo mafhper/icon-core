@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   clearReleaseCache,
@@ -12,7 +12,6 @@ import {
   type FetchLike,
   type ReleaseAsset,
 } from './releases';
-
 const REPO = 'mafhper/icon-core';
 const LATEST_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 const LIST_URL = `https://api.github.com/repos/${REPO}/releases?per_page=4`;
@@ -159,6 +158,63 @@ describe('loadLatestRelease', () => {
     const release = await loadLatestRelease(REPO, { fetchImpl: healthy.fetchImpl });
 
     expect(release.versionLabel).toBe('Icon Core v1.7.0');
+  });
+});
+
+describe('offline fallback', () => {
+  const deadFetch: FetchLike = async () => {
+    throw new TypeError('Failed to fetch');
+  };
+
+  it('reports a disconnected browser as offline, not as a generic network failure', async () => {
+    await expect(loadLatestRelease(REPO, { fetchImpl: deadFetch, isOnline: false })).rejects.toMatchObject({
+      name: 'ReleaseFetchError',
+      reason: 'offline',
+    });
+  });
+
+  it('reads the connection from a probe when the caller passes one', async () => {
+    const probe = vi.fn(() => false);
+
+    await expect(loadLatestRelease(REPO, { fetchImpl: deadFetch, isOnline: probe })).rejects.toMatchObject({
+      reason: 'offline',
+    });
+    expect(probe).toHaveBeenCalled();
+  });
+
+  it('keeps the generic reason when the browser believes it is connected', async () => {
+    await expect(loadLatestRelease(REPO, { fetchImpl: deadFetch, isOnline: true })).rejects.toMatchObject({
+      reason: 'network',
+    });
+  });
+
+  it('calls an unreadable body a network failure even on a disconnected browser', async () => {
+    const malformed: FetchLike = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON');
+      },
+    });
+
+    await expect(loadLatestRelease(REPO, { fetchImpl: malformed, isOnline: false })).rejects.toMatchObject({
+      name: 'ReleaseFetchError',
+      reason: 'network',
+    });
+  });
+
+  it('serves the answer already in the ten-minute window when the network disappears', async () => {
+    const online = fetcher(LATEST_PAYLOAD);
+    await loadLatestRelease(REPO, { fetchImpl: online.fetchImpl, now: 0 });
+
+    const second = await loadLatestRelease(REPO, {
+      fetchImpl: deadFetch,
+      isOnline: false,
+      now: RELEASES_TTL_MS - 1,
+    });
+
+    expect(second.versionLabel).toBe('Icon Core v1.7.0');
+    expect(second.links.windows).toBe('https://example.test/iconcore.msi');
   });
 });
 

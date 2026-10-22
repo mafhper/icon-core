@@ -33,10 +33,30 @@ type ListState =
 
 const isMobile = (os: string) => os === 'ios' || os === 'android';
 
-const failureCopy = (reason: ReleaseFailureReason) =>
-  reason === 'rate-limit'
-    ? 'O GitHub limitou as consultas agora.'
-    : 'Não deu para carregar agora.';
+const RATE_LIMIT_COPY = 'O GitHub limitou as consultas agora.';
+const OFFLINE_COPY = 'Sem conexão com o GitHub agora.';
+
+/**
+ * One table for both places the strip reports a failure. The two read the same three reasons,
+ * and only the `network` wording differs: the latest-release line can name what it failed to
+ * fetch, while the list line is already inside the panel it failed to fill.
+ */
+type FailureScope = 'latest' | 'list';
+
+const FAILURE_COPY: Record<FailureScope, Record<ReleaseFailureReason, string>> = {
+  latest: {
+    offline: OFFLINE_COPY,
+    'rate-limit': RATE_LIMIT_COPY,
+    network: 'Não deu para consultar a última versão agora.',
+  },
+  list: {
+    offline: OFFLINE_COPY,
+    'rate-limit': RATE_LIMIT_COPY,
+    network: 'Não deu para carregar agora.',
+  },
+};
+
+const failureCopy = (scope: FailureScope, reason: ReleaseFailureReason) => FAILURE_COPY[scope][reason];
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -184,17 +204,9 @@ export function GetItStrip({
             <p className="font-mono text-xs text-muted-foreground">{latest.release.versionLabel}</p>
           )}
 
-          {latest.status === 'loading' && (
-            <p className="font-mono text-xs text-muted-foreground" role="status">
-              Verificando a última versão…
-            </p>
-          )}
-
           {latest.status === 'error' && (
             <p className="text-xs text-muted-foreground" role="status">
-              {latest.reason === 'rate-limit'
-                ? 'O GitHub limitou as consultas agora.'
-                : 'Não deu para consultar a última versão agora.'}{' '}
+              {failureCopy('latest', latest.reason)}{' '}
               <a
                 href={`${siteConfig.repoUrl}/releases`}
                 target="_blank"
@@ -208,8 +220,14 @@ export function GetItStrip({
 
           <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2.5">
             {latest.status === 'loading' ? (
+              /*
+                Disabled, and it says why: the request is the only thing between the visitor
+                and a working installer, so the affordance itself carries the status instead
+                of looking like a link that does nothing.
+              */
               <span
-                aria-hidden
+                role="status"
+                aria-live="polite"
                 className={buttonClass({
                   className: 'pointer-events-none rounded-full opacity-60'
                 })}
@@ -276,7 +294,7 @@ export function GetItStrip({
 
             {list.status === 'error' && (
               <p className="py-1.5 text-muted-foreground">
-                {failureCopy(list.reason)}{' '}
+                {failureCopy('list', list.reason)}{' '}
                 <a
                   href={`${siteConfig.repoUrl}/releases`}
                   target="_blank"

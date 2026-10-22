@@ -208,6 +208,55 @@ describe('GetItStrip window frame', () => {
   });
 });
 
+describe('GetItStrip offline', () => {
+  const OFFLINE_NAVIGATOR = {
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    platform: 'Win32',
+    maxTouchPoints: 0,
+    onLine: false,
+  };
+
+  const deadFetch = () =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      })
+    );
+
+  it('names the missing connection and still links to the releases page', async () => {
+    vi.stubGlobal('navigator', OFFLINE_NAVIGATOR);
+    deadFetch();
+
+    const { ui, render } = renderStrip();
+    await render;
+    await settle();
+
+    expect(ui.container.textContent).toContain('Sem conexão com o GitHub agora.');
+    const fallback = ui.container.querySelector<HTMLAnchorElement>(`a[href="${RELEASES_URL}"]`);
+    expect(fallback).not.toBeNull();
+    expect(fallback?.textContent).toContain('Ver downloads no GitHub');
+  });
+
+  it('keeps the retry when the release list is opened offline', async () => {
+    vi.stubGlobal('navigator', OFFLINE_NAVIGATOR);
+    deadFetch();
+
+    const { ui, render } = renderStrip();
+    await render;
+    await settle();
+
+    await click(toggleIn(ui.container));
+    await settle();
+
+    expect(ui.container.textContent).toContain('Sem conexão com o GitHub agora.');
+    const retry = Array.from(ui.container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Tentar de novo')
+    );
+    expect(retry).toBeDefined();
+  });
+});
+
 describe('GetItStrip release list', () => {
   it('loads the short list only when the visitor opens it', async () => {
     const fetchMock = stubGitHub();

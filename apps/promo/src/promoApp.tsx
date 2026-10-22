@@ -8,36 +8,42 @@ import { Platforms } from './components/icon-core/Platforms';
 import { StudioProvider } from './components/icon-core/studio-context';
 import { siteConfig } from './lib/site-config';
 
+/*
+ * These three labels are the promo site's own wording. Only "Create in Edit Space" is also a
+ * heading in the app's welcome modal; the other two are written there as "Upload → Export" and
+ * "Upload → Edit → Export". README.pt-BR lists all three exactly as below (the English README
+ * uses different section headings), so the titles stay as they are.
+ */
 const workflows = [
   {
     title: 'Create in Edit Space',
-    text: 'Start with a blank canvas, build layers, tune variants, and keep the project editable.',
-    meta: 'Layered editing'
+    text: 'Comece com a tela em branco, monte camadas, ajuste variantes e mantenha o projeto editável.',
+    meta: 'Edição em camadas'
   },
   {
     title: 'Upload to Export Utilities',
-    text: 'Drop an existing logo and generate the web, PWA, desktop, and marketing assets directly.',
-    meta: 'Fast export'
+    text: 'Solte um logo que já existe e gere na hora os assets para web, PWA, desktop e divulgação.',
+    meta: 'Exportação rápida'
   },
   {
     title: 'Upload, Adjust, Export',
-    text: 'Import an asset into Edit Space, adjust positioning and variants, then send it to Export Utilities.',
-    meta: 'Unified flow'
+    text: 'Importe o arquivo no Edit Space, ajuste posição e variantes e envie para o Export Utilities.',
+    meta: 'Fluxo único'
   }
 ];
 
 const faqs = [
   {
-    q: 'Is Icon Core free?',
-    a: 'Yes. Icon Core is open-source, free to use, and built as a local-first tool for designers and developers.'
+    q: 'O Icon Core é grátis?',
+    a: 'É. O Icon Core é open source, gratuito e feito para rodar localmente, para designers e desenvolvedores.'
   },
   {
-    q: 'Do files need to be uploaded to a server?',
-    a: 'No. The browser workflow processes files locally, and the desktop app keeps the same local-first model.'
+    q: 'Preciso subir arquivos para um servidor?',
+    a: 'Não. O fluxo no navegador processa os arquivos localmente, e o app desktop mantém o mesmo modelo local-first.'
   },
   {
-    q: 'Can I contribute?',
-    a: 'Yes. The project is public on GitHub, and issues, ideas, and pull requests are welcome.'
+    q: 'Posso contribuir?',
+    a: 'Pode. O projeto é público no GitHub, e issues, ideias e pull requests são bem-vindos.'
   }
 ];
 
@@ -64,11 +70,11 @@ const WorkflowMini = ({ index }: { index: number }) => {
 
   return (
     <div className="workflow-mini mini-flow">
-      <span>upload</span>
+      <span>importar</span>
       <i />
-      <span>adjust</span>
+      <span>ajustar</span>
       <i />
-      <span>export</span>
+      <span>exportar</span>
     </div>
   );
 };
@@ -96,16 +102,16 @@ export const PromoApp = () => {
           <EditorShowcase />
 
           {/*
-            Sections still wearing the v1 copy. They keep their original anchors (#workflows,
+            Pre-P6 sections, now in pt-BR. They keep their original anchors (#workflows,
             #edit-space, #export-utilities, #community) so links already in the wild keep
-            resolving. `#baixar` and its `#desktop` alias now live in the showcase's
-            GetItStrip, next to the editor they download.
+            resolving. `#baixar` and its `#desktop` alias live in the showcase's GetItStrip,
+            next to the editor they download.
           */}
           <div className="promo-legacy">
             <section id="workflows" className="section-block scroll-mt-24">
               <div className="section-heading">
-                <h2>Choose the workspace that matches your icon flow.</h2>
-                <p>Every path stays free and local-first. Start clean, export fast, or adjust before packaging.</p>
+                <h2>Escolha o workspace que combina com o seu fluxo de ícones.</h2>
+                <p>Todo caminho continua gratuito e local-first. Comece do zero, exporte direto ou ajuste antes de empacotar.</p>
               </div>
               <div className="workflow-grid">
                 {workflows.map((item, index) => (
@@ -121,48 +127,48 @@ export const PromoApp = () => {
 
             <section id="edit-space" className="split-section scroll-mt-24">
               <div>
-                <h2>Edit Space is for precise icon adjustment.</h2>
+                <h2>O Edit Space é para ajuste preciso do ícone.</h2>
                 <p>
-                  Arrange layers, tune position and scale, keep variant-specific overrides, and inspect selected layer
-                  properties before exporting.
+                  Organize camadas, ajuste posição e escala, mantenha os ajustes por variante e confira as propriedades
+                  da camada selecionada antes de exportar.
                 </p>
               </div>
               <div className="feature-panel">
-                <span>Draggable layers</span>
-                <span>Right-click properties</span>
-                <span>Variant tabs</span>
-                <span>Shape, text, image, SVG</span>
+                <span>Camadas arrastáveis</span>
+                <span>Propriedades no botão direito</span>
+                <span>Abas de variante</span>
+                <span>Forma, texto, imagem, SVG</span>
               </div>
             </section>
 
             <section id="export-utilities" className="split-section split-section-alt scroll-mt-24">
               <div className="feature-panel export-panel">
                 <span>favicon</span>
-                <span>PWA manifest</span>
+                <span>manifesto PWA</span>
                 <span>Tauri</span>
                 <span>Electron</span>
-                <span>marketing images</span>
+                <span>imagens de divulgação</span>
               </div>
               <div>
-                <h2>Export Utilities packages assets without hiding the details.</h2>
+                <h2>O Export Utilities empacota os assets sem esconder os detalhes.</h2>
                 <p>
-                  Pick the targets and variants you need, review the resulting structure, and download a ZIP that is
-                  ready for open-source apps and documentation.
+                  Escolha os targets e as variantes de que você precisa, revise a estrutura gerada e baixe um ZIP pronto
+                  para apps open source e documentação.
                 </p>
               </div>
             </section>
 
             <section id="community" className="community-section scroll-mt-24">
               <div>
-                <h2>Built in the open.</h2>
+                <h2>Feito em aberto.</h2>
                 <p>
-                  Icon Core exists as a community-friendly utility. Use it, inspect it, file issues, suggest workflows, or
-                  help improve the editor and exporters.
+                  O Icon Core existe como uma ferramenta aberta à comunidade. Use, inspecione, abra issues, sugira fluxos
+                  ou ajude a melhorar o editor e os exportadores.
                 </p>
               </div>
               <div className="community-actions">
-                <a className="button button-primary" href={siteConfig.repoUrl} target="_blank" rel="noreferrer">Join on GitHub</a>
-                <a className="button" href={`${siteConfig.repoUrl}/issues`} target="_blank" rel="noreferrer">Open issues</a>
+                <a className="button button-primary" href={siteConfig.repoUrl} target="_blank" rel="noreferrer">Entrar no GitHub</a>
+                <a className="button" href={`${siteConfig.repoUrl}/issues`} target="_blank" rel="noreferrer">Abrir issues</a>
               </div>
             </section>
 

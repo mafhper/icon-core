@@ -21,13 +21,19 @@ export type FetchLike = (
   options?: { headers?: Record<string, string> }
 ) => Promise<ReleaseResponse>;
 
-export type ReleaseFailureReason = 'rate-limit' | 'network';
+export type ReleaseFailureReason = 'rate-limit' | 'network' | 'offline';
 
 export class ReleaseFetchError extends Error {
   readonly reason: ReleaseFailureReason;
 
   constructor(reason: ReleaseFailureReason) {
-    super(reason === 'rate-limit' ? 'GitHub rate limit reached' : 'Could not read the GitHub release');
+    super(
+      reason === 'rate-limit'
+        ? 'GitHub rate limit reached'
+        : reason === 'offline'
+          ? 'The browser is offline'
+          : 'Could not read the GitHub release'
+    );
     this.name = 'ReleaseFetchError';
     this.reason = reason;
   }
@@ -56,6 +62,11 @@ export type ReleaseLoaderOptions = {
   fetchImpl?: FetchLike;
   /** Clock injection for the cache; defaults to the wall clock. */
   now?: number;
+  /**
+   * Connection probe for the offline copy. Injected so a test states the connection instead of
+   * relying on the ambient one; defaults to `navigator.onLine`, guarded for a non-browser run.
+   */
+  isOnline?: boolean | (() => boolean);
 };
 
 /** GitHub's unauthenticated quota is small; ten minutes is the page's own stale window. */
@@ -181,15 +192,33 @@ function failureFor(status: number): ReleaseFailureReason {
   return status === 403 || status === 429 ? 'rate-limit' : 'network';
 }
 
+/** `navigator.onLine` is the browser's own guess; the guard keeps a non-browser run connected. */
+function ambientOnline(): boolean {
+  return typeof navigator === 'undefined' || navigator.onLine !== false;
+}
+
+function isConnected(probe: boolean | (() => boolean)): boolean {
+  return typeof probe === 'function' ? probe() : probe;
+}
+
+/**
+ * A rejected `fetch` is two different facts. When the browser already knows it has no
+ * connection, saying "could not read the release" hides the one cause the visitor can act on;
+ * the offline copy is what tells them the page is fine and the network is not.
+ *
+ * Only a rejected `fetch` proves that: a body GitHub answered but could not be read is a
+ * network failure even while the browser believes it is connected.
+ */
 async function requestJson(
   url: string,
-  fetchImpl: FetchLike
+  fetchImpl: FetchLike,
+  isOnline: boolean | (() => boolean)
 ): Promise<unknown> {
   let response: ReleaseResponse;
   try {
     response = await fetchImpl(url, { headers: { Accept: ACCEPT } });
   } catch {
-    throw new ReleaseFetchError('network');
+    throw new ReleaseFetchError(isConnected(isOnline) ? 'network' : 'offline');
   }
 
   if (!response.ok) throw new ReleaseFetchError(failureFor(response.status));
@@ -214,10 +243,14 @@ async function cached<T>(key: string, now: number, load: () => Promise<T>): Prom
 /** Latest published release plus the per-system links, served from the stale window when fresh. */
 export function loadLatestRelease(
   repo: string,
-  { fetchImpl = defaultFetch, now = Date.now() }: ReleaseLoaderOptions = {}
+  { fetchImpl = defaultFetch, now = Date.now(), isOnline = ambientOnline }: ReleaseLoaderOptions = {}
 ): Promise<LatestRelease> {
   return cached(`latest:${repo}`, now, async () => {
-    const payload = await requestJson(`https://api.github.com/repos/${repo}/releases/latest`, fetchImpl);
+    const payload = await requestJson(
+      `https://api.github.com/repos/${repo}/releases/latest`,
+      fetchImpl,
+      isOnline
+    );
 
     return parseLatest(repo, payload);
   });
@@ -226,10 +259,14 @@ export function loadLatestRelease(
 /** Four most recent releases, for the list that opens on demand. */
 export function loadReleases(
   repo: string,
-  { fetchImpl = defaultFetch, now = Date.now() }: ReleaseLoaderOptions = {}
+  { fetchImpl = defaultFetch, now = Date.now(), isOnline = ambientOnline }: ReleaseLoaderOptions = {}
 ): Promise<ReleaseSummary[]> {
   return cached(`list:${repo}`, now, async () => {
-    const payload = await requestJson(`https://api.github.com/repos/${repo}/releases?per_page=4`, fetchImpl);
+    const payload = await requestJson(
+      `https://api.github.com/repos/${repo}/releases?per_page=4`,
+      fetchImpl,
+      isOnline
+    );
 
     return parseReleases(payload).slice(0, 4);
   });
