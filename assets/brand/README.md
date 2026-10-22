@@ -48,6 +48,7 @@ Declarar qual é a fonte dissolve isso: `assets/brand/` alimenta os derivados, e
 | `logo.svg` (= default) | `apps/promo/public/branding/logo.svg`, `apps/web/public/branding/logo.svg` | `<link rel="icon">` nos dois `index.html` |
 | `logo-dark.svg` | os dois `branding/logo-dark.svg` | variante escura: ícone de app (o conjunto do Tauri vem dela) |
 | `logo-light.svg` | os dois `branding/logo-light.svg` | variante clara: marca e arte de release |
+| `logo-mono.svg` | os dois `branding/logo-mono.svg` | variante monochrome: a quarta aparência do dock do promosite |
 | `release.webp` | os dois `branding/release.webp`, **e** `docs/images/releases/release.webp` | a imagem da release no GitHub |
 | `release-art.iconcore.json` | *(template; gera `release.webp`)* | o desenho da arte de release, derivado por comando |
 
@@ -95,6 +96,59 @@ mediu antes de executar:
 Os hashes da coluna "referência do dono" são a prova de fidelidade do lote 1; os
 da coluna da fonte são o estado atual (lote 2). Toda edição nas matrizes passa
 pelo portão (`check-brand`) e pelos derivados, nunca à mão nos `branding/`.
+A quarta variante — Monochrome — chegou em 2026-10-22; ver a seção seguinte.
+
+## As quatro aparências do mockup (2026-10-22)
+
+O dock do promosite mostra o ícone em quatro aparências — **Default**, **Light**, **Dark** e
+**Monochrome** — e a direção é que o conjunto de ícones do app seja o mesmo. O padrão do
+sample-003 continua valendo: **mesma geometria, só a placa muda**. O que faltava era medir o
+que já existia contra as quatro e criar a que não existia.
+
+| Aparência | Matriz | Placa que a matriz desenha | Placa que o mockup declara | Δ medido |
+|---|---|---|---|---|
+| Default | `logo.svg` | halo grafite `#1c1b1f`, opacidade 0 → 0,45, radial sobre transparência | prata radial `#f4f5f5` → `#dcdedf` → `#b9bcbe` | 35 (média 12,3) |
+| Light | `logo-light.svg` | lima→teal linear `#efef12` → `#6bb7d8` | lima→menta→ciano `#e4f46a` → `#b9ec8c` → `#6fdde3` | 134 (média 28) |
+| Dark | `logo-dark.svg` | marinho linear `#111827` → `#03090c` | grafite radial `#34353a` → `#28282a` → `#151517` | 59 (média 28,3) |
+| Monochrome | `logo-mono.svg` | prata claro radial `#ffffff` → `#f0f0f0` → `#dadada` | a mesma | **0** |
+
+Δ é a maior diferença por canal (0–255) entre a matriz renderizada e a placa do preset
+renderizada sozinha, em seis pontos fora do símbolo (topo, base, as duas laterais e os dois
+cantos), a 512 px. As três primeiras **não** são a placa do mockup: são a identidade do
+sample-003, promovida byte-idêntica à referência aprovada pelo dono (ADR-025). Portar as três
+para os presets do promosite mudaria o favicon, a arte de release (que compõe
+`logo-light.svg`) e o conjunto do Tauri (que é gerado de `logo-dark.svg`) — é decisão do dono,
+não efeito colateral deste lote.
+
+### O que o mono muda, e por quê
+
+`logo-mono.svg` é a matriz escura com **a placa e a pintura do símbolo trocadas** — não é
+redesenho. As provas, e como repeti-las:
+
+- **Geometria idêntica.** Os sete `d=` (seis pétalas + glifo), todos os `transform=`, o
+  `viewBox` e o clip `rx 130` são byte a byte iguais aos de `logo-dark.svg`.
+- **Resíduo zero.** Desfazendo o namespace (`mono-` → `dark-`), a placa e as treze linhas de
+  pintura, o arquivo volta a ser **byte-idêntico** ao `logo-dark.svg` (8.089 bytes). Ou seja,
+  das 57 linhas, 33 mudaram: **1** é a definição da placa, **19** são só o namespace dos ids
+  (inclusive as referências no clip e no `fill`) e **13** são pintura — nenhuma é geometria.
+
+A pintura muda porque **a placa mono é clara** e o símbolo das outras três é branco: o
+contraste do glifo branco contra a placa `#ffffff` → `#dadada` é **1,04:1** — o “I” desaparece.
+O mono usa então o que o próprio preset declara para o símbolo: pétalas `#8c8c8c` (opacidade
+0,9) → `#c4c4c4` (0,05) e glifo `#8f8f8f`, o tom estático do núcleo mono. Com isso o glifo
+fica em **3,10:1** e a pétala em **3,22:1**.
+
+O *gloss* que o mockup desenha sobre a placa (branco a 30%) ficou de fora: é uma camada a mais
+que nenhuma das outras três tem, e a diferença medida é de **Δ4** no pior canal (média 1,2).
+Se o gloss entrar, é uma linha a mais no grupo da placa — e as três antigas ganham a mesma
+linha ou a família continua sem ele.
+
+Os derivados são os mesmos de sempre, agora com o mono:
+
+```bash
+node scripts/build-brand.mjs   # republica os derivados, inclusive logo-mono.svg
+node scripts/check-brand.mjs   # confere os pares por conteúdo
+```
 
 **Os nomes do derivado são fechados**, e a tabela de "Os arquivos" é a tradução. O motivo de a tabela
 existir é que a frota tinha dois nomes para a mesma arte (`release.webp` e

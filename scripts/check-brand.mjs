@@ -140,6 +140,11 @@ const DERIVADOS = {
       'apps/promo/public/branding/logo-light.svg',
       'apps/web/public/branding/logo-light.svg'
     ],
+    // A quarta aparência do mockup (Monochrome), com a placa clara do preset `mono`.
+    'logo-mono.svg': [
+      'apps/promo/public/branding/logo-mono.svg',
+      'apps/web/public/branding/logo-mono.svg'
+    ],
     'release.webp': [
       'apps/promo/public/branding/release.webp',
       'apps/web/public/branding/release.webp',
