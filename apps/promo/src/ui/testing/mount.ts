@@ -4,8 +4,9 @@ import { afterEach } from 'vitest';
 
 /**
  * Minimal DOM harness: `react-dom/client` + `act`, both already dependencies of this app.
- * The kit has no testing-library dependency on purpose (Lote 99 forbids new dependencies),
- * so this file is the only test-only module under `src/ui`.
+ * The kit has no testing-library dependency on purpose — nothing new to install, since
+ * this file only needs `react-dom/client` + `act` — so it is the only test-only module
+ * under `src/ui`.
  *
  * Lives in a `.ts` file (no JSX) because `react-refresh/only-export-components` warns on
  * non-component exports from `.tsx`, and lint runs with `--max-warnings 0`.

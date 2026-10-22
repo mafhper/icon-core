@@ -12,6 +12,10 @@
  * Ratchet philosophy (004): numbers only descend. To lower a budget after a
  * cleanup PR, edit `.ui-budget.json` in the same commit. Never raise one.
  *
+ * EXCEÇÃO REGISTRADA (decisão do dono, 2026-10-22): `apps/promo/src/index.css` foi a
+ * 870 + slack 120 = 990 linhas (o valor medido) e o hex de 97 para 159 — teto elevado
+ * por decisão explícita; gate segue travando acima disso.
+ *
  * Run in CI: node scripts/check-ui-budget.mjs
  */
 
