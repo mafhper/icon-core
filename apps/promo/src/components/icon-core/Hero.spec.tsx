@@ -57,7 +57,7 @@ describe('hero backdrop follows the dock', () => {
     // #03465a: the deep teal that only the dark appearance carries.
     expect(backdropPaint(ui.container)).toContain('rgb(3, 70, 90)');
 
-    await click(radio(ui.container, 'Monochrome') as HTMLButtonElement);
+    await click(radio(ui.container, 'Mono') as HTMLButtonElement);
     // Three greys and no chroma at all.
     expect(backdropPaint(ui.container)).toContain('rgb(194, 194, 194)');
     expect(backdropPaint(ui.container)).not.toContain('rgb(3, 70, 90)');

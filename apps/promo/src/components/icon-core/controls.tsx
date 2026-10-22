@@ -1,6 +1,6 @@
 import { useRef, type KeyboardEvent } from 'react';
 
-import { APPEARANCES, CANVAS_PX, RADIUS_MAX, RADIUS_MIN, RADIUS_PRESETS, radiusFraction, radiusToPx, roundedRectPath } from '../../lib/appearance';
+import { APPEARANCES, CANVAS_PX, RADIUS_MAX, RADIUS_MIN, RADIUS_PRESETS, THUMB_RADIUS, radiusFraction, radiusToPx, roundedRectPath } from '../../lib/appearance';
 import { cn } from '../../lib/cn';
 import { SLIDER_THUMB_PX, Slider } from '../../ui/Slider';
 import { IconGlyph } from './IconArt';
@@ -160,9 +160,17 @@ function RadiusTick({ preset, radius, onSelect }: PresetProps) {
  *
  * Roving tabindex keeps one stop for the whole dock and the arrow keys walk it, which is the
  * expected keyboard model for radios.
+ *
+ * One thing the port does not copy is the plate's radius. The mockup hands every tile the frame's
+ * own `radius` (`controls.tsx`, `radii={radius}`), which at the dock's 38 px is a 9.65 px corner —
+ * 23 % of the 42 px tile the hero leaves it in at 360 px, 2 px from the tile's own 16 px corner, so
+ * the two shapes merge. The mockup's own answer for a small preview is next door: its 22 px layer
+ * thumbs are drawn at a fixed `radii={20}`, never at the canvas radius. A tile is that same kind of
+ * thumb, so it takes `THUMB_RADIUS` (7.6 px at 38 px) and the dock stops enlarging the icon's
+ * curvature as the tile shrinks. The frame keeps its own radius on the canvas, where it belongs.
  */
 export function AppearanceDock({ className, size = 44 }: { className?: string; size?: number }) {
-  const { appearance, setAppearance, radius } = useStudio();
+  const { appearance, setAppearance } = useStudio();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const onKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -205,7 +213,7 @@ export function AppearanceDock({ className, size = 44 }: { className?: string; s
               {active && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />}
               <IconGlyph
                 appearance={item.id}
-                radii={radius}
+                radii={THUMB_RADIUS}
                 size={size}
                 className="transition-transform duration-300 group-hover:-translate-y-0.5"
               />

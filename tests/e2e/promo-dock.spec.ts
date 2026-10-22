@@ -29,6 +29,9 @@ import { test, expect, type Page } from '@playwright/test';
  *   - the tile metrics, at the mockup's values when the dock has the mockup's width and at the
  *     compressed ones (10 px label, 4 px horizontal padding, the mockup's 4 px gap) when the card
  *     squeezes it;
+ *   - the plate inside each tile is a **thumb**: the mockup's `radii={20}` — 102.4 of the 512
+ *     viewBox, i.e. 7.6 px on the hero's 38 px plate and 6.8 px on the editor's 34 px one — and
+ *     never the frame's 130/512 (25.39 %) that would paint 9.65 / 8.63 px;
  *   - the four preset ticks sit where the thumb sits for that radius, and Enter on a focused tick
  *     sets the radius — the keyboard path a visitor has instead of the mouse.
  *
@@ -38,7 +41,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 const DOCK = '[role="radiogroup"][aria-label="Aparência do ícone e do site"]';
 const CARD = '[data-testid="widget-card"]';
-const LABELS = ['Default', 'Light', 'Dark', 'Monochrome'];
+const LABELS = ['Default', 'Light', 'Dark', 'Mono'];
 
 /** The mockup's dock width (`max-w-xl` card, 576 px, minus 13rem, 1 px and two 20 px gaps). */
 const WIDE_DOCK = 240;
@@ -55,6 +58,14 @@ const THUMB = 16;
 /** The four presets as a share of the rail, literals from the scale (24/512 over 50 → 9.375 %). */
 const PRESET_FRACTIONS = [0, 0.09375, 0.45, 1];
 
+/**
+ * The mockup's thumb radius, `radii={20}` on every small preview: 20 % of the 512 viewBox is a
+ * 102.4 corner. At the two plate sizes the page draws, that is 7.6 px in the hero and 6.8 px in the
+ * editor — where the frame's own 130/512 would be 9.65 and 8.63 px.
+ */
+const PLATE_ARC = 102.4;
+const PLATE_PX: Record<string, number> = { top: 7.6, interface: 6.8 };
+
 type Tile = {
   name: string;
   width: number;
@@ -68,6 +79,8 @@ type Tile = {
   labelLeft: number;
   labelRight: number;
   left: number;
+  /** The plate's corner: the path's own arc in the viewBox, and what it paints on screen. */
+  plate: { arc: number | null; px: number | null };
 };
 
 type Dock = {
@@ -105,6 +118,9 @@ async function measure(page: Page, width: number): Promise<Measurement> {
           const tileStyle = getComputedStyle(tile);
           const label = [...tile.querySelectorAll('span')].at(-1)!;
           const labelRect = label.getBoundingClientRect();
+          const glyph = tile.querySelector('svg')?.getBoundingClientRect() ?? null;
+          const platePath = tile.querySelector('svg clipPath path')?.getAttribute('d') ?? '';
+          const arc = /^M([\d.]+)/.exec(platePath);
           return {
             name: (tile.textContent ?? '').trim(),
             width: tileRect.width,
@@ -117,7 +133,11 @@ async function measure(page: Page, width: number): Promise<Measurement> {
             labelClient: label.clientWidth,
             labelLeft: labelRect.left,
             labelRight: labelRect.right,
-            left: tileRect.left
+            left: tileRect.left,
+            plate: {
+              arc: arc ? Number(arc[1]) : null,
+              px: arc && glyph ? Number(((Number(arc[1]) / 512) * glyph.width).toFixed(2)) : null
+            }
           };
         });
 
@@ -244,7 +264,23 @@ for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) 
       const gap = minLabelGap(dock.tiles);
       if (gap <= 1) report.push(`[${dock.instance}] labels on the same row are ${gap.toFixed(1)}px apart`);
 
-      // 4. The labels stay inside the widget they belong to — the card in the hero, the dock when it
+      // 4. The plate is a thumb, not a miniature of the file: the mockup's `radii={20}` — a 102.4
+      // corner of the viewBox, 7.6 px on the hero's 38 px plate and 6.8 px on the editor's 34 px
+      // one. The frame's 130/512 would paint 9.65 / 8.63 px and, at 360 px, sit on the tile's own
+      // corner.
+      const platePx = PLATE_PX[dock.instance];
+      for (const tile of dock.tiles) {
+        if (tile.plate.arc !== PLATE_ARC) {
+          report.push(`[${dock.instance}] "${tile.name}" plate arc is ${tile.plate.arc} of 512, expected ${PLATE_ARC}`);
+        }
+        if (platePx === undefined || tile.plate.px === null || Math.abs(tile.plate.px - platePx) > 0.05) {
+          report.push(
+            `[${dock.instance}] "${tile.name}" plate paints ${tile.plate.px}px of corner, expected ${platePx}px`
+          );
+        }
+      }
+
+      // 5. The labels stay inside the widget they belong to — the card in the hero, the dock when it
       // stands alone in the editor. A squeezed tile may let its label reach past its own border into
       // the gap beside it, which is what the mockup does at 320 px; it may not leave the card.
       const bounds = dock.card ?? { left: dock.tiles[0]!.left, right: dock.right };
@@ -257,7 +293,7 @@ for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) 
         }
       }
 
-      // 5. The hero card, not the dock: radius | separator | dock on one line, never stacked.
+      // 6. The hero card, not the dock: radius | separator | dock on one line, never stacked.
       if (dock.card) {
         const { card } = dock;
         if (card.width > 576.5) {
@@ -283,7 +319,7 @@ for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) 
           report.push(`[top] the separator is ${card.separator.height}px tall; it should hold the row`);
         }
 
-        // 6. The preset marks sit on the rail's own scale: a mark at fraction f is the thumb's centre
+        // 7. The preset marks sit on the rail's own scale: a mark at fraction f is the thumb's centre
         // when the slider holds that preset, i.e. half a thumb inside the rail at each end.
         if (card.rail) {
           const expected = PRESET_FRACTIONS.map(

@@ -10,7 +10,7 @@ import {
 } from 'react';
 
 import { useDetectedOS } from '../../hooks/use-os';
-import { APPEARANCES, radiusToPx, type Appearance } from '../../lib/appearance';
+import { APPEARANCES, THUMB_RADIUS, radiusToPx, type Appearance } from '../../lib/appearance';
 import { cn } from '../../lib/cn';
 import { exportFormats, siteConfig } from '../../lib/site-config';
 import { Slider } from '../../ui/Slider';
@@ -996,7 +996,7 @@ function LayerThumb({ appearance, kind }: { appearance: Appearance; kind: LayerK
   return (
     <IconGlyph
       appearance={appearance}
-      radii={20}
+      radii={THUMB_RADIUS}
       size={22}
       layers={{ background: kind === 'background', petals: kind === 'petals', core: kind === 'core' }}
     />

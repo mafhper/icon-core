@@ -7,7 +7,7 @@ export const APPEARANCES: { id: Appearance; label: string }[] = [
   { id: 'default', label: 'Default' },
   { id: 'light', label: 'Light' },
   { id: 'dark', label: 'Dark' },
-  { id: 'mono', label: 'Monochrome' },
+  { id: 'mono', label: 'Mono' },
 ];
 
 /**
@@ -51,6 +51,21 @@ export const RADIUS_PRESETS = [
 ] as const;
 
 export const DEFAULT_RADIUS = (130 / CANVAS_PX) * 100;
+
+/**
+ * Radius of a **thumb**: the plate under a preview of the icon, fixed at a fifth of its own box.
+ *
+ * A preview is not a miniature of the file. The 512 px icon carries 130 px of corner (25.39 %), and
+ * at 22–38 px that same share leaves so little straight edge that the plate reads as a blob — and
+ * in the dock, where the tile is only a few pixels wider than the glyph, its 9.65 px corner sits
+ * almost on the tile's own. The landing mockup draws every small preview at a fixed `radii={20}`
+ * instead (`mockup-lovable-shader/main/src/components/icon-core/EditorShowcase.tsx`, the 22 px
+ * layer thumbs), independent of the `radii={radius}` its 260 px canvas uses.
+ *
+ * Written once here so both thumb surfaces — the appearance dock and the editor's layer rows —
+ * read the same number: 20 % of 38 px is 7.6 px, of 34 px 6.8 px, of 22 px 4.4 px.
+ */
+export const THUMB_RADIUS = 20;
 
 /* ---------- Geometry (viewBox 0 0 512 512) ---------- */
 
