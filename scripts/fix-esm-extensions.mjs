@@ -20,7 +20,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const PACKAGES = ['shared', 'engine', 'renderer', 'validator', 'exporters', 'cli', 'ui'];
+const PACKAGES = ['shared', 'library', 'engine', 'renderer', 'validator', 'exporters', 'cli', 'ui'];
 
 /** `from './x'` and `import('./x')` — the two forms that need an extension. */
 const SPECIFIER = /(\bfrom\s+|\bimport\s*\(\s*)(['"])(\.{1,2}\/[^'"]*)\2/g;

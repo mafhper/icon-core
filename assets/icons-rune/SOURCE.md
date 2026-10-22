@@ -71,3 +71,16 @@ colisão de id é falha do script.
 
 A opacidade de cada cinza é `1 − média(R,G,B)/255`, arredondada a duas casas — o valor que
 preserva o cinza original sobre fundo branco.
+
+## Derivado: a biblioteca de dados (`@iconcore/library`)
+
+`packages/iconcore-library/src/icons.generated.ts` é **derivado** deste diretório pelo
+`scripts/build-rune-library.mjs` — `ICONS` com `id`/`name`/`category`/`tags`/`variants`,
+ordenado por id. Metadados vêm do `lib/icons/manifest.generated.ts` **no pin** (blob sha1
+conferido); id sem entrada cai em `misc`, com teto de 5%. O gerador re-afirma o contrato dos
+SVGs (raiz exata, viewBox 24×24, sem literal de cor, sem `<style>`), prefixa ids internos
+(`<id>--…`, seguro para inlining) e reserva o prefixo `glass-` para o delta de glass-icons.
+
+Regerar exige o checkout do pin; o CI cobra o derivado em dia com
+`node scripts/build-rune-library.mjs --check` (o `--check` compara o derivado com os SVGs —
+a procedência dos metadados é conferida na geração, que recusa qualquer checkout que não o pin).
