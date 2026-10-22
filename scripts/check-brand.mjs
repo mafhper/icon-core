@@ -116,10 +116,32 @@ const fonteExiste = (nome) => fs.existsSync(fonteDe(nome));
 const FONTES = {
   'CalSans-Regular.woff2': ['apps/web/src/fonts/CalSans-Regular.woff2'],
   'CalSans-Bold.woff2': ['apps/web/src/fonts/CalSans-Bold.woff2'],
-  'Manrope-Regular.woff2': ['apps/web/src/fonts/Manrope-Regular.woff2'],
-  'Manrope-Medium.woff2': ['apps/web/src/fonts/Manrope-Medium.woff2'],
-  'Manrope-SemiBold.woff2': ['apps/web/src/fonts/Manrope-SemiBold.woff2'],
-  'Manrope-Bold.woff2': ['apps/web/src/fonts/Manrope-Bold.woff2']
+  // Manrope is the body face on both fronts: Studio shell (web) and landing page (promo).
+  // Each app owns a derived copy inside its own `src/`, both compared to `assets/fonts/`.
+  'Manrope-Regular.woff2': [
+    'apps/web/src/fonts/Manrope-Regular.woff2',
+    'apps/promo/src/fonts/Manrope-Regular.woff2'
+  ],
+  'Manrope-Medium.woff2': [
+    'apps/web/src/fonts/Manrope-Medium.woff2',
+    'apps/promo/src/fonts/Manrope-Medium.woff2'
+  ],
+  'Manrope-SemiBold.woff2': [
+    'apps/web/src/fonts/Manrope-SemiBold.woff2',
+    'apps/promo/src/fonts/Manrope-SemiBold.woff2'
+  ],
+  'Manrope-Bold.woff2': [
+    'apps/web/src/fonts/Manrope-Bold.woff2',
+    'apps/promo/src/fonts/Manrope-Bold.woff2'
+  ],
+  // Display (Sora) and mono (IBM Plex Mono) of the landing page. Only the promo consumes
+  // them, so there is one derived copy each.
+  'Sora-Regular.woff2': ['apps/promo/src/fonts/Sora-Regular.woff2'],
+  'Sora-SemiBold.woff2': ['apps/promo/src/fonts/Sora-SemiBold.woff2'],
+  'Sora-Bold.woff2': ['apps/promo/src/fonts/Sora-Bold.woff2'],
+  'IBMPlexMono-Regular.woff2': ['apps/promo/src/fonts/IBMPlexMono-Regular.woff2'],
+  'IBMPlexMono-Medium.woff2': ['apps/promo/src/fonts/IBMPlexMono-Medium.woff2'],
+  'IBMPlexMono-SemiBold.woff2': ['apps/promo/src/fonts/IBMPlexMono-SemiBold.woff2']
 };
 
 /** Todas as derivadas: arte e fonte, com o mesmo contrato de SHA-256. */

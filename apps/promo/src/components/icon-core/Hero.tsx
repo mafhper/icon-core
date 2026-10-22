@@ -38,7 +38,7 @@ export function Hero() {
           <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-glass-border bg-glass px-3 py-1 font-mono text-[11px] text-muted-foreground backdrop-blur">
             <span className="size-1.5 rounded-full bg-primary" />v{siteConfig.version} · nova interface
           </p>
-          <h1 className="text-5xl leading-[0.95] font-semibold tracking-[-0.045em] sm:text-6xl xl:text-7xl">
+          <h1 className="font-display text-5xl leading-[0.95] font-semibold tracking-[-0.045em] sm:text-6xl xl:text-7xl">
             Um ícone.
             <br />
             <span className="text-muted-foreground">Todas as telas.</span>

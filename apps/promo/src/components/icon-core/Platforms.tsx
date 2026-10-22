@@ -27,7 +27,7 @@ export function Platforms() {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-xl">
             <p className="font-mono text-xs tracking-[0.2em] text-primary uppercase">Exporte uma vez</p>
-            <h2 className="mt-3 text-4xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
+            <h2 className="font-display mt-3 text-4xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
               O mesmo ícone em todo lugar.
             </h2>
           </div>

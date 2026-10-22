@@ -1,12 +1,105 @@
 @import "tailwindcss";
 
+/*
+ * Typefaces, self-hosted. Same mechanics as `apps/web`: source under `assets/fonts/`,
+ * derived copy in `src/fonts/` (where Vite resolves, hashes and respects `base`), and
+ * `scripts/check-brand.mjs` compares both by SHA-256. Not a CDN: this page is the front
+ * door of an offline-first tool, and a remote face disappears without a trace when the
+ * network does — the text simply falls back and the drawing changes.
+ *
+ * `font-display: swap` here, unlike the Studio shell's `block`: the landing page never
+ * measures text in canvas, so painting the fallback immediately beats an invisible heading.
+ * Static weights only (Cal Sans convention): 400-700 for Manrope, 400/600/700 for Sora and
+ * 400/500/600 for the mono. `800` and the in-between `720`/`760` resolve by CSS matching.
+ */
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/Manrope-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/Manrope-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/Manrope-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/Manrope-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/Sora-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/Sora-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/Sora-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/IBMPlexMono-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/IBMPlexMono-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/IBMPlexMono-SemiBold.woff2") format("woff2");
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-display: "Sora", sans-serif;
   --font-body: "Manrope", sans-serif;
-  /* The promoted mono is the one the page actually loads (IBM Plex Mono, shared
-     with the app); JetBrains Mono was declared but never requested. */
+  /* The promoted mono is the one the page actually renders (IBM Plex Mono), and since the
+     self-host pass it comes from `src/fonts/` like the other two. */
   --font-mono: "IBM Plex Mono", monospace;
 }
 
@@ -235,8 +328,8 @@ html {
 
 body {
   margin: 0;
-  /* Body copy uses the loaded Manrope; the previous stack led with two fonts the
-     page never requested, so everything silently rendered in Sora. */
+  /* Body copy composes in the self-hosted Manrope (declared above); the rest of the stack
+     only covers a machine where that file failed to decode. */
   font-family: Manrope, "Sora", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background:
@@ -354,6 +447,10 @@ a {
 .split-section h2,
 .community-section h2 {
   font-size: clamp(2rem, 4vw, 4rem);
+  /* The legacy band composes in the display face too. The component sections name it with
+     the `font-display` utility; these predate the utility layer, so the role is applied
+     where their typography already lives. */
+  font-family: var(--font-display);
 }
 
 .section-heading p,

@@ -265,7 +265,7 @@ export function EditorShowcase() {
           <p className="font-mono text-xs tracking-[0.2em] text-primary uppercase">
             Nova interface · v{siteConfig.version}
           </p>
-          <h2 className="mt-3 text-4xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
+          <h2 className="font-display mt-3 text-4xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
             Um editor de ícones de verdade, no navegador e no desktop.
           </h2>
           <p className="mt-4 text-muted-foreground">

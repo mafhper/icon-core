@@ -48,10 +48,35 @@ const rootDir = path.resolve(__dirname, '..');
 const FONTES = {
   'CalSans-Regular.woff2': ['apps/web/src/fonts/CalSans-Regular.woff2'],
   'CalSans-Bold.woff2': ['apps/web/src/fonts/CalSans-Bold.woff2'],
-  'Manrope-Regular.woff2': ['apps/web/src/fonts/Manrope-Regular.woff2'],
-  'Manrope-Medium.woff2': ['apps/web/src/fonts/Manrope-Medium.woff2'],
-  'Manrope-SemiBold.woff2': ['apps/web/src/fonts/Manrope-SemiBold.woff2'],
-  'Manrope-Bold.woff2': ['apps/web/src/fonts/Manrope-Bold.woff2']
+  /**
+   * Manrope serves both fronts: the Studio shell (web app) and the landing page, which
+   * loaded it from Google Fonts until the self-host pass (LOTE 111). One source, one copy
+   * per app — the promo has its own `src/fonts/` because Vite resolves `url()` there.
+   */
+  'Manrope-Regular.woff2': [
+    'apps/web/src/fonts/Manrope-Regular.woff2',
+    'apps/promo/src/fonts/Manrope-Regular.woff2'
+  ],
+  'Manrope-Medium.woff2': [
+    'apps/web/src/fonts/Manrope-Medium.woff2',
+    'apps/promo/src/fonts/Manrope-Medium.woff2'
+  ],
+  'Manrope-SemiBold.woff2': [
+    'apps/web/src/fonts/Manrope-SemiBold.woff2',
+    'apps/promo/src/fonts/Manrope-SemiBold.woff2'
+  ],
+  'Manrope-Bold.woff2': [
+    'apps/web/src/fonts/Manrope-Bold.woff2',
+    'apps/promo/src/fonts/Manrope-Bold.woff2'
+  ],
+  // Display and mono for the landing page. The promo is the only consumer, so the
+  // derived copy lives only inside its `src/fonts/`.
+  'Sora-Regular.woff2': ['apps/promo/src/fonts/Sora-Regular.woff2'],
+  'Sora-SemiBold.woff2': ['apps/promo/src/fonts/Sora-SemiBold.woff2'],
+  'Sora-Bold.woff2': ['apps/promo/src/fonts/Sora-Bold.woff2'],
+  'IBMPlexMono-Regular.woff2': ['apps/promo/src/fonts/IBMPlexMono-Regular.woff2'],
+  'IBMPlexMono-Medium.woff2': ['apps/promo/src/fonts/IBMPlexMono-Medium.woff2'],
+  'IBMPlexMono-SemiBold.woff2': ['apps/promo/src/fonts/IBMPlexMono-SemiBold.woff2']
 };
 
 const DERIVADOS = {
