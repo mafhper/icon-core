@@ -7,11 +7,12 @@ import { DownloadButton, WebAppButton } from './DownloadButton';
 import { BrandMark } from './IconArt';
 
 /**
- * Only anchors that exist on this page. `#interface` joins the list with the section that
- * ports the editor (a nav link to nowhere is a broken promise, not a placeholder).
+ * Only anchors that exist on this page. `#interface` is the editor showcase; `#baixar` is
+ * the get-it strip docked under that window, so both land on something real.
  */
 const NAV = [
   { href: '#plataformas', label: 'Plataformas' },
+  { href: '#interface', label: 'Interface' },
   { href: '#baixar', label: 'Baixar' },
 ];
 

@@ -1,26 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
+import { EditorShowcase } from './components/icon-core/EditorShowcase';
 import { Footer } from './components/icon-core/Footer';
 import { Header } from './components/icon-core/Header';
 import { Hero } from './components/icon-core/Hero';
 import { Platforms } from './components/icon-core/Platforms';
 import { StudioProvider } from './components/icon-core/studio-context';
-
-const repo = 'mafhper/icon-core';
-
-const publicLabel = (value: string): string => value.replace(/\bIconCore\b/g, 'Icon Core');
-
-type Platform = 'Windows' | 'macOS' | 'Linux';
-
-type ReleaseStatus = 'loading' | 'ready' | 'error';
-
-interface DesktopLinks {
-  windows: string | null;
-  macos: string | null;
-  linux: string | null;
-  releaseUrl: string;
-  versionLabel: string;
-}
+import { siteConfig } from './lib/site-config';
 
 const workflows = [
   {
@@ -55,43 +41,6 @@ const faqs = [
   }
 ];
 
-const isSignatureAsset = (assetName: string) => {
-  const lower = assetName.toLowerCase();
-  return lower.endsWith('.sig') || lower.endsWith('.sigstore') || lower.endsWith('.sha256') || lower.endsWith('.sha256sum') || lower.endsWith('.json');
-};
-
-const pickAssetByExtensions = (
-  assets: Array<{ name: string; browser_download_url: string }>,
-  extensions: string[]
-) => {
-  const usable = assets.filter((asset) => !isSignatureAsset(asset.name));
-  for (const extension of extensions) {
-    const match = usable.find((asset) => asset.name.toLowerCase().endsWith(extension));
-    if (match) return match.browser_download_url;
-  }
-  return null;
-};
-
-const pickAssetByHints = (
-  assets: Array<{ name: string; browser_download_url: string }>,
-  hints: string[]
-) => {
-  const usable = assets.filter((asset) => !isSignatureAsset(asset.name));
-  return usable.find((asset) => hints.some((hint) => asset.name.toLowerCase().includes(hint)))?.browser_download_url ?? null;
-};
-
-const PlatformButton = ({ platform, href, status }: { platform: Platform; href: string | null; status: ReleaseStatus }) => {
-  if (status === 'loading') {
-    return <button type="button" className="promo-download is-loading" disabled>{platform} · checking…</button>;
-  }
-
-  if (!href) {
-    return <button type="button" className="promo-download is-disabled" disabled>{platform} unavailable</button>;
-  }
-
-  return <a className="promo-download" href={href} target="_blank" rel="noreferrer">{platform}</a>;
-};
-
 const WorkflowMini = ({ index }: { index: number }) => {
   if (index === 0) {
     return (
@@ -125,15 +74,6 @@ const WorkflowMini = ({ index }: { index: number }) => {
 };
 
 export const PromoApp = () => {
-  const [releaseStatus, setReleaseStatus] = useState<ReleaseStatus>('loading');
-  const [desktopLinks, setDesktopLinks] = useState<DesktopLinks>({
-    windows: null,
-    macos: null,
-    linux: null,
-    releaseUrl: `https://github.com/${repo}/releases/latest`,
-    versionLabel: 'Latest release'
-  });
-
   useEffect(() => {
     /*
      * A fragment in the URL is resolved before React mounts, so the browser finds no
@@ -145,37 +85,6 @@ export const PromoApp = () => {
     if (id) document.getElementById(id)?.scrollIntoView();
   }, []);
 
-  useEffect(() => {
-    const loadRelease = async () => {
-      try {
-        const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-          headers: { Accept: 'application/vnd.github+json' }
-        });
-        if (!response.ok) throw new Error('Unable to fetch release');
-        const release = (await response.json()) as {
-          html_url: string;
-          tag_name: string;
-          name?: string;
-          assets: Array<{ name: string; browser_download_url: string }>;
-        };
-        const assets = release.assets ?? [];
-        setDesktopLinks({
-          windows: pickAssetByExtensions(assets, ['.msi', '.exe']) ?? pickAssetByHints(assets, ['windows', 'win64', 'win32']),
-          macos: pickAssetByExtensions(assets, ['.dmg', '.pkg', '.app.tar.gz']) ?? pickAssetByHints(assets, ['macos', 'darwin', 'mac']),
-          linux: pickAssetByExtensions(assets, ['.appimage', '.deb', '.rpm', '.tar.xz', '.tar.gz']) ?? pickAssetByHints(assets, ['linux']),
-          releaseUrl: release.html_url || `https://github.com/${repo}/releases/latest`,
-          versionLabel: publicLabel(release.name?.trim() || release.tag_name || 'Latest release')
-        });
-        setReleaseStatus('ready');
-      } catch {
-        setDesktopLinks((previous) => ({ ...previous, windows: null, macos: null, linux: null }));
-        setReleaseStatus('error');
-      }
-    };
-
-    void loadRelease();
-  }, []);
-
   return (
     <StudioProvider>
       <div className="promo-root">
@@ -184,12 +93,13 @@ export const PromoApp = () => {
         <main>
           <Hero />
           <Platforms />
+          <EditorShowcase />
 
           {/*
             Sections still wearing the v1 copy. They keep their original anchors (#workflows,
-            #edit-space, #export-utilities, #desktop, #community) so links already in the wild
-            keep resolving; `#baixar` aliases the desktop section, which is where the
-            downloads live until the PT-BR download section replaces it.
+            #edit-space, #export-utilities, #community) so links already in the wild keep
+            resolving. `#baixar` and its `#desktop` alias now live in the showcase's
+            GetItStrip, next to the editor they download.
           */}
           <div className="promo-legacy">
             <section id="workflows" className="section-block scroll-mt-24">
@@ -242,24 +152,6 @@ export const PromoApp = () => {
               </div>
             </section>
 
-            <section id="baixar" className="section-block desktop-section scroll-mt-24">
-              <span id="desktop" className="block scroll-mt-24" aria-hidden />
-              <div className="section-heading">
-                <h2>Use it online or download the desktop build.</h2>
-                <p>The desktop app is also free and open-source, with native file access for local workflows.</p>
-              </div>
-              <p className="release-line">{releaseStatus === 'loading' ? 'Checking the latest release…' : desktopLinks.versionLabel}</p>
-              <div className="download-grid">
-                <PlatformButton platform="Windows" href={desktopLinks.windows} status={releaseStatus} />
-                <PlatformButton platform="macOS" href={desktopLinks.macos} status={releaseStatus} />
-                <PlatformButton platform="Linux" href={desktopLinks.linux} status={releaseStatus} />
-              </div>
-              {releaseStatus === 'error' && (
-                <p className="release-error" role="status">Could not reach GitHub right now. You can still browse the downloads directly.</p>
-              )}
-              <a className="text-link" href={desktopLinks.releaseUrl} target="_blank" rel="noreferrer">View all release assets</a>
-            </section>
-
             <section id="community" className="community-section scroll-mt-24">
               <div>
                 <h2>Built in the open.</h2>
@@ -269,8 +161,8 @@ export const PromoApp = () => {
                 </p>
               </div>
               <div className="community-actions">
-                <a className="button button-primary" href={`https://github.com/${repo}`} target="_blank" rel="noreferrer">Join on GitHub</a>
-                <a className="button" href={`https://github.com/${repo}/issues`} target="_blank" rel="noreferrer">Open issues</a>
+                <a className="button button-primary" href={siteConfig.repoUrl} target="_blank" rel="noreferrer">Join on GitHub</a>
+                <a className="button" href={`${siteConfig.repoUrl}/issues`} target="_blank" rel="noreferrer">Open issues</a>
               </div>
             </section>
 

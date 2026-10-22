@@ -51,6 +51,16 @@ afterEach(async () => {
   for (const ui of mounted.splice(0)) await ui.unmount();
 });
 
+/**
+ * Waits one macrotask inside `act`, which is how a promise chain started by an effect
+ * (`fetch` → `json` → `setState`) settles before the next assertion.
+ */
+export async function settle(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
 export async function press(element: Element, key: string): Promise<void> {
   await act(async () => {
     element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));

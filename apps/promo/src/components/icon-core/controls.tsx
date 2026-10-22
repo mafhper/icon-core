@@ -7,13 +7,13 @@ import { IconGlyph } from './IconArt';
 import { useStudio } from './studio-context';
 
 /** Frame radius: slider plus the four presets, all writing to the shared studio state. */
-export function RadiusControl({ className }: { className?: string }) {
+export function RadiusControl({ className, id = 'frame-radius' }: { className?: string; id?: string }) {
   const { radius, setRadius } = useStudio();
 
   return (
     <div className={cn('grid gap-3', className)}>
       <Slider
-        id="frame-radius"
+        id={id}
         label="Raio da moldura"
         min={0}
         max={50}

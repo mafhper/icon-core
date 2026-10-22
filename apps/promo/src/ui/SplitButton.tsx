@@ -193,7 +193,7 @@ export const SplitButton = forwardRef<HTMLDivElement, SplitButtonProps>(function
   const primaryShape = pill ? 'rounded-s-full rounded-e-none' : 'rounded-e-none';
   const triggerShape = cn(
     'rounded-s-none px-2',
-    pill ? 'rounded-e-full border-s border-primary-foreground/25' : 'border-s-0'
+    pill ? 'rounded-e-full border-s border-primary-foreground/20' : 'border-s-0'
   );
   const asLink = Boolean(actionHref) && !disabled;
   // Unreachable through the props union; a JavaScript caller can still get here, and an

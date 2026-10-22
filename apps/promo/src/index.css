@@ -205,6 +205,26 @@
   --scene-foreground: oklch(0.2 0 0);
 }
 
+/* 32 px work-area grid, used by the editor showcase when the grid switch is on. */
+@utility ic-grid-bg {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/*
+ * Default border color for a bare `border`, as in the shell. It has to sit in `base`: unlayered,
+ * the `*` selector would outrank every `border-*` color utility on the page. The shell names this
+ * role `--color-border`, but colors are configured here with `@theme inline`, which emits no
+ * `--color-*` custom properties, so the live token is `--border` (light, dark and mono).
+ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+}
+
 * {
   box-sizing: border-box;
 }

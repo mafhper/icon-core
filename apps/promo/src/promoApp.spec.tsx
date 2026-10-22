@@ -36,6 +36,7 @@ describe('promo page anchors', () => {
     const ids = [
       'top',
       'plataformas',
+      'interface',
       'baixar',
       'workflows',
       'edit-space',
@@ -75,6 +76,10 @@ describe('promo sections', () => {
       'Todas as telas.',
       'Exporte uma vez',
       'O mesmo ícone em todo lugar.',
+      'Um editor de ícones de verdade',
+      'Camadas de assets',
+      'Versão web',
+      'App desktop',
       'Separar camadas',
       'Raio da moldura',
       'Baixar para Windows',
