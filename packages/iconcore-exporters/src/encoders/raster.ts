@@ -130,26 +130,32 @@ export const backgroundModeFor = (
  * it does **not** do is invent a shape — a project that declares none stays
  * full bleed, exactly as before.
  *
- * Two artifacts opt out, and both for a reason the platform states in its own
+ * The artifact's own shape wins over everything except a container: a preset
+ * can ship a round variant of a square logo, and declaring the shape is how it
+ * says so. Two cases still opt out, for reasons the platform states in its own
  * spec rather than taste:
  *
  * - **A container (`.ico`, `.icns`).** Windows and macOS read a single file and
  *   pick the size they want. A rounded `.ico` is not a thing — the mask is
  *   applied to the bitmap at display time, so a clipped one loses a ring of
  *   pixels that the OS would have clipped identically.
- * - **`background: 'opaque'`.** That flag means the artifact requires an opaque
- *   background, which in practice is a PWA *maskable* icon. Those are cropped by
- *   the launcher to whatever shape it likes, inside the safe zone, so a rounded
- *   export would be cropped twice.
+ * - **`background: 'opaque'` — but only when the artifact declares no shape of
+ *   its own.** That flag means the artifact requires an opaque background, which
+ *   in practice is a PWA *maskable* icon: the launcher crops it to whatever
+ *   shape it likes, inside the safe zone, so a shape here would be a second
+ *   crop. An artifact that **does** declare one is speaking about itself — a
+ *   legacy `ic_launcher_round` exists to be round, and the opaque rule used to
+ *   erase exactly that, leaving a byte-for-byte copy of the square file. The
+ *   declared shape wins; the opaque rule covers only the silent case.
  */
 export const maskModeFor = (
   artifact: Pick<ExportArtifactSpec, 'format' | 'background' | 'maskShape'>,
   project: IconCoreProject
 ): CanvasMaskShape | 'none' => {
   if (isContainerFormat(artifact.format)) return 'none';
-  if (artifact.background === 'opaque') return 'none';
-  // The artifact's own shape wins: a preset can ship a round variant of a square logo.
+  // The artifact's own shape wins — over the project, and over the opaque rule.
   if (artifact.maskShape !== undefined) return artifact.maskShape;
+  if (artifact.background === 'opaque') return 'none';
   // Nothing declared means nothing assumed: the project renders as it always did.
   if (project.canvas.maskShape === undefined && project.canvas.maskRadius === undefined) return 'none';
   return project.canvas.maskShape ?? 'rounded-rectangle';

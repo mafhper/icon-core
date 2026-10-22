@@ -8,6 +8,7 @@ import { parseProjectFile } from '../utils/projectGuard';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { modKey } from '../utils/platform';
 import { COMMAND_PALETTE_EVENT } from '../utils/commandPalette';
+import { requestExportFocus } from '../utils/exportFocus';
 
 interface Command {
   id: string;
@@ -181,11 +182,16 @@ export const CommandPalette = () => {
     },
     {
       id: 'export',
-      label: 'Open Export Utilities',
-      description: 'Export icons for selected targets',
+      label: 'Export icons',
+      description: 'Open the Export tab in the Inspector',
       shortcut: `${mod}+E`,
       category: 'export',
-      action: () => navigate('export-utilities')
+      action: () => {
+        // A aba do Inspector é a única superfície de export — a paleta leva
+        // para ela em vez de navegar para uma view própria.
+        navigate('edit-space');
+        requestExportFocus();
+      }
     },
     {
       id: 'variant-default',

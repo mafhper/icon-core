@@ -14,7 +14,12 @@ function createMockBackend(): RenderBackend {
 
   const mockCtx = {
     fillRect: vi.fn(),
+    fill: vi.fn(),
     fillStyle: '',
+    fillText: vi.fn(),
+    font: '',
+    textAlign: 'start',
+    textBaseline: 'alphabetic',
     createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
     createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
     globalAlpha: 1,
@@ -230,6 +235,91 @@ describe('composeLayers', () => {
     );
     expect(backend.applyFill).not.toHaveBeenCalled();
     backend.destroy();
+  });
+
+  it('pre-renders a classic drop shadow offscreen for a filled shape', async () => {
+    // The fill paints through a clip to the outline; a shadow riding that
+    // same context is clipped with it and never lands outside the shape.
+    // The layer below carries the offset past its own edge, so the fast path
+    // would amputate it: the shadow must pre-render, unclipped, and composite
+    // under the content. Pixels are pinned by the long-offset parity fixture;
+    // this pins the mechanism (one page canvas + one shadow canvas + a draw).
+    const { composeLayers } = await import('../src/composeLayers');
+    const backend = createMockBackend();
+    const project = createMinimalProject({
+      layers: [{
+        id: 'shadow-shape',
+        name: 'Shadow',
+        kind: 'shape',
+        visible: true,
+        zIndex: 0,
+        source: { type: 'reference', path: '', shape: { kind: 'rectangle', width: 64, height: 64, cornerRadius: 0 } },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        fill: { kind: 'solid', color: '#3366cc' },
+        effects: [{ kind: 'drop-shadow', enabled: true, params: { x: 0, y: 20, blur: 16, color: '#000000', opacity: 0.5 } }]
+      }]
+    });
+    await composeLayers(
+      project.layers,
+      resolveSize(project.canvas),
+      project.canvas.background,
+      'default',
+      undefined,
+      backend
+    );
+    expect(backend.createCanvas).toHaveBeenCalledTimes(2);
+    const native = vi.mocked(backend.createCanvas).mock.results[0].value.native as unknown as {
+      drawImage: ReturnType<typeof vi.fn>;
+    };
+    expect(native.drawImage).toHaveBeenCalled();
+    backend.destroy();
+  });
+
+  it('keeps the fast shadow path for text and hollow shapes', async () => {
+    // Neither clips its paint (`fillText`/`drawImage` for text, stroke-only
+    // for hollow), so the shadow rides the draw as it always did: one canvas,
+    // and the offset lands on the main context itself.
+    const { composeLayers } = await import('../src/composeLayers');
+    for (const layer of [
+      {
+        id: 'shadow-text',
+        name: 'Shadow text',
+        kind: 'text',
+        visible: true,
+        zIndex: 0,
+        source: { type: 'reference', path: '' },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        text: { content: 'Icon', fontFamily: 'sans-serif', fontSize: 64, fontWeight: 700 }
+      },
+      {
+        id: 'shadow-hollow',
+        name: 'Shadow hollow',
+        kind: 'shape',
+        visible: true,
+        zIndex: 0,
+        source: { type: 'reference', path: '', shape: { kind: 'rectangle', width: 64, height: 64, cornerRadius: 0 } },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+        opacity: 1,
+        fill: { kind: 'none' },
+        stroke: { color: '#0f172a', width: 8, alignment: 'center' as const },
+        effects: [{ kind: 'drop-shadow', enabled: true, params: { x: 0, y: 20, blur: 16, color: '#000000', opacity: 0.5 } }]
+      }
+    ]) {
+      const backend = createMockBackend();
+      const project = createMinimalProject({ layers: [layer as never] });
+      await composeLayers(
+        project.layers,
+        resolveSize(project.canvas),
+        project.canvas.background,
+        'default',
+        undefined,
+        backend
+      );
+      expect(backend.createCanvas).toHaveBeenCalledTimes(1);
+      backend.destroy();
+    }
   });
 });
 

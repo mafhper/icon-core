@@ -4,8 +4,9 @@
 derivados — nunca edite lá.**
 
 ```bash
-node scripts/build-brand.mjs           # gera os derivados
+node scripts/build-brand.mjs           # gera os derivados (copia, sem browser)
 node scripts/build-brand.mjs --check   # reprova se a cópia estiver desatualizada
+node scripts/build-brand.mjs --from-template  # regenera a ARTE (release.webp) do template
 node scripts/check-brand.mjs           # o portão, que é o que roda no CI
 node scripts/inventory-images.mjs      # quem usa o quê, e o que é duplicata
 ```
@@ -44,10 +45,172 @@ Declarar qual é a fonte dissolve isso: `assets/brand/` alimenta os derivados, e
 
 | Fonte | Derivado | Para quê |
 |---|---|---|
-| `logo.svg` | `apps/promo/public/branding/logo.svg`, `apps/web/public/branding/logo.svg` | `<link rel="icon">` nos dois `index.html` |
+| `logo.svg` (= default) | `apps/promo/public/branding/logo.svg`, `apps/web/public/branding/logo.svg` | `<link rel="icon">` nos dois `index.html` |
+| `logo-dark.svg` | os dois `branding/logo-dark.svg` | variante escura: ícone de app (o conjunto do Tauri vem dela) |
+| `logo-light.svg` | os dois `branding/logo-light.svg` | variante clara: marca e arte de release |
+| `logo-mono.svg` | os dois `branding/logo-mono.svg` | variante monochrome: a quarta aparência do dock do promosite |
 | `release.webp` | os dois `branding/release.webp`, **e** `docs/images/releases/release.webp` | a imagem da release no GitHub |
+| `release-art.iconcore.json` | *(template; gera `release.webp`)* | o desenho da arte de release, derivado por comando |
 
-**Os nomes do derivado são fechados**, e a tabela acima é a tradução. O motivo de a tabela
+## O set do release (lotes 1 e 2, 2026-10-19)
+
+Três matrizes SVG em `viewBox 0 0 512 512`, mesma identidade nas três variantes:
+placa arredondada (`rx 130`) + o símbolo de seis pás da marca + glifo branco.
+O que muda entre elas é **só o fundo da placa** — escuro (`logo-dark.svg`),
+halo grafite (`logo.svg`, a default) e lima→teal (`logo-light.svg`). O símbolo é
+o mesmo da fonte anterior (os seis paths de pás estão intactos, byte a byte);
+o lote acrescenta a placa e o glifo.
+
+| Fonte (sha256:12) | Placa | sha na referência do dono |
+|---|---|---|
+| `logo.svg` `4dd0a732b56e` (= default) | halo grafite sobre transparência | `6568cea3901b` |
+| `logo-dark.svg` `f9917168d990` | marinho quase-preto `#111827`→`#03090c` | `a7b26cbf59c4` |
+| `logo-light.svg` `0810c13043d1` | lima→teal `#efef12`→`#6bb7d8` | `e2e3460e214b` |
+
+As três foram promovidas **byte-idênticas à referência aprovada pelo dono** no
+lote 1 — fidelidade total, sem redesenho — e a limpeza ficou para o lote 2, que a
+mediu antes de executar:
+
+- **A declaração `<?xml?>` aninhada não era inofensiva.** O arquivo era **XML
+  inválido**: o parser do Chromium reprova (`Invalid processing instruction`), o
+  `<img>` não decodifica e o próprio `<link rel="icon">` não renderizava. A
+  remoção foi provada **inerte por medição**: o render do original parseado
+  lenientemente e o do arquivo sem a declaração dão **PNG byte-idêntico**
+  (PNGs de paridade byte-idênticos, sha256:12
+  `ca257d0905a0`/`5175f7345c47`/`f51c8c9bd436` — prova não versionada).
+- **Os ids foram namespaced por variante** (`default-`/`dark-`/`light-`). As três
+  matrizes compartilhavam `bg-0`, `canvas-clip-2` e os ids `llayer-…` — como
+  documento próprio funciona; inline na mesma página o primeiro vence e o segundo
+  pinta errado. Mesma prova antes/depois: os mesmos PNGs byte-idênticos acima, e
+  o conjunto do Tauri regenerado sai byte a byte igual.
+- **Caveat medido, não corrigido:** o render do SVG difere do PNG de referência
+  **no gradiente da placa** — cantos mais saturados (concordância 76,4% / 75,7% /
+  49,8% por pixel, medido em Chromium a 1024px contra os PNGs de referência da
+  mesma resolução, em prova não versionada). O PNG tem o gradiente
+  *corner-to-corner* (o mesmo que o canvas do studio desenha); o SVG declara
+  `14.64%→85.36%`, um span comprimido — a mesma classe de divergência que a
+  fixture `gradiente` do `check-svg-parity` já isola. Nenhuma matriz foi editada
+  por isso: a fonte promovida é a aprovada, e mexer na fórmula do `renderToSvg`
+  é lote próprio (afeta todo export SVG).
+
+Os hashes da coluna "referência do dono" são a prova de fidelidade do lote 1; os
+da coluna da fonte são o estado do lote 2. Esse estado mudou depois, no port das
+placas para os presets do promosite — o hash atual de cada matriz está na tabela
+de "O port das três placas", mais abaixo. Toda edição nas matrizes passa pelo
+portão (`check-brand`) e pelos derivados, nunca à mão nos `branding/`.
+
+A quarta variante — Monochrome — chegou em 2026-10-22; ver a seção seguinte.
+
+## As quatro aparências do mockup (2026-10-22)
+
+O dock do promosite mostra o ícone em quatro aparências — **Default**, **Light**, **Dark** e
+**Monochrome** — e a direção é que o conjunto de ícones do app seja o mesmo. O padrão do
+sample-003 continua valendo: **mesma geometria, só a placa muda**. O que faltava era medir o
+que já existia contra as quatro e criar a que não existia. A tabela é o **estado medido antes
+do port** — a única das quatro que já estava no preset era a mono:
+
+| Aparência | Matriz | Placa que a matriz desenhava | Placa que o mockup declara | Δ medido |
+|---|---|---|---|---|
+| Default | `logo.svg` | halo grafite `#1c1b1f`, opacidade 0 → 0,45, radial sobre transparência | prata radial `#f4f5f5` → `#dcdedf` → `#b9bcbe` | 35 (média 12,3) |
+| Light | `logo-light.svg` | lima→teal linear `#efef12` → `#6bb7d8` | lima→menta→ciano `#e4f46a` → `#b9ec8c` → `#6fdde3` | 134 (média 28) |
+| Dark | `logo-dark.svg` | marinho linear `#111827` → `#03090c` | grafite radial `#34353a` → `#28282a` → `#151517` | 59 (média 28,3) |
+| Monochrome | `logo-mono.svg` | prata claro radial `#ffffff` → `#f0f0f0` → `#dadada` | a mesma | **0** |
+
+Δ é a maior diferença por canal (0–255) entre a matriz renderizada e a placa do preset
+renderizada sozinha, em seis pontos fora do símbolo (topo, base, as duas laterais e os dois
+cantos), a 512 px. As três primeiras **não eram** a placa do mockup nessa medição: eram a
+identidade do sample-003, promovida byte-idêntica à referência aprovada pelo dono (ADR-025). O
+port das três foi decidido em seguida — as quatro variações serão servidas — e está medido na
+subseção seguinte.
+
+### O que o mono muda, e por quê
+
+`logo-mono.svg` é a matriz escura com **a placa e a pintura do símbolo trocadas** — não é
+redesenho. As provas, e como repeti-las:
+
+- **Geometria idêntica.** Os sete `d=` (seis pétalas + glifo), todos os `transform=`, o
+  `viewBox` e o clip `rx 130` são byte a byte iguais aos de `logo-dark.svg`.
+- **Resíduo zero.** Desfazendo o namespace (`mono-` → `dark-`), a placa e as treze linhas de
+  pintura, o arquivo volta a ser **byte-idêntico** ao `logo-dark.svg` (8.089 bytes). Ou seja,
+  das 57 linhas, 33 mudaram: **1** é a definição da placa, **19** são só o namespace dos ids
+  (inclusive as referências no clip e no `fill`) e **13** são pintura — nenhuma é geometria.
+
+A pintura muda porque **a placa mono é clara** e o símbolo das outras três é branco: o
+contraste do glifo branco contra a placa `#ffffff` → `#dadada` é **1,04:1** — o “I” desaparece.
+O mono usa então o que o próprio preset declara para o símbolo: pétalas `#8c8c8c` (opacidade
+0,9) → `#c4c4c4` (0,05) e glifo `#8f8f8f`, o tom estático do núcleo mono. Com isso o glifo
+fica em **3,10:1** e a pétala em **3,22:1**.
+
+O *gloss* que o mockup desenha sobre a placa (branco a 30%) ficou de fora: é uma camada a mais
+que nenhuma das outras três tem, e a diferença medida é de **Δ4** no pior canal (média 1,2).
+Se o gloss entrar, é uma linha a mais no grupo da placa — e as três antigas ganham a mesma
+linha ou a família continua sem ele.
+
+Os derivados são os mesmos de sempre, agora com o mono:
+
+```bash
+node scripts/build-brand.mjs   # republica os derivados, inclusive logo-mono.svg
+node scripts/check-brand.mjs   # confere os pares por conteúdo
+```
+
+### O port das três placas (mesmo dia)
+
+As quatro variações serão servidas, e o `ICON_PALETTES` do promosite é a referência: as três
+matrizes que ainda desenhavam a identidade do sample-003 passaram a desenhar a **placa do
+preset** — mesmo tipo de gradiente, mesmos stops e mesma geometria de gradiente (`cx 50% cy 42%
+r 72%` no radial; `0,0 → 1,1` no linear). O mono do Lote 97 não foi tocado.
+
+| Aparência | Matriz (sha256:12) | Placa agora (= preset) | Δ medido |
+|---|---|---|---|
+| Default | `logo.svg` `1e3b9691631a` | prata radial `#f4f5f5` → `#dcdedf` (0,55) → `#b9bcbe` | **0** (era 35) |
+| Light | `logo-light.svg` `c50c677ab1ee` | lima→menta→ciano `#e4f46a` → `#b9ec8c` (0,5) → `#6fdde3` | **0** (era 134) |
+| Dark | `logo-dark.svg` `af37bd982f8f` | grafite radial `#34353a` → `#28282a` (0,6) → `#151517` | **0** (era 59) |
+| Monochrome | `logo-mono.svg` `0af442fbc2c2` | inalterada (já era o preset) | 0 |
+
+Δ pela mesma régua da tabela anterior (seis pontos fora do símbolo, 512 px): agora é **0 nos
+seis pontos das três matrizes** — sem o gloss, que é a escolha documentada acima. Com o gloss
+do mockup na conta, o Δ seria 12 / 44 / 32 (médias 3,4 / 6,6 / 10).
+
+**Geometria: a mesma, com resíduo zero.** Os sete `d=` (seis pétalas + glifo), todo `transform=`,
+o `viewBox`, os `x/y/width/height` das layers e o clip `rx 130` são byte a byte os de antes do
+port. Das 57 linhas, mudaram **14** no default e no light (1 de placa + 13 de pintura) e **2** no
+dark (1 + 1) — nenhuma de geometria; desfazendo placa e pintura, cada arquivo volta
+**byte-idêntico** ao anterior (8.797 / 8.111 / 8.089 bytes).
+
+**A pintura mudou porque o glifo branco some na placa clara.** O contraste (WCAG, luminância) do
+glifo `#00d6ff` sobre a placa onde ele fica é 1,59:1 no default, 1,28:1 no light e 7,03:1 no
+dark; o branco que estava lá daria 1,09:1 e 1,36:1 — no default ele desaparecia, e no light o
+que separa o glifo da placa é o **matiz** (ciano contra lima/menta), não a luminância. É assim
+que o mockup desenha as três aparências coloridas; o cinza só existe no mono. As pétalas seguem
+o `petal` do preset: default `#7f8386` (op 0,9) → `#a7aaac` (op 0,05), 3,02:1 no topo; light
+branco (op 0,95) → branco (op 0,05), 1,34:1, como o mockup; dark `#d9d9d9` → `#737373` (op 0),
+8,67:1 — que já era exatamente o que o arquivo tinha, então no dark só o glifo mudou.
+
+**O que foi regenerado, e os números:**
+
+- as **6 cópias** de `apps/*/public/branding/` (2 por matriz);
+- a **arte de release**, recomposta pelo template (a camada `Mark` resolve `logo-light.svg`):
+  27.378 bytes, sha256 `bcdfc15ee351` (era 29.824 / `38d7c13aabd4`), e duas execuções seguidas
+  dão o mesmo sha;
+- o **conjunto do Tauri**, de `logo-dark.svg`: 50 dos 52 arquivos mudaram — os dois XML do
+  Android são config e ficaram. O `icon.png` de 512 mede canto `rgb(33,33,35)` (grafite) e
+  centro `rgb(0,219,250)` (ciano), que é a placa nova com o glifo do preset;
+- `check-brand` **17/17**.
+
+Para repetir, na ordem (os dois passos de derivado são os mesmos de cima):
+
+```bash
+node scripts/build-brand.mjs --from-template   # a arte de release, do template
+node scripts/build-brand.mjs                   # os derivados das matrizes
+node scripts/check-brand.mjs                   # o portão
+cd apps/desktop && npx tauri icon ../../assets/brand/logo-dark.svg
+```
+
+A medição de Δ não é um script versionado: foi o `IconGlyph` do mockup rasterizado em Chromium a
+512 px, amostrado pixel a pixel nos seis pontos, contra a placa do preset desenhada sozinha (e a
+matriz, pela mesma via).
+
+**Os nomes do derivado são fechados**, e a tabela de "Os arquivos" é a tradução. O motivo de a tabela
 existir é que a frota tinha dois nomes para a mesma arte (`release.webp` e
 `release-new.webp`); nome duplicado custa caro até alguém usar o errado — e quem usou o
 errado foi a release.
@@ -59,7 +222,8 @@ O portão também reprova um arquivo **inesperado** em `branding/`, que é como 
 
 Porque três coisas o consomem, e as três leem o repositório de jeitos diferentes:
 
-- `index.html` dos dois apps, via `public/` — servido **estático**;
+- os dois `public/` dos apps — a arte é servida **estática** (`og:image`/manifest voltam
+  com o pipeline do IC61F; hoje o `<link>` é só o favicon SVG);
 - `.github/release.config.json` → a imagem da release, lida num job que **não roda npm**.
 
 Por isso os derivados são **commitados**, e não gerados no build: um `prebuild` funcionaria
@@ -83,13 +247,14 @@ normalização em todos os projetos:
 | `apps/*/public/branding/` | **derivado** | nunca editar; `--check` reprova |
 | `docs/images/releases/` | **derivado** | nunca editar; é o que o Release Core lê |
 | `docs/assets/*.png` | screenshots do README | **público e usado** — 4 referências no `README.md` |
-| `apps/desktop/src-tauri/icons/` | conjunto do Tauri | **não mexer** — ver abaixo |
+| `apps/desktop/src-tauri/icons/` | conjunto do Tauri | **gerado** pelo `tauri icon` a partir de `logo-dark.svg` — ver "O lote 2", abaixo; nunca editar à mão |
 | `assets/archive/` | o que foi arquivado, e por quê | não é fonte de nada |
 
 ## O que **não** foi arquivado, e por que
 
-O levantamento (`scripts/inventory-images.mjs`) achou 61 imagens versionadas. Só **uma** não
-tinha consumidor, e foi arquivada. As outras duas categorias parecem sobras e não são:
+O levantamento (`scripts/inventory-images.mjs`) mediu **631 imagens versionadas** na
+última execução (2026-10-19). Só **uma** não tinha consumidor, e foi arquivada. As outras duas
+categorias parecem sobras e não são:
 
 **`src-tauri/icons/ios/` e `Square*Logo.png` (29 arquivos, sem referência em texto).**
 `tauri.conf.json` lista **dois** ícones — `icons/icon.ico` e `icons/icon.png` — e o resto não
@@ -98,10 +263,12 @@ convenção** pelo empacotador do Tauri no macOS, não pela config. Sem build ma
 máquina não dá para provar que o conjunto é dispensável, e um portão que reprova por
 adivinhação treina a pessoa a rodar sem portão.
 
-Além disso há `@2x-1.png` e `@2x.png` **byte-idênticos** (sha256 igual) em quatro grupos: o
-sufixo `-1` é o que o macOS acrescenta ao copiar um arquivo para uma pasta que já tinha o
-nome. São artefato de operação, não escolha — mas a decisão de removê-los é de quem tem build
-macOS, não de um script rodando em Windows.
+Além disso há `@2x-1.png` e `@2x.png` **byte-idênticos** (sha256 igual) em **três** grupos
+(`20x20@2x`, `29x29@2x`, `40x40@2x`). A nota anterior atribuía o sufixo `-1` a uma cópia do
+macOS; a regeneração de 2026-10-22 mostrou que **é o próprio `tauri icon` que grava os dois**
+(CLI 2.12.1, no Windows), com hash igual ao par. São artefato de operação, não escolha — e,
+sendo byte-idênticos, não há divergência a corrigir; removê-los continua sendo decisão de quem
+tem build macOS.
 
 **`docs/assets/*.png` (4 arquivos).** Têm cara de lixo e são a imagem que o GitHub mostra no
 README. Referenciados nas linhas 7, 15, 29 e 40.
@@ -115,17 +282,57 @@ README. Referenciados nas linhas 7, 15, 29 e 40.
 Está **arquivado, não apagado**: o conteúdo está íntegro e o hash está aqui, então a reversão
 é `cp` de volta para a fonte e um `node scripts/build-brand.mjs`.
 
-## O que dá para gerar depois
+## O lote 2 (`@build` — raster e wiring), executado em 2026-10-19
 
-Com um rasterizador disponível, a imagem de release passa a ser **derivada de um template**,
-não desenhada à mão — que é a direção da normalização da frota:
+A spec do lote 1 pedia quatro passos; todos rodaram com o portão verificando cada um:
+
+1. **Pipeline estendido.** `logo-dark.svg` e `logo-light.svg` declarados no
+   `DERIVADOS` de `scripts/build-brand.mjs` e `scripts/check-brand.mjs` (destinos:
+   os dois `public/branding/`). `node scripts/build-brand.mjs` → exit 0;
+   `node scripts/check-brand.mjs` → exit 0, **15/15** pares OK (a nota do lote 1
+   dizia "12/12" para um total de 11; agora são 2 logos default + 2 dark + 2
+   light + 3 release + 6 fontes).
+2. **`release.webp` regenerada da nova identidade.** Deixou de ser um PNG
+   composto à mão: o desenho agora é o template `release-art.iconcore.json`,
+   rasterizado pelo motor Canvas num Chromium headless (ADR-017,
+   `canvas.toBlob('image/webp')` na página, sem sharp) por
+   `node scripts/build-brand.mjs --from-template`. A arte saiu de 1490×850
+   (`5f78b11f048e`) para **1280×640** — o tamanho do `github-social` do ADR-018 —
+   com `38d7c13aabd4`; duas execuções seguidas dão o mesmo sha (determinístico).
+   Os três destinos são republicados pelo passo normal do `build-brand`.
+3. **Ícones de app.** O conjunto do Tauri foi regenerado pelo próprio gerador:
+
+   ```bash
+   cd apps/desktop
+   npx tauri icon ../../assets/brand/logo-dark.svg
+   ```
+
+   A variante é a **escura** (decisão do dono, 2026-10-19): placa marinho sólida
+   — silhueta de ícone de app de verdade, legível em barra clara e escura. O PNG
+   de 512 do gerador foi medido contra o PNG de referência aprovado: 0,2% dos
+   pixels fora de tolerância. PWA/manifest e favicons raster continuam fora do
+   site de propósito (voltam com o pipeline do IC61F, como o `index.html`
+   documenta); o favicon SVG é o `logo.svg`.
+4. **Limpeza das matrizes** — executada com prova de paridade; ver
+   "O set do release", acima. O namespacing de ids por variante também está
+   aplicado (`default-`/`dark-`/`light-`).
+
+## A arte de release é derivada de um template
+
+`release-art.iconcore.json` **é** o desenho (abre no studio; diffável; versionado).
+O fluxo, na ordem:
 
 ```bash
 # gera assets/brand/release.webp a partir do template do projeto
 node scripts/build-brand.mjs --from-template
 # e então os derivados + o portão cobrem o resto
 node scripts/build-brand.mjs
+node scripts/check-brand.mjs
 ```
 
-Isso ainda não existe. O que existe é a **fonte declarada**, que é o pré-requisito: sem uma
-fonte, um gerador só produziria mais uma cópia.
+Uma convenção do template, e o motivo dela: uma layer `inline` de
+`mimeType: "image/svg+xml"` com `path` (sem `data`) é resolvida **no render**
+contra esta pasta — `logo-light.svg` entra pelo nome, e a arte nunca carrega uma
+cópia embutida da fonte. (Se o studio re-exportar o template, ele grava `data`
+embutido; aí a cópia passa a existir e o diff mostra.) O carregador vive em
+`scripts/release-art.mjs`, ao lado do `build-brand.mjs`.

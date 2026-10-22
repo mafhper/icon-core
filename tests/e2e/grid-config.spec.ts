@@ -46,7 +46,8 @@ test('grid: default desligado, e as divisoes mudam o background-size', async ({ 
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
@@ -100,7 +101,8 @@ test('grid: divisao fora da faixa e limitada, e o grid continua visivel', async 
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);

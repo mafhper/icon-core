@@ -32,7 +32,8 @@ test('import margin: a guia acompanha o slider e respeita o toggle', async ({ pa
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
@@ -97,7 +98,8 @@ test('import margin: a guia nao impede selecionar a camada de baixo', async ({ p
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
@@ -149,7 +151,8 @@ test('import margin: a guia tem nome acessivel com a porcentagem', async ({ page
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);

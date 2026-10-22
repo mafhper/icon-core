@@ -1,12 +1,30 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
-import type { ReactNode } from 'react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useEffect, type ReactNode } from 'react';
+import { TooltipProvider } from '@iconcore/ui';
 import { ToastProvider } from '../toast/ToastContext';
-import { ComposerProvider } from '../ComposerContext';
+import { ComposerProvider, useComposer } from '../ComposerContext';
 import { CommandPalette } from './CommandPalette';
-import { ExportView } from '../views/ExportView';
+import type { IconCoreProject } from '@iconcore/shared';
+import { createBlankProject } from '../utils/projectFactory';
+import { StudioShell } from '../../studio/StudioApp';
 
 afterEach(cleanup);
+
+beforeEach(() => {
+  window.localStorage.clear();
+  if (!window.matchMedia) {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }));
+  }
+});
 
 /** `ComposerProvider` reads `useToast`, so the toast provider must wrap it. */
 const renderInApp = (node: ReactNode) =>
@@ -32,66 +50,51 @@ describe('CommandPalette (accessible name + modal focus)', () => {
   });
 });
 
-describe('ExportView (accessible names)', () => {
+describe('Studio export panel (accessible names)', () => {
   /**
-   *  replaced the target checkbox list + global format with an editable plan.
-   * The names the old test guarded (a "quick select" combobox) no longer exist —
-   * these cover what replaced them. A project must be open for the plan to seed.
+   * Export lives at the end of the Inspector Export tab — the dialog left with
+   * the P2 cut, and the panel keeps the same contract the dialog held: every
+   * group named, every toggle named, the export action labelled with its file
+   * count.
    */
-  const renderExport = () => {
-    localStorage.setItem(
-      'iconcore-composer-project',
-      JSON.stringify({
-        schemaVersion: 3,
-        metadata: { name: 'A11y', shortName: 'A11y' },
-        canvas: { size: 512, background: { kind: 'solid', color: '#ffffff' } },
-        layers: [],
-        variants: { default: {} },
-        targets: [{ target: 'tauri', enabled: true }],
-        exportProfile: { outputBaseName: 'a11y', quality: 0.95, generateReport: false }
-      })
-    );
-    renderInApp(<ExportView />);
+  const SeededShell = ({ project }: { project: IconCoreProject }) => {
+    const { dispatch } = useComposer();
+    useEffect(() => {
+      dispatch({ type: 'LOAD_PROJECT', payload: { project, view: 'edit-space' } });
+    }, [dispatch, project]);
+    return <StudioShell />;
   };
 
-  afterEach(() => {
-    localStorage.removeItem('iconcore-composer-project');
+  const openExport = () => {
+    render(
+      <TooltipProvider delayDuration={400}>
+        <ToastProvider>
+          <ComposerProvider>
+            <SeededShell project={createBlankProject('A11y', 512)} />
+          </ComposerProvider>
+        </ToastProvider>
+      </TooltipProvider>
+    );
+    // The export surface is the Inspector Export tab itself.
+    const inspector = screen.getByRole('region', { name: 'Inspector panel' });
+    fireEvent.click(within(inspector).getByRole('tab', { name: 'Export' }));
+    return inspector;
+  };
+
+  it('names the format, size and variant groups and every toggle', () => {
+    const inspector = openExport();
+
+    for (const name of ['File format', 'PNG sizes', 'Variants']) {
+      expect(within(inspector).getByRole('group', { name })).toBeInTheDocument();
+    }
+    for (const name of ['SVG', 'PNG', 'ICO']) {
+      expect(within(inspector).getByRole('checkbox', { name })).toHaveAccessibleName();
+    }
   });
 
-  it('names the preset picker and every artifact toggle', async () => {
-    renderExport();
+  it('labels the export action with its file count', () => {
+    const inspector = openExport();
 
-    expect(await screen.findByRole('group', { name: 'Export presets' })).toBeInTheDocument();
-    // The Tauri target seeds real containers — the regression  exists for.
-    const toggles = await screen.findAllByRole('checkbox', { name: /^Include / });
-    expect(toggles.length).toBeGreaterThan(0);
-    toggles.forEach((toggle) => {
-      expect(toggle).toHaveAccessibleName();
-    });
-  });
-
-  it('names each row action by the artifact it acts on', async () => {
-    renderExport();
-
-    expect((await screen.findAllByRole('button', { name: /^Edit / })).length).toBeGreaterThan(0);
-    expect((await screen.findAllByRole('button', { name: /^Duplicate / })).length).toBeGreaterThan(0);
-    expect((await screen.findAllByRole('button', { name: /^Remove / })).length).toBeGreaterThan(0);
-  });
-
-  it('exposes the destination as a named group and labels the export action', async () => {
-    renderExport();
-
-    // The FieldGroup and the SegmentedControl must not share a name, or a screen
-    // reader announces "Destination" twice.
-    expect(await screen.findByRole('group', { name: 'Destination' })).toBeInTheDocument();
-    expect(await screen.findByRole('group', { name: 'Delivery destination' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: /Export ZIP|Export to folder|Download/ })).toBeInTheDocument();
-  });
-
-  it('explains the empty state instead of rendering a broken plan', () => {
-    localStorage.clear();
-    renderInApp(<ExportView />);
-
-    expect(screen.getByText(/nothing to export yet/i)).toBeInTheDocument();
+    expect(within(inspector).getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
   });
 });

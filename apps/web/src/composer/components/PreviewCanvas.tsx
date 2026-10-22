@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Circle, ImagePlus, Shapes, Slash, Square, Squircle, Star, Triangle, Type } from 'lucide-react';
-import type { IconLayer, IconVariant, IconCoreProject, ShapeDefinition } from '@iconcore/shared';
-import { defaultMaskRadius, resolveSize } from '@iconcore/shared';
-import { renderProject, createCanvasBackend, layerBaseRect } from '@iconcore/renderer';
-import { ButtonGroup, IconButton, Menu, MenuItem, Tooltip } from '@iconcore/ui';
+import { useMemo, useRef, useState } from 'react';
+import type { IconLayer } from '@iconcore/shared';
+import { resolveMaskRadius, resolveSize } from '@iconcore/shared';
+import { layerBaseRect } from '@iconcore/renderer';
 import { useComposer } from '../ComposerContext';
-import { useLayerImport } from '../hooks/useLayerImport';
+import { useRenderedProject } from '../hooks/useRenderedProject';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch } from '../utils/layerEdit';
 import { workAreaToCss } from '../utils/workArea';
@@ -15,37 +13,13 @@ import { layerSize } from '../utils/layerStyle';
 
 const SNAP_THRESHOLD_PX = 6;
 import { DropZone } from './DropZone';
+import { SafeAreaOverlay } from './SafeAreaOverlay';
 import { VariantPanel } from './VariantPanel';
 import { KeylineOverlay } from './KeylineOverlay';
 import { MarginOverlay } from './MarginOverlay';
 import { LayerContextMenu } from './LayerContextMenu';
 
 type DragMode = 'move' | 'scale' | 'rotate';
-
-/** Tiny rounded-rectangle glyph (lucide has no rounded-rect primitive). */
-const RoundedRectGlyph = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-    <rect x="2" y="3.5" width="12" height="9" rx="2.5" />
-  </svg>
-);
-
-interface ShapeOption {
-  kind: ShapeDefinition['kind'];
-  label: string;
-  icon: ReactNode;
-  defaults: ShapeDefinition;
-}
-
-/** Primitive shapes offered by the canvas "Add" menu, with creation defaults. */
-const SHAPE_OPTIONS: ShapeOption[] = [
-  { kind: 'rectangle', label: 'Rectangle', icon: <Square size={15} />, defaults: { kind: 'rectangle', width: 220, height: 220 } },
-  { kind: 'rounded-rectangle', label: 'Rounded rectangle', icon: <RoundedRectGlyph />, defaults: { kind: 'rounded-rectangle', width: 220, height: 220, cornerRadius: 48 } },
-  { kind: 'squircle', label: 'Squircle', icon: <Squircle size={15} />, defaults: { kind: 'squircle', width: 220, height: 220, cornerRadius: 48 } },
-  { kind: 'circle', label: 'Circle', icon: <Circle size={15} />, defaults: { kind: 'circle', width: 220, height: 220 } },
-  { kind: 'triangle', label: 'Triangle', icon: <Triangle size={15} />, defaults: { kind: 'triangle', width: 220, height: 220 } },
-  { kind: 'line', label: 'Line', icon: <Slash size={15} />, defaults: { kind: 'line', width: 280, height: 40 } },
-  { kind: 'star', label: 'Star', icon: <Star size={15} />, defaults: { kind: 'star', width: 220, height: 220 } }
-];
 
 interface DragState {
   id: string;
@@ -60,59 +34,17 @@ interface DragState {
 const layerTransform = (layer: IconLayer, zoom: number): string =>
   `translate(-50%, -50%) translate(${layer.transform.x * zoom}px, ${layer.transform.y * zoom}px) rotate(${layer.transform.rotation}deg) scale(${layer.transform.scale})`;
 
-/**
- * Render the project through the SAME Canvas2D pipeline used for export, so the
- * live preview is pixel-identical to the exported asset. Returns an object URL
- * for the rendered PNG, re-rendered (RAF-coalesced) whenever the project or
- * variant changes. `enabled` lets callers skip the (compare) ghost render.
- */
-const useRenderedIcon = (
-  project: IconCoreProject | null,
-  variant: IconVariant,
-  enabled = true
-): string | null => {
-  const [url, setUrl] = useState<string | null>(null);
-  const urlRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!project || !enabled || project.layers.length === 0) {
-      setUrl(null);
-      return;
-    }
-
-    let cancelled = false;
-    const backend = createCanvasBackend();
-    const raf = requestAnimationFrame(async () => {
-      try {
-        const blob = await renderProject(project, variant, resolveSize(project.canvas), backend);
-        if (cancelled) return;
-        const next = URL.createObjectURL(blob);
-        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-        urlRef.current = next;
-        setUrl(next);
-      } catch (err) {
-        console.error('Live preview render failed:', err);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-      backend.destroy();
-    };
-  }, [project, variant, enabled]);
-
-  useEffect(() => () => {
-    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-  }, []);
-
-  return url;
-};
-
-export const PreviewCanvas = () => {
+export const PreviewCanvas = (
+  { interactionMode = 'select', workAreaFallback = 'var(--ic-bg)' }: {
+    interactionMode?: 'select' | 'hand';
+    /**
+     * Para onde a mesa cai quando nada foi escolhido. O Composer usa o fundo
+     * do tema; a concha passa a mesa do mockup para que palco e faixa leiam
+     * um pano só. Só o padrão muda — cor escolhida pinta igual nos dois.
+     */
+    workAreaFallback?: string;
+  } = {}) => {
   const { state, dispatch } = useComposer();
-  const importFiles = useLayerImport();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; layerId: string } | null>(null);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
   const dragRef = useRef<DragState | null>(null);
@@ -125,8 +57,8 @@ export const PreviewCanvas = () => {
     [project]
   );
 
-  const previewUrl = useRenderedIcon(project, state.activeVariant);
-  const ghostUrl = useRenderedIcon(
+  const previewUrl = useRenderedProject(project, state.activeVariant);
+  const ghostUrl = useRenderedProject(
     project,
     'default',
     state.compareDefault && state.activeVariant !== 'default'
@@ -139,10 +71,18 @@ export const PreviewCanvas = () => {
   // below stays square-first (that is a UI surface, not the export model).
   const canvas = resolveSize(project.canvas);
   const displaySize = canvasSize * state.zoom;
-  // One resolver in `@iconcore/shared` owns the shape → radius rule. The old
-  // inline ternary handled three of the four shapes, so `squircle` silently got
-  // the square's 4px instead of the superellipse the keylines draw at.
-  const frameRadiusPx = project.canvas.maskRadius ?? defaultMaskRadius(state.maskShape, canvasSize);
+  // One resolver in `@iconcore/shared` owns the shape → radius rule — the same
+  // one the export mask reads, so frame and file cannot drift apart. The
+  // document's shape wins; the toolbar's choice covers a project that never
+  // declared one. The old inline ternary handled three of the four shapes, so
+  // `squircle` silently got the square's 4px instead of the superellipse the
+  // keylines draw at.
+  // The mask preview flag rounds the frame; off shows the square frame.
+  // The export always masks — this is the preview comparison, not the output.
+  const frameShape = project.canvas.maskShape ?? state.maskShape;
+  const frameRadiusPx = state.showMask
+    ? resolveMaskRadius({ ...project.canvas, maskShape: frameShape })
+    : 0;
   const frameRadius = `${frameRadiusPx}px`;
 
   const scheduleTransform = (id: string, transform: IconLayer['transform']) => {
@@ -163,6 +103,8 @@ export const PreviewCanvas = () => {
     layer: IconLayer,
     mode: DragMode
   ) => {
+    // The Hand tool owns the pointer: pans happen at the stage, never here.
+    if (interactionMode === 'hand') return;
     if (layer.locked) return;
     event.preventDefault();
     event.stopPropagation();
@@ -264,64 +206,8 @@ export const PreviewCanvas = () => {
     dispatch({ type: 'COMMIT_HISTORY' });
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    await importFiles(e.target.files);
-    e.target.value = '';
-  };
-
   return (
     <div className="ic-preview-panel">
-      <div className="ic-canvas-toolbar">
-        <div className="flex min-w-0 items-center gap-1">
-          <span className="ic-toolbar-label" aria-hidden="true">
-            Add
-          </span>
-          <ButtonGroup label="Add layer" className="ic-toolbar-group">
-            <Menu
-              label="Add shape"
-              trigger={<IconButton icon={<Shapes size={16} />} aria-label="Add shape" />}
-            >
-              {SHAPE_OPTIONS.map((shape) => (
-                <MenuItem
-                  key={shape.kind}
-                  icon={shape.icon}
-                  label={shape.label}
-                  onSelect={() => dispatch({ type: 'ADD_LAYER', payload: { kind: 'shape', shape: shape.defaults } })}
-                />
-              ))}
-            </Menu>
-            <Tooltip content="Add text layer">
-              <IconButton
-                icon={<Type size={16} />}
-                aria-label="Add text layer"
-                onClick={() => dispatch({ type: 'ADD_LAYER', payload: { kind: 'text' } })}
-              />
-            </Tooltip>
-            <Tooltip content="Add background fill layer">
-              <IconButton
-                icon={<Square size={16} fill="currentColor" strokeWidth={1} />}
-                aria-label="Add background fill layer"
-                onClick={() => dispatch({ type: 'ADD_LAYER', payload: { kind: 'background' } })}
-              />
-            </Tooltip>
-            <Tooltip content="Upload image">
-              <IconButton
-                icon={<ImagePlus size={16} />}
-                aria-label="Upload image"
-                onClick={() => fileRef.current?.click()}
-              />
-            </Tooltip>
-          </ButtonGroup>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp"
-            className="hidden"
-            multiple
-            onChange={handleFileUpload}
-          />
-        </div>
-      </div>
       <div
         className="ic-edit-stage"
         /**
@@ -330,9 +216,10 @@ export const PreviewCanvas = () => {
          * O `data-editor-backdrop` com tres regras CSS era o que impedia isto de ser uma
          * cor: o valor tinha de estar na folha, e por isso o `plain` — que ja era uma cor
          * — carregava um literal `#e6ecf5` dentro do `color-mix`. Inline, o fallback
-         * continua sendo `var(--ic-bg)` e nenhum literal existe.
+         * continua sendo o `workAreaFallback` (o fundo do tema no Composer) e nenhum
+         * literal existe.
          */
-        style={{ backgroundColor: workAreaToCss(state.workAreaColor) }}
+        style={{ backgroundColor: workAreaToCss(state.workAreaColor, workAreaFallback) }}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
@@ -341,6 +228,7 @@ export const PreviewCanvas = () => {
           // Canvas adjustments (work area) belong to the stage *around* the icon;
           // a click inside the icon frame is the frame's own business.
           if ((event.target as HTMLElement).closest('.ic-canvas-frame')) return;
+          if (interactionMode === 'hand') return;
           dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: null } });
         }}
       >
@@ -360,6 +248,7 @@ export const PreviewCanvas = () => {
               // its own: clicking the icon's background selects its handle, which
               // brings it up in the sidebar and in the inspector.
               event.stopPropagation();
+              if (interactionMode === 'hand') return;
               const background = layers.find((layer) => layer.role === 'background');
               if (background) dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: background.id } });
             }}
@@ -386,6 +275,7 @@ export const PreviewCanvas = () => {
                 que responde ao controle que a pessoa acabou de mexer.
             */}
             <MarginOverlay />
+            <SafeAreaOverlay />
             {layers.filter((baseLayer) => baseLayer.role !== 'background').map((baseLayer) => {
               const layer = resolveLayerVariant(baseLayer, state.activeVariant);
               if (!layer.visible) return null;
@@ -409,28 +299,38 @@ export const PreviewCanvas = () => {
                   onPointerDown={(event) => startDrag(event, layer, 'move')}
                   onClick={(event) => {
                     event.stopPropagation();
+                    if (interactionMode === 'hand') return;
                     dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
                   }}
                   onContextMenu={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
+                    if (interactionMode === 'hand') return;
                     dispatch({ type: 'SET_ACTIVE_LAYER', payload: { id: layer.id } });
                     setMenu({ x: event.clientX, y: event.clientY, layerId: layer.id });
                   }}
                 >
                   {selected && !layer.locked && (
                     <>
-                      <button
-                        type="button"
-                        className="ic-transform-handle ic-scale-handle"
-                        onPointerDown={(event) => startDrag(event, layer, 'scale')}
-                        title="Scale layer"
-                      />
+                      <span className="ic-dimension-tag" aria-hidden="true">
+                        {Math.round(rect.w)} × {Math.round(rect.h)}
+                      </span>
+                      {(['tl', 'tr', 'bl', 'br'] as const).map((corner) => (
+                        <button
+                          key={corner}
+                          type="button"
+                          className={`ic-transform-handle ic-scale-handle is-${corner}`}
+                          onPointerDown={(event) => startDrag(event, layer, 'scale')}
+                          title="Scale layer"
+                          aria-label={`Scale ${layer.name}`}
+                        />
+                      ))}
                       <button
                         type="button"
                         className="ic-transform-handle ic-rotate-handle"
                         onPointerDown={(event) => startDrag(event, layer, 'rotate')}
                         title="Rotate layer"
+                        aria-label={`Rotate ${layer.name}`}
                       />
                     </>
                   )}

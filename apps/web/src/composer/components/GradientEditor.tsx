@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { AlignHorizontalDistributeCenter, ArrowLeftRight, Plus, Trash2 } from 'lucide-react';
 import type { GradientFill, GradientStop } from '@iconcore/shared';
-import { Button, ColorField, IconButton, NumberField, Slider, type ColorValue } from '@iconcore/ui';
+import { Button, IconButton, NumberField, Slider, type ColorValue } from '@iconcore/ui';
+import { StudioColorPicker } from '../../studio/components/StudioColorPicker';
 import { normalizeStops, sampleStopDetailed, sampleStops } from '@iconcore/renderer';
 import { applyGradientPreset, presetsFor } from '../utils/gradientPresets';
 
@@ -207,11 +208,10 @@ export const GradientEditor = ({ fill, onChange, onCommit }: GradientEditorProps
                 className="w-16 shrink-0"
               />
               <div className="min-w-[9rem] flex-1">
-                <ColorField
-                  variant="inline"
+                <StudioColorPicker
                   label={`Stop ${index + 1} color`}
                   value={toColorValue(stop)}
-                  onChange={(next) => updateStop(index, { color: next.color, alpha: next.alpha }, true)}
+                  onChange={(next, transient) => updateStop(index, { color: next.color, alpha: next.alpha }, transient)}
                   onCommit={onCommit}
                 />
               </div>

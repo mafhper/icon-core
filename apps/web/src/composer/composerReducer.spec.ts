@@ -19,6 +19,14 @@ const asset = {
   height: 128
 };
 
+/**
+ * A primeira layer de conteudo. `NEW_PROJECT` semeia o handle de Background
+ * em `layers[0]`, entao `layers[0]` e o fundo, nao a forma — os overrides de
+ * variante moram na layer de conteudo.
+ */
+const primeiraConteudo = (state: ReturnType<typeof composerReducer>) =>
+  state.project!.layers.find((layer) => layer.role !== 'background')!;
+
 describe('Icon Core workspaces state', () => {
   it('creates a v3 project from an uploaded asset', () => {
     const project = createProjectFromAsset(asset);
@@ -75,12 +83,12 @@ describe('Icon Core workspaces state', () => {
     });
 
     const generated = composerReducer(withLayer, { type: 'GENERATE_VARIANT', payload: { variant: 'dark' } });
-    expect(generated.project!.layers[0].variantOverrides?.dark?.fill).toBeDefined();
+    expect(primeiraConteudo(generated).variantOverrides?.dark?.fill).toBeDefined();
     const darkBg = generated.project!.variants.dark?.canvas?.background;
     expect(darkBg?.kind === 'solid' ? darkBg.color : undefined).toBe('#0f172a');
 
     const cleared = composerReducer(generated, { type: 'CLEAR_VARIANT', payload: { variant: 'dark' } });
-    expect(cleared.project!.layers[0].variantOverrides?.dark).toBeUndefined();
+    expect(primeiraConteudo(cleared).variantOverrides?.dark).toBeUndefined();
   });
 
   it('drops the variant key entirely when clearing, so it stops reading as existing', () => {
@@ -114,7 +122,7 @@ describe('Icon Core workspaces state', () => {
     // key, so promotion removes it and `projectVariants` stops offering a slot
     // for it — there is nothing left of that variant to show.
     expect(Object.keys(promoted.project!.variants)).not.toContain('mono');
-    expect(promoted.project!.layers[0].variantOverrides?.mono).toBeUndefined();
+    expect(primeiraConteudo(promoted).variantOverrides?.mono).toBeUndefined();
   });
 
   it('keeps sibling variants when one is cleared', () => {
@@ -218,5 +226,48 @@ describe('Work area color (SET_WORK_AREA_COLOR)', () => {
     expect(next.isDirty).toBe(initialState.isDirty);
     expect(next.history.length).toBe(initialState.history.length);
     expect(next.historyIndex).toBe(initialState.historyIndex);
+  });
+});
+
+describe('Studio view flags (TOGGLE_SAFE_AREA, TOGGLE_MASK)', () => {
+  it('starts masked and without the safe-area guide', () => {
+    expect(initialState.showMask).toBe(true);
+    expect(initialState.showSafeArea).toBe(false);
+  });
+
+  it('toggles each flag without touching the document, dirty or history', () => {
+    const masked = composerReducer(initialState, { type: 'TOGGLE_MASK' });
+    expect(masked.showMask).toBe(false);
+    expect(masked.project).toBe(initialState.project);
+    expect(masked.isDirty).toBe(initialState.isDirty);
+
+    const guided = composerReducer(masked, { type: 'TOGGLE_SAFE_AREA' });
+    expect(guided.showSafeArea).toBe(true);
+    // The two flags are independent: unmasking never guides, guiding never unmasks.
+    expect(guided.showMask).toBe(false);
+    expect(guided.history.length).toBe(initialState.history.length);
+  });
+});
+
+describe('Studio close document (CLOSE_PROJECT)', () => {
+  it('clears the canvas and opens the workspace list, keeping the bench', () => {
+    const open = composerReducer(initialState, { type: 'NEW_PROJECT', payload: { name: 'Open', size: 512 } });
+    const withLayer = composerReducer(open, {
+      type: 'ADD_LAYER',
+      payload: { kind: 'shape', shape: { kind: 'circle', width: 100, height: 100 } }
+    });
+    expect(withLayer.project).not.toBeNull();
+
+    const closed = composerReducer(withLayer, { type: 'CLOSE_PROJECT' });
+    expect(closed.project).toBeNull();
+    expect(closed.projectId).toBeNull();
+    expect(closed.activeLayerId).toBeNull();
+    expect(closed.view).toBe('workspaces');
+    expect(closed.history).toHaveLength(0);
+    expect(closed.historyIndex).toBe(-1);
+    expect(closed.isDirty).toBe(false);
+    // The bench is not the document: zoom and overlays survive the close.
+    expect(closed.zoom).toBe(withLayer.zoom);
+    expect(closed.showGrid).toBe(withLayer.showGrid);
   });
 });

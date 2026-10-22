@@ -34,7 +34,8 @@ test('keyline: partes ligaveis, uma a uma', async ({ page }) => {
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
@@ -42,8 +43,9 @@ test('keyline: partes ligaveis, uma a uma', async ({ page }) => {
   // Desligada por padrao — o padrao antigo era `false` e segue assim.
   await expect(page.locator('.ic-keyline-overlay')).toHaveCount(0);
 
-  // Liga pela barra de acao. O dono pediu que o atalho **continue** la.
-  await page.getByRole('button', { name: 'Toggle keyline grid' }).click();
+  // Liga pelo View options da barra do canvas, a morada do toggle desde o slice do chrome.
+  await page.getByRole('button', { name: 'View options' }).click();
+  await page.getByRole('menuitem', { name: 'Keylines — Off' }).click();
   await page.waitForTimeout(300);
 
   const overlay = page.locator('.ic-keyline-overlay');
@@ -89,12 +91,14 @@ test('keyline: iOS e Android **nao** desenham as mesmas guias', async ({ page })
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
 
-  await page.getByRole('button', { name: 'Toggle keyline grid' }).click();
+  await page.getByRole('button', { name: 'View options' }).click();
+  await page.getByRole('menuitem', { name: 'Keylines — Off' }).click();
   await page.waitForTimeout(300);
 
   /**
@@ -158,12 +162,14 @@ test('keyline: a zona desenhada carrega o numero da plataforma', async ({ page }
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
 
-  await page.getByRole('button', { name: 'Toggle keyline grid' }).click();
+  await page.getByRole('button', { name: 'View options' }).click();
+  await page.getByRole('menuitem', { name: 'Keylines — Off' }).click();
   await page.waitForTimeout(300);
 
   /**
@@ -232,11 +238,11 @@ test('keyline: a zona desenhada carrega o numero da plataforma', async ({ page }
 });
 
 /**
- * O toggle da barra **não** esvazia as partes.
+ * O toggle do View options **não** esvazia as partes.
  *
- * Regressão de estado que o reducer documenta: se `Ctrl/Ctrl+K` limpasse o conjunto,
- * duas vezes deixaria o painel com tudo desligado e a pessoa teria de religar parte por
- * parte. O conjunto é preferência; o toggle é exibição.
+ * Regressão de estado que o reducer documenta: se o toggle limpasse o conjunto,
+ * duas vezes deixaria o painel com tudo desligado e a pessoa teria de religar
+ * parte por parte. O conjunto é preferência; o toggle é exibição.
  */
 test('keyline: o atalho liga e desliga sem perder as partes', async ({ page }) => {
   await page.goto('/icon-core/app/?theme=dark');
@@ -246,25 +252,28 @@ test('keyline: o atalho liga e desliga sem perder as partes', async ({ page }) =
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
 
-  const toggle = page.getByRole('button', { name: 'Toggle keyline grid' });
+  // O menu fecha a cada escolha, entao cada toggle reabre o View options.
+  const toggle = async (rotulo: string) => {
+    await page.getByRole('button', { name: 'View options' }).click();
+    await page.getByRole('menuitem', { name: rotulo }).click();
+    await page.waitForTimeout(200);
+  };
   const overlay = page.locator('.ic-keyline-overlay');
 
-  await toggle.click();
-  await page.waitForTimeout(200);
+  await toggle('Keylines — Off');
   const antes = await contarGuias(page);
   expect(antes).toBeGreaterThan(0);
 
-  await toggle.click();
-  await page.waitForTimeout(200);
+  await toggle('Keylines — On');
   await expect(overlay).toHaveCount(0);
 
-  await toggle.click();
-  await page.waitForTimeout(200);
+  await toggle('Keylines — Off');
   // As mesmas guias de antes, nao um overlay vazio.
   expect(await contarGuias(page)).toBe(antes);
 });

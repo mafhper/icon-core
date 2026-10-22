@@ -36,6 +36,63 @@
         "apps/web/src/fonts/CalSans-Bold.woff2"
       ],
       "notes": "REDISTRIBUTED. Two static weights (400, 700) as WOFF2, from fonts/calsans-static-base. Bundled because a text layer rendered on canvas falls back to whatever the machine has: the editor preview and the PNG export disagreed with the SVG, which carries the family NAME and resolves it on the viewer's machine. WOFF2 rather than TTF is 3x smaller for the same outlines (69 KB vs 226 KB per weight). The apps/web/src/fonts/ copies are DERIVED by scripts/build-brand.mjs and compared by SHA-256 in scripts/check-brand.mjs - they live inside src/ because that is where Vite resolves and hashes the url(); public/ would not respect the /icon-core/app/ base. The OFL permits embedding and redistribution; the full text is under LICENSES/. See assets/fonts/README.md."
+    },
+    {
+      "id": "manrope",
+      "name": "Manrope",
+      "source": "https://github.com/googlefonts/manrope",
+      "license": "OFL-1.1",
+      "licenseFile": "LICENSES/manrope-OFL.txt",
+      "attribution": "NOTICE",
+      "files": [
+        "assets/fonts/Manrope-Regular.woff2",
+        "assets/fonts/Manrope-Medium.woff2",
+        "assets/fonts/Manrope-SemiBold.woff2",
+        "assets/fonts/Manrope-Bold.woff2",
+        "apps/web/src/fonts/Manrope-Regular.woff2",
+        "apps/web/src/fonts/Manrope-Medium.woff2",
+        "apps/web/src/fonts/Manrope-SemiBold.woff2",
+        "apps/web/src/fonts/Manrope-Bold.woff2",
+        "apps/promo/src/fonts/Manrope-Regular.woff2",
+        "apps/promo/src/fonts/Manrope-Medium.woff2",
+        "apps/promo/src/fonts/Manrope-SemiBold.woff2",
+        "apps/promo/src/fonts/Manrope-Bold.woff2"
+      ],
+      "notes": "REDISTRIBUTED. Four static weights (400 Regular, 500 Medium, 600 SemiBold, 700 Bold) as latin-subset WOFF2 (~14 KB each), from @fontsource/manrope 5.2.5 (OFL). Static, not variable, per the Cal Sans convention in assets/fonts/README.md: the Studio chrome asks for discrete weights (400/500/600/700; the mockup's 650 resolves to Bold by CSS font matching) and a variable axis would add an unused dimension. Same mechanics as Cal Sans: source under assets/fonts/, derived copies inside each app's src/fonts/ (where Vite resolves and hashes url()), SHA-256 compared by scripts/check-brand.mjs. Declared for the Studio shell (FATIA 1b) and, since LOTE 111, also served by the landing page: apps/promo vendored the same four files and dropped its Google Fonts link. Never via CDN (offline requirement)."
+    },
+    {
+      "id": "sora",
+      "name": "Sora",
+      "source": "https://github.com/sora-xor/sora-font",
+      "license": "OFL-1.1",
+      "licenseFile": "LICENSES/sora-OFL.txt",
+      "attribution": "NOTICE",
+      "files": [
+        "assets/fonts/Sora-Regular.woff2",
+        "assets/fonts/Sora-SemiBold.woff2",
+        "assets/fonts/Sora-Bold.woff2",
+        "apps/promo/src/fonts/Sora-Regular.woff2",
+        "apps/promo/src/fonts/Sora-SemiBold.woff2",
+        "apps/promo/src/fonts/Sora-Bold.woff2"
+      ],
+      "notes": "REDISTRIBUTED. Three static weights (400 Regular, 600 SemiBold, 700 Bold) as latin-subset WOFF2 (~15 KB each), from @fontsource/sora 5.3.0 (OFL; Copyright 2019 The Sora Project Authors). The landing page's display face (--font-display in apps/promo); the 400/600/700 set covers regular copy, the semibold headings the token is meant for, and bold. Static, not variable, per the Cal Sans convention in assets/fonts/README.md. Source under assets/fonts/, derived copy inside apps/promo/src/fonts/ (where Vite resolves and hashes url()), SHA-256 compared by scripts/check-brand.mjs. Never via CDN (offline requirement): the page used to request this family from fonts.googleapis.com."
+    },
+    {
+      "id": "ibm-plex-mono",
+      "name": "IBM Plex Mono",
+      "source": "https://github.com/IBM/plex",
+      "license": "OFL-1.1",
+      "licenseFile": "LICENSES/ibm-plex-mono-OFL.txt",
+      "attribution": "NOTICE",
+      "files": [
+        "assets/fonts/IBMPlexMono-Regular.woff2",
+        "assets/fonts/IBMPlexMono-Medium.woff2",
+        "assets/fonts/IBMPlexMono-SemiBold.woff2",
+        "apps/promo/src/fonts/IBMPlexMono-Regular.woff2",
+        "apps/promo/src/fonts/IBMPlexMono-Medium.woff2",
+        "apps/promo/src/fonts/IBMPlexMono-SemiBold.woff2"
+      ],
+      "notes": "REDISTRIBUTED. Three static weights (400 Regular, 500 Medium, 600 SemiBold) as latin-subset WOFF2 (~15 KB each), from @fontsource/ibm-plex-mono 5.3.0 (OFL; Copyright 2017 IBM Corp. All rights reserved). The landing page's mono face (--font-mono in apps/promo), used for release labels, file formats and short numeric values; 400/500/600 are the weights the page asks for. Same mechanics as Manrope: source under assets/fonts/, derived copy inside apps/promo/src/fonts/, SHA-256 compared by scripts/check-brand.mjs. Never via CDN (offline requirement)."
     }
   ]
 }

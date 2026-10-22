@@ -8,6 +8,7 @@ import {
   type ComposerView
 } from './composerReducer';
 import { describeSaveOutcome, downloadProject, projectFileName } from './utils/projectStorage';
+import { requestExportFocus } from './utils/exportFocus';
 import {
   openWithFileSystemAccess,
   saveProjectInPlace,
@@ -332,10 +333,17 @@ const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
     const handleHashChange = () => {
       const raw = window.location.hash.replace(/^#\/?/, '').split('/')[0];
       const view = normalizeRoute(raw);
-      if (raw === 'composer' || raw === 'compose' || raw === 'start' || raw === 'export') {
+      // Rotas legadas de export (`#/export`, `#/export-utilities`): o modal saiu
+      // com o P2 e a superfície é a aba Export do Inspector. A deep-link cai no
+      // studio e **foca a aba** — o link publicado (o promo linka esta rota)
+      // continua contando a mesma história, e o hash velho sequer fica na barra
+      // de endereço.
+      const legacyExport = raw === 'export' || raw === 'export-utilities';
+      if (raw === 'composer' || raw === 'compose' || raw === 'start' || legacyExport) {
         window.history.replaceState(null, '', `#/` + view);
       }
       dispatch({ type: 'NAVIGATE', payload: view });
+      if (legacyExport) requestExportFocus();
     };
 
     handleHashChange();

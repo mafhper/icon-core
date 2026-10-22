@@ -71,13 +71,14 @@ const abrirComTexto = async (page: Page) => {
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(600);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(400);
 
   /**
    * Seleciona a camada explicitamente, e o motivo esta aqui.
    *
-   * `Add text layer` **cria** a camada; se ela nao vier selecionada, o inspetor mostra o
+   * O item Text do Insert **cria** a camada; se ela nao vier selecionada, o inspetor mostra o
    * estado do canvas e a secao "Text" — que e onde mora o seletor de fonte — nem existe no
    * DOM. O teste falhava procurando um `combobox` que nunca foi renderizado, e a causa nao
    * era o `FontPicker`.

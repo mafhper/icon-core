@@ -56,6 +56,17 @@ describe('workAreaToCss', () => {
     expect(workAreaToCss({ color: '#abcde', alpha: 1 })).toBe('var(--ic-bg)');
     expect(workAreaToCss({ color: 'vermelho', alpha: 1 })).toBe('var(--ic-bg)');
   });
+
+  it('o fallback e parametrizavel: a concha cai na mesa, o Composer no fundo', () => {
+    // A faixa continua do mockup: palco e faixa no mesmo pano. O Composer
+    // mantem o fundo do tema; a concha passa a mesa para os dois inlines
+    // (palco e superficie de edicao). Cor escolhida ignora o fallback.
+    expect(workAreaToCss(null, 'var(--ic-workspace)')).toBe('var(--ic-workspace)');
+    expect(workAreaToCss({ color: '', alpha: 1 }, 'var(--ic-workspace)')).toBe(
+      'var(--ic-workspace)'
+    );
+    expect(workAreaToCss({ color: '#1e1e1e', alpha: 1 }, 'var(--ic-workspace)')).toBe('#1e1e1e');
+  });
 });
 
 describe('resolveWorkAreaColor', () => {

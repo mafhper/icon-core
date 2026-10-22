@@ -17,9 +17,12 @@ import { maskModeFor, encodeRaster } from '../src/encoders/raster';
  *    it saves, clips, and then immediately restores, which cancels the clip —
  *    so the export has always been full bleed.
  *
- * These tests pin the rule and, more importantly, the two places where it must
- * **not** apply: a container (`.ico`/`.icns`) and a PWA maskable tile, because in
- * both cases the platform states the contract, and guessing would break it.
+ * These tests pin the rule and, more importantly, the places where it must
+ * **not** apply: a container (`.ico`/`.icns`) and an opaque artifact that
+ * declares no shape of its own (a PWA maskable tile) — in both cases the
+ * platform states the contract, and guessing would break it. An opaque artifact
+ * that **does** declare a shape is masked: that is how a legacy round icon
+ * stays expressible instead of shipping as a copy of the square one.
  */
 
 const layer = (): IconLayer => ({
@@ -148,9 +151,13 @@ describe('where the mirror must not apply', () => {
     const container = { format: 'ico' as const, background: undefined };
     expect(maskModeFor(container, project({ maskShape: 'circle' }))).toBe('none');
     expect(maskModeFor({ format: 'icns' as const }, project({ maskShape: 'circle' }))).toBe('none');
+    // Container vence até a forma do próprio artefato.
+    expect(maskModeFor({ format: 'ico' as const, maskShape: 'circle' }, project({ maskShape: 'squircle' }))).toBe(
+      'none'
+    );
   });
 
-  it('leaves an opaque artifact full bleed — a PWA maskable is cropped by the launcher', () => {
+  it('leaves an opaque artifact full bleed when it declares no shape — a PWA maskable is cropped by the launcher', () => {
     const maskable = { format: 'png' as const, background: 'opaque' as const };
     expect(maskModeFor(maskable, project({ maskShape: 'circle' }))).toBe('none');
   });
@@ -184,11 +191,11 @@ describe('where the mirror must not apply', () => {
     expect(maskModeFor({ format: 'png' }, project())).toBe('none');
   });
 
-  it('an opaque artifact stays full bleed even asking for a shape', () => {
-    // Um PNG opaco recortado vira um disco com fundo transparente na borda — que é pior
-    // que não recortar. A regra do opaco vem antes da forma, e antes dela mesmo.
-    expect(maskModeFor({ format: 'png', background: 'opaque', maskShape: 'circle' }, project())).toBe(
-      'none'
-    );
+  it('an opaque artifact that declares its own shape is masked', () => {
+    // A regra do opaco cobre o caso **silencioso** (maskable sem forma declarada,
+    // que o launcher recorta). Quem declara a forma está falando de si: um
+    // `ic_launcher_round` opaco existe para ser redondo — e antes desta ordem ele
+    // saía quadrado, byte a byte igual ao arquivo quadrado. A forma declarada vence.
+    expect(maskModeFor({ format: 'png', background: 'opaque', maskShape: 'circle' }, project())).toBe('circle');
   });
 });

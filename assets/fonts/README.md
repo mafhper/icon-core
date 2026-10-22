@@ -1,6 +1,6 @@
 # Fontes
 
-**Este diretório é a fonte. `apps/web/src/fonts/` é derivado — nunca edite lá.**
+**Este diretório é a fonte. `apps/web/src/fonts/` e `apps/promo/src/fonts/` são derivados — nunca edite neles.**
 
 ```bash
 node scripts/build-brand.mjs           # gera os derivados (arte e fonte)
@@ -110,14 +110,14 @@ a próxima coisa a decidir: embutir o mono também, ou aceitar a dependência sa
 falha sem rede.
 
 ## A interface do app usa a Cal Sans
-
 `--font-display`, `--font-body` e o `body` apontam para a Cal Sans embarcada. Isso é o que
 torna a troca do default completa: sem isso, a fonte embarcada ficaria disponível no seletor
 enquanto a tela continuaria pedindo a remota, e o defeito seria apenas trocado de lugar.
 
-O `apps/promo` **não** foi tocado: ele tem identidade própria (`Manrope` para display) e é a
-landing page, não o editor. Se a padronização da frota quiser a Cal Sans lá também, é a mesma
-mecânica — fonte em `assets/fonts/`, derivado, portão.
+O `apps/promo` **tem identidade própria** — Manrope no corpo, Sora no display e IBM Plex
+Mono nos rótulos — e desde o LOTE 111 as três vêm destes arquivos, não de CDN. É a mesma
+mecânica do app: fonte em `assets/fonts/`, derivado em `apps/promo/src/fonts/`, portão
+comparando os dois. A Cal Sans não entra na landing page; ela é a typeface do editor.
 
 ## O que o SVG ainda não entrega
 
@@ -130,3 +130,63 @@ Isto está escrito no validador (`TEXT_FONT_NOT_EMBEDDED`), que só avisa quando
 
 A correção de raiz é **converter o texto em `<path>` no export**, como o Figma faz no
 "flatten". Não existe ainda, e é a peça que fecha o contrato de fidelidade do SVG.
+
+## Manrope — a fonte da concha do Studio (FATIA 1b)
+
+| | |
+|---|---|
+| Origem | <https://github.com/googlefonts/manrope> (arquivos via `@fontsource/manrope@5.2.5`, mesma OFL) |
+| Licença | SIL Open Font License 1.1 — texto em `LICENSES/manrope-OFL.txt` |
+| Pesos embarcados | 400 (Regular), 500 (Medium), 600 (SemiBold), 700 (Bold) |
+| Formato | WOFF2 com subconjunto latin — ~14 KB por peso |
+
+O mockup do Studio usa Manrope como typeface da interface (densidade 10/11/12px,
+pesos 400–700). A decisão do dono na FATIA 1b adota a aparência do mockup, então a
+concha (`.studio`) compõe em Manrope — declarada por `@font-face` dentro de
+`apps/web/src/studio/studio.css`, com `url('../fonts/…')` para os derivados em
+`apps/web/src/fonts/` (o mesmo motivo do `src/` da Cal Sans: o Vite resolve,
+hasheia e respeita a base `/icon-core/app/`).
+
+**Estáticos, não variável**, pela mesma razão da Cal Sans: a concha pede pesos
+discretos (400/500/600/700) e um eixo contínuo traria uma dimensão sem uso. O 650
+do mockup (marca) resolve para o Bold pelo casamento de peso do CSS — diferença
+imperceptível, sem arquivo extra.
+
+**Nunca via CDN.** Offline é requisito do produto, e vale para os dois fronts: a concha do
+editor e a landing page usam só estes arquivos — sem rede, sem fallback, sem troca de
+métrica. Até o LOTE 111 o `apps/promo` carregava Manrope do Google Fonts; hoje ele serve a
+cópia local. O guard `check-third-party-assets.mjs` reprova se faltar metadado ou arquivo; o
+`check-brand.mjs` compara fonte e derivados por SHA-256; o spec
+`tests/e2e/promo-fonts.spec.ts` reprova qualquer subrecurso de renderização fora da origem
+(inclusive um `<link>` de fonte que voltasse).
+
+A Cal Sans continua onde estava: typeface das camadas de texto, do corpo do app
+fora da concha e da galeria `#/ui`. Nada aqui muda o default dela.
+
+## Sora e IBM Plex Mono — o display e o mono da landing page (LOTE 111)
+
+| | Sora | IBM Plex Mono |
+|---|---|---|
+| Origem | <https://github.com/sora-xor/sora-font> (arquivos via `@fontsource/sora@5.3.0`, mesma OFL) | <https://github.com/IBM/plex> (arquivos via `@fontsource/ibm-plex-mono@5.3.0`, mesma OFL) |
+| Licença | SIL Open Font License 1.1 — `LICENSES/sora-OFL.txt` | SIL Open Font License 1.1 — `LICENSES/ibm-plex-mono-OFL.txt` |
+| Pesos embarcados | 400 (Regular), 600 (SemiBold), 700 (Bold) | 400 (Regular), 500 (Medium), 600 (SemiBold) |
+| Formato | WOFF2 com subconjunto latin — ~15 KB por peso | WOFF2 com subconjunto latin — ~15 KB por peso |
+| Papel | `--font-display` da landing page | `--font-mono` da landing page |
+
+A landing page puxava as três famílias de `fonts.googleapis.com` por um `<link>`. Isso
+sobreviveu porque a página é estática e **parece** correta com rede: sem rede, as fontes
+somem, a métrica muda e nada acusa. O LOTE 111 fechou o contrato — `@font-face` local em
+`apps/promo/src/index.css`, com `font-display: swap` (a landing page não mede texto em
+canvas; ao contrário do Studio, pintar o fallback na hora é melhor que o título invisível).
+
+**Pesos escolhidos pelo uso, não pela lista do link.** O `<link>` pedia 400–800 para as três
+famílias; a página pede 400/500/600 no mono e pesos até 760 no corpo e no display, que
+resolvem no Bold embarcado pelo casamento de peso do CSS — a mesma regra do resto do
+repositório. Um peso a mais é byte que ninguém pede; um a menos é síntese no navegador.
+
+As três famílias seguem a mesma regra: fonte em `assets/fonts/`, derivado em
+`apps/promo/src/fonts/` (o Vite resolve, hasheia e respeita a base `/icon-core/`),
+`check-brand.mjs` comparando por SHA-256 e `third-party/manifest.json` com a licença e os
+arquivos. O spec `tests/e2e/promo-fonts.spec.ts` prova o resultado no navegador: as três
+famílias carregam de `.woff2` da própria origem, e nenhum subrecurso de renderização sai
+dela.

@@ -182,10 +182,24 @@ export interface Stroke {
   color: string;
   width: number;
   alignment: 'center' | 'inside' | 'outside';
+  /**
+   * End caps for **open** paths (the line shape). Additive and optional:
+   * absent means `'butt'` (the flat end) — for closed shapes caps do not paint.
+   */
+  cap?: 'butt' | 'round' | 'square';
+  /**
+   * Corner joins. Additive and optional: absent means `'miter'` (canvas/SVG
+   * default), clamped by the platforms' default miter limit of 4.
+   */
+  join?: 'miter' | 'round' | 'bevel';
 }
 
 export type LayerEffectKind =
   | 'depth-shadow'
+  | 'drop-shadow'
+  | 'inner-shadow'
+  | 'backdrop-blur'
+  | 'glass'
   | 'inner-lift'
   | 'edge-highlight'
   | 'soft-refraction'
@@ -193,7 +207,13 @@ export type LayerEffectKind =
   | 'translucent-fill'
   | 'noise-grain'
   | 'adaptive-stroke'
-  | 'mono-mapper';
+  | 'mono-mapper'
+  /**
+   * Bloom (Tier 3): stacked zero-offset drop shadows — an intense glow.
+   * Additive and optional like every kind here: absent/disabled paints
+   * exactly what the project always painted.
+   */
+  | 'bloom';
 
 export interface LayerEffect {
   kind: LayerEffectKind;
@@ -255,6 +275,12 @@ export interface ShapeDefinition {
   width: number;
   height: number;
   cornerRadius?: number;
+  /**
+   * Corner smoothing for `rounded-rectangle`, 0–1 (Figma/OpenPencil's second
+   * corner level; the editor shows it as %). **Additive and optional:**
+   * absent/0 renders exactly the plain rounded rectangle every project had.
+   */
+  cornerSmoothing?: number;
   points?: Array<{ x: number; y: number }>;
   /** star: number of points (default 5) and inner/outer radius ratio (default 0.5). */
   pointCount?: number;

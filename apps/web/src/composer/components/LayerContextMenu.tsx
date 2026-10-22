@@ -8,6 +8,13 @@ interface LayerContextMenuProps {
   y: number;
   layerId: string;
   onClose: () => void;
+  /**
+   * Studio delete confirmation (Fase 2): when provided, the Delete item hands
+   * the layer id back instead of dispatching `REMOVE_LAYER` itself, so the
+   * caller can ask first. Absent, the menu keeps its direct delete (canvas
+   * path and keyboard Delete stay one undo away).
+   */
+  onDeleteRequest?: (id: string) => void;
 }
 
 const MENU_MARGIN = 8;
@@ -23,7 +30,7 @@ const MENU_KEYS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
  * first item, ArrowUp/Down (and Home/End) move, Escape/Tab close, and focus
  * returns to the element that opened it.
  */
-export const LayerContextMenu = ({ x, y, layerId, onClose }: LayerContextMenuProps) => {
+export const LayerContextMenu = ({ x, y, layerId, onClose, onDeleteRequest }: LayerContextMenuProps) => {
   const { state, dispatch } = useComposer();
   const resetAspect = useResetLayerAspect(layerId);
   const layer = state.project?.layers.find((item) => item.id === layerId);
@@ -136,7 +143,22 @@ export const LayerContextMenu = ({ x, y, layerId, onClose }: LayerContextMenuPro
           {resetAspect.busy ? 'Measuring…' : 'Reset Aspect Ratio'}
         </button>
       )}
-      <button role="menuitem" type="button" tabIndex={-1} className="is-danger" onClick={() => run({ type: 'REMOVE_LAYER', payload: { id: layer.id } })}>Delete</button>
+      <button
+        role="menuitem"
+        type="button"
+        tabIndex={-1}
+        className="is-danger"
+        onClick={() => {
+          if (onDeleteRequest) {
+            onDeleteRequest(layer.id);
+            onClose();
+          } else {
+            run({ type: 'REMOVE_LAYER', payload: { id: layer.id } });
+          }
+        }}
+      >
+        Delete
+      </button>
     </div>
   );
 };

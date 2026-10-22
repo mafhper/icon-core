@@ -194,9 +194,14 @@ glob pick up the class names, so a token that is not mapped into the app's
 **`apps/web`** — the editor. All logic lives in `src/composer/`: a reducer
 (`composerReducer.ts`) holding the project, selection, variants and history;
 a context that adds `localStorage` restore, a debounced autosave, and hash
-routing (`#/workspaces`, `#/edit-space`, `#/export-utilities`, `#/ui`); and the
-views and panels. Export runs `executePlan` against a canvas backend, then ships
-the files as a zip, as individual saves, or to a folder on desktop.
+routing (`#/workspaces`, `#/edit-space`, `#/ui`); the
+studio shell in `src/studio/` (titlebar, toolbar, layers, canvas stage,
+inspector, statusbar) over the reused panels and viewport; and the `#/ui`
+component gallery. Export lives in the Inspector Export tab (no route of its
+own): `#/export` and `#/export-utilities` remain as legacy deep-links that land
+in the studio with the tab focused. Export runs `executePlan` against a canvas
+backend, then ships the files as a zip, as individual saves, or to a folder on
+desktop.
 
 **`apps/promo`** — the landing page. It imports nothing from `@iconcore/*` on
 purpose; its icon pack in `public/branding/` is real generated output, not
@@ -238,7 +243,9 @@ Things a reader will otherwise waste time rediscovering:
   on the transform, on layer placement and on polygon outlines because tests
   say so, not because one shared implementation serves both. Adding a shape kind
   means touching both.
-- No visual gate compares a rasterised Canvas render against the SVG export
-  with a tolerance. The parity tests work on geometry, which is cheaper and
-  catches the class of bug that actually shipped, but it is not the same thing
-  as pixel agreement.
+- Pixel parity between the two pipelines is gated per fixture:
+  `scripts/check-svg-parity.mjs` renders every fixture through the browser
+  canvas and through the SVG export and compares pixel by pixel, each fixture
+  with its own `minFora` allowance — and a fixture without a declared limit
+  fails closed. Geometry-only unit tests remain the cheap net; the gate is the
+  pixel agreement.

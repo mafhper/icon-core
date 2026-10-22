@@ -51,7 +51,8 @@ const abrir = async (page: Page) => {
 /** Cria `n` camadas de texto com nomes distintos e fecha os popovers. */
 const criarCamadas = async (page: Page, n: number) => {
   for (let i = 0; i < n; i++) {
-    await page.getByRole('button', { name: 'Add text layer' }).click();
+    await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
     await page.waitForTimeout(220);
   }
   await page.keyboard.press('Escape');
@@ -98,8 +99,11 @@ test('arrastar a camada de baixo para o topo muda a ordem na lista', async ({ pa
   await criarCamadas(page, 3);
 
   const antes = await ordem(page);
-  expect(antes, 'a lista nao tem as tres camadas').toHaveLength(3);
+  // "4": as tres de texto mais o Background semeado, sempre por ultimo.
+  expect(antes, 'a lista nao tem as tres camadas mais o Background').toHaveLength(4);
+  expect(antes.at(-1)).toMatch(/background/i);
 
+  // Linha 2 = a ultima DE CONTEUDO (a 3 e o Background, que nao se arrasta).
   await arrastar(page, 2, 0);
 
   const depois = await ordem(page);
@@ -111,9 +115,10 @@ test('arrastar a camada de baixo para o topo muda a ordem na lista', async ({ pa
    * Antes da correcao esta lista voltava **igual** — `REORDER_LAYER` era um no-op, porque
    * `reorderLayers` ordenava de novo pelo `zIndex` antigo e descartava o splice.
    */
-  expect(antes[2], 'a camada arrastada nao era a ultima').not.toBe(antes[0]);
+  expect(antes[2], 'a camada arrastada nao era a ultima de conteudo').not.toBe(antes[0]);
   expect(depois[0], 'arrastar para o topo nao pôs a camada no topo').toBe(antes[2]);
   expect(depois, 'a lista nao mudou').not.toEqual(antes);
+  expect(depois.at(-1), 'o Background saiu do fim').toMatch(/background/i);
 });
 
 test('arrastar para baixo tambem muda a ordem, e nao volta ao comeco', async ({ page }) => {
@@ -122,20 +127,22 @@ test('arrastar para baixo tambem muda a ordem, e nao volta ao comeco', async ({ 
 
   const antes = await ordem(page);
 
+  // Linha 0 = topo de conteudo, linha 2 = fim de conteudo (a 3 e o Background).
   await arrastar(page, 0, 2);
 
   const depois = await ordem(page);
   expect(depois, 'arrastar para baixo nao mudou a lista').not.toEqual(antes);
 
   /**
-   * A camada que estava no topo desce ate o fim — e **nao** ate o lugar de onde veio.
+   * A camada que estava no topo desce ate o fim DO CONTEUDO — e **nao** ate o lugar de onde veio.
    *
    * Este e o off-by-one que so aparecia com o handle de Background: a conta era feita na
    * lista (descendente) e refletida no fim, e os dois frames tem espacos de indices
    * diferentes quando existe a vaga 0 do Background. O sintoma e uma camada que desce dois
    * degraus em vez de um.
    */
-  expect(depois.at(-1), 'a camada do topo nao desceu ate o fim').toBe(antes[0]);
+  expect(depois[2], 'a camada do topo nao desceu ate o fim do conteudo').toBe(antes[0]);
+  expect(depois.at(-1), 'o Background saiu do fim').toMatch(/background/i);
 });
 
 test('arrastar uma camada vizinha troca as duas de posicao', async ({ page }) => {
@@ -149,7 +156,9 @@ test('arrastar uma camada vizinha troca as duas de posicao', async ({ page }) =>
 
   const depois = await ordem(page);
   expect(depois).not.toEqual(antes);
-  expect(depois, 'as duas vizinhas nao trocaram de lugar').toEqual([antes[0], antes[2], antes[1]]);
+  // A troca e so no conteudo (linhas 0..2); o Background segue por ultimo.
+  expect(depois.slice(0, 3), 'as duas vizinhas nao trocaram de lugar').toEqual([antes[0], antes[2], antes[1]]);
+  expect(depois.at(-1), 'o Background saiu do fim').toMatch(/background/i);
 });
 
 test('arrastar com o handle de Background presente nao o traz para cima', async ({ page }) => {
@@ -157,11 +166,12 @@ test('arrastar com o handle de Background presente nao o traz para cima', async 
   await criarCamadas(page, 3);
 
   /**
-   * O handle e criado pelo botao "Add background fill layer", e um projeto novo **nao** tem
-   * um. Um teste com `test.skip` aqui mediria nada; entao o handle e criado pela mesma
-   * acao que a pessoa usaria.
+   * O arquivo novo ja traz o handle; o item Background do Insert o reseleciona
+   * (sem duplicar), pela mesma acao que a pessoa usaria. Um teste com
+   * `test.skip` aqui mediria nada.
    */
-  await page.getByRole('button', { name: 'Add background fill layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Background' }).click();
   await page.waitForTimeout(450);
 
   const antes = await ordem(page);

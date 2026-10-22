@@ -11,6 +11,9 @@ asset's `files` are populated, that those files exist).
 | Component | License | Source | License text | Attribution |
 |---|---|---|---|---|
 | Lucide (app icons) | ISC | https://lucide.dev (npm `lucide-react`) | https://github.com/lucide-icons/lucide/blob/main/LICENSE | See `NOTICE` |
+| Manrope (Studio shell and landing page body) | OFL-1.1 | https://github.com/googlefonts/manrope | `LICENSES/manrope-OFL.txt` | See `NOTICE` |
+| Sora (landing page display) | OFL-1.1 | https://github.com/sora-xor/sora-font | `LICENSES/sora-OFL.txt` | See `NOTICE` |
+| IBM Plex Mono (landing page mono) | OFL-1.1 | https://github.com/IBM/plex | `LICENSES/ibm-plex-mono-OFL.txt` | See `NOTICE` |
 
 > **Rune Icons is registered but not yet redistributed.** It is listed in
 > `third-party/manifest.json` as the accepted source of the built-in icon library
@@ -39,6 +42,34 @@ Application chrome icons are provided by the [Lucide](https://lucide.dev)
 project (ISC License, Copyright (c) Lucide Contributors). See the original
 LICENSE for full terms:
 https://github.com/lucide-icons/lucide/blob/main/LICENSE
+
+### Manrope — SIL Open Font License 1.1
+
+[Manrope](https://github.com/googlefonts/manrope) (SIL Open Font License 1.1,
+Copyright 2018 The Manrope Project Authors) is the Studio shell typeface, and since
+the landing-page self-host pass also its body face. It is embedded as four static
+latin-subset WOFF2 weights under `assets/fonts/` (see `assets/fonts/README.md`), with
+a derived copy per app (`apps/web/src/fonts/`, `apps/promo/src/fonts/`) compared by
+`scripts/check-brand.mjs`. A copy of the license is kept at
+`LICENSES/manrope-OFL.txt`.
+
+### Sora — SIL Open Font License 1.1
+
+The landing page's display face is [Sora](https://github.com/sora-xor/sora-font) (SIL
+Open Font License 1.1, Copyright 2019 The Sora Project Authors), embedded as three
+static latin-subset WOFF2 weights (400/600/700) under `assets/fonts/` and served
+from `apps/promo/src/fonts/`. The page loaded it from Google Fonts until the
+self-host pass; the local files are what the build serves. A copy of the license is
+kept at `LICENSES/sora-OFL.txt`.
+
+### IBM Plex Mono — SIL Open Font License 1.1
+
+The landing page's mono face is [IBM Plex Mono](https://github.com/IBM/plex) (SIL Open
+Font License 1.1, Copyright 2017 IBM Corp. All rights reserved), embedded as three
+static latin-subset WOFF2 weights (400/500/600) under `assets/fonts/` and served from
+`apps/promo/src/fonts/`. Same rules as the other faces: one source under
+`assets/fonts/`, a derived copy, and `scripts/check-brand.mjs` comparing both by
+SHA-256. A copy of the license is kept at `LICENSES/ibm-plex-mono-OFL.txt`.
 
 ## Adding a component
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Eraser, Ratio } from 'lucide-react';
-import type { Fill, IconLayer, ShapeDefinition, ShapeKind } from '@iconcore/shared';
+import type { Fill, IconLayer, ShapeDefinition, ShapeKind, Stroke } from '@iconcore/shared';
 import { defaultMaskRadius } from '@iconcore/shared';
 import { Button, ColorField, NumberField, Section, SegmentedControl, Select, Slider, Switch, TextField } from '@iconcore/ui';
 import { RADIUS_MARKS, radiusMarkValue } from '../utils/radiusMarks';
@@ -17,11 +17,13 @@ import { FontPicker } from './FontPicker';
 import { DEFAULT_FONT_STACK } from '@iconcore/renderer';
 import { resolveLayerVariant } from '../utils/layerResolve';
 import { scopedLayerDispatch, type ScopedLayerChanges } from '../utils/layerEdit';
-import { fillColor, getShadow, setShadow } from '../utils/layerStyle';
+import { fillColor, strokeScaleNote } from '../utils/layerStyle';
 import { readSvgLayerColors } from '../utils/svgLayerColors';
 import { useResetLayerAspect } from '../hooks/useResetLayerAspect';
 import { FillEditor } from './FillEditor';
+import { LayerInspectorEffects } from './LayerInspectorEffects';
 import { SvgPaintEditor } from './SvgPaintEditor';
+import { StudioColorPicker } from '../../studio/components/StudioColorPicker';
 import { BackgroundRemovalModal } from './BackgroundRemovalModal';
 
 const blendModes: NonNullable<IconLayer['blendMode']>[] = ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'];
@@ -101,8 +103,14 @@ export const LayerInspector = () => {
   }
 
   if (baseLayer?.role === 'background') {
+    // The effective background for the variant being edited: the override
+    // wins where one exists, else the base — the same rule the renderer
+    // resolves (`resolveCanvasBackground`). Reading only the base while a
+    // non-default variant is active showed one colour and painted another.
+    const effective =
+      state.project.variants[activeVariant]?.canvas?.background ?? state.project.canvas.background;
     const setCanvasBg = (next: Fill, transient = false) =>
-      dispatch({ type: 'SET_CANVAS_BACKGROUND', payload: { background: next, transient } });
+      dispatch({ type: 'SET_CANVAS_BACKGROUND', payload: { background: next, variant: activeVariant, transient } });
     return (
       <aside className="ic-inspector">
         <div className="ic-inspector-head">
@@ -111,9 +119,14 @@ export const LayerInspector = () => {
             <h2>Background</h2>
           </div>
         </div>
+        {activeVariant !== 'default' && (
+          <p className="ic-variant-scope-note">
+            Editing the <strong>{activeVariant}</strong> variant — changes stay here, not the default.
+          </p>
+        )}
         <div className="ic-field-stack">
           <BackgroundFillSection
-            background={state.project.canvas.background}
+            background={effective}
             onChange={setCanvasBg}
             onCommit={() => dispatch({ type: 'COMMIT_HISTORY' })}
           />
@@ -125,16 +138,21 @@ export const LayerInspector = () => {
   if (!layer || !baseLayer) {
     const size = state.project.canvas.size;
     /**
-     * A cor **calculada** de `--ic-bg`, para a amostra do `ColorField`.
+     * A cor **calculada** de `--ic-workspace`, para a amostra do `ColorField`.
      *
      * Ler o token e nao usar um hex fixo porque a amostra tem de ser a cor que a
      * bancada esta de fato: um valor fixo mentiria no outro tema. E `try/catch`
      * porque `getComputedStyle` pode lancar num iframe sem origem — sem isto o
      * inspetor inteiro nao renderiza por causa de uma amostra.
+     *
+     * E o workspace, e nao `--ic-bg`: a faixa continua (palco e faixa no mesmo
+     * pano) fez o caimento da mesa seguir a mesa do mockup, entao a amostra do
+     * "nada escolhido" e a mesa — ler o fundo do app mostraria uma cor que o
+     * desk nunca vai ter.
      */
     const themeBg = (() => {
       try {
-        return getComputedStyle(document.documentElement).getPropertyValue('--ic-bg').trim();
+        return getComputedStyle(document.documentElement).getPropertyValue('--ic-workspace').trim();
       } catch {
         return '';
       }
@@ -440,22 +458,10 @@ export const LayerInspector = () => {
     });
   };
 
-  const shadow = getShadow(layer);
   const isImage = baseLayer.kind === 'image' || baseLayer.kind === 'svg';
   const imageFilter = layer.imageFilter ?? {};
   const updateImageFilter = (patch: Partial<typeof imageFilter>, transient = false) =>
     updateLayer({ imageFilter: { ...imageFilter, ...patch } }, transient);
-
-  const blurRadius = Number(layer.effects?.find((effect) => effect.kind === 'surface-blur')?.params.radius ?? 0);
-  const setBlur = (radius: number, transient = false) => {
-    const effects = layer.effects ?? [];
-    const next = radius <= 0
-      ? effects.filter((effect) => effect.kind !== 'surface-blur')
-      : effects.some((effect) => effect.kind === 'surface-blur')
-        ? effects.map((effect) => (effect.kind === 'surface-blur' ? { ...effect, enabled: true, params: { radius } } : effect))
-        : [...effects, { kind: 'surface-blur' as const, enabled: true, params: { radius } }];
-    updateLayer({ effects: next }, transient);
-  };
 
   return (
     <aside className="ic-inspector">
@@ -474,6 +480,276 @@ export const LayerInspector = () => {
       )}
 
       <div className="ic-field-stack">
+        <Section title="Position">
+          <div className="grid grid-cols-2 gap-2.5">
+            <NumberField
+              label="X"
+              value={Math.round(layer.transform.x)}
+              onChange={(event) => updateTransform({ x: Number(event.target.value) }, false)}
+            />
+            <NumberField
+              label="Y"
+              value={Math.round(layer.transform.y)}
+              onChange={(event) => updateTransform({ y: Number(event.target.value) }, false)}
+            />
+          </div>
+
+          {/*
+              W/H vive aqui enquanto Layout nao existe no modelo.
+
+              No painel de referencia, dimensoes moram em Layout; aqui o motor so
+              tem `shape.width/height`, entao os numeros ficam em Position — que e
+              onde a pessoa procura medidas. Quando Layout existir, eles se mudam.
+          */}
+          {baseLayer.kind === 'shape' && shape && (
+            <div className="grid grid-cols-2 gap-2.5">
+              <NumberField
+                label="W"
+                min={1}
+                value={Math.round(shape.width)}
+                onChange={(event) => updateShape({ width: Math.max(1, Number(event.target.value)) })}
+              />
+              <NumberField
+                label="H"
+                min={1}
+                value={Math.round(shape.height)}
+                onChange={(event) => updateShape({ height: Math.max(1, Number(event.target.value)) })}
+              />
+            </div>
+          )}
+
+          <Slider
+            variant="inline"
+            label="Rotation"
+            unit="°"
+            min="-180"
+            max="180"
+            step="1"
+            value={layer.transform.rotation}
+            onChange={(event) => updateTransform({ rotation: Number(event.target.value) })}
+            onCommit={commit}
+          />
+
+          <Slider
+            variant="inline"
+            label="Scale"
+            unit="×"
+            min="0.08"
+            max="4"
+            step="0.01"
+            value={layer.transform.scale}
+            onChange={(event) => updateTransform({ scale: Number(event.target.value) })}
+            onCommit={commit}
+          />
+        </Section>
+
+        {baseLayer.kind === 'shape' && shape && (
+          <Section title="Geometry">
+            <Select
+              label="Shape"
+              value={shape.kind}
+              onChange={(event) => updateShape({ kind: event.target.value as ShapeKind })}
+            >
+              {shapeKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+            </Select>
+            {shape.kind === 'rounded-rectangle' && (
+              <Slider
+                variant="inline"
+                label="Corner radius"
+                unit="px"
+                min="0"
+                max={Math.round(Math.min(shape.width, shape.height) / 2)}
+                value={Math.round(shape.cornerRadius ?? 32)}
+                onChange={(event) => updateShape({ cornerRadius: Number(event.target.value) }, true)}
+                onCommit={commit}
+              />
+            )}
+            {shape.kind === 'rounded-rectangle' && (
+              <Slider
+                variant="inline"
+                label="Corner smoothing"
+                unit="%"
+                min="0"
+                max="100"
+                value={Math.round((shape.cornerSmoothing ?? 0) * 100)}
+                onChange={(event) => updateShape({ cornerSmoothing: Number(event.target.value) / 100 }, true)}
+                onCommit={commit}
+              />
+            )}
+          </Section>
+        )}
+
+        {/*
+            Constraints / Layout / Mask NAO existem no modelo — diferimento explicito.
+
+            O painel de referencia os mostra entre Position e Appearance, mas o
+            motor nao tem esses conceitos (traço e preenchimento sao unitarios,
+            sem layout nem mascara). Nao inventar secoes nem campos: quando o
+            schema ganhar esses conceitos, eles entram aqui, nesta posicao.
+        */}
+        <Section title="Appearance">
+          <Select
+            label="Blend mode"
+            value={layer.blendMode ?? 'normal'}
+            onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
+          >
+            {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+          </Select>
+
+          <Slider
+            variant="inline"
+            label="Opacity"
+            unit="%"
+            min="0"
+            max="100"
+            value={Math.round(layer.opacity * 100)}
+            onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
+            onCommit={commit}
+          />
+        </Section>
+
+        <Section title="Fill">
+          {/*
+            `IC63/1b` — para `kind: 'svg'`, o `Fill` é **trocado**, não acrescido.
+
+            A layer não tem `fill` próprio: a cor mora no markup, e o renderer injeta o
+            documento verbatim (`renderToSvg.ts:391-419`), sem nunca ler `layer.fill`.
+            O controle que ficava aqui mostrava "transparent" para uma camada
+            desenhando branco, com a nota *"No fill — the shape is transparent"* — que
+            era falsa. E mexer nele não fazia nada, nos dois sentidos.
+
+            Deixar os dois lado a lado seria pior que qualquer um deles sozinho: um
+            controle que parece funcionar, ao lado do que funciona.
+
+            Só a **pintura** sai. `Opacity` e `Blend mode` continuam valendo para SVG —
+            são aplicação de camada, e o `filterAttr`/`opacity` do renderer já os
+            aplica ao group que envolve o documento.
+          */}
+          {layer.kind === 'svg' ? (
+            <SvgPaintEditor
+              colors={coresSvg}
+              overrides={layer.svgPaintOverrides}
+              onChange={(svgPaintOverrides, transient) => updateLayer({ svgPaintOverrides }, transient)}
+              onCommit={commit}
+            />
+          ) : (
+            <FillEditor
+              label="Fill"
+              fill={layer.fill ?? { kind: 'solid', color: fillColor(layer.fill) }}
+              onChange={(next, transient) => updateLayer({ fill: next }, transient)}
+              onCommit={commit}
+            />
+          )}
+        </Section>
+
+        {baseLayer.kind === 'shape' && shape && shape.kind !== 'line' && (
+          <Section title="Stroke">
+            {/*
+              Vazado, traço real e alinhamento: o motor pinta o contorno como
+              outline (a forma nunca estica), `fill: none` desenha só a borda, e
+              inside/outside usam clip/mask nos dois pipelines — o aceite duro
+              da Fase 4, travado pelas fixtures `traco*`/`vazado` da paridade.
+            */}
+            {layer.stroke ? (
+              <>
+                <StudioColorPicker
+                  label="Stroke color"
+                  value={{ color: layer.stroke.color, alpha: 1 }}
+                  showAlpha={false}
+                  onChange={(next, transient) => updateLayer({ stroke: { ...layer.stroke!, color: next.color } }, transient)}
+                  onCommit={commit}
+                />
+                <Select
+                  label="Alignment"
+                  value={layer.stroke.alignment}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, alignment: event.target.value as Stroke['alignment'] } })}
+                >
+                  <option value="center">center</option>
+                  <option value="inside">inside</option>
+                  <option value="outside">outside</option>
+                </Select>
+                <Slider
+                  variant="inline"
+                  label="Stroke width"
+                  unit="px"
+                  min="0"
+                  max="64"
+                  value={Math.round(layer.stroke.width)}
+                  valueLabel={strokeScaleNote(layer.stroke.width, layer.transform.scale)}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, width: Number(event.target.value) } }, true)}
+                  onCommit={commit}
+                />
+                <Select
+                  label="Join"
+                  value={layer.stroke.join ?? 'miter'}
+                  onChange={(event) => updateLayer({ stroke: { ...layer.stroke!, join: event.target.value as 'miter' | 'round' | 'bevel' } })}
+                >
+                  <option value="miter">miter</option>
+                  <option value="round">round</option>
+                  <option value="bevel">bevel</option>
+                </Select>
+                <Button variant="secondary" onClick={() => updateLayer({ stroke: undefined })}>
+                  Remove stroke
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="secondary"
+                onClick={() => updateLayer({ stroke: { color: fillColor(layer.fill), width: 4, alignment: 'center' } })}
+              >
+                Add stroke
+              </Button>
+            )}
+          </Section>
+        )}
+
+        {baseLayer.kind === 'shape' && shape && shape.kind === 'line' && (
+          <Section title="Stroke">
+            {/*
+              A linha é um corpo fechado cuja espessura É a altura do shape:
+              o slider "Stroke width" edita `shape.height` — a grandeza que
+              move pixels nos dois pipelines — e nunca `stroke.width`, que
+              nenhum pipeline lê para linhas. O `stroke` hospeda só o cap
+              (a forma das pontas) e espelha a altura em `width`, para o
+              validador ler uma espessura verdadeira. A cor vive no Fill.
+            */}
+            <Slider
+              variant="inline"
+              label="Stroke width"
+              unit="px"
+              min="1"
+              max="64"
+              value={Math.round(shape.height)}
+              valueLabel={strokeScaleNote(shape.height, layer.transform.scale)}
+              onChange={(event) =>
+                updateShape({ height: Math.max(1, Number(event.target.value)) }, true)
+              }
+              onCommit={commit}
+            />
+            <Select
+              label="Cap"
+              value={layer.stroke?.cap ?? 'round'}
+              onChange={(event) =>
+                updateLayer({
+                  stroke: {
+                    color: layer.stroke?.color ?? fillColor(layer.fill),
+                    width: Math.round(shape.height),
+                    alignment: 'center',
+                    cap: event.target.value as 'butt' | 'round' | 'square'
+                  }
+                })
+              }
+            >
+              <option value="butt">butt</option>
+              <option value="round">round</option>
+              <option value="square">square</option>
+            </Select>
+          </Section>
+        )}
+
+        <LayerInspectorEffects layer={layer} updateLayer={updateLayer} commit={commit} />
+
+        {/* Text depois de Effects: a ordem segue a decisao barata (Text so com texto selecionado); tipografia profunda fica diferida. */}
         {layer.kind === 'text' && (
           <Section title="Text">
             {/**
@@ -585,162 +861,6 @@ export const LayerInspector = () => {
           </Section>
         )}
 
-
-        <Section title="Layer">
-          <TextField
-            label="Name"
-            value={baseLayer.name}
-            onChange={(event) => dispatch({ type: 'UPDATE_LAYER', payload: { id: baseLayer.id, changes: { name: event.target.value } } })}
-          />
-        </Section>
-
-        <Section title="Composition">
-          <div className="grid grid-cols-2 gap-2.5">
-            <NumberField
-              label="X"
-              value={Math.round(layer.transform.x)}
-              onChange={(event) => updateTransform({ x: Number(event.target.value) }, false)}
-            />
-            <NumberField
-              label="Y"
-              value={Math.round(layer.transform.y)}
-              onChange={(event) => updateTransform({ y: Number(event.target.value) }, false)}
-            />
-          </div>
-
-          <Slider
-            variant="inline"
-            label="Scale"
-            unit="×"
-            min="0.08"
-            max="4"
-            step="0.01"
-            value={layer.transform.scale}
-            onChange={(event) => updateTransform({ scale: Number(event.target.value) })}
-            onCommit={commit}
-          />
-
-          <Slider
-            variant="inline"
-            label="Rotation"
-            unit="°"
-            min="-180"
-            max="180"
-            step="1"
-            value={layer.transform.rotation}
-            onChange={(event) => updateTransform({ rotation: Number(event.target.value) })}
-            onCommit={commit}
-          />
-        </Section>
-
-        {baseLayer.kind === 'shape' && shape && (
-          <Section title="Geometry">
-            <Select
-              label="Shape"
-              value={shape.kind}
-              onChange={(event) => updateShape({ kind: event.target.value as ShapeKind })}
-            >
-              {shapeKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
-            </Select>
-            {shape.kind === 'rounded-rectangle' && (
-              <Slider
-                variant="inline"
-                label="Corner radius"
-                unit="px"
-                min="0"
-                max={Math.round(Math.min(shape.width, shape.height) / 2)}
-                value={Math.round(shape.cornerRadius ?? 32)}
-                onChange={(event) => updateShape({ cornerRadius: Number(event.target.value) }, true)}
-                onCommit={commit}
-              />
-            )}
-          </Section>
-        )}
-
-        <Section title="Color">
-          {/*
-            `IC63/1b` — para `kind: 'svg'`, o `Fill` é **trocado**, não acrescido.
-
-            A layer não tem `fill` próprio: a cor mora no markup, e o renderer injeta o
-            documento verbatim (`renderToSvg.ts:391-419`), sem nunca ler `layer.fill`.
-            O controle que ficava aqui mostrava "transparent" para uma camada
-            desenhando branco, com a nota *"No fill — the shape is transparent"* — que
-            era falsa. E mexer nele não fazia nada, nos dois sentidos.
-
-            Deixar os dois lado a lado seria pior que qualquer um deles sozinho: um
-            controle que parece funcionar, ao lado do que funciona.
-
-            Só a **pintura** sai. `Opacity` e `Blend mode` continuam valendo para SVG —
-            são aplicação de camada, e o `filterAttr`/`opacity` do renderer já os
-            aplica ao group que envolve o documento.
-          */}
-          {layer.kind === 'svg' ? (
-            <SvgPaintEditor
-              colors={coresSvg}
-              overrides={layer.svgPaintOverrides}
-              onChange={(svgPaintOverrides, transient) => updateLayer({ svgPaintOverrides }, transient)}
-              onCommit={commit}
-            />
-          ) : (
-            <FillEditor
-              label="Fill"
-              fill={layer.fill ?? { kind: 'solid', color: fillColor(layer.fill) }}
-              onChange={(next, transient) => updateLayer({ fill: next }, transient)}
-              onCommit={commit}
-            />
-          )}
-
-          <Slider
-            variant="inline"
-            label="Opacity"
-            unit="%"
-            min="0"
-            max="100"
-            value={Math.round(layer.opacity * 100)}
-            onChange={(event) => updateLayer({ opacity: Number(event.target.value) / 100 })}
-            onCommit={commit}
-          />
-
-          <Select
-            label="Blend mode"
-            value={layer.blendMode ?? 'normal'}
-            onChange={(event) => updateLayer({ blendMode: event.target.value as IconLayer['blendMode'] })}
-          >
-            {blendModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-          </Select>        </Section>
-
-        <Section title="Effects">
-          <Switch
-            label="Depth shadow"
-            checked={shadow.enabled}
-            onChange={(event) => updateLayer({ effects: setShadow(layer, { ...shadow, enabled: event.target.checked }) })}
-          />
-
-          <Slider
-            variant="inline"
-            label="Shadow blur"
-            unit="px"
-            min="0"
-            max="80"
-            value={Number(shadow.params.blur ?? 34)}
-            onChange={(event) => updateLayer({
-              effects: setShadow(layer, { ...shadow, params: { ...shadow.params, blur: Number(event.target.value) } })
-            }, true)}
-            onPointerUp={commit}
-          />
-
-          <Slider
-            variant="inline"
-            label="Layer blur"
-            unit="px"
-            min="0"
-            max="60"
-            value={blurRadius}
-            onChange={(event) => setBlur(Number(event.target.value), true)}
-            onCommit={commit}
-          />
-        </Section>
-
         {isImage && (
           <Section title="Image adjustments">
             <Slider
@@ -805,6 +925,14 @@ export const LayerInspector = () => {
             )}
           </Section>
         )}
+
+        <Section title="Layer">
+          <TextField
+            label="Name"
+            value={baseLayer.name}
+            onChange={(event) => dispatch({ type: 'UPDATE_LAYER', payload: { id: baseLayer.id, changes: { name: event.target.value } } })}
+          />
+        </Section>
 
         <Button
           variant="secondary"

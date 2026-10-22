@@ -38,7 +38,8 @@ const abrirComTexto = async (page: Page) => {
     await page.getByRole('button', { name: /^Create$/i }).first().click();
     await page.waitForTimeout(700);
   }
-  await page.getByRole('button', { name: 'Add text layer' }).click();
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
   await page.waitForTimeout(500);
   await page.locator('.ic-layer-row').first().click();
   await page.waitForTimeout(500);

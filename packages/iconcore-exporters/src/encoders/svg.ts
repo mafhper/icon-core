@@ -25,8 +25,11 @@ export interface SvgEncodeOptions {
   height?: number;
   /**
    * Whether to paint the project background. `canvas` (the default) matches the
-   * editor; the export path passes `transparent` so a seeded variant colour does
-   * not become an opaque rectangle in the file.
+   * editor; the export path answers per artifact (`backgroundModeFor`):
+   * `transparent` for the artifacts that never asked — so a seeded variant
+   * colour does not become an opaque rectangle in the file — and `canvas` for
+   * the ones that require an opaque background (the Studio export with the
+   * alpha switch off resolves the variant's background into the SVG).
    */
   background?: RenderBackground;
   /**
