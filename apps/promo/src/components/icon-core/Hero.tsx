@@ -61,11 +61,31 @@ export function Hero() {
           <IconStage />
         </div>
 
-        <div className="order-3 w-full max-w-xl lg:order-none lg:col-start-1 lg:row-start-2 lg:self-start">
-          <div className="grid gap-5 rounded-2xl border border-glass-border bg-glass p-4 shadow-float backdrop-blur-xl sm:grid-cols-[minmax(0,13rem)_1px_minmax(0,1fr)] sm:items-center">
-            <RadiusControl />
-            <div className="hidden h-full w-px bg-border sm:block" />
-            <AppearanceDock size={38} />
+        {/*
+          The card is the mockup's (`Hero.tsx` in `mockup-lovable-shader`): radius control,
+          1px separator, dock — `grid ... sm:grid-cols-[minmax(0,13rem)_1px_minmax(0,1fr)]`.
+
+          The one thing the port gets to choose is *when* it changes, and the answer is never:
+          the three parts are a row at every width. An earlier version switched on the viewport
+          (`sm`) and stacked the card whenever the window was narrow, which at 1024 px meant a
+          row in a 576 px mockup card became radius-on-top in our 356 px one. The card is the
+          container, and it compresses instead: the radius column is `minmax(0,13rem)`, so it
+          gives width up first, and the dock column has a floor of 11.25rem — below that its
+          four labels start sharing ink. The card's own knob is the gap: 8 → 12 → 20 px (the
+          mockup's `gap-5`). Past that, each block compresses inside its column — the radius
+          header stacks under 8rem, the dock steps to its 10 px tile under 15rem — and the card
+          keeps its three columns.
+        */}
+        <div className="order-3 w-full min-w-0 max-w-xl lg:order-none lg:col-start-1 lg:row-start-2 lg:self-start">
+          <div className="@container">
+            <div
+              data-testid="widget-card"
+              className="grid grid-cols-[minmax(0,13rem)_1px_minmax(11.25rem,1fr)] items-center gap-2 rounded-2xl border border-glass-border bg-glass p-4 shadow-float backdrop-blur-xl @min-[26rem]:gap-3 @min-[34rem]:gap-5"
+            >
+              <RadiusControl className="min-w-0" />
+              <div aria-hidden className="h-full w-px bg-border" />
+              <AppearanceDock size={38} />
+            </div>
           </div>
         </div>
       </div>

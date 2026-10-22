@@ -100,11 +100,11 @@ describe('EditorShowcase frame radius', () => {
 
     // 50% of a 512 px canvas is 256 px — independent of how the control formats it.
     expect(slider?.getAttribute('aria-valuetext')).toBe('256 px');
-    expect(presetButton(ui.container, 'Círculo')?.getAttribute('aria-pressed')).toBe('true');
+    expect(presetButton(ui.container, 'Raio 256 px')?.getAttribute('aria-pressed')).toBe('true');
 
     await inputValue(slider as HTMLInputElement, '0');
     expect(slider?.getAttribute('aria-valuetext')).toBe('0 px');
-    expect(presetButton(ui.container, 'Quadrado')?.getAttribute('aria-pressed')).toBe('true');
+    expect(presetButton(ui.container, 'Raio 0 px')?.getAttribute('aria-pressed')).toBe('true');
   });
 });
 

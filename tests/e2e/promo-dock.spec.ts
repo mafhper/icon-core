@@ -1,183 +1,330 @@
 import { test, expect, type Page } from '@playwright/test';
 
 /**
- * The appearance dock is the landing page's only "preview" control: four tiles with an icon
- * and a label, hosted by the hero panel and by the editor showcase.
+ * The appearance dock is the landing page's only "preview" control: four tiles with a glyph and a
+ * label, hosted by the hero panel and by the editor showcase. Beside it in the hero sits the frame
+ * radius control, and the two are one row.
  *
- * It was one flex row of four `flex-1` tiles; at 320px the dock is ~270px, so each tile got
- * ~64px and the label span got ~46px of content box. The span is a flex item with the
- * default `min-width: auto`, which for nowrap text means the text itself: "Monochrome"
- * measures ~67px and **refused to shrink**, so `truncate` never engaged and the label
- * painted over the tile padding and the neighbours ("DefaultLightDarkonochrome").
+ * That row is the contract, and it is the third attempt at this widget:
+ *   1. a **viewport** grid (`grid-cols-2 sm:flex`) — at a 1258 px window `sm:flex` read "wide, one
+ *      row" while the hero's dock column was 149 px, so four ~34 px tiles held a ~67 px word;
+ *   2. a **container** ladder of 2 and then 1 column — honest about the box, but it gave up the one
+ *      thing the page is reproducing: the mockup's dock is four tiles in a row, always;
+ *   3. a **container switch** that stacked the card below 576 px — which is the mockup's `sm:` rule
+ *      applied to the card's width, and it turned the 1024 px hero (a 356 px card) into radius on
+ *      top, dock below.
  *
- * The first fix switched on the **viewport** (`grid grid-cols-2 sm:flex`). That is the wrong
- * axis: at a 1258px window `sm:flex` reads "wide, one row", but the dock's own column in the
- * hero card is ~149px — the radius control takes 13rem of a `max-w-xl` card — so four tiles
- * of ~34px were laid out on one row with a ~16px content box for a ~67px word. Same defect,
- * same reading, reintroduced by a breakpoint that never measured the box it was styling.
+ * The mockup (`mockup-lovable-shader/main/src/components/icon-core/Hero.tsx`) is
+ * `grid ... sm:grid-cols-[minmax(0,13rem)_1px_minmax(0,1fr)]`: radius control | 1 px separator |
+ * dock. The widths the port has to carry are not the mockup's (`max-w-xl` = 576 px), so the port
+ * compresses instead of reflowing: the radius column is `minmax(0,13rem)` and gives width up first,
+ * the dock column has a floor of 11.25rem, and the gaps step 8 → 12 → 20 px. At 576 px the card is
+ * the mockup's to the pixel: radius 208, separator 1, dock 293, tiles 70.3, labels 11 px, gaps 4.
  *
- * The contract is therefore the **container**: the widget measures the space it was given.
- * Thresholds come from the label, not from a preference: "Monochrome" at 11px is ~67.5px and
- * the tile adds `px-2` (16px) plus its border (2px), so an intact tile needs ~85.5px. Two of
- * them plus the 4px gap fit from ~180px. Both hosts cap the slot below the ~354px that four
- * tiles would need (293px in the hero, 320px by `max-w-xs` in the editor), so a single row is
- * not reachable on this page and the ladder stops at two columns.
+ * What is asserted here:
+ *   - the card is one row at every width: the dock starts after the radius block and shares its
+ *     horizontal band, and the separator is a 1 px vertical line between them;
+ *   - the dock is one row of four tiles in both hosts, with equal widths;
+ *   - every label is whole: no truncation, a visible gap to its neighbour, inside the card;
+ *   - the tile metrics, at the mockup's values when the dock has the mockup's width and at the
+ *     compressed ones (10 px label, 4 px horizontal padding, the mockup's 4 px gap) when the card
+ *     squeezes it;
+ *   - the four preset ticks sit where the thumb sits for that radius, and Enter on a focused tick
+ *     sets the radius — the keyboard path a visitor has instead of the mouse.
  *
- * These assertions are made in the browser because the defect is layout: jsdom computes no
- * geometry, and reading class names proves nothing about a text that overflows.
+ * These assertions run in the browser because the defect is layout: jsdom computes no geometry, and
+ * reading class names proves nothing about a line that wrapped.
  */
 
 const DOCK = '[role="radiogroup"][aria-label="Aparência do ícone e do site"]';
+const CARD = '[data-testid="widget-card"]';
 const LABELS = ['Default', 'Light', 'Dark', 'Monochrome'];
 
-/** Narrowest container that holds two intact tiles: 2 × 88px + the 4px gap. */
-const TWO_COLUMNS = 180;
+/** The mockup's dock width (`max-w-xl` card, 576 px, minus 13rem, 1 px and two 20 px gaps). */
+const WIDE_DOCK = 240;
 
-/** Rows the dock must paint for the width *it* was given, not for the window. */
-function expectedRows(container: number) {
-  return container >= TWO_COLUMNS ? 2 : LABELS.length;
-}
+/** The mockup's tile metrics, in CSS px: `gap-1` between tiles, `gap-1.5` inside one. */
+const WIDE = { gap: 4, padding: '8px 8px 6px', font: '11px' };
+/** The compressed tile, once the dock is squeezed under `WIDE_DOCK`: the gap stays the mockup's. */
+const NARROW = { gap: 4, padding: '8px 4px 6px', font: '10px' };
+const TILE_GAP = 6;
+
+/** Rail thumb diameter (`SLIDER_THUMB_PX`): a mark is placed half a thumb inside the rail's box. */
+const THUMB = 16;
+
+/** The four presets as a share of the rail, literals from the scale (24/512 over 50 → 9.375 %). */
+const PRESET_FRACTIONS = [0, 0.09375, 0.45, 1];
 
 type Tile = {
   name: string;
   width: number;
-  content: number;
+  top: number;
+  font: string;
+  gap: number;
+  padding: string;
   labelWidth: number;
-  overflow: number;
+  labelScroll: number;
+  labelClient: number;
   labelLeft: number;
   labelRight: number;
   left: number;
-  right: number;
-  top: number;
 };
 
-type Measurement = {
-  docks: Array<{
-    instance: string;
+type Dock = {
+  instance: string;
+  width: number;
+  rows: number;
+  gap: number;
+  right: number;
+  tiles: Tile[];
+  card: {
     width: number;
-    rows: number;
+    left: number;
     right: number;
-    tiles: Tile[];
-  }>;
-  overflowFromDock: string[];
+    radius: { width: number; left: number; right: number; top: number; bottom: number };
+    separator: { width: number; height: number; display: string };
+    rail: { left: number; width: number } | null;
+    ticks: number[];
+  } | null;
 };
+
+type Measurement = { docks: Dock[]; overflowFromDock: string[] };
 
 async function measure(page: Page, width: number): Promise<Measurement> {
   await page.setViewportSize({ width, height: 1400 });
   await page.goto('/icon-core/');
-  // The label width IS the measurement: with a fallback face the numbers move.
-  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(250);
 
-  return page.evaluate((selector) => {
-    const docks = [...document.querySelectorAll(selector)].map((dock) => {
-      const dockRect = dock.getBoundingClientRect();
-      const tiles = [...dock.querySelectorAll('[role="radio"]')].map((tile) => {
-        const tileRect = tile.getBoundingClientRect();
-        const tileStyle = getComputedStyle(tile);
-        const content =
-          tileRect.width -
-          (parseFloat(tileStyle.paddingLeft) || 0) -
-          (parseFloat(tileStyle.paddingRight) || 0) -
-          (parseFloat(tileStyle.borderLeftWidth) || 0) -
-          (parseFloat(tileStyle.borderRightWidth) || 0);
-        const label = [...tile.querySelectorAll('span')].at(-1)!.getBoundingClientRect();
+  return page.evaluate(
+    ({ selector, cardSelector }) => {
+      const docks = [...document.querySelectorAll(selector)].map((dock) => {
+        const dockRect = dock.getBoundingClientRect();
+        const dockStyle = getComputedStyle(dock);
+        const tiles = [...dock.querySelectorAll('[role="radio"]')].map((tile) => {
+          const tileRect = tile.getBoundingClientRect();
+          const tileStyle = getComputedStyle(tile);
+          const label = [...tile.querySelectorAll('span')].at(-1)!;
+          const labelRect = label.getBoundingClientRect();
+          return {
+            name: (tile.textContent ?? '').trim(),
+            width: tileRect.width,
+            top: Math.round(tileRect.top),
+            font: getComputedStyle(label).fontSize,
+            gap: parseFloat(tileStyle.rowGap) || 0,
+            padding: [tileStyle.paddingTop, tileStyle.paddingRight, tileStyle.paddingBottom].join(' '),
+            labelWidth: labelRect.width,
+            labelScroll: label.scrollWidth,
+            labelClient: label.clientWidth,
+            labelLeft: labelRect.left,
+            labelRight: labelRect.right,
+            left: tileRect.left
+          };
+        });
+
+        const card = dock.closest(cardSelector);
+        let cardData = null;
+        if (card) {
+          const cardRect = card.getBoundingClientRect();
+          const radius = card.children[0].getBoundingClientRect();
+          const separator = card.children[1];
+          const separatorRect = separator.getBoundingClientRect();
+          const rail = card.children[0].querySelector('input[type="range"]');
+          const ticks = [...card.children[0].querySelectorAll('button[aria-label^="Raio "]')].map((button) => {
+            const rect = button.getBoundingClientRect();
+            return rect.left + rect.width / 2;
+          });
+          cardData = {
+            width: cardRect.width,
+            left: cardRect.left,
+            right: cardRect.right,
+            radius: { width: radius.width, left: radius.left, right: radius.right, top: radius.top, bottom: radius.bottom },
+            separator: {
+              width: separatorRect.width,
+              height: separatorRect.height,
+              display: getComputedStyle(separator).display
+            },
+            rail: rail ? { left: rail.getBoundingClientRect().left, width: rail.getBoundingClientRect().width } : null,
+            ticks
+          };
+        }
+
         return {
-          name: (tile.textContent ?? '').trim(),
-          width: tileRect.width,
-          content,
-          labelWidth: label.width,
-          overflow: Math.max(0, (label.width - content) / 2),
-          labelLeft: label.left,
-          labelRight: label.right,
-          left: tileRect.left,
-          right: tileRect.right,
-          top: Math.round(tileRect.top)
+          instance: dock.closest('section')?.id ?? 'editor',
+          width: dockRect.width,
+          rows: new Set(tiles.map((tile) => tile.top)).size,
+          gap: parseFloat(dockStyle.columnGap) || 0,
+          right: dockRect.right,
+          tiles,
+          card: cardData
         };
       });
-      return {
-        instance: dock.closest('section')?.id ?? 'unknown',
-        width: dockRect.width,
-        rows: new Set(tiles.map((tile) => tile.top)).size,
-        right: dockRect.right,
-        tiles
-      };
-    });
 
-    // The page has its own pre-existing horizontal overflow in the top bar (native-tooltip
-    // spans at `left-[104%]`). What this contract owns is that the dock contributes none:
-    // nothing inside a dock may extend past the viewport.
-    const overflowFromDock: string[] = [];
-    for (const dock of document.querySelectorAll(selector)) {
-      for (const element of [dock, ...dock.querySelectorAll('*')]) {
-        const rect = element.getBoundingClientRect();
-        if (rect.width > 0 && rect.right > window.innerWidth + 1) {
-          overflowFromDock.push(`${element.tagName.toLowerCase()} right=${Math.round(rect.right)}`);
+      // The page has its own pre-existing horizontal overflow in the top bar (native-tooltip spans at
+      // `left-[104%]`). What this contract owns is that the dock contributes none: nothing inside a
+      // dock may extend past the viewport.
+      const overflowFromDock: string[] = [];
+      for (const dock of document.querySelectorAll(selector)) {
+        for (const element of [dock, ...dock.querySelectorAll('*')]) {
+          const rect = element.getBoundingClientRect();
+          if (rect.width > 0 && rect.right > window.innerWidth + 0.5) {
+            overflowFromDock.push(`${dock.closest('section')?.id ?? 'editor'}: ${(element.textContent ?? '').slice(0, 24)}`);
+          }
         }
       }
-    }
 
-    return { docks, overflowFromDock };
-  }, DOCK);
+      return { docks, overflowFromDock };
+    },
+    { selector: DOCK, cardSelector: CARD }
+  );
 }
 
-/** Distance between the text of two tiles on the same row; negative means overlap. */
+/** Distance between the text of two tiles on the same row; zero or less means overlap. */
 function minLabelGap(tiles: Tile[]) {
   const rows = [...new Set(tiles.map((tile) => tile.top))];
+
   return Math.min(
     ...rows.map((top) => {
       const row = tiles.filter((tile) => tile.top === top);
-      return Math.min(...row.slice(1).map((tile, index) => tile.left - row[index]!.right));
+      return Math.min(...row.slice(1).map((tile, index) => tile.labelLeft - row[index]!.labelRight));
     })
   );
 }
 
-// 320 is the narrowest supported phone, 360 the common Android width, 640/768/1280 the old
-// "one row from `sm`" widths — kept because that is exactly where the viewport axis was
-// wrong — and 1024/1100/1258 the wide window whose *card* is narrow (73px, 149px and 293px
-// of dock). The expectation is derived from the width the dock measured, so these numbers
-// stay honest if a host card changes.
-for (const width of [320, 360, 640, 768, 1024, 1100, 1258, 1280] as const) {
-  test(`appearance dock lays out from its own container at ${width}px`, async ({ page }) => {
+// 320 is the narrowest supported phone, 355/360 the widths whose card is ~320 (where the owner
+// compared the port to the mockup), 640/768/1024/1100 the widths where the hero's *card* is narrow
+// while the window is not, and 1258/1280 the wide window whose hero column is `max-w-xl`. The dock
+// expectation is derived from the width the card measured, so these numbers stay honest if the grid
+// changes.
+for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) {
+  test(`the widget is one row, with the mockup's dock, at ${width}px`, async ({ page }) => {
     const { docks, overflowFromDock } = await measure(page, width);
 
     // Two instances share the component: the hero panel and the editor showcase.
-    expect(docks.map((dock) => dock.instance).sort(), 'the dock was not found in both hosts').toEqual([
-      'interface',
-      'top'
-    ]);
+    expect(docks.map((dock) => dock.instance).sort()).toEqual(['interface', 'top']);
+    expect(overflowFromDock, 'the dock never pushes ink past the window').toEqual([]);
 
     const report: string[] = [];
+
     for (const dock of docks) {
       expect(dock.tiles.map((tile) => tile.name), `[${dock.instance}] the four labels changed`).toEqual(LABELS);
 
-      const rows = expectedRows(dock.width);
-      if (dock.rows !== rows) {
-        report.push(
-          `[${dock.instance}] container ${dock.width.toFixed(1)}px needs ${rows} row(s), the dock painted ${dock.rows}`
-        );
+      // 1. The dock is one row of four, always — the mockup's `flex gap-1`, never a grid.
+      if (dock.rows !== 1) {
+        report.push(`[${dock.instance}] the dock painted ${dock.rows} rows in a ${dock.width.toFixed(1)}px slot; the mockup has one`);
+      }
+      const tileWidths = dock.tiles.map((tile) => tile.width);
+      if (Math.max(...tileWidths) - Math.min(...tileWidths) > 0.5) {
+        report.push(`[${dock.instance}] tiles are not equal: ${tileWidths.map((value) => value.toFixed(1)).join(' / ')}`);
       }
 
+      // 2. The mockup's tile metrics at the mockup's width, and the compressed ones below it.
+      const state = dock.width >= WIDE_DOCK ? WIDE : NARROW;
+      if (dock.gap !== state.gap) {
+        report.push(`[${dock.instance}] dock gap is ${dock.gap}px, expected ${state.gap}px at ${dock.width.toFixed(1)}px`);
+      }
       for (const tile of dock.tiles) {
-        if (tile.overflow > 0.5) {
-          report.push(
-            `[${dock.instance}] "${tile.name}": label ${tile.labelWidth.toFixed(1)}px in ${tile.content.toFixed(1)}px ` +
-              `of content box (${tile.overflow.toFixed(1)}px outside, each side)`
-          );
+        if (tile.padding !== state.padding) {
+          report.push(`[${dock.instance}] "${tile.name}" padding is ${tile.padding}, expected ${state.padding}`);
         }
-        if (tile.labelLeft < tile.left - 0.5 || tile.labelRight > tile.right + 0.5) {
+        if (tile.font !== state.font) {
+          report.push(`[${dock.instance}] "${tile.name}" label is ${tile.font}, expected ${state.font}`);
+        }
+        if (tile.gap !== TILE_GAP) {
+          report.push(`[${dock.instance}] "${tile.name}" glyph-to-label gap is ${tile.gap}px, expected ${TILE_GAP}px`);
+        }
+
+        // 3. The label is whole: its scroll box is its client box, and it keeps a gap to its neighbour.
+        if (tile.labelScroll > tile.labelClient + 1) {
           report.push(
-            `[${dock.instance}] "${tile.name}" paints outside its tile: ` +
-              `label ${tile.labelLeft.toFixed(1)}..${tile.labelRight.toFixed(1)}, ` +
-              `tile ${tile.left.toFixed(1)}..${tile.right.toFixed(1)}`
+            `[${dock.instance}] "${tile.name}" is truncated: label scrolls ${tile.labelScroll}px in ${tile.labelClient}px`
           );
         }
       }
 
       const gap = minLabelGap(dock.tiles);
-      if (gap <= 0) report.push(`[${dock.instance}] labels on the same row overlap by ${(-gap).toFixed(1)}px`);
+      if (gap <= 1) report.push(`[${dock.instance}] labels on the same row are ${gap.toFixed(1)}px apart`);
+
+      // 4. The labels stay inside the widget they belong to — the card in the hero, the dock when it
+      // stands alone in the editor. A squeezed tile may let its label reach past its own border into
+      // the gap beside it, which is what the mockup does at 320 px; it may not leave the card.
+      const bounds = dock.card ?? { left: dock.tiles[0]!.left, right: dock.right };
+      for (const tile of dock.tiles) {
+        if (tile.labelLeft < bounds.left - 1 || tile.labelRight > bounds.right + 1) {
+          report.push(
+            `[${dock.instance}] "${tile.name}" paints outside its host: ` +
+              `${tile.labelLeft.toFixed(1)}..${tile.labelRight.toFixed(1)} in ${bounds.left.toFixed(1)}..${bounds.right.toFixed(1)}`
+          );
+        }
+      }
+
+      // 5. The hero card, not the dock: radius | separator | dock on one line, never stacked.
+      if (dock.card) {
+        const { card } = dock;
+        if (card.width > 576.5) {
+          report.push(`[top] the card is ${card.width.toFixed(1)}px, wider than the mockup's max-w-xl`);
+        }
+        if (dock.tiles[0]!.left < card.radius.right) {
+          report.push(
+            `[top] the dock starts at ${dock.tiles[0]!.left.toFixed(1)}, before the radius block ends at ${card.radius.right.toFixed(1)}`
+          );
+        }
+        if (dock.tiles[0]!.top > card.radius.bottom - 1) {
+          report.push(
+            `[top] the dock (top ${dock.tiles[0]!.top}) is below the radius block (bottom ${card.radius.bottom.toFixed(1)}): the card stacked`
+          );
+        }
+        if (card.separator.display === 'none') {
+          report.push('[top] the card has no separator between the radius block and the dock');
+        }
+        if (card.separator.width > 1.5) {
+          report.push(`[top] the separator is ${card.separator.width}px wide, the mockup's is 1px`);
+        }
+        if (card.separator.height < 24) {
+          report.push(`[top] the separator is ${card.separator.height}px tall; it should hold the row`);
+        }
+
+        // 6. The preset marks sit on the rail's own scale: a mark at fraction f is the thumb's centre
+        // when the slider holds that preset, i.e. half a thumb inside the rail at each end.
+        if (card.rail) {
+          const expected = PRESET_FRACTIONS.map(
+            (fraction) => card.rail!.left + THUMB / 2 + fraction * (card.rail!.width - THUMB)
+          );
+          const placed = card.ticks.map((center, index) => `${(center - expected[index]!).toFixed(1)}px`);
+          if (card.ticks.length !== PRESET_FRACTIONS.length) {
+            report.push(`[top] ${card.ticks.length} preset marks on the rail, expected ${PRESET_FRACTIONS.length}`);
+          } else if (placed.some((offset) => Math.abs(parseFloat(offset)) > 1)) {
+            report.push(`[top] preset marks are ${placed.join(' / ')} off the rail's scale`);
+          }
+        }
+      }
     }
 
     expect(report, report.join('\n')).toEqual([]);
-    expect(overflowFromDock, `the dock pushes the page: ${overflowFromDock.join(', ')}`).toEqual([]);
   });
 }
+
+test('a preset is reachable and settable from the keyboard', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1400 });
+  await page.goto('/icon-core/');
+
+  const rail = page.locator(`${CARD} input[type="range"]`);
+  const circle = page.locator(`${CARD} button[aria-label="Raio 256 px"]`);
+
+  expect(await rail.getAttribute('aria-valuetext')).toBe('130 px');
+
+  // The rail is one stop; after it come the four marks in scale order, one stop each. Walking the
+  // real Tab order is the part jsdom cannot prove: it has no tab navigation at all.
+  await rail.focus();
+  const focused: string[] = [];
+  for (let step = 0; step < 4; step += 1) {
+    await page.keyboard.press('Tab');
+    focused.push((await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) ?? '');
+  }
+  expect(focused).toEqual(['Raio 0 px', 'Raio 24 px', 'Raio 115 px', 'Raio 256 px']);
+
+  await page.keyboard.press('Enter');
+
+  expect(await rail.getAttribute('aria-valuetext')).toBe('256 px');
+  expect(await circle.getAttribute('aria-pressed')).toBe('true');
+});
+

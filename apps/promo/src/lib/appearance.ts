@@ -20,9 +20,27 @@ export function resolveDarkTheme(appearance: Appearance, systemDark: boolean): b
 
 export const CANVAS_PX = 512;
 
-/** Frame radius is stored as % of the icon size (0 = square, 50 = circle). */
+/** Frame radius is stored as % of the icon size: 0 is a square, 50 a circle. */
+export const RADIUS_MIN = 0;
+export const RADIUS_MAX = 50;
+
+/** Frame radius in canvas px, clamped to the scale. */
 export function radiusToPx(pct: number, size = CANVAS_PX) {
-  return Math.round((Math.min(50, Math.max(0, pct)) / 100) * size);
+  return Math.round((Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, pct)) / 100) * size);
+}
+
+/**
+ * Where a radius sits on its rail, from 0 at the square end to 1 at the circle.
+ *
+ * A rail's thumb travels half a thumb-width inside its own box, so a mark drawn at
+ * `left: fraction * 100%` inside a layer inset by half a thumb lands under the thumb when the
+ * slider holds that radius. That is the contract the preset marks are placed by — one derivation
+ * for every preset, instead of a percentage written down twice.
+ */
+export function radiusFraction(pct: number) {
+  const clamped = Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, pct));
+
+  return (clamped - RADIUS_MIN) / (RADIUS_MAX - RADIUS_MIN);
 }
 
 export const RADIUS_PRESETS = [
