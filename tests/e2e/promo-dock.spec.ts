@@ -29,6 +29,9 @@ import { test, expect, type Page } from '@playwright/test';
  *   - the tile metrics, at the mockup's values when the dock has the mockup's width and at the
  *     compressed ones (10 px label, 4 px horizontal padding, the mockup's 4 px gap) when the card
  *     squeezes it;
+ *   - the tile's own corner follows its width: 17.1 %, the share the mockup's `rounded-xl` has on
+ *     its 70.25 px tile (12 px), which is 7.2 px on the compact 42 px one — never a fixed 16 px,
+ *     which is what `rounded-xl` paints in this theme (38 % of the compact tile);
  *   - the plate inside each tile is a **thumb**: `THUMB_RADIUS` — 12 % of the 512 viewBox, written
  *     `61.4` by the path formatter, i.e. 4.56 px on the hero's 38 px plate and 4.08 px on the
  *     editor's 34 px one — and never the frame's 130/512 (25.39 %) that would paint 9.65 / 8.63 px;
@@ -66,6 +69,15 @@ const PRESET_FRACTIONS = [0, 0.09375, 0.45, 1];
 const PLATE_ARC = 61.4;
 const PLATE_PX: Record<string, number> = { top: 4.56, interface: 4.08 };
 
+/**
+ * The tile's corner as a share of the tile's own width: the mockup's 12 px on its 70.25 px tile is
+ * 17.1 %. At the two widths this page hands the dock that is 12.0 px on the 70.25 px tile and
+ * 7.2 px on the compact 42 px one. The fixed 16 px `rounded-xl` paints here (`--radius-xl` is
+ * `calc(--radius + 4px)`) would be 22.8 % and 38 % — 4.0 and 8.8 px off the share.
+ */
+const TILE_RADIUS_RATIO = 0.171;
+const TILE_RADIUS_TOLERANCE = 1;
+
 type Tile = {
   name: string;
   width: number;
@@ -79,6 +91,8 @@ type Tile = {
   labelLeft: number;
   labelRight: number;
   left: number;
+  /** The tile's own corner, as the browser resolved it: px, not the authored calc string. */
+  radius: number;
   /** The plate's corner: the path's own arc in the viewBox, and what it paints on screen. */
   plate: { arc: number | null; px: number | null };
 };
@@ -106,6 +120,13 @@ type Measurement = { docks: Dock[]; overflowFromDock: string[] };
 async function measure(page: Page, width: number): Promise<Measurement> {
   await page.setViewportSize({ width, height: 1400 });
   await page.goto('/icon-core/');
+  // The page is client-rendered, so the two docks (hero panel and editor showcase) mount after the
+  // bundle runs. Waiting for both instead of sleeping a fixed 250 ms is what keeps the measurement
+  // honest on a cold preview server; the settle after it is for the fonts label widths depend on.
+  await page.waitForFunction(
+    ({ selector }) => document.querySelectorAll(selector).length === 2,
+    { selector: DOCK }
+  );
   await page.waitForTimeout(250);
 
   return page.evaluate(
@@ -134,6 +155,7 @@ async function measure(page: Page, width: number): Promise<Measurement> {
             labelLeft: labelRect.left,
             labelRight: labelRect.right,
             left: tileRect.left,
+            radius: parseFloat(tileStyle.borderTopLeftRadius),
             plate: {
               arc: arc ? Number(arc[1]) : null,
               px: arc && glyph ? Number(((Number(arc[1]) / 512) * glyph.width).toFixed(2)) : null
@@ -264,7 +286,20 @@ for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) 
       const gap = minLabelGap(dock.tiles);
       if (gap <= 1) report.push(`[${dock.instance}] labels on the same row are ${gap.toFixed(1)}px apart`);
 
-      // 4. The plate is a thumb, not a miniature of the file: `THUMB_RADIUS` at 12 % — a 61.44
+      // 4. The tile's own corner is a share of its width, not a class: 17.1 % of 70.25 px is the
+      // mockup's 12 px, and of the compact 42 px tile it is 7.2 px. A fixed 16 px (`rounded-xl`
+      // here) would be 22.8 % and 38 %, which is the bubble this rule exists to prevent.
+      for (const tile of dock.tiles) {
+        const share = tile.width * TILE_RADIUS_RATIO;
+        if (!Number.isFinite(tile.radius) || Math.abs(tile.radius - share) > TILE_RADIUS_TOLERANCE) {
+          report.push(
+            `[${dock.instance}] "${tile.name}" corner is ${tile.radius}px on a ${tile.width.toFixed(1)}px tile, ` +
+              `expected ${share.toFixed(1)}px (${(TILE_RADIUS_RATIO * 100).toFixed(1)} %)`
+          );
+        }
+      }
+
+      // 5. The plate is a thumb, not a miniature of the file: `THUMB_RADIUS` at 12 % — a 61.44
       // corner of the viewBox, written `61.4`, 4.56 px on the hero's 38 px plate and 4.08 px on
       // the editor's 34 px one. The frame's 130/512 would paint 9.65 / 8.63 px and, at 360 px, sit
       // on the tile's own corner.
@@ -280,7 +315,7 @@ for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) 
         }
       }
 
-      // 5. The labels stay inside the widget they belong to — the card in the hero, the dock when it
+      // 6. The labels stay inside the widget they belong to — the card in the hero, the dock when it
       // stands alone in the editor. A squeezed tile may let its label reach past its own border into
       // the gap beside it, which is what the mockup does at 320 px; it may not leave the card.
       const bounds = dock.card ?? { left: dock.tiles[0]!.left, right: dock.right };
@@ -293,7 +328,7 @@ for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) 
         }
       }
 
-      // 6. The hero card, not the dock: radius | separator | dock on one line, never stacked.
+      // 7. The hero card, not the dock: radius | separator | dock on one line, never stacked.
       if (dock.card) {
         const { card } = dock;
         if (card.width > 576.5) {
@@ -319,7 +354,7 @@ for (const width of [320, 355, 360, 640, 768, 1024, 1100, 1258, 1280] as const) 
           report.push(`[top] the separator is ${card.separator.height}px tall; it should hold the row`);
         }
 
-        // 7. The preset marks sit on the rail's own scale: a mark at fraction f is the thumb's centre
+        // 8. The preset marks sit on the rail's own scale: a mark at fraction f is the thumb's centre
         // when the slider holds that preset, i.e. half a thumb inside the rail at each end.
         if (card.rail) {
           const expected = PRESET_FRACTIONS.map(

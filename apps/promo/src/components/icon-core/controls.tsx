@@ -148,6 +148,36 @@ function RadiusTick({ preset, radius, onSelect }: PresetProps) {
 }
 
 /**
+ * The tile's corner as a share of the tile's own width: 12 px of the 70.25 px tile — the mockup's
+ * dock is 293 px of four tiles and three `gap-1` gaps — is 17.1 %.
+ *
+ * The mockup writes `rounded-xl` and the port copied the class, but a class is a fixed 16 px in
+ * both themes (`--radius-xl` is `calc(--radius + 4px)` over `--radius: 0.75rem`), so the compact
+ * dock's 42 px tile (a 180 px slot at 360 px) painted 38 % of its width where the mockup paints
+ * 22.8 % of its 70.25 px one — the "bubble" the owner read. The share is the part worth keeping,
+ * and a tile's width is the dock's box minus three gaps over four, which CSS can do itself with
+ * the dock's own container units. One authored number, no second breakpoint, and the corner keeps
+ * the mockup's proportion at every width between the two: 12 px wide, 7.2 px compact.
+ *
+ * The measurement the batch asked for disagrees with its own arithmetic: the mockup's computed
+ * corner is 16 px — 22.8 % of 70.25 px — not the 12 px of Tailwind's default `rounded-xl`, because
+ * that theme adds 4 px to `--radius`. The share here is the batch's `12 / 70.25`, so the wide
+ * state lands on 12 px where the mockup paints 16; moving to the mockup's rendered corner is this
+ * one number, nothing else.
+ */
+const TILE_RADIUS_RATIO = 12 / 70.25;
+
+/** `gap-1` between tiles — three of them inside the dock, counted out of the tile's width. */
+const DOCK_GAP_PX = 4;
+
+/**
+ * `border-radius` for a tile of any width: 17.1 % of `(100cqw - 3 × 4px) / 4`, i.e.
+ * `4.2705cqw - 0.5125px`. The coefficient is the ratio over four columns; the fixed term is the
+ * three gaps the tile does not own, at the same share.
+ */
+const TILE_RADIUS = `calc(${((TILE_RADIUS_RATIO / 4) * 100).toFixed(4)}cqw - ${((TILE_RADIUS_RATIO * DOCK_GAP_PX * 3) / 4).toFixed(4)}px)`;
+
+/**
  * The four appearances as a radio group, laid out exactly as the landing mockup lays them out
  * (`mockup-lovable-shader/main/src/components/icon-core/controls.tsx`, `AppearanceDock`): one row
  * of four equal tiles, `flex gap-1` + `min-w-0 flex-1`, glyph above the label. The row never wraps
@@ -168,6 +198,11 @@ function RadiusTick({ preset, radius, onSelect }: PresetProps) {
  * thumbs are drawn at a fixed small radius, never at the canvas radius. A tile is that same kind of
  * thumb, so it takes `THUMB_RADIUS` (4.56 px at 38 px) and the dock stops enlarging the icon's
  * curvature as the tile shrinks. The frame keeps its own radius on the canvas, where it belongs.
+ *
+ * The tile's own frame — the chip behind the label, not the plate — is also a share of its width
+ * rather than a class (see `TILE_RADIUS` below). At 17.1 % it is 12 px on the mockup's 70.25 px
+ * tile and 7.2 px on the compact one, so the chip keeps the mockup's proportion when the dock
+ * narrows instead of turning into a bubble.
  */
 export function AppearanceDock({ className, size = 44 }: { className?: string; size?: number }) {
   const { appearance, setAppearance } = useStudio();
@@ -205,8 +240,9 @@ export function AppearanceDock({ className, size = 44 }: { className?: string; s
               tabIndex={active ? 0 : -1}
               onKeyDown={(event) => onKey(event, index)}
               onClick={() => setAppearance(item.id)}
+              style={{ borderRadius: TILE_RADIUS }}
               className={cn(
-                'group relative flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-transparent px-1 pt-2 pb-1.5 text-[10px] text-muted-foreground transition-all hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none @min-[15rem]:px-2 @min-[15rem]:text-[11px]',
+                'group relative flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 border border-transparent px-1 pt-2 pb-1.5 text-[10px] text-muted-foreground transition-all hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none @min-[15rem]:px-2 @min-[15rem]:text-[11px]',
                 active && 'border-border bg-card text-foreground shadow-float'
               )}
             >

@@ -67,3 +67,25 @@ describe('appearance dock plates', () => {
     expect(plateCorners(ui.container)).toEqual(['M61.4', 'M61.4', 'M61.4', 'M61.4']);
   });
 });
+
+/**
+ * The tile's chip — the frame behind the glyph and the label — is a share of its own width, because
+ * a fixed class cannot be: `rounded-xl` is 16 px in this theme, which is 38 % of the compact dock's
+ * 42 px tile and 22.8 % of the mockup's 70.25 px one. The mockup's share is 12 / 70.25 = 17.1 %,
+ * and a tile is `(100cqw - 3 × 4px) / 4` wide inside the dock's container, so the expression is
+ * `4.2705cqw - 0.5125px` — written below as a literal, not recomputed from the source constant.
+ * The order is jsdom's: it serialises the `calc` with the length first.
+ */
+const TILE_RADIUS = 'calc(-0.5125px + 4.2705cqw)';
+
+describe('appearance dock tiles', () => {
+  it('takes the tile frame radius from the dock width, not from a fixed class', async () => {
+    const ui = mount();
+    await ui.render(createElement(StudioProvider, null, createElement(AppearanceDock)));
+
+    const tiles = Array.from(ui.container.querySelectorAll<HTMLElement>('[role="radio"]'));
+
+    expect(tiles).toHaveLength(4);
+    expect(tiles.map((tile) => tile.style.borderRadius)).toEqual(Array(4).fill(TILE_RADIUS));
+  });
+});
