@@ -1,16 +1,8 @@
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent
-} from 'react';
+import { forwardRef, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 
 import { cn } from '../lib/cn';
 import { Button } from './Button';
-import type { ButtonSize, ButtonVariant } from './buttonStyles';
+import { buttonClass, type ButtonSize, type ButtonVariant } from './buttonStyles';
 
 export interface SplitButtonItem {
   id: string;
@@ -20,19 +12,34 @@ export interface SplitButtonItem {
   danger?: boolean;
 }
 
-export interface SplitButtonProps {
-  /** Visible label of the primary action. */
-  label: string;
-  onAction: () => void;
+interface SplitButtonBaseProps {
+  /** Visible label of the primary control. */
+  label: ReactNode;
+  /** Optional leading glyph of the primary control. */
+  icon?: ReactNode;
   items: SplitButtonItem[];
   /** Accessible name for the menu trigger; the visible glyph is a chevron only. */
   menuLabel?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Fully rounded ends, as used by the promo header. Default is the kit's rounded rect. */
+  pill?: boolean;
   disabled?: boolean;
   align?: 'start' | 'end';
   className?: string;
 }
+
+/**
+ * The primary either performs an in-page action (`onAction`) or navigates (`actionHref`) —
+ * never both, never neither. The union makes a dead primary unrepresentable, so a caller
+ * that loses its handler fails typecheck instead of rendering a control that does nothing.
+ *
+ * `actionHref` renders the primary as an anchor, so middle-click and "open in new tab" keep
+ * working. The download buttons point at the releases page, which is navigation, not an
+ * in-page action.
+ */
+export type SplitButtonProps = SplitButtonBaseProps &
+  ({ onAction: () => void; actionHref?: never } | { onAction?: never; actionHref: string });
 
 const MENU_ITEM =
   'flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-start text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground disabled:pointer-events-none disabled:opacity-50';
@@ -54,16 +61,24 @@ function ChevronDown() {
  * Action + menu in one control, built from `button` elements and a `role="menu"` list.
  * Behaviour follows the ARIA menu-button pattern: `aria-haspopup`/`aria-expanded` on the
  * trigger, focus moves into the menu, arrows/Home/End walk enabled items, Escape closes
- * and returns focus, and a pointer press outside closes without stealing focus.
+ * and returns focus, and a pointer press outside closes without stealing focus. Passing
+ * `actionHref` swaps the primary for a real anchor; the menu stays the same.
+ *
+ * The props union already forbids a primary with neither `onAction` nor `actionHref`. For a
+ * JavaScript caller that gets there anyway, the primary is dropped and a dev warning names
+ * the missing prop — an inert control that looks clickable is the one outcome to avoid.
  */
 export const SplitButton = forwardRef<HTMLDivElement, SplitButtonProps>(function SplitButton(
   {
     label,
+    icon,
     onAction,
+    actionHref,
     items,
     menuLabel = 'Mais opções',
     variant = 'default',
     size = 'default',
+    pill = false,
     disabled = false,
     align = 'end',
     className
@@ -175,6 +190,24 @@ export const SplitButton = forwardRef<HTMLDivElement, SplitButtonProps>(function
     }
   };
 
+  const primaryShape = pill ? 'rounded-s-full rounded-e-none' : 'rounded-e-none';
+  const triggerShape = cn(
+    'rounded-s-none px-2',
+    pill ? 'rounded-e-full border-s border-primary-foreground/25' : 'border-s-0'
+  );
+  const asLink = Boolean(actionHref) && !disabled;
+  // Unreachable through the props union; a JavaScript caller can still get here, and an
+  // inert primary that looks clickable is worse than no primary at all.
+  const deadPrimary = !actionHref && !onAction;
+
+  useEffect(() => {
+    if (deadPrimary && import.meta.env.DEV) {
+      console.warn(
+        'SplitButton: the primary needs either `onAction` or `actionHref`; dropping it and keeping the menu.'
+      );
+    }
+  }, [deadPrimary]);
+
   return (
     <div
       ref={(element) => {
@@ -184,19 +217,33 @@ export const SplitButton = forwardRef<HTMLDivElement, SplitButtonProps>(function
       }}
       className={cn('relative inline-flex', className)}
     >
-      <Button
-        type="button"
-        variant={variant}
-        size={size}
-        disabled={disabled}
-        onClick={() => {
-          close(false);
-          onAction();
-        }}
-        className="rounded-e-none"
-      >
-        {label}
-      </Button>
+      {!deadPrimary &&
+        (asLink ? (
+          <a
+            href={actionHref}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonClass({ variant, size, className: primaryShape })}
+          >
+            {icon}
+            {label}
+          </a>
+        ) : (
+          <Button
+            type="button"
+            variant={variant}
+            size={size}
+            disabled={disabled}
+            onClick={() => {
+              close(false);
+              onAction?.();
+            }}
+            className={primaryShape}
+          >
+            {icon}
+            {label}
+          </Button>
+        ))}
 
       {items.length > 0 && (
         <Button
@@ -212,7 +259,7 @@ export const SplitButton = forwardRef<HTMLDivElement, SplitButtonProps>(function
           aria-label={menuLabel}
           onClick={() => (open ? close(true) : showMenu('first'))}
           onKeyDown={onTriggerKeyDown}
-          className="rounded-s-none border-s-0 px-2"
+          className={triggerShape}
         >
           <ChevronDown />
         </Button>

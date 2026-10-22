@@ -163,6 +163,20 @@
   --elev-window: 0 60px 120px -50px oklch(0 0 0 / 0.9), 0 0 0 1px oklch(1 0 0 / 0.08);
   --spec: oklch(1 0 0 / 0.45);
   --rim: oklch(1 0 0 / 0.22);
+  /*
+   * The v1 sections still on the page name their surfaces and ink with the legacy
+   * variables. Re-pointing them here is what keeps the band between the new sections
+   * from staying cream in dark mode; they leave together with those sections.
+   */
+  --page: oklch(0.17 0.006 250);
+  --page-2: oklch(0.13 0.006 250);
+  --ink: oklch(0.94 0.004 240);
+  --promo-muted: oklch(0.72 0.01 250);
+  --line: oklch(1 0 0 / 0.14);
+  --line-strong: oklch(1 0 0 / 0.26);
+  --graphite: oklch(0.9 0.004 240);
+  --gold-ink: oklch(0.84 0.1 85);
+  --shadow: oklch(0 0 0 / 0.5);
 }
 
 .mono {
@@ -219,45 +233,10 @@ a {
   min-height: 100vh;
 }
 
-.promo-nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  width: min(1180px, calc(100% - 32px));
-  margin: 16px auto 0;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 22px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 16px 40px var(--shadow);
-  padding: 10px 12px 10px 18px;
-  border-radius: 22px;
-}
-
-.promo-brand {
-  font-size: 0.98rem;
-  font-weight: 760;
-  letter-spacing: -0.02em;
-}
-
-.promo-nav nav {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  color: var(--promo-muted);
-  font-size: 0.82rem;
-  font-weight: 620;
-}
-
-.promo-nav nav a:hover,
 .text-link:hover {
   color: var(--ink);
 }
 
-.nav-cta,
 .button,
 .promo-download {
   display: inline-flex;
@@ -273,34 +252,18 @@ a {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 10px 24px rgba(48, 42, 30, 0.1);
 }
 
-.button-primary,
-.nav-cta {
+.button-primary {
   border-color: rgba(201, 154, 69, 0.5);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.42)),
     linear-gradient(135deg, rgba(201, 154, 69, 0.34), rgba(90, 169, 200, 0.2));
 }
 
-main {
+.promo-legacy {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
 }
 
-.hero-section {
-  min-height: calc(100vh - 96px);
-  display: grid;
-  grid-template-columns: minmax(0, 0.86fr) minmax(420px, 1.14fr);
-  gap: 46px;
-  align-items: center;
-  padding: 62px 0 42px;
-}
-
-.hero-copy {
-  display: grid;
-  gap: 22px;
-}
-
-.hero-copy h1,
 .section-heading h2,
 .split-section h2,
 .community-section h2 {
@@ -310,20 +273,6 @@ main {
   text-wrap: balance;
 }
 
-.hero-copy h1 {
-  font-size: clamp(3rem, 7vw, 6.25rem);
-  max-width: 9.5ch;
-}
-
-.hero-copy p {
-  margin: 0;
-  max-width: 58ch;
-  color: var(--promo-muted);
-  font-size: 1.08rem;
-  line-height: 1.62;
-}
-
-.hero-actions,
 .community-actions {
   display: flex;
   flex-wrap: wrap;
@@ -338,188 +287,10 @@ main {
   border-bottom: 1px solid var(--line-strong);
 }
 
-.product-preview {
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  border-radius: 30px;
-  background:
-    linear-gradient(150deg, rgba(255, 255, 255, 0.16), transparent 28%),
-    linear-gradient(180deg, var(--graphite) 0%, #111215 100%);
-  box-shadow: 0 34px 90px rgba(20, 20, 22, 0.34);
-  overflow: hidden;
-  color: #f7f4ed;
-}
-
-.preview-titlebar {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.preview-titlebar span {
-  width: 9px;
-  height: 9px;
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.32);
-}
-
-.preview-titlebar strong {
-  margin-left: 12px;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-}
-
-.preview-layout {
-  display: grid;
-  grid-template-columns: 62px minmax(0, 1fr) 180px;
-  min-height: 420px;
-}
-
-.preview-rail,
-.preview-panel {
-  background: rgba(255, 255, 255, 0.045);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.preview-rail {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  padding: 20px;
-}
-
-.preview-rail span {
-  width: 22px;
-  height: 22px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.preview-rail .is-active {
-  background: linear-gradient(135deg, var(--gold), var(--promo-cyan));
-}
-
-.preview-canvas {
-  position: relative;
-  display: grid;
-  place-items: center;
-  background: #ece9df;
-}
-
-.preview-grid,
-.ic-canvas-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(23, 23, 23, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23, 23, 23, 0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.preview-icon {
-  width: 164px;
-  height: 164px;
-  border-radius: 42px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #f1cc78, #62adc8);
-  box-shadow: 0 24px 50px rgba(17, 18, 21, 0.28);
-  position: relative;
-  z-index: 1;
-}
-
-.preview-icon i {
-  width: 70px;
-  height: 88px;
-  border-radius: 18px 18px 34px 18px;
-  background: rgba(255, 255, 255, 0.82);
-  transform: rotate(9deg);
-}
-
-.preview-selection {
-  position: absolute;
-  width: 192px;
-  height: 192px;
-  border: 1px solid var(--gold);
-  z-index: 2;
-}
-
-.preview-selection b {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--gold);
-}
-
-.preview-selection b:first-child {
-  right: -5px;
-  bottom: -5px;
-}
-
-.preview-selection b:last-child {
-  left: 50%;
-  top: -28px;
-}
-
-.preview-panel {
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  border-right: 0;
-  padding: 20px;
-}
-
-.preview-panel p,
-.preview-panel em {
-  margin: 0 0 8px;
-  color: rgba(247, 244, 237, 0.56);
-  font-size: 0.72rem;
-  font-style: normal;
-}
-
-.preview-panel strong {
-  display: block;
-  margin-bottom: 18px;
-  font-size: 0.9rem;
-}
-
-.preview-panel span {
-  display: block;
-  height: 32px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  background: rgba(255, 255, 255, 0.09);
-}
-
-.preview-export {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.preview-export span {
-  margin-right: auto;
-  color: rgba(247, 244, 237, 0.7);
-  font-size: 0.78rem;
-}
-
-.preview-export i {
-  font-style: normal;
-  border: 1px solid rgba(201, 154, 69, 0.42);
-  border-radius: 999px;
-  padding: 6px 10px;
-  color: #f7f4ed;
-  font-size: 0.72rem;
-}
-
 .section-block,
 .split-section,
 .community-section,
-.faq-section,
-.promo-footer {
+.faq-section {
   margin-top: 24px;
   border: 1px solid var(--line);
   border-radius: 30px;
@@ -530,6 +301,25 @@ main {
 
 .section-block {
   padding: 34px;
+}
+
+/*
+ * The v1 panels are white at 54%: on the dark page that reads as a grey card under light
+ * ink. A flat low-alpha surface keeps them legible until the sections are replaced.
+ */
+.dark .section-block,
+.dark .split-section,
+.dark .faq-section,
+.dark .workflow-card,
+.dark .workflow-card.is-featured,
+.dark .feature-panel {
+  background: oklch(1 0 0 / 0.055);
+  border-color: var(--line);
+}
+
+.dark .promo-download {
+  background: oklch(1 0 0 / 0.08);
+  border-color: var(--line-strong);
 }
 
 .section-heading {
@@ -549,8 +339,7 @@ main {
 .section-heading p,
 .split-section p,
 .community-section p,
-.faq-section p,
-.promo-footer p {
+.faq-section p {
   margin: 0;
   color: var(--promo-muted);
   line-height: 1.58;
@@ -600,7 +389,9 @@ main {
   height: 146px;
   border: 1px solid var(--line);
   border-radius: 18px;
+  /* A light mock of the canvas, in both themes: its own ink is fixed with it. */
   background: #f8f7f1;
+  color: oklch(0.21 0.012 250);
   overflow: hidden;
 }
 
@@ -685,7 +476,8 @@ main {
 .mini-flow i {
   width: 20px;
   height: 1px;
-  background: var(--line-strong);
+  background: currentColor;
+  opacity: 0.35;
 }
 
 .split-section {
@@ -775,9 +567,8 @@ main {
   grid-template-columns: 1fr auto;
   gap: 28px;
   align-items: center;
-  background:
-    linear-gradient(135deg, rgba(28, 30, 34, 0.94), rgba(28, 30, 34, 0.84)),
-    var(--graphite);
+  /* The panel is dark in every theme, so its wash cannot read a themed token. */
+  background: linear-gradient(135deg, rgba(28, 30, 34, 0.94), rgba(28, 30, 34, 0.84));
   color: #f7f4ed;
 }
 
@@ -802,51 +593,12 @@ main {
   font-size: 1rem;
 }
 
-.promo-footer {
-  width: min(1180px, calc(100% - 32px));
-  margin: 24px auto 32px;
-  padding: 26px 34px;
-  display: grid;
-  grid-template-columns: 1.2fr 0.7fr 1fr;
-  gap: 24px;
-}
-
-.promo-footer strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 1.1rem;
-}
-
-.promo-footer nav {
-  display: grid;
-  gap: 8px;
-  color: var(--promo-muted);
-  font-size: 0.88rem;
-}
-
 @media (max-width: 920px) {
-  .promo-nav {
-    grid-template-columns: 1fr auto;
-  }
-
-  .promo-nav nav {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-
-  .hero-section,
   .section-heading,
   .split-section,
   .split-section-alt,
-  .community-section,
-  .promo-footer {
+  .community-section {
     grid-template-columns: 1fr;
-  }
-
-  .hero-section {
-    min-height: auto;
   }
 
   .workflow-grid,
@@ -854,60 +606,13 @@ main {
   .download-grid {
     grid-template-columns: 1fr;
   }
-
-  .preview-layout {
-    grid-template-columns: 48px minmax(0, 1fr);
-  }
-
-  .preview-panel {
-    display: none;
-  }
 }
 
 @media (max-width: 620px) {
-  .promo-nav,
-  main,
-  .promo-footer {
+  .promo-legacy {
     width: min(100% - 18px, 1180px);
   }
 
-  .promo-nav {
-    border-radius: 18px;
-    grid-template-columns: 1fr;
-    align-items: start;
-    gap: 14px;
-    padding: 16px 18px;
-  }
-
-  .promo-nav nav {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    justify-content: stretch;
-    gap: 10px 18px;
-    overflow: visible;
-    padding-bottom: 0;
-    width: 100%;
-  }
-
-  .promo-nav nav a {
-    min-width: 0;
-    line-height: 1.25;
-  }
-
-  .nav-cta {
-    display: none;
-  }
-
-  .hero-section {
-    padding-top: 36px;
-    gap: 26px;
-  }
-
-  .hero-copy h1 {
-    font-size: 3.25rem;
-  }
-
-  .hero-actions,
   .community-actions {
     align-items: stretch;
     flex-direction: column;
@@ -921,8 +626,7 @@ main {
   .section-block,
   .split-section,
   .community-section,
-  .faq-section,
-  .promo-footer {
+  .faq-section {
     border-radius: 22px;
     padding: 22px;
   }

@@ -2,7 +2,7 @@
 import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { SplitButton, type SplitButtonItem } from './SplitButton';
+import { SplitButton, type SplitButtonItem, type SplitButtonProps } from './SplitButton';
 import { click, mount, pointerDown, press } from './testing/mount';
 
 const TARGETS = ['PNG', 'SVG', 'Copy path'];
@@ -165,5 +165,61 @@ describe('SplitButton', () => {
 
     await pointerDown(document.body);
     expect(menuIn(ui)).toBeNull();
+  });
+
+  it('renders the primary as a real link when it navigates', async () => {
+    const ui = mount();
+    await ui.render(
+      createElement(SplitButton, {
+        label: 'Download',
+        actionHref: 'https://example.com/releases',
+        items: items()
+      })
+    );
+
+    const link = ui.container.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('https://example.com/releases');
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toBe('noreferrer');
+
+    await click(triggerIn(ui));
+    expect(menuItemsIn(ui)).toHaveLength(TARGETS.length);
+  });
+
+  it('drops the primary and warns when it has neither an action nor a link', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const ui = mount();
+
+    // Bypasses the props union on purpose: this is the shape a plain JavaScript caller can
+    // still pass, and the runtime guard is what keeps it from rendering a dead control.
+    await ui.render(
+      createElement(SplitButton, {
+        label: 'Export',
+        items: items()
+      } as unknown as SplitButtonProps)
+    );
+
+    const buttons = Array.from(ui.container.querySelectorAll('button'));
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toBe(triggerIn(ui));
+    expect(ui.container.querySelector('a')).toBeNull();
+    expect(ui.container.textContent).not.toContain('Export');
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('onAction'));
+
+    await click(triggerIn(ui));
+    expect(menuItemsIn(ui)).toHaveLength(TARGETS.length);
+
+    warn.mockRestore();
+  });
+
+  it('rounds only the outer edges when pill is requested', async () => {
+    const ui = mount();
+    await ui.render(createElement(SplitButton, { label: 'Export', onAction: () => {}, items: items(), pill: true }));
+
+    const [primary, trigger] = Array.from(ui.container.querySelectorAll('button'));
+    expect(primary.className).toContain('rounded-s-full');
+    expect(trigger.className).toContain('rounded-e-full');
   });
 });
