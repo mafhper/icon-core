@@ -94,8 +94,11 @@ mediu antes de executar:
   é lote próprio (afeta todo export SVG).
 
 Os hashes da coluna "referência do dono" são a prova de fidelidade do lote 1; os
-da coluna da fonte são o estado atual (lote 2). Toda edição nas matrizes passa
-pelo portão (`check-brand`) e pelos derivados, nunca à mão nos `branding/`.
+da coluna da fonte são o estado do lote 2. Esse estado mudou depois, no port das
+placas para os presets do promosite — o hash atual de cada matriz está na tabela
+de "O port das três placas", mais abaixo. Toda edição nas matrizes passa pelo
+portão (`check-brand`) e pelos derivados, nunca à mão nos `branding/`.
+
 A quarta variante — Monochrome — chegou em 2026-10-22; ver a seção seguinte.
 
 ## As quatro aparências do mockup (2026-10-22)
@@ -103,9 +106,10 @@ A quarta variante — Monochrome — chegou em 2026-10-22; ver a seção seguint
 O dock do promosite mostra o ícone em quatro aparências — **Default**, **Light**, **Dark** e
 **Monochrome** — e a direção é que o conjunto de ícones do app seja o mesmo. O padrão do
 sample-003 continua valendo: **mesma geometria, só a placa muda**. O que faltava era medir o
-que já existia contra as quatro e criar a que não existia.
+que já existia contra as quatro e criar a que não existia. A tabela é o **estado medido antes
+do port** — a única das quatro que já estava no preset era a mono:
 
-| Aparência | Matriz | Placa que a matriz desenha | Placa que o mockup declara | Δ medido |
+| Aparência | Matriz | Placa que a matriz desenhava | Placa que o mockup declara | Δ medido |
 |---|---|---|---|---|
 | Default | `logo.svg` | halo grafite `#1c1b1f`, opacidade 0 → 0,45, radial sobre transparência | prata radial `#f4f5f5` → `#dcdedf` → `#b9bcbe` | 35 (média 12,3) |
 | Light | `logo-light.svg` | lima→teal linear `#efef12` → `#6bb7d8` | lima→menta→ciano `#e4f46a` → `#b9ec8c` → `#6fdde3` | 134 (média 28) |
@@ -114,11 +118,10 @@ que já existia contra as quatro e criar a que não existia.
 
 Δ é a maior diferença por canal (0–255) entre a matriz renderizada e a placa do preset
 renderizada sozinha, em seis pontos fora do símbolo (topo, base, as duas laterais e os dois
-cantos), a 512 px. As três primeiras **não** são a placa do mockup: são a identidade do
-sample-003, promovida byte-idêntica à referência aprovada pelo dono (ADR-025). Portar as três
-para os presets do promosite mudaria o favicon, a arte de release (que compõe
-`logo-light.svg`) e o conjunto do Tauri (que é gerado de `logo-dark.svg`) — é decisão do dono,
-não efeito colateral deste lote.
+cantos), a 512 px. As três primeiras **não eram** a placa do mockup nessa medição: eram a
+identidade do sample-003, promovida byte-idêntica à referência aprovada pelo dono (ADR-025). O
+port das três foi decidido em seguida — as quatro variações serão servidas — e está medido na
+subseção seguinte.
 
 ### O que o mono muda, e por quê
 
@@ -149,6 +152,63 @@ Os derivados são os mesmos de sempre, agora com o mono:
 node scripts/build-brand.mjs   # republica os derivados, inclusive logo-mono.svg
 node scripts/check-brand.mjs   # confere os pares por conteúdo
 ```
+
+### O port das três placas (mesmo dia)
+
+As quatro variações serão servidas, e o `ICON_PALETTES` do promosite é a referência: as três
+matrizes que ainda desenhavam a identidade do sample-003 passaram a desenhar a **placa do
+preset** — mesmo tipo de gradiente, mesmos stops e mesma geometria de gradiente (`cx 50% cy 42%
+r 72%` no radial; `0,0 → 1,1` no linear). O mono do Lote 97 não foi tocado.
+
+| Aparência | Matriz (sha256:12) | Placa agora (= preset) | Δ medido |
+|---|---|---|---|
+| Default | `logo.svg` `1e3b9691631a` | prata radial `#f4f5f5` → `#dcdedf` (0,55) → `#b9bcbe` | **0** (era 35) |
+| Light | `logo-light.svg` `c50c677ab1ee` | lima→menta→ciano `#e4f46a` → `#b9ec8c` (0,5) → `#6fdde3` | **0** (era 134) |
+| Dark | `logo-dark.svg` `af37bd982f8f` | grafite radial `#34353a` → `#28282a` (0,6) → `#151517` | **0** (era 59) |
+| Monochrome | `logo-mono.svg` `0af442fbc2c2` | inalterada (já era o preset) | 0 |
+
+Δ pela mesma régua da tabela anterior (seis pontos fora do símbolo, 512 px): agora é **0 nos
+seis pontos das três matrizes** — sem o gloss, que é a escolha documentada acima. Com o gloss
+do mockup na conta, o Δ seria 12 / 44 / 32 (médias 3,4 / 6,6 / 10).
+
+**Geometria: a mesma, com resíduo zero.** Os sete `d=` (seis pétalas + glifo), todo `transform=`,
+o `viewBox`, os `x/y/width/height` das layers e o clip `rx 130` são byte a byte os de antes do
+port. Das 57 linhas, mudaram **14** no default e no light (1 de placa + 13 de pintura) e **2** no
+dark (1 + 1) — nenhuma de geometria; desfazendo placa e pintura, cada arquivo volta
+**byte-idêntico** ao anterior (8.797 / 8.111 / 8.089 bytes).
+
+**A pintura mudou porque o glifo branco some na placa clara.** O contraste (WCAG, luminância) do
+glifo `#00d6ff` sobre a placa onde ele fica é 1,59:1 no default, 1,28:1 no light e 7,03:1 no
+dark; o branco que estava lá daria 1,09:1 e 1,36:1 — no default ele desaparecia, e no light o
+que separa o glifo da placa é o **matiz** (ciano contra lima/menta), não a luminância. É assim
+que o mockup desenha as três aparências coloridas; o cinza só existe no mono. As pétalas seguem
+o `petal` do preset: default `#7f8386` (op 0,9) → `#a7aaac` (op 0,05), 3,02:1 no topo; light
+branco (op 0,95) → branco (op 0,05), 1,34:1, como o mockup; dark `#d9d9d9` → `#737373` (op 0),
+8,67:1 — que já era exatamente o que o arquivo tinha, então no dark só o glifo mudou.
+
+**O que foi regenerado, e os números:**
+
+- as **6 cópias** de `apps/*/public/branding/` (2 por matriz);
+- a **arte de release**, recomposta pelo template (a camada `Mark` resolve `logo-light.svg`):
+  27.378 bytes, sha256 `bcdfc15ee351` (era 29.824 / `38d7c13aabd4`), e duas execuções seguidas
+  dão o mesmo sha;
+- o **conjunto do Tauri**, de `logo-dark.svg`: 50 dos 52 arquivos mudaram — os dois XML do
+  Android são config e ficaram. O `icon.png` de 512 mede canto `rgb(33,33,35)` (grafite) e
+  centro `rgb(0,219,250)` (ciano), que é a placa nova com o glifo do preset;
+- `check-brand` **17/17**.
+
+Para repetir, na ordem (os dois passos de derivado são os mesmos de cima):
+
+```bash
+node scripts/build-brand.mjs --from-template   # a arte de release, do template
+node scripts/build-brand.mjs                   # os derivados das matrizes
+node scripts/check-brand.mjs                   # o portão
+cd apps/desktop && npx tauri icon ../../assets/brand/logo-dark.svg
+```
+
+A medição de Δ não é um script versionado: foi o `IconGlyph` do mockup rasterizado em Chromium a
+512 px, amostrado pixel a pixel nos seis pontos, contra a placa do preset desenhada sozinha (e a
+matriz, pela mesma via).
 
 **Os nomes do derivado são fechados**, e a tabela de "Os arquivos" é a tradução. O motivo de a tabela
 existir é que a frota tinha dois nomes para a mesma arte (`release.webp` e
@@ -203,10 +263,12 @@ convenção** pelo empacotador do Tauri no macOS, não pela config. Sem build ma
 máquina não dá para provar que o conjunto é dispensável, e um portão que reprova por
 adivinhação treina a pessoa a rodar sem portão.
 
-Além disso há `@2x-1.png` e `@2x.png` **byte-idênticos** (sha256 igual) em quatro grupos: o
-sufixo `-1` é o que o macOS acrescenta ao copiar um arquivo para uma pasta que já tinha o
-nome. São artefato de operação, não escolha — mas a decisão de removê-los é de quem tem build
-macOS, não de um script rodando em Windows.
+Além disso há `@2x-1.png` e `@2x.png` **byte-idênticos** (sha256 igual) em **três** grupos
+(`20x20@2x`, `29x29@2x`, `40x40@2x`). A nota anterior atribuía o sufixo `-1` a uma cópia do
+macOS; a regeneração de 2026-10-22 mostrou que **é o próprio `tauri icon` que grava os dois**
+(CLI 2.12.1, no Windows), com hash igual ao par. São artefato de operação, não escolha — e,
+sendo byte-idênticos, não há divergência a corrigir; removê-los continua sendo decisão de quem
+tem build macOS.
 
 **`docs/assets/*.png` (4 arquivos).** Têm cara de lixo e são a imagem que o GitHub mostra no
 README. Referenciados nas linhas 7, 15, 29 e 40.

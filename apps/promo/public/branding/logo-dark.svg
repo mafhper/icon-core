@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="dark-bg-0" x1="14.64%" y1="14.64%" x2="85.36%" y2="85.36%"><stop offset="0" stop-color="#111827" stop-opacity="1"/><stop offset="0.1" stop-color="#0f1624" stop-opacity="1"/><stop offset="0.2" stop-color="#0e1521" stop-opacity="1"/><stop offset="0.3" stop-color="#0c131f" stop-opacity="1"/><stop offset="0.4" stop-color="#0a121c" stop-opacity="1"/><stop offset="0.5" stop-color="#091019" stop-opacity="1"/><stop offset="0.6" stop-color="#070f16" stop-opacity="1"/><stop offset="0.7" stop-color="#060d14" stop-opacity="1"/><stop offset="0.8" stop-color="#050c11" stop-opacity="1"/><stop offset="0.9" stop-color="#040a0f" stop-opacity="1"/><stop offset="1" stop-color="#03090c" stop-opacity="1"/></linearGradient>
+    <radialGradient id="dark-bg-0" cx="50.00%" cy="42.00%" r="72.00%"><stop offset="0" stop-color="#34353a" stop-opacity="1"/><stop offset="0.6" stop-color="#28282a" stop-opacity="1"/><stop offset="1" stop-color="#151517" stop-opacity="1"/></radialGradient>
     <clipPath id="dark-canvas-clip-2"><rect x="0" y="0" width="512" height="512" rx="130" ry="130"/></clipPath>
   </defs>
 <g clip-path="url(#dark-canvas-clip-2)"><rect width="512" height="512" fill="url(#dark-bg-0)"/>
@@ -48,7 +48,7 @@
 </svg>
 </g></g>
 <g opacity="1" transform="translate(256,256) rotate(0) scale(0.49) translate(-256,-256)" filter="url(#dark-llayer-8a09b6e5-85d1-4219-9ee9-17561144e322-filter-layer-1581b282-8c25-4232-9d4f-1bf5d429cd3f-1)"><g transform="translate(122.91499999999999,0) scale(0.8476751592356688,0.847682119205298)"><svg viewBox="0 0 314 604" fill="none" xmlns="http://www.w3.org/2000/svg" x="0" y="0" width="314" height="604">
-<path d="M0 196.923C0 88.1656 88.1656 0 196.923 0H294.229C305.106 0 313.921 8.81623 313.921 19.6923V406.772C313.921 515.531 225.756 603.694 116.998 603.694H19.6923C8.81689 603.694 0 594.878 0 584.001V196.923Z" fill="white"/>
+<path d="M0 196.923C0 88.1656 88.1656 0 196.923 0H294.229C305.106 0 313.921 8.81623 313.921 19.6923V406.772C313.921 515.531 225.756 603.694 116.998 603.694H19.6923C8.81689 603.694 0 594.878 0 584.001V196.923Z" fill="#00d6ff"/>
 </svg>
 </g></g>
 </g>
