@@ -53,11 +53,16 @@ export function RadiusControl({ className, id = 'frame-radius' }: { className?: 
  * The four appearances as a radio group. Roving tabindex keeps one stop for the whole dock
  * and the arrow keys walk it, which is the expected keyboard model for radios.
  *
- * Two per row below `sm`: the label, not the glyph, is the long pole. Four tiles in a ~270px
- * dock leave ~46px of content box each, and `truncate` cannot shrink the span — as a flex
- * item its `min-width: auto` is the nowrap text itself (~67px for "Monochrome"), so the
- * labels paint over the padding and touch their neighbours ("DefaultLightDarkonochrome")
- * instead of ellipsing. From `sm` up there is room for one row and the layout is unchanged.
+ * The layout reads the **container**, never the viewport. The label, not the glyph, is the
+ * long pole: "Monochrome" is ~67px at 11px and the tile adds `px-2` (16px) plus its border
+ * (2px), so an intact tile needs ~85px. Two of them plus the 4px gap fit from 180px, and
+ * below that the dock stacks — a tile narrower than its own word can only clip, so `max-w-full`
+ * on the label keeps `truncate` honest instead of painting the text over the neighbours.
+ *
+ * Both hosts cap the slot below the ~354px four tiles would need (293px in the hero card,
+ * 320px by `max-w-xs` in the editor), which is why the ladder stops at two columns. A `sm:`
+ * breakpoint here was the defect: at a 1258px window the hero column is 149px and the row
+ * still turned on, squeezing four ~34px tiles into "DefaultLightDarkonochrome".
  */
 export function AppearanceDock({ className, size = 44 }: { className?: string; size?: number }) {
   const { appearance, setAppearance, radius } = useStudio();
@@ -79,41 +84,43 @@ export function AppearanceDock({ className, size = 44 }: { className?: string; s
   };
 
   return (
-    <div
-      role="radiogroup"
-      aria-label="Aparência do ícone e do site"
-      className={cn('grid grid-cols-2 gap-1 sm:flex', className)}
-    >
-      {APPEARANCES.map((item, index) => {
-        const active = item.id === appearance;
-        return (
-          <button
-            key={item.id}
-            ref={(element) => {
-              refs.current[index] = element;
-            }}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            tabIndex={active ? 0 : -1}
-            onKeyDown={(event) => onKey(event, index)}
-            onClick={() => setAppearance(item.id)}
-            className={cn(
-              'group relative flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-transparent px-2 pt-2 pb-1.5 text-[11px] text-muted-foreground transition-all hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-              active && 'border-border bg-card text-foreground shadow-float'
-            )}
-          >
-            {active && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />}
-            <IconGlyph
-              appearance={item.id}
-              radii={radius}
-              size={size}
-              className="transition-transform duration-300 group-hover:-translate-y-0.5"
-            />
-            <span className="truncate">{item.label}</span>
-          </button>
-        );
-      })}
+    <div className={cn('@container', className)}>
+      <div
+        role="radiogroup"
+        aria-label="Aparência do ícone e do site"
+        className="grid grid-cols-1 gap-1 @min-[11.25rem]:grid-cols-2"
+      >
+        {APPEARANCES.map((item, index) => {
+          const active = item.id === appearance;
+          return (
+            <button
+              key={item.id}
+              ref={(element) => {
+                refs.current[index] = element;
+              }}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              tabIndex={active ? 0 : -1}
+              onKeyDown={(event) => onKey(event, index)}
+              onClick={() => setAppearance(item.id)}
+              className={cn(
+                'group relative flex min-w-0 flex-1 cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-transparent px-2 pt-2 pb-1.5 text-[11px] text-muted-foreground transition-all hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                active && 'border-border bg-card text-foreground shadow-float'
+              )}
+            >
+              {active && <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />}
+              <IconGlyph
+                appearance={item.id}
+                radii={radius}
+                size={size}
+                className="transition-transform duration-300 group-hover:-translate-y-0.5"
+              />
+              <span className="max-w-full truncate">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

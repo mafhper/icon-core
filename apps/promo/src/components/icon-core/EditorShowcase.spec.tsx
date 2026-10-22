@@ -331,7 +331,9 @@ describe('EditorShowcase zoom readout', () => {
 });
 
 describe('EditorShowcase history cap', () => {
-  // 50 snapshots plus 50 undos is 100 UI actions; this test needs room, not a smaller cap.
+  // 50 snapshots plus 50 undos is 100 UI actions, each a full React commit: ~5 s idle, but
+  // several times that when the suite runs with many workers on one machine.
+  // The ceiling is wall-clock room for that contention, not a smaller cap.
   it(
     'keeps the 50 most recent edits undoable',
     async () => {
@@ -354,6 +356,6 @@ describe('EditorShowcase history cap', () => {
       expect(steps).toBe(50);
       expect(layerRows(ui.container).length).toBe(4);
     },
-    30_000
+    60_000
   );
 });

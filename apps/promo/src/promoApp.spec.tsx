@@ -31,19 +31,9 @@ beforeAll(() => {
 });
 
 describe('promo page anchors', () => {
-  it('gives every new and legacy anchor exactly one target', () => {
+  it('gives every anchor of the page exactly one target', () => {
     const page = renderToStaticMarkup(createElement(PromoApp));
-    const ids = [
-      'top',
-      'plataformas',
-      'interface',
-      'baixar',
-      'workflows',
-      'edit-space',
-      'export-utilities',
-      'desktop',
-      'community',
-    ];
+    const ids = ['top', 'plataformas', 'interface', 'baixar', 'desktop'];
 
     for (const id of ids) {
       expect(occurrences(page, `id="${id}"`), `#${id} should appear once`).toBe(1);
@@ -107,47 +97,32 @@ describe('promo sections', () => {
   });
 });
 
-describe('legacy band in pt-BR', () => {
-  it('narrates the three workspaces and the FAQ in pt-BR', () => {
+describe('page composition', () => {
+  it('renders only the sections of the design, with no v1 band left behind', () => {
     const page = renderToStaticMarkup(createElement(PromoApp));
 
-    const copy = [
+    for (const anchor of ['workflows', 'edit-space', 'export-utilities', 'community']) {
+      expect(page, `#${anchor} should be gone`).not.toContain(`id="${anchor}"`);
+    }
+
+    for (const text of [
       'Escolha o workspace que combina com o seu fluxo de ícones.',
-      'Comece do zero, exporte direto ou ajuste antes de empacotar.',
-      'Edição em camadas',
-      'Exportação rápida',
-      'Fluxo único',
       'O Edit Space é para ajuste preciso do ícone.',
-      'Camadas arrastáveis',
       'O Export Utilities empacota os assets sem esconder os detalhes.',
       'Feito em aberto.',
       'O Icon Core é grátis?',
-      'Preciso subir arquivos para um servidor?',
-      'Posso contribuir?',
-    ];
-
-    for (const text of copy) expect(page, text).toContain(text);
-  });
-
-  it('keeps the workspace names the app itself shows', () => {
-    const page = renderToStaticMarkup(createElement(PromoApp));
-
-    for (const name of ['Create in Edit Space', 'Upload to Export Utilities', 'Upload, Adjust, Export']) {
-      expect(page, name).toContain(name);
+      'Create in Edit Space',
+      'Upload to Export Utilities',
+    ]) {
+      expect(page, text).not.toContain(text);
     }
   });
 
-  it('leaves no English copy of the old band behind', () => {
+  it('does not reuse the classes of the removed band', () => {
     const page = renderToStaticMarkup(createElement(PromoApp));
 
-    for (const text of [
-      'Choose the workspace',
-      'Built in the open.',
-      'Is Icon Core free?',
-      'Can I contribute?',
-      'Join on GitHub',
-    ]) {
-      expect(page, text).not.toContain(text);
+    for (const className of ['promo-legacy', 'workflow-grid', 'feature-panel', 'faq-section']) {
+      expect(page, className).not.toContain(className);
     }
   });
 });
