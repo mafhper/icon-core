@@ -1,4 +1,4 @@
-import type { CanvasMaskShape, IconCoreProject, IconVariant } from '@iconcore/shared';
+import type { CanvasMaskShape, ExportArtifactLayers, IconCoreProject, IconVariant } from '@iconcore/shared';
 import type { RenderBackend } from '@iconcore/renderer';
 import { renderToSvgWithOptions } from '@iconcore/renderer';
 import type { RenderBackground } from '@iconcore/renderer';
@@ -37,6 +37,11 @@ export interface SvgEncodeOptions {
    * absent keep it full bleed.
    */
   mask?: CanvasMaskShape | 'none';
+  /**
+   * Whether the artwork layers are emitted. Defaults to `'all'`; `'none'` emits the
+   * background only, mirroring the raster path (see `RenderOptions.layers`).
+   */
+  layers?: ExportArtifactLayers;
 }
 
 export const encodeSvg = async (
@@ -69,7 +74,8 @@ export const encodeSvg = async (
     size: options.size,
     height: options.height,
     background: options.background,
-    mask: options.mask
+    mask: options.mask,
+    layers: options.layers
   });
 
   return { blob: new Blob([svg], { type: 'image/svg+xml' }), warnings };

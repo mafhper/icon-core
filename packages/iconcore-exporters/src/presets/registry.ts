@@ -14,7 +14,7 @@ const raster = (
   extras: Partial<
     Pick<
       ExportArtifactSpec,
-      'background' | 'quality' | 'target' | 'variant' | 'safeZone' | 'maskShape'
+      'background' | 'quality' | 'target' | 'variant' | 'safeZone' | 'layers' | 'maskShape'
     >
   > = {}
 ): ExportArtifactSpec => ({
@@ -204,12 +204,16 @@ export const EXPORT_PRESETS: ExportPreset[] = [
       raster('android-foreground-xhdpi', 'mipmap-xhdpi/ic_launcher_foreground.png', 216, { safeZone: SAFE_ZONE }),
       raster('android-foreground-xxhdpi', 'mipmap-xxhdpi/ic_launcher_foreground.png', 324, { safeZone: SAFE_ZONE }),
       raster('android-foreground-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_foreground.png', 432, { safeZone: SAFE_ZONE }),
-      // The background is full bleed on purpose — it is what fills the mask.
-      raster('android-background-mdpi', 'mipmap-mdpi/ic_launcher_background.png', 108, { background: 'opaque' }),
-      raster('android-background-hdpi', 'mipmap-hdpi/ic_launcher_background.png', 162, { background: 'opaque' }),
-      raster('android-background-xhdpi', 'mipmap-xhdpi/ic_launcher_background.png', 216, { background: 'opaque' }),
-      raster('android-background-xxhdpi', 'mipmap-xxhdpi/ic_launcher_background.png', 324, { background: 'opaque' }),
-      raster('android-background-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_background.png', 432, { background: 'opaque' }),
+      // The background is full bleed on purpose — it is what fills the mask. And it is
+      // **the fill alone**: `layers: 'none'`, because the launcher draws the background
+      // across the 108dp layer and enlarges it 1.5× before drawing the foreground on
+      // top. A background that carried the artwork would show the mark twice — the
+      // background copy stretched and offset. See `ExportArtifactLayers`.
+      raster('android-background-mdpi', 'mipmap-mdpi/ic_launcher_background.png', 108, { background: 'opaque', layers: 'none' }),
+      raster('android-background-hdpi', 'mipmap-hdpi/ic_launcher_background.png', 162, { background: 'opaque', layers: 'none' }),
+      raster('android-background-xhdpi', 'mipmap-xhdpi/ic_launcher_background.png', 216, { background: 'opaque', layers: 'none' }),
+      raster('android-background-xxhdpi', 'mipmap-xxhdpi/ic_launcher_background.png', 324, { background: 'opaque', layers: 'none' }),
+      raster('android-background-xxxhdpi', 'mipmap-xxxhdpi/ic_launcher_background.png', 432, { background: 'opaque', layers: 'none' }),
       // ── Legacy launcher, below API 26 ───────────────────────────────────────────
       raster('android-legacy-mdpi', 'mipmap-mdpi/ic_launcher.png', 48),
       raster('android-legacy-hdpi', 'mipmap-hdpi/ic_launcher.png', 72),

@@ -56,7 +56,8 @@ export const encodeArtifact = async (
         size: artifact.size ?? options.svg?.size,
         height: artifact.height ?? options.svg?.height,
         background: backgroundModeFor(artifact),
-        mask: maskModeFor(artifact, project)
+        mask: maskModeFor(artifact, project),
+        layers: artifact.layers
       });
     case 'container':
       return encodeContainer(artifact as ExportContainerSpec, project, variant, backend);
@@ -87,7 +88,8 @@ const encodeContainer = async (
     // colour while a normal one exports with alpha.
     const blob = await renderProject(project, variant, { width, height: width }, backend, {
       format: 'png',
-      background: backgroundModeFor(artifact)
+      background: backgroundModeFor(artifact),
+      layers: artifact.layers
     });
     representations.push({ width, blob });
   }

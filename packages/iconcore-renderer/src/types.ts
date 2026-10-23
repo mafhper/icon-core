@@ -1,4 +1,12 @@
-import type { CanvasMaskShape, Fill, IconLayer, ShapeKind, Stroke, BlendMode } from '@iconcore/shared';
+import type {
+  CanvasMaskShape,
+  ExportArtifactLayers,
+  Fill,
+  IconLayer,
+  ShapeKind,
+  Stroke,
+  BlendMode
+} from '@iconcore/shared';
 
 export interface ImageHandle {
   width: number;
@@ -40,6 +48,14 @@ export type RenderOptions = {
    * to that outline, which is how the export mirrors the canvas frame.
    */
   mask?: CanvasMaskShape | 'none';
+  /**
+   * Whether the composition includes the document's layers. Defaults to `'all'`.
+   *
+   * `'none'` paints the canvas background and nothing else. It is what the Android
+   * adaptive icon's **background layer** is: the fill the launcher scales and masks,
+   * not a picture of the icon. See `ExportArtifactLayers` for the defect it prevents.
+   */
+  layers?: ExportArtifactLayers;
 }
 
 export interface RenderBackend {
