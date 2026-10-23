@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Promo contrast guard (IC79 S5, ADR-026).
+ * Promo contrast guard.
  *
  * The landing page carries its own palette (`apps/promo/src/index.css`, zero
  * `--ic-*` tokens) and had no instrument at all: the light `--primary` /

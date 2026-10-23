@@ -2,7 +2,7 @@
 /**
  * Portão da cópia única do react.
  *
- * ## Por que este arquivo existe (IC79 S7, PR #248)
+ * ## Por que este arquivo existe (PR #248)
  *
  * O `package.json` da raiz não declarava `react` em lugar nenhum, e o PR #248 mostrou o preço:
  * depois do bump, o npm manteve o `@radix-ui/react-id` **hoisted na raiz** e aninhou o `react`
@@ -29,7 +29,7 @@
  * decorativa: a âncora primeiro, porque é ela que garante o hoist dos outros três.
  *
  * Depois de escrever os quatro: `npm install` na raiz (npm 10.9.2, o `packageManager`) para o
- * `package-lock.json` ser regerado — **nunca editar o lockfile à mão** (lição do IC-N44).
+ * `package-lock.json` ser regerado — **nunca editar o lockfile à mão** (lição já paga uma vez).
  * Verificação: este guard, mais `npm ci` local. No lockfile tem que existir `node_modules/react`
  * na raiz e **nenhum** `.../node_modules/react` aninhado.
  *

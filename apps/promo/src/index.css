@@ -191,7 +191,7 @@
   --popover: oklch(0.995 0.002 240);
   --popover-foreground: oklch(0.21 0.012 250);
   /*
-   * AA fix (IC79 S5, ADR-026): at L 0.58 this pair measured 3.95:1 against the
+   * AA fix: at L 0.58 this pair measured 3.95:1 against the
    * foreground below. L 0.54 is the smallest step that clears 4.5 (L 0.55 still
    * gives 4.46); hue 162 and chroma 0.115 are untouched, so the identity stays.
    */

@@ -60,7 +60,7 @@ jobs:
 
       # A landing tem paleta propria (apps/promo/src/index.css, zero --ic-*) e
       # ficou fora de todo gate ate 2026-10-23: o par primary/primary-foreground
-      # do tema light media 3,95:1 (IC79 S5, ADR-026). O valor foi corrigido no
+      # do tema light media 3,95:1. O valor foi corrigido no
       # mesmo commit que cria o gate, para ele nao nascer vermelho.
       - name: Promo contrast guard
         run: node scripts/check-promo-contrast.mjs
