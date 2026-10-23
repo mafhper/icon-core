@@ -35,6 +35,11 @@ jobs:
       - name: Third-party asset guard
         run: node scripts/check-third-party-assets.mjs
 
+      # The published repository must not cite the private workspace. Ratchet: the
+      # baseline in .public-surface-baseline.json only goes down; a new reference fails.
+      - name: Public surface guard
+        run: node scripts/check-public-surface.mjs
+
       - name: Brand guard (one source, derived copies)
         run: node scripts/check-brand.mjs
 
