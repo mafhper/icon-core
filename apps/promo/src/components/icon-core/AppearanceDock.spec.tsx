@@ -2,7 +2,7 @@
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { click, mount } from '../../ui/testing/mount';
+import { click, mount, press } from '../../ui/testing/mount';
 import { AppearanceDock, RadiusControl } from './controls';
 import { StudioProvider } from './studio-context';
 
@@ -87,5 +87,34 @@ describe('appearance dock tiles', () => {
 
     expect(tiles).toHaveLength(4);
     expect(tiles.map((tile) => tile.style.borderRadius)).toEqual(Array(4).fill(TILE_RADIUS));
+  });
+});
+
+/**
+ * The dock is a radiogroup with a roving tabindex: focus moves and the selection follows it, which
+ * is why the arrows change `aria-checked` as they walk. `Home` and `End` are that same walk at its
+ * ends — the landing's own menu has handled them for longer (`EditorShowcase`, "Opções de
+ * exibição"), and the dock handled only the four arrows.
+ *
+ * The labels are literals because the order is the contract: Default, Light, Dark, Mono.
+ */
+describe('appearance dock keyboard ends', () => {
+  it('jumps to the last tile with End, and back to the first with Home', async () => {
+    const ui = mount();
+    await ui.render(createElement(StudioProvider, null, createElement(AppearanceDock)));
+
+    const tiles = Array.from(ui.container.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
+
+    expect(tiles.map((tile) => tile.textContent)).toEqual(['Default', 'Light', 'Dark', 'Mono']);
+
+    await press(tiles[0] as HTMLButtonElement, 'End');
+
+    expect(document.activeElement).toBe(tiles[3]);
+    expect(tiles[3]?.getAttribute('aria-checked')).toBe('true');
+
+    await press(tiles[3] as HTMLButtonElement, 'Home');
+
+    expect(document.activeElement).toBe(tiles[0]);
+    expect(tiles[0]?.getAttribute('aria-checked')).toBe('true');
   });
 });

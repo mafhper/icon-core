@@ -188,8 +188,8 @@ const TILE_RADIUS = `calc(${((TILE_RADIUS_RATIO / 4) * 100).toFixed(4)}cqw - ${(
  * may use the tile's full width, so a squeezed tile lets its label reach into the gap beside it
  * instead of truncating.
  *
- * Roving tabindex keeps one stop for the whole dock and the arrow keys walk it, which is the
- * expected keyboard model for radios.
+ * Roving tabindex keeps one stop for the whole dock, the arrow keys walk it and `Home`/`End` jump to
+ * its ends, which is the expected keyboard model for radios.
  *
  * One thing the port does not copy is the plate's radius. The mockup hands every tile the frame's
  * own `radius` (`controls.tsx`, `radii={radius}`), which at the dock's 38 px is a 9.65 px corner —
@@ -215,10 +215,20 @@ export function AppearanceDock({ className, size = 44 }: { className?: string; s
         : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
           ? -1
           : 0;
-    if (!step) return;
+
+    // Home and End are the same walk at its ends: focus moves and the selection follows it, as the
+    // arrows already do. `SplitButton` and the display menu treat the pair the same way.
+    const next =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? APPEARANCES.length - 1
+          : step
+            ? (index + step + APPEARANCES.length) % APPEARANCES.length
+            : -1;
+    if (next < 0) return;
 
     event.preventDefault();
-    const next = (index + step + APPEARANCES.length) % APPEARANCES.length;
     setAppearance(APPEARANCES[next]?.id ?? 'default');
     refs.current[next]?.focus();
   };
