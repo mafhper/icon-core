@@ -400,9 +400,14 @@ export const StudioExportPanel = () => {
           </>
         )}
         {stage === 'error' && (
-          <button type="button" className="studio-export-ghost" onClick={() => setStage('configure')}>
-            <ArrowLeft size={14} aria-hidden="true" /> Back
-          </button>
+          <>
+            <button type="button" className="studio-export-ghost" onClick={() => setStage('configure')}>
+              <ArrowLeft size={14} aria-hidden="true" /> Back
+            </button>
+            <button type="button" className="studio-export-ghost" onClick={resetSession}>
+              Close
+            </button>
+          </>
         )}
       </div>
     </>

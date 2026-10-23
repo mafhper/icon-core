@@ -301,4 +301,33 @@ describe('Studio export panel — S2/S3/S-err', () => {
     fireEvent.click(within(inspector).getByRole('button', { name: 'Back' }));
     expect(within(inspector).getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
   });
+
+  it('S-err oferece Close, e ele fecha o painel com os defaults frescos', async () => {
+    vi.mocked(executePlan).mockRejectedValueOnce(new Error('Encoder exploded'));
+    const inspector = openExport();
+    const tiles = within(inspector).getByRole('group', { name: 'Variants' });
+
+    // Sai dos defaults para o Close do erro ter o que provar — a mesma seleção
+    // do teste do Close do done.
+    fireEvent.click(within(tiles).getByRole('checkbox', { name: 'Light' }));
+    fireEvent.click(within(tiles).getByRole('button', { name: 'Set Dark active' }));
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: '1024' }));
+    fireEvent.click(within(inspector).getByRole('checkbox', { name: 'PNG' }));
+    fireEvent.click(within(inspector).getByRole('switch', { name: 'Transparent background' }));
+
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Export 2 files' }));
+    expect(await within(inspector).findByRole('alert')).toHaveTextContent('Encoder exploded');
+
+    // O erro também fecha: o mesmo `resetSession` do Close do done.
+    fireEvent.click(within(inspector).getByRole('button', { name: 'Close' }));
+
+    expect(within(inspector).queryByRole('alert')).not.toBeInTheDocument();
+    const tilesReset = within(inspector).getByRole('group', { name: 'Variants' });
+    expect(within(inspector).getByRole('checkbox', { name: 'PNG' })).toBeChecked();
+    expect(within(inspector).getByRole('checkbox', { name: '1024' })).not.toBeChecked();
+    expect(within(inspector).getByRole('switch', { name: 'Transparent background' })).not.toBeChecked();
+    expect(within(tilesReset).getByRole('checkbox', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(tilesReset).getByRole('checkbox', { name: 'Light' })).toHaveAttribute('aria-checked', 'false');
+    expect(within(inspector).getByRole('button', { name: 'Export 3 files' })).toBeInTheDocument();
+  });
 });
