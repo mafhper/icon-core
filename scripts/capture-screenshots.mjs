@@ -4,6 +4,10 @@
 // Requires both dev servers running: `npm run dev:web` (5173) and `npm run dev:promo` (5174).
 //   node scripts/capture-screenshots.mjs
 //
+// Pass file names as arguments to capture only some of them, e.g. an app-only
+// refresh that does not need the promo server running:
+//   node scripts/capture-screenshots.mjs app-editor.png app-export.webp
+//
 // What it writes, all under `docs/assets/`:
 //   app-editor.png   Studio, sample project, a layer selected
 //   app-export.webp  the Inspector's Export tab (Playwright only encodes PNG/JPEG,
@@ -27,7 +31,7 @@
 //    "Your projects" with the sample listed twice, instead of the three ways in.
 import { chromium } from 'playwright';
 import sharp from 'sharp';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const APP = 'http://localhost:5173/icon-core/app/';
 const PROMO = 'http://localhost:5174/icon-core/';
@@ -35,6 +39,16 @@ const OUT = 'docs/assets';
 mkdirSync(OUT, { recursive: true });
 
 const VIEWPORT = { width: 1320, height: 840 };
+
+/**
+ * The app captures frame a 512px canvas at 100% zoom, and the canvas column's
+ * scrollable stage is only ~430px tall at `VIEWPORT` — the artboard's bottom sat
+ * outside the visible area. The old sample hid this: its artwork was 320px and
+ * centred, so the cut fell on empty background. A taller window gives the stage
+ * room for the canvas plus its 40px breathing, so what the capture shows is the
+ * whole artboard.
+ */
+const APP_VIEWPORT = { width: 1320, height: 1040 };
 
 /**
  * The Layers panel minimum is 205px, and at that width the row spends its space on
@@ -46,10 +60,25 @@ const VIEWPORT = { width: 1320, height: 840 };
  */
 const PANELS = { left: 300, right: 320 };
 
-/** A tasteful sample project seeded through the legacy slot, which the app migrates. */
+/**
+ * The brand mark itself, read from `assets/brand/logo.svg` and base64-encoded —
+ * the same payload an import produces, so the sample is the real logo instead of
+ * a stand-in drawing that a later brand change leaves behind.
+ */
+const LOGO_SVG_BASE64 = readFileSync('assets/brand/logo.svg').toString('base64');
+
+/**
+ * A tasteful sample project seeded through the legacy slot, which the app migrates.
+ *
+ * The single layer is shaped exactly as `createLayerFromAsset` in
+ * `apps/web/src/composer/utils/projectFactory.ts` writes an imported SVG —
+ * `kind: 'svg'` with an inline base64 `source` and a `rectangle` shape at the
+ * asset's footprint — so the capture shows the import path rather than a layout
+ * the editor cannot otherwise produce.
+ */
 const project = {
   schemaVersion: 2,
-  metadata: { name: 'Aurora', shortName: 'Aurora' },
+  metadata: { name: 'Icon-Core', shortName: 'Icon-Core' },
   canvas: {
     size: 512,
     background: { kind: 'linear-gradient', angle: 160, stops: [{ offset: 0, color: '#eef2ff' }, { offset: 1, color: '#c7d2fe' }] },
@@ -57,27 +86,19 @@ const project = {
   },
   layers: [
     {
-      id: 'layer-card',
-      name: 'Card',
-      kind: 'shape',
+      id: 'layer-logo',
+      name: 'Logo',
+      kind: 'svg',
       visible: true,
       zIndex: 0,
-      source: { type: 'reference', path: '', shape: { kind: 'squircle', width: 320, height: 320, cornerRadius: 88 } },
+      source: {
+        type: 'inline',
+        mimeType: 'image/svg+xml',
+        data: LOGO_SVG_BASE64,
+        shape: { kind: 'rectangle', width: 512, height: 512 }
+      },
       transform: { x: 0, y: 0, scale: 1, rotation: 0 },
-      opacity: 1,
-      fill: { kind: 'linear-gradient', angle: 135, stops: [{ offset: 0, color: '#f3d18a' }, { offset: 1, color: '#6bb7d8' }] },
-      effects: [{ kind: 'depth-shadow', enabled: true, params: { x: 0, y: 18, blur: 34, color: 'rgba(15,23,42,0.28)' } }]
-    },
-    {
-      id: 'layer-accent',
-      name: 'Accent',
-      kind: 'shape',
-      visible: true,
-      zIndex: 1,
-      source: { type: 'reference', path: '', shape: { kind: 'circle', width: 120, height: 120 } },
-      transform: { x: -72, y: -72, scale: 1, rotation: 0 },
-      opacity: 0.92,
-      fill: { kind: 'solid', color: '#ffffff' }
+      opacity: 1
     }
   ],
   variants: {
@@ -95,7 +116,7 @@ const project = {
     { target: 'marketing', enabled: false }
   ],
   exportProfile: {
-    outputBaseName: 'aurora',
+    outputBaseName: 'icon-core',
     quality: 0.92,
     generateReport: true,
     format: 'png',
@@ -109,15 +130,19 @@ const project = {
 
 const browser = await chromium.launch();
 
+/** Names passed on the command line; empty means "all of them". */
+const requested = new Set(process.argv.slice(2));
+
 /**
  * One screenshot, one context. `deviceScaleFactor` is per shot because the two
  * surfaces want different densities: UI text is the subject of the app captures
  * (1.5), while the landing is one large colour field where 1.25 already resolves
  * twice the width the README displays and keeps the PNG about a third smaller.
  */
-const capture = async (name, { url, seed = false, scale = 1.5, beforeShot } = {}) => {
+const capture = async (name, { url, seed = false, scale = 1.5, viewport = VIEWPORT, beforeShot } = {}) => {
+  if (requested.size > 0 && !requested.has(name)) return;
   const context = await browser.newContext({
-    viewport: VIEWPORT,
+    viewport,
     deviceScaleFactor: scale,
     colorScheme: 'dark',
     reducedMotion: 'reduce'
@@ -152,15 +177,16 @@ const capture = async (name, { url, seed = false, scale = 1.5, beforeShot } = {}
   await context.close();
 };
 
-// Editor: the sample project with the squircle selected, so the Inspector has
-// real geometry (320 × 320, squircle) and the canvas shows the selection box.
+// Editor: the sample project with the logo selected, so the Inspector has the
+// layer's real geometry (512 × 512, the imported SVG's footprint, full bleed).
 await capture('app-editor.png', {
   url: APP + '#/edit-space',
   seed: true,
+  viewport: APP_VIEWPORT,
   beforeShot: async (page) => {
     // The layer's name button, not the row: see `PANELS` for why the row centre
     // is the wrong target.
-    const layerName = page.getByRole('button', { name: 'Card', exact: true });
+    const layerName = page.getByRole('button', { name: 'Logo', exact: true });
     try {
       await layerName.click({ timeout: 4000 });
       await page.waitForTimeout(900);
@@ -172,7 +198,7 @@ await capture('app-editor.png', {
 
 // Export: a **tab inside the Inspector** (`#/export-utilities` is the legacy
 // deep-link that lands on it and focuses the tab — the promo still links it).
-await capture('app-export.webp', { url: APP + '#/export-utilities', seed: true });
+await capture('app-export.webp', { url: APP + '#/export-utilities', seed: true, viewport: APP_VIEWPORT });
 
 // Welcome: no seeded project, so the modal offers the three ways in.
 await capture('app-welcome.png', { url: APP + '#/workspaces' });
