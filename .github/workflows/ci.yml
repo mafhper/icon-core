@@ -38,6 +38,12 @@ jobs:
       - name: Brand guard (one source, derived copies)
         run: node scripts/check-brand.mjs
 
+      # O derivado da biblioteca Rune (icons.generated.ts) tem que ser exatamente o
+      # que o gerador produz de assets/icons-rune/ — editar um SVG vendorizado sem
+      # regenerar deixa o pacote mentindo, e nenhum outro passo veria.
+      - name: Rune library data guard (generated matches source)
+        run: node scripts/build-rune-library.mjs --check
+
       - name: UI boundary guard (G6)
         run: node scripts/check-ui-boundary.mjs
 

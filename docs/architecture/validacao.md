@@ -1,7 +1,8 @@
 # Validação: paridade prova divergência, assertion absoluta prova correção
 
-> Origem: `ADR-021` (decisão de arquitetura, mantida no workspace privado). Este é o
-> documento **operacional** e é o que o CI pode ler.
+> Este é o documento **operacional** da regra e é o que o CI pode ler. A decisão que o
+> originou e o incidente que a motivaram são registrados internamente; o que vale aqui é o
+> que é verificável pelos gates citados abaixo.
 
 ## A regra
 
@@ -17,7 +18,7 @@ contrato pretendido. Paridade é complementar, nunca substituto.
 
 ### Por que isso não é teórico
 
-O gate de paridade do `IC63/2` media `text-anchor` e `font-style` nos dois pipelines, e
+O gate de paridade media `text-anchor` e `font-style` nos dois pipelines, e
 passava. Se o campo novo **não chegasse** ao renderer, os dois pipelines continuariam de
 acordo — porque os dois leriam a mesma ausência. A fixture estava cega.
 
@@ -49,7 +50,8 @@ modelo → persistência → reducer → UI → Canvas → SVG → paridade → 
 ```
 
 Contagem de testes não é cobertura. `204 testes no renderer` não diz se uma dimensão nova
-está protegida — e o `IC63/2` provou: o pacote tinha 168 testes quando uma mutação passou.
+está protegida — e o incidente do campo de texto provou: o pacote tinha 168 testes quando
+uma mutação passou.
 
 Ao reportar, preencher a cadeia e marcar o que está vazio. Lacuna declarada é dívida
 legível; lacuna não declarada vira surpresa.
@@ -72,17 +74,21 @@ fixture que não existe.
 
 Coisas que esta regra **não** faz, e que continuam abertas:
 
-- **O número agregado de paridade não é portão binário.** 94% em 16 fixtures esconde
-  regressão — uma fixture pode cair 20 pontos e a média mal mexer. Falta limiar **por
-  fixture** com baseline versionado; hoje o baseline é local e não está no repositório.
+- **O número agregado de paridade não é portão binário.** A média em 32 fixtures esconde
+  regressão — uma fixture pode cair 20 pontos e a média mal mexer. Cada fixture tem
+  limiar próprio (`minFora` em `scripts/check-svg-parity.mjs`) e fixture sem limite
+  reprova; o baseline continua local e não está no repositório.
 - **`charset-scan` não é `cspell`.** Ele pega CJK, cirílico, árabe e Hangul. Não pega
   prosa em outro idioma (`itángulo`, `Ameasured`) nem palavra duplicada
   (`estabeleceram estabeleceram`), que já foram defeitos reais.
-- **Não há branch protection no `main`.** Um `--amend` com erro de stage já teve efeito
-  uma vez.
-- **`adb`/in-browser e2e do Composer não existem.** A cobertura de e2e é do promo; fluxos
-  do Composer não são cobertos.
+- **A `main` é PR-only.** Cinco checks obrigatórios (`validate`, `desktop-smoke`,
+  `dependency-review`, `Analyze`, `CodeQL`), branch atualizada e `enforce_admins` ligado;
+  push direto é recusado. Antes disso, um `--amend` com erro de stage já teve efeito uma vez.
+- **`adb` continua fora; e2e do app no navegador existem.** 18 specs em `tests/e2e/`
+  dirigem o studio (shell, export com assinaturas, camadas, inspetor); fluxos fora do
+  navegador (instalação, sistema) continuam sem cobertura.
 
 ## Referências
 
-- `ADR-021` — a decisão e o incidente que a originou
+- `scripts/check-svg-parity.mjs` — o gate de paridade por fixture
+- `docs/architecture/current.md` — o retrato da arquitetura vigente

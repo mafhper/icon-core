@@ -22,7 +22,7 @@ import {
   DEFAULT_TARGETS
 } from './utils/projectFactory';
 
-export type PublicRoute = 'workspaces' | 'edit-space' | 'export-utilities' | 'ui';
+export type PublicRoute = 'workspaces' | 'edit-space' | 'ui';
 export type WorkspaceId = 'create-edit' | 'upload-export' | 'upload-edit-export';
 export type ComposerView = PublicRoute;
 
@@ -90,6 +90,25 @@ export interface ComposerState {
   showMarginOverlay: boolean;
   showSnapping: boolean;
   /**
+   * The adaptive safe-area guide, drawn from `project.canvas.safeArea`.
+   *
+   * **Off by default**, like every overlay except the margin one: the margin
+   * answers a control the person just touched, while this one is a reference
+   * they ask for. Same family as `showMarginOverlay` (a guide, not art —
+   * no history, no dirty), but its own flag, because "import margin" and
+   * "safe area" are two different boxes and one toggle must never move both.
+   */
+  showSafeArea: boolean;
+  /**
+   * Whether the canvas frame previews the icon mask (the rounded frame).
+   *
+   * **On by default**: every existing project renders masked, so the default
+   * keeps the preview identical to what it always was. Off shows the square
+   * frame — the preview comparison, not the export, which always masks.
+   * A preview flag, not art: no history, no dirty.
+   */
+  showMask: boolean;
+  /**
    * Divisões do grid, por eixo. `8` reproduz o `background-size: 12.5%` fixo de antes.
    *
    * São **divisões**, não pixels: a pessoa quer "divida em 8", não "linha a cada 24px" —
@@ -146,6 +165,15 @@ export type AddLayerPayload =
 export type ComposerAction =
   | { type: 'NEW_PROJECT'; payload: { name: string; size: number; view?: ComposerView } }
   | { type: 'LOAD_PROJECT'; payload: { project: IconCoreProject; view?: ComposerView; projectId?: string } | IconCoreProject }
+  /**
+   * Closes the open document: the canvas clears and the workspace list opens.
+   *
+   * The stored record is untouched — closing is not deleting — so the project
+   * stays in the library and the welcome offers it back as "Continue". Editor
+   * preferences (zoom, grid, overlays) survive: they describe the bench, not
+   * the document. History is dropped with the document it described.
+   */
+  | { type: 'CLOSE_PROJECT' }
   | { type: 'ADD_LAYER'; payload: AddLayerPayload }
   | { type: 'UPDATE_LAYER'; payload: { id: string; changes: Partial<IconLayer>; transient?: boolean } }
   | { type: 'UPDATE_LAYER_VARIANT'; payload: { id: string; variant: IconVariant; changes: Partial<Omit<IconLayer, 'id' | 'variantOverrides'>>; transient?: boolean } }
@@ -165,7 +193,7 @@ export type ComposerAction =
   | { type: 'PROMOTE_VARIANT'; payload: { variant: IconVariant } }
   | { type: 'TOGGLE_COMPARE_DEFAULT' }
   | { type: 'SET_ACTIVE_TARGET'; payload: { target: IconTarget; enabled: boolean } }
-  | { type: 'SET_CANVAS_BACKGROUND'; payload: { background: Fill; transient?: boolean } }
+  | { type: 'SET_CANVAS_BACKGROUND'; payload: { background: Fill; variant?: IconVariant; transient?: boolean } }
   | { type: 'SET_CANVAS_IMPORT_MARGIN'; payload: { margin: number; transient?: boolean } }
   | {
       type: 'SET_CANVAS_MASK_RADIUS';
@@ -193,6 +221,8 @@ export type ComposerAction =
   | { type: 'TOGGLE_MARGIN_OVERLAY' }
   | { type: 'SET_GRID_DIVISIONS'; payload: { columns: number; rows: number } }
   | { type: 'TOGGLE_SNAPPING' }
+  | { type: 'TOGGLE_SAFE_AREA' }
+  | { type: 'TOGGLE_MASK' }
   | { type: 'SET_MASK_SHAPE'; payload: 'square' | 'circle' | 'rounded-rectangle' | 'squircle' }
   /**
    * Troca a cor da bancada. `null` volta ao token do tema.
@@ -223,6 +253,8 @@ export const initialState: ComposerState = {
   keylineStandard: 'generic',
   showMarginOverlay: true,
   showSnapping: true,
+  showSafeArea: false,
+  showMask: true,
   gridColumns: DEFAULT_DIVISIONS,
   gridRows: DEFAULT_DIVISIONS,
   history: [],
@@ -231,8 +263,13 @@ export const initialState: ComposerState = {
 
 export const normalizeRoute = (value: string): ComposerView => {
   if (value === 'composer' || value === 'compose' || value === 'start') return 'edit-space';
-  if (value === 'export') return 'export-utilities';
-  if (value === 'edit-space' || value === 'export-utilities' || value === 'workspaces' || value === 'ui') return value;
+  // `export`/`export-utilities` são rotas **legadas** e continuam reconhecidas:
+  // o modal saiu com o P2 e a superfície vive na aba Export do Inspector, então
+  // a rota cai no studio — o `ComposerProvider` foca a aba pelo
+  // `EXPORT_FOCUS_EVENT`. O promo ainda linka `#/export-utilities`, e um link
+  // publicado não pode virar uma tela de boas-vindas.
+  if (value === 'export' || value === 'export-utilities') return 'edit-space';
+  if (value === 'edit-space' || value === 'workspaces' || value === 'ui') return value;
   return 'workspaces';
 };
 
@@ -429,9 +466,18 @@ const moveLayer = (layers: IconLayer[], id: string, direction: 'forward' | 'back
 export const composerReducer = (state: ComposerState, action: ComposerAction): ComposerState => {
   switch (action.type) {
     case 'NEW_PROJECT': {
+      const blank = createBlankProject(action.payload.name, action.payload.size);
+      // A new file is born WITH the default Background handle: the image
+      // background (`canvas.background`) is only adjustable through that
+      // handle, so a file born without it shows a background colour with no
+      // visible control that owns it. The handle never paints (the renderer
+      // skips `role: 'background'`), carries the lowest zIndex, and leaves
+      // `activeLayerId` to the content rule in `setProject` (null here — a
+      // newborn has no content, so the inspector opens on the Canvas panel).
+      const background = createBackgroundLayer(blank.canvas.size, -1);
       return setProject(
         state,
-        createBlankProject(action.payload.name, action.payload.size),
+        { ...blank, layers: [background] },
         action.payload.view ?? 'edit-space'
       );
     }
@@ -445,6 +491,20 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
         // project the user just opened. A caller that does not know an id (opening a
         // file, for instance) falls back to the freshly minted one.
         projectId: payload.projectId ?? mintProjectId()
+      };
+    }
+
+    case 'CLOSE_PROJECT': {
+      return {
+        ...state,
+        project: null,
+        projectId: null,
+        activeLayerId: null,
+        renamingLayerId: null,
+        view: 'workspaces',
+        history: [],
+        historyIndex: -1,
+        isDirty: false
       };
     }
 
@@ -593,7 +653,11 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
     case 'DUPLICATE_LAYER': {
       if (!state.project) return state;
       const source = state.project.layers.find((layer) => layer.id === action.payload.id);
-      if (!source) return state;
+      // The Background handle is a singleton: duplicating it would mint a
+      // second `role: 'background'`, and `ADD_LAYER` would keep re-selecting
+      // the first while the copy sat in the list doing nothing. New files are
+      // born with the handle, so this is two clicks away, not a corner.
+      if (!source || source.role === 'background') return state;
       const layer: IconLayer = {
         ...source,
         id: `layer-${crypto.randomUUID()}`,
@@ -762,11 +826,45 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
         : commitProject(state, project);
     }
 
+    /**
+     * The image background, scoped to the edited variant.
+     *
+     * One source (`project.canvas.background`, ADR-011 — the Background layer
+     * with `role: 'background'` is only its selectable handle and never
+     * paints), but TWO slots: the base and the active variant's
+     * `variants[v].canvas.background` override, which wins wherever the
+     * renderer resolves it (`resolveCanvasBackground`: override, else base).
+     * Writing every edit to the base while a non-default variant is active
+     * committed fine and changed nothing on screen — canvas, tiles and export
+     * all read the override — which is exactly "background adjustments are
+     * not respected". So the payload carries the variant, mirroring
+     * `UPDATE_LAYER_VARIANT`: base edits stay global, variant edits stay in
+     * their slot, and clearing a variant falls back to the base by
+     * construction. The work area (`state.workAreaColor`) is not a third
+     * slot: it is bench paint, never in the model, never exported.
+     */
     case 'SET_CANVAS_BACKGROUND': {
       if (!state.project) return state;
+      const variant = action.payload.variant ?? 'default';
+      if (variant === 'default') {
+        const project = {
+          ...state.project,
+          canvas: { ...state.project.canvas, background: action.payload.background }
+        };
+        return action.payload.transient
+          ? { ...state, project, isDirty: true }
+          : commitProject(state, project);
+      }
+      const previous = state.project.variants[variant];
       const project = {
         ...state.project,
-        canvas: { ...state.project.canvas, background: action.payload.background }
+        variants: {
+          ...state.project.variants,
+          [variant]: {
+            ...previous,
+            canvas: { ...previous?.canvas, background: action.payload.background }
+          }
+        }
       };
       return action.payload.transient
         ? { ...state, project, isDirty: true }
@@ -861,6 +959,12 @@ export const composerReducer = (state: ComposerState, action: ComposerAction): C
 
     case 'TOGGLE_SNAPPING':
       return { ...state, showSnapping: !state.showSnapping };
+
+    case 'TOGGLE_SAFE_AREA':
+      return { ...state, showSafeArea: !state.showSafeArea };
+
+    case 'TOGGLE_MASK':
+      return { ...state, showMask: !state.showMask };
 
     case 'SET_MASK_SHAPE': {
       // The shape belongs to the document, not just to the toolbar: it is part

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { IconCoreProject, Fill, IconLayer, ImageFilter } from '@iconcore/shared';
 import { renderToSvgWithOptions } from '../src/renderToSvg';
+import { contentOf } from './svgScan';
 
 const solidFill: Fill = { kind: 'solid', color: '#ffffff' };
 
@@ -107,11 +108,12 @@ describe('renderToSvg — SVG filters (feColorMatrix)', () => {
     expect(result.svg).toContain('hueRotate');
     expect(result.svg).toContain('saturate');
     expect(result.svg).toContain('feComponentTransfer');
-    // Should have one filter with multiple primitives
-    const filterMatch = result.svg.match(/<filter[^>]*>(.*?)<\/filter>/s);
-    expect(filterMatch).toBeTruthy();
-    expect(filterMatch![1]).toContain('feColorMatrix');
-    expect(filterMatch![1]).toContain('feComponentTransfer');
+    // Should have one filter with multiple primitives. O corpo do filtro vem por
+    // varredura de `indexOf` e não por `/<filter[^>]*>(.*?)<\/filter>/s`, que é o caso
+    // clássico de backtracking polinomial (js/polynomial-redos).
+    const corpo = contentOf(result.svg, 'filter');
+    expect(corpo).toContain('feColorMatrix');
+    expect(corpo).toContain('feComponentTransfer');
   });
 
   it('applies filter to text layer', () => {

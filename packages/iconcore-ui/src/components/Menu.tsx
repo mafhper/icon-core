@@ -36,6 +36,28 @@ export interface MenuItemProps {
   className?: string;
 }
 
+export interface MenuLabelProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export interface MenuRadioGroupProps {
+  value: string;
+  onValueChange: (value: string) => void;
+  children: ReactNode;
+  className?: string;
+}
+
+export interface MenuRadioItemProps {
+  /** This option's identity inside the group. */
+  value: string;
+  /** Visible label and accessible name of the option. */
+  label: string;
+  /** Dimmed but still focusable — see `MenuItemProps.disabled`. */
+  disabled?: boolean;
+  className?: string;
+}
+
 /**
  * Dropdown menu for grouping mutually-exclusive creation/selection actions
  * (e.g. the shape picker in the canvas toolbar).
@@ -94,6 +116,62 @@ export const MenuItem = forwardRef<HTMLDivElement, MenuItemProps>(function MenuI
     </MenuPrimitive.Item>
   );
 });
+
+/**
+ * Non-interactive heading for a group of items.
+ *
+ * Deliberately a Radix `Label`, not a dimmed item: labels are not collection
+ * items, so arrows, typeahead and `aria-activedescendant` skip it — a heading
+ * focus can land on is a trap, and a heading that can be "selected" is a lie.
+ * The colour rides the `--ic-text-muted` on `--ic-overlay` pair measured by
+ * `scripts/check-ui-contrast.mjs`.
+ */
+export const MenuLabel = ({ children, className }: MenuLabelProps) => (
+  <MenuPrimitive.Label className={cn('px-2 pt-1.5 pb-1 text-[11px] text-ic-text-muted select-none', className)}>
+    {children}
+  </MenuPrimitive.Label>
+);
+
+/**
+ * Mutually exclusive set of items (e.g. the light/dark/system theme choice).
+ *
+ * Controlled only: the checked item is `value`, and a selection reports
+ * through `onValueChange` — the same shape as `SegmentedControl`, because it
+ * is the same kind of setting expressed in a menu.
+ */
+export const MenuRadioGroup = ({ value, onValueChange, children, className }: MenuRadioGroupProps) => (
+  <MenuPrimitive.RadioGroup value={value} onValueChange={onValueChange} className={className}>
+    {children}
+  </MenuPrimitive.RadioGroup>
+);
+
+/**
+ * One option of a `MenuRadioGroup`. The dot is the group's own affordance, so
+ * there is no leading-icon slot; `label` is the visible text and the item's
+ * accessible name (Radix renders it `aria-checked`).
+ *
+ * `disabled` keeps the row focusable for the same reason as `MenuItem`: arrows
+ * still land on it and a screen reader can read *why* it is unavailable.
+ */
+export const MenuRadioItem = ({ value, label, disabled = false, className }: MenuRadioItemProps) => (
+  <MenuPrimitive.RadioItem
+    value={value}
+    disabled={disabled}
+    className={cn(
+      'relative flex cursor-pointer items-center rounded-ic-sm py-1.5 pr-2 pl-7 text-[13px] text-ic-text outline-none select-none',
+      'data-[highlighted]:bg-ic-elevated',
+      'data-[disabled]:cursor-default data-[disabled]:text-ic-text-muted data-[disabled]:opacity-55',
+      className
+    )}
+  >
+    <span className="absolute left-2 flex h-3 w-3 items-center justify-center">
+      <MenuPrimitive.ItemIndicator>
+        <span className="block h-1.5 w-1.5 rounded-full bg-ic-accent" />
+      </MenuPrimitive.ItemIndicator>
+    </span>
+    <span className="truncate">{label}</span>
+  </MenuPrimitive.RadioItem>
+);
 
 /**
  * Divider between groups of items.

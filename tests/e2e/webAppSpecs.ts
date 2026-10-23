@@ -40,13 +40,17 @@ export const WEB_APP_SPECS = [
   'grid-config',
   'keyline-config',
   'layer-reorder',
-  'export-preview',
   'font-picker',
   'preview-fidelity',
   'layer-drag',
   'text-panel',
   'foreignobject-regression',
-  'storage-isolation'
+  'storage-isolation',
+  'studio-shell',
+  'studio-chrome2',
+  'studio-export',
+  'bg-fidelity',
+  'export-fidelity'
 ] as const;
 
 /**

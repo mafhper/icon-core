@@ -21,19 +21,19 @@ export interface LayerGroup {
   layers: IconLayer[];
 }
 
-export type LayerGroupId = 'text' | 'artwork' | 'background';
+export type LayerGroupId = 'assets' | 'background';
 
 /**
  * Definitions with two separate orderings, because they answer different
  * questions:
  *
  * - `claimRank` — which group a layer goes to. The Background handle must be
- *   tested **before** the artwork group, because the handle is itself a `shape`
- *   and would otherwise be swallowed there. This is the order that was wrong
- *   first time round: with a single ordering, whichever way it was sorted, one
- *   of the two groups ate the other's layer.
- * - `displayRank` — where the group appears. The sidebar shows the topmost
- *   thing first: Text above Shapes, Shapes above Background.
+ *   tested **before** Assets, because the handle is itself a shape and would
+ *   otherwise be swallowed by the catch-all. Only the semantic `role` claims
+ *   it: the paint (a gradient fill, say) never does.
+ * - `displayRank` — where the group appears. Assets first, Background last:
+ *   the sidebar reads front-most first, and the handle is the floor of the
+ *   artwork.
  */
 const GROUPS: Array<{
   id: LayerGroupId;
@@ -44,28 +44,20 @@ const GROUPS: Array<{
   matches: (l: IconLayer) => boolean;
 }> = [
   {
-    id: 'text',
-    label: 'Text',
-    hint: 'Editable text layers. Double-click to rename.',
-    claimRank: 0,
-    displayRank: 0,
-    matches: (layer) => layer.kind === 'text'
-  },
-  {
     id: 'background',
-    label: 'Background & gradients',
+    label: 'Background layer',
     hint: 'The canvas background handle. It stays at the bottom and never renders on its own.',
-    claimRank: 1,
-    displayRank: 2,
+    claimRank: 0,
+    displayRank: 1,
     matches: (layer) => layer.role === 'background'
   },
   {
-    id: 'artwork',
-    label: 'Shapes & imports',
-    hint: 'Vector shapes, images and imported SVGs.',
-    claimRank: 2,
-    displayRank: 1,
-    matches: (layer) => layer.kind === 'shape' || layer.kind === 'image' || layer.kind === 'svg'
+    id: 'assets',
+    label: 'Assets layers',
+    hint: 'Text, vector shapes, images and imported SVGs.',
+    claimRank: 1,
+    displayRank: 0,
+    matches: () => true
   }
 ];
 
@@ -76,16 +68,15 @@ const GROUPS: Array<{
  * zIndex, so the first entry is the front-most). Order **within** each group is
  * preserved, and a group never appears empty.
  *
- * A layer that matches no group would be invisible, so the last group is a
- * catch-all rather than a predicate — losing a layer is worse than a slightly
- * loose label.
+ * Assets is the catch-all: whatever the background does not claim lands there,
+ * so a kind the sidebar does not know about yet cannot vanish from the list.
  */
 export const groupLayers = (input: IconLayer[]): LayerGroup[] => {
   const remaining = [...input];
   const found: Array<LayerGroup & { displayRank: number }> = [];
 
-  // Claim by `claimRank`, so the Background handle is taken before the artwork
-  // group can swallow it.
+  // Claim by `claimRank`, so the Background handle is taken before the Assets
+  // catch-all can swallow it.
   for (const group of [...GROUPS].sort((a, b) => a.claimRank - b.claimRank)) {
     const matched = remaining.filter(group.matches);
     if (matched.length === 0) continue;
@@ -97,20 +88,6 @@ export const groupLayers = (input: IconLayer[]): LayerGroup[] => {
       displayRank: group.displayRank,
       layers: matched
     });
-  }
-
-  // Catch-all, so a kind the sidebar does not know about cannot vanish.
-  if (remaining.length > 0) {
-    const artwork = found.find((g) => g.id === 'artwork');
-    if (artwork) artwork.layers.push(...remaining);
-    else
-      found.push({
-        id: 'artwork',
-        label: 'Shapes & imports',
-        hint: 'Layers whose kind the sidebar does not group yet.',
-        displayRank: 1,
-        layers: remaining
-      });
   }
 
   return found

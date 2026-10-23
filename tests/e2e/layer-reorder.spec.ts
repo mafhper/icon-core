@@ -59,7 +59,8 @@ const preparar = async (page: Page) => {
     await page.waitForTimeout(600);
   }
   for (let i = 0; i < 3; i++) {
-    await page.getByRole('button', { name: 'Add text layer' }).click();
+    await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Text' }).click();
     await page.waitForTimeout(220);
   }
   await page.keyboard.press('Escape');
@@ -83,17 +84,19 @@ const usarMenu = async (page: Page, linha: number, item: string) => {
 test('reordenar: Bring Forward troca duas camadas de lugar', async ({ page }) => {
   await preparar(page);
   const antes = await ordemNaTela(page);
-  expect(antes).toHaveLength(3);
+  // "4": as tres de texto mais o Background semeado, sempre por ultimo.
+  expect(antes).toHaveLength(4);
+  expect(antes.at(-1)).toBe('Background');
 
-  // A última da lista (menor zIndex) sobe uma posição.
+  // A última DE CONTEUDO (menor zIndex entre as que pintam) sobe uma posição.
   await usarMenu(page, 2, 'Bring Forward');
   const depois = await ordemNaTela(page);
 
   expect(depois).not.toEqual(antes);
-  // Uma troca **exata**: os mesmos três nomes, outra ordem.
+  // Uma troca **exata**: os mesmos quatro nomes, outra ordem, Background no fim.
   expect([...depois].sort()).toEqual([...antes].sort());
-  // E Specifically: o último subiu para o meio.
-  expect(depois).toEqual([antes[0], antes[2], antes[1]]);
+  // E Specifically: a ultima de conteudo subiu para o meio.
+  expect(depois).toEqual([antes[0], antes[2], antes[1], antes[3]]);
 });
 
 test('reordenar: Send Backward desfaz Bring Forward', async ({ page }) => {
@@ -118,10 +121,11 @@ test('reordenar: Bring to Front / Send to Back vao aos extremos', async ({ page 
 
 test('reordenar: o Background fica no fim mesmo depois de reordenar', async ({ page }) => {
   await preparar(page);
-  // O projeto novo **nao tem** Background: é um handle que a pessoa cria. Sem criá-lo,
-  // a regra do `IC66` não tem o que segurar — e o teste original falhava por isso, não
-  // porque o `MOVE_LAYER` empurrasse algo.
-  await page.getByRole('button', { name: 'Add background fill layer' }).click();
+  // O arquivo novo ja traz o handle; o item o reseleciona (sem duplicar), e o
+  // Escape devolve o foco para a lista — sem ele, o passo abaixo leria a ordem
+  // com o handle ativo em vez da ordem das camadas.
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Background' }).click();
   await page.waitForTimeout(300);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(250);

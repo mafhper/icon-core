@@ -10,12 +10,14 @@
     "frontendDist": "../../web/dist"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "IconCore",
         "width": 1400,
         "height": 900,
-        "resizable": true
+        "resizable": true,
+        "decorations": false
       }
     ],
     "security": {

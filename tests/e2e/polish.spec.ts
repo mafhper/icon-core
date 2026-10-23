@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { clickBarAction } from './barAction';
 
 /**
  * Polish contract, derived from the `better-ui` rules (see
@@ -16,9 +17,14 @@ const openInspector = async (page: Page, withShape: boolean) => {
   await page.getByRole('button', { name: /^Create$/i }).first().click();
   await expect(page.locator('.ic-inspector')).toBeVisible();
   if (!withShape) return;
-  await page.getByRole('button', { name: /add shape/i }).first().click();
-  await page.getByRole('menuitem').first().click();
-  await page.waitForTimeout(400);
+  // Arquivo novo ja traz o handle de Background, entao o estado vazio da
+  // lista ("Add a shape") nao existe na criacao — a forma entra pelo Insert,
+  // o unico ponto de criacao. O clique abaixo e o ponto de sincronia para o
+  // re-render; a lista ja tem o Background, entao "No layers yet" nunca aparece.
+  await page.getByRole('button', { name: 'Insert layer' }).first().click();
+  await page.getByRole('menuitem', { name: 'Rounded rectangle' }).click();
+  // "2": a forma mais o Background — o ponto de sincronia para o re-render.
+  await expect(page.locator('.ic-layer-row')).toHaveCount(2);
 };
 
 const collect = (page: Page, scope: string, fn: (root: Element, pill: number) => string[], pill = PILL_RADIUS) =>
@@ -275,7 +281,9 @@ const SURFACES: Array<{
 }> = [
   { name: 'welcome modal', selector: '.ic-welcome-modal', needsProject: false },
   { name: 'layers panel', selector: '.ic-layer-list', needsProject: true },
-  { name: 'action bar', selector: '.ic-action-bar', needsProject: true },
+  // The Composer action bar is gone with the old shell; its successor is the
+  // floating canvas pill, which owns the same verbs under the same names.
+  { name: 'canvas pill', selector: '.studio-pillbar', needsProject: true },
   { name: 'topbar', selector: '.ic-topbar, header', needsProject: true },
   // F6 — 2ª passada: as duas superfícies que ficaram sem contrato na 1ª.
   {
@@ -289,15 +297,16 @@ const SURFACES: Array<{
     }
   },
   {
-    name: 'export utilities',
-    selector: '.ic-export-view',
+    name: 'export panel',
+    selector: '.studio-panel-right',
     needsProject: true,
-    // Through the **Export menu**: the standalone Export button left the toolbar, so
-    // there is no longer a topbar button to click.
+    // Through the Inspector Export tab: the old plan-editor view left with
+    // the Composer chrome (Fase 6 cut) and the dialog left with the P2 cut;
+    // the panel is the surface now, held to the same polish contract.
     open: async (page) => {
-      await page.getByRole('button', { name: 'Export menu' }).click();
-      await page.getByRole('menuitem', { name: /export icon pack/i }).click();
-      await expect(page.locator('.ic-export-view')).toBeVisible();
+      const inspector = page.getByRole('region', { name: 'Inspector panel' });
+      await inspector.getByRole('tab', { name: 'Export' }).click();
+      await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
     }
   }
 ];
@@ -481,17 +490,18 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
   await expect(page.locator('.ic-variant-panel')).toBeVisible();
   await audit('.ic-variant-panel', 'variant panel');
 
-  // Export Utilities (the plan editor). Reached through the **Export menu**, since the
-  // standalone Export button left the toolbar: this is the regression lock for that.
-  await page.getByRole('button', { name: 'Export menu' }).click();
-  await audit('body', 'export menu open');
-  await page.getByRole('menuitem', { name: /export icon pack/i }).click();
-  await expect(page.getByRole('heading', { name: 'Export', exact: true })).toBeVisible();
+  // Export panel (the plan editor left with the Composer chrome and the
+  // dialog left with the P2 cut; the panel is the surface now). Reached
+  // through the Inspector Export tab.
+  const inspector = page.getByRole('region', { name: 'Inspector panel' });
+  await inspector.getByRole('tab', { name: 'Export' }).click();
+  await expect(inspector.getByRole('button', { name: /Export \d+ files?/ })).toBeVisible();
+  await audit('body', 'export panel open');
   await audit('body', 'export');
 
   // About modal (portalled to <body>; audited last, so it need not be dismissed).
-  await page.getByRole('button', { name: /back to edit space/i }).click();
-  await page.getByRole('button', { name: /about/i }).click();
+  await page.keyboard.press('Escape');
+  await clickBarAction(page, 'Sobre', 'Sobre o Icon-Core');
   await expect(page.locator('.ic-about-modal')).toBeVisible();
   await audit('.ic-about-modal', 'about modal');
 
@@ -508,7 +518,7 @@ test('icon stroke matches the adjacent text weight', async ({ page }) => {
  */
 test('modal overlays cover the viewport', async ({ page }) => {
   await openInspector(page, false);
-  await page.getByRole('button', { name: /about/i }).click();
+  await clickBarAction(page, 'Sobre', 'Sobre o Icon-Core');
   await expect(page.locator('.ic-about-modal')).toBeVisible();
 
   const viewport = page.viewportSize()!;

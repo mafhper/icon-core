@@ -29,3 +29,9 @@ export const DEFAULT_SOLID_COLOR = '#2193b8';
 
 /** Neutral colour used when no fill colour is available at all. */
 export const EMPTY_SOLID_COLOR = '#ffffff';
+
+/**
+ * Fallback when a colour string does not parse (the picker never guesses).
+ * Black, matching the picker's long-standing invalid-input rendering.
+ */
+export const FALLBACK_SOLID_HEX = '#000000';

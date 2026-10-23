@@ -60,6 +60,15 @@ describe('convertFillKind', () => {
     expect(convertFillKind(radial, 'solid')).toEqual({ kind: 'solid', color: '#ff0000', alpha: 0.25 });
   });
 
+  it('round-trips solid → gradient → solid without losing the colour', () => {
+    const solid: Fill = { kind: 'solid', color: '#ff0000', alpha: 0.5 };
+    const gradient = convertFillKind(solid, 'linear-gradient');
+    const back = convertFillKind(gradient, 'solid');
+
+    expect(gradient.kind).toBe('linear-gradient');
+    expect(back).toEqual({ kind: 'solid', color: '#ff0000', alpha: 0.5 });
+  });
+
   it('falls back to the brand colour when leaving "none" or an empty fill', () => {
     expect(convertFillKind({ kind: 'none' }, 'solid').kind).toBe('solid');
     expect(convertFillKind(undefined, 'solid')).toEqual({ kind: 'solid', color: DEFAULT_SOLID_COLOR });

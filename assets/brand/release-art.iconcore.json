@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 3,
+  "metadata": {
+    "name": "Icon Core release art",
+    "shortName": "release-art",
+    "description": "Template da imagem da release (docs/images/releases/release.webp). Renderizado por scripts/release-art.mjs; layers inline de SVG resolvem path contra assets/brand/."
+  },
+  "canvas": {
+    "size": 1280,
+    "height": 640,
+    "background": {
+      "kind": "linear-gradient",
+      "angle": 135,
+      "stops": [
+        { "offset": 0, "color": "#111827" },
+        { "offset": 1, "color": "#03090c" }
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "glow",
+      "name": "Glow",
+      "kind": "shape",
+      "visible": true,
+      "zIndex": 0,
+      "source": {
+        "type": "reference",
+        "path": "",
+        "shape": { "kind": "circle", "width": 920, "height": 920 }
+      },
+      "transform": { "x": -340, "y": 0, "scale": 1, "rotation": 0 },
+      "opacity": 1,
+      "blendMode": "screen",
+      "fill": {
+        "kind": "radial-gradient",
+        "stops": [
+          { "offset": 0, "color": "#6bb7d8", "alpha": 0.34 },
+          { "offset": 1, "color": "#6bb7d8", "alpha": 0 }
+        ]
+      }
+    },
+    {
+      "id": "mark",
+      "name": "Mark",
+      "kind": "svg",
+      "visible": true,
+      "zIndex": 1,
+      "source": {
+        "type": "inline",
+        "mimeType": "image/svg+xml",
+        "path": "logo-light.svg",
+        "shape": { "kind": "rectangle", "width": 360, "height": 360 }
+      },
+      "transform": { "x": -340, "y": 0, "scale": 1, "rotation": 0 },
+      "opacity": 1
+    },
+    {
+      "id": "wordmark",
+      "name": "Wordmark",
+      "kind": "text",
+      "visible": true,
+      "zIndex": 2,
+      "source": {
+        "type": "reference",
+        "path": "",
+        "shape": { "kind": "rectangle", "width": 640, "height": 140 }
+      },
+      "transform": { "x": 240, "y": -62, "scale": 1, "rotation": 0 },
+      "opacity": 1,
+      "fill": { "kind": "solid", "color": "#f8fafc" },
+      "text": {
+        "content": "Icon Core",
+        "fontFamily": "Cal Sans",
+        "fontSize": 104,
+        "fontWeight": 700,
+        "textAlign": "left"
+      }
+    },
+    {
+      "id": "tagline-1",
+      "name": "Tagline 1",
+      "kind": "text",
+      "visible": true,
+      "zIndex": 3,
+      "source": {
+        "type": "reference",
+        "path": "",
+        "shape": { "kind": "rectangle", "width": 680, "height": 40 }
+      },
+      "transform": { "x": 260, "y": 18, "scale": 1, "rotation": 0 },
+      "opacity": 1,
+      "fill": { "kind": "solid", "color": "#94a3b8" },
+      "text": {
+        "content": "Ícones de aplicativo gratuitos e de código aberto,",
+        "fontFamily": "Manrope",
+        "fontSize": 25,
+        "fontWeight": 500,
+        "textAlign": "left"
+      }
+    },
+    {
+      "id": "tagline-2",
+      "name": "Tagline 2",
+      "kind": "text",
+      "visible": true,
+      "zIndex": 4,
+      "source": {
+        "type": "reference",
+        "path": "",
+        "shape": { "kind": "rectangle", "width": 680, "height": 40 }
+      },
+      "transform": { "x": 260, "y": 58, "scale": 1, "rotation": 0 },
+      "opacity": 1,
+      "fill": { "kind": "solid", "color": "#94a3b8" },
+      "text": {
+        "content": "do primeiro esboço aos arquivos finais.",
+        "fontFamily": "Manrope",
+        "fontSize": 25,
+        "fontWeight": 500,
+        "textAlign": "left"
+      }
+    }
+  ],
+  "variants": {
+    "default": {}
+  },
+  "targets": [],
+  "exportProfile": {
+    "outputBaseName": "release",
+    "quality": 0.92,
+    "generateReport": false
+  }
+}

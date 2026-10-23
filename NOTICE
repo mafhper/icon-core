@@ -28,3 +28,24 @@ Lucide
   Licensed under the ISC License.
   Source: https://lucide.dev
   License: https://github.com/lucide-icons/lucide/blob/main/LICENSE
+
+OFL-1.1 components
+------------------
+
+IBM Plex Mono
+  Copyright 2017 IBM Corp. All rights reserved.
+  Licensed under the SIL Open Font License, Version 1.1.
+  Source: https://github.com/IBM/plex
+  License text: LICENSES/ibm-plex-mono-OFL.txt
+
+Manrope
+  Copyright 2018 The Manrope Project Authors (https://github.com/googlefonts/manrope)
+  Licensed under the SIL Open Font License, Version 1.1.
+  Source: https://github.com/googlefonts/manrope
+  License text: LICENSES/manrope-OFL.txt
+
+Sora
+  Copyright 2019 The Sora Project Authors (https://github.com/sora-xor/sora-font)
+  Licensed under the SIL Open Font License, Version 1.1.
+  Source: https://github.com/sora-xor/sora-font
+  License text: LICENSES/sora-OFL.txt

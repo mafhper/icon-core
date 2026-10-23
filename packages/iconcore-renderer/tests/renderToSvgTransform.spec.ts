@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { IconCoreProject, Fill, IconLayer } from '@iconcore/shared';
 import { renderToSvgWithOptions } from '../src/renderToSvg';
+import { tagsOf } from './svgScan';
 
 /**
  *  — the SVG export used to place layers with a transform around the
@@ -32,7 +33,9 @@ const applyMatrix = (m: Matrix, x: number, y: number) => ({
 /** Minimal `translate()/rotate()/scale()` evaluator — enough for our own output. */
 const parseTransform = (src: string): Matrix => {
   let m: Matrix = [1, 0, 0, 1, 0, 0];
-  const re = /(translate|rotate|scale)\(([^)]*)\)/g;
+  // `[^()]` e não `[^)]`: o argumento que aceita `(` é o que fazia a regex voltar em
+  // cada parêntese aberto (js/polynomial-redos). O nosso output nunca aninha parênteses.
+  const re = /(translate|rotate|scale)\(([^()]*)\)/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(src)) !== null) {
     const n = match[2]
@@ -53,16 +56,13 @@ const parseTransform = (src: string): Matrix => {
 
 /** Bounding box of the transformed layer rect, in canvas coordinates. */
 const transformedRect = (svg: string) => {
-  const hit = svg.match(
-    /<rect x="([-\d.]+)" y="([-\d.]+)" width="([\d.]+)" height="([\d.]+)"[^>]*transform="([^"]+)"/
-  );
-  if (!hit) throw new Error(`no transformed layer rect in:\n${svg}`);
-  const [, xs, ys, ws, hs, ts] = hit;
-  const x = Number(xs);
-  const y = Number(ys);
-  const w = Number(ws);
-  const h = Number(hs);
-  const m = parseTransform(ts);
+  const rect = tagsOf(svg, 'rect').find((tag) => tag.attrs.transform !== undefined);
+  if (!rect) throw new Error(`no transformed layer rect in:\n${svg}`);
+  const x = Number(rect.attrs.x);
+  const y = Number(rect.attrs.y);
+  const w = Number(rect.attrs.width);
+  const h = Number(rect.attrs.height);
+  const m = parseTransform(rect.attrs.transform ?? '');
   const corners = [
     applyMatrix(m, x, y),
     applyMatrix(m, x + w, y),

@@ -1,0 +1,1381 @@
+/**
+ * Studio shell styles (FATIA 1b: porte integral do sistema visual do mockup).
+ *
+ * Source of truth: the approved mockup's `styles.css`
+ * (Icon-Core blocks: oklch palette, `--radius: 0.375rem`, densities 10/11/12px,
+ * dark-first) + `editor.tsx`/`inspector.tsx` (chrome furniture). Owner override:
+ * the mockup look wins over the previous blue/Cal Sans remap, Export tab included.
+ *
+ * Scope contract: every rule lives under `.studio`. Nothing here touches the
+ * Composer `ic-*` *rules* in `apps/web/src/index.css` — those files are not edited
+ * and legacy surfaces outside `.studio` (`#/ui` gallery, toasts) stay
+ * pixel-identical. Inside `.studio`, roles are redefined to the mockup palette
+ * (blocks below) so reused panels (Layers list, canvas, Inspector) repaint
+ * through the same `--ic-*` vocabulary — no raw colour literal in any rule.
+ *
+ * Colour provenance: mockup oklch values landed as sRGB hex (conversion table +
+ * lightness-only contrast adjustments in the FATIA 1b ADR). New surfaces
+ * (`--ic-workspace`, `--ic-checker-*`) live in `packages/iconcore-ui/tokens.css`
+ * with surface roles. The contrast guard (`scripts/check-ui-contrast.mjs`)
+ * enforces every text pair against the merged scoped maps — no measurement,
+ * no swap.
+ *
+ * Type: Manrope, embedded (WOFF2 under `assets/fonts/`, `@font-face` below,
+ * OFL in `LICENSES/`) — never a CDN: offline is a product requirement. The
+ * mockup's 650 brand weight resolves to Bold (static weights only, Cal Sans
+ * convention). Cal Sans stays the text-layer/body font outside the shell.
+ *
+ * Type floor: the mockup uses 8/9/10px micro-labels; the standing decision
+ * keeps an 11px floor — each occurrence below is marked `piso 11px`.
+ *
+ * Deliberate deviations from the mockup (structure freeze — zero behaviour
+ * change, no markup rebuilds):
+ * - The floating pill stays floating (the mockup toolbar is in-flow); it adopts
+ *   the toolbar metrics (7px radius, background paint, 18px dividers).
+ * - The tiles strip stays a bottom strip (the mockup row is in-flow); tiles
+ *   adopt the mockup tile metrics (78px, 49px art, active border+paint, dot).
+ * - The Inspector Design content stays the Composer `LayerInspector` (sections,
+ *   fill-item, gradient stops and effect rows are not rebuilt here); it repaints
+ *   via scoped tokens. Only the tabs + Export grid + session foot are ported.
+ * - Dead controls are never painted: window actions are painted only where the
+ *   OS shell owns them (the Tauri runtime, F4), and the one collapse/restore
+ *   toggle is the canvas pill's; the tabs carry no decorative sliders icon.
+ */
+
+/* --- Manrope embarcada (convenção da Cal Sans) --------------------------- */
+/* Fonte em `assets/fonts/`, derivados em `apps/web/src/fonts/` conferidos por
+   `check-brand.mjs`; OFL-1.1 em `LICENSES/manrope-OFL.txt`; `font-display:
+   block` como na Cal Sans (o shell não mede texto em canvas, mas a regra única
+   evita uma segunda política de carga). `url('../fonts/…')`: dentro de `src/`
+   o Vite resolve, hasheia e respeita a base — `public/` não respeitaria. */
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../fonts/Manrope-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('../fonts/Manrope-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('../fonts/Manrope-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../fonts/Manrope-Bold.woff2') format('woff2');
+}
+
+/* --- Escopo .studio: paleta do mockup (dark-first) ------------------------ */
+/* ESTE BLOCO É O PRIMEIRO `.studio` DO ARQUIVO DE PROPÓSITO: o guard de
+   contraste extrai as redefinições daqui (e de `[data-theme='light'] .studio`
+   abaixo) e mede os mesmos pares contra o mapa mesclado. Papéis não listados
+   herdam os tokens globais (ex.: `--ic-warning`, `--ic-bg-bottom`, scroll). */
+
+.studio {
+  --ic-bg: #181a19;
+  --ic-bg-top: #181a19;
+  --ic-surface: #1e201f;
+  --ic-elevated: #242625;
+  --ic-overlay: #202221;
+  --ic-border: #323332;
+  --ic-border-soft: #323332;
+  --ic-text: #e0e2e0;
+  --ic-text-muted: #8d908e;
+  --ic-text-faint: #676a68;
+  --ic-accent: #6bd39d;
+  --ic-accent-hover: #79e0aa;
+  --ic-accent-text: #6bd39d;
+  --ic-on-accent: #0a1710;
+  --ic-success: #5fce8c;
+  --ic-danger: #ff6467;
+  --ic-shadow: rgba(0, 0, 0, 0.45);
+  --ic-gold: var(--ic-accent);
+}
+
+[data-theme='light'] .studio {
+  --ic-bg: #f6f7f6;
+  --ic-bg-top: #f6f7f6;
+  --ic-surface: #fbfcfb;
+  --ic-elevated: #e8eae9;
+  --ic-overlay: #fbfcfb;
+  --ic-border: #cfd2d0;
+  --ic-border-soft: #cfd2d0;
+  --ic-text: #1c201e;
+  --ic-text-muted: #636765;
+  --ic-text-faint: #878a88;
+  --ic-accent: #008557;
+  --ic-accent-hover: #00794c;
+  --ic-accent-text: #007346;
+  --ic-on-accent: #fafcfb;
+  --ic-success: #2fa06a;
+  --ic-danger: #e7000b;
+  --ic-gold: var(--ic-accent);
+}
+
+.studio {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--ic-bg);
+  color: var(--ic-text);
+  font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.studio button,
+.studio input,
+.studio select {
+  /* Herda família/tamanho sem zerar o peso: `font: inherit` (shorthand)
+     redefinia `font-weight` com especificidade (0,1,1) e vencia cada regra
+     de peso (0,1,0) — marca 700, gatilhos 500 e Composer 600/700 caíam para
+     400 e o audit de traço (1.5px no regular, 2px no 500+) reclamava com
+     razão. Só família/tamanho/altura herdam; o peso declarado vence. */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+}
+
+/* --- Titlebar (mockup: 42px, respiro 16px, marca 12px/650, BETA 8px) ------- */
+
+/* Minimal bar, four zones left to right: a marca (nunca trunca), a zona de
+   menus (medida — os quatro gatilhos dão lugar ao hambúrguer no transbordo
+   real, nunca num breakpoint de janela; ver `StudioMenus`), o breadcrumb
+   elástico do documento e — só sob o shell desktop — os controles de janela.
+   O breadcrumb cede primeiro: é a folga que a zona de menus recupera antes de
+   entregar os gatilhos. */
+.studio-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 42px;
+  flex: 0 0 42px;
+  padding: 0 16px;
+  background-color: var(--ic-bg-top);
+  border-bottom: 1px solid var(--ic-border-soft);
+  /* Guard only: the breadcrumb yields before anything else could spill. */
+  overflow: hidden;
+}
+
+.studio-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  /* Mockup 650: sem peso estático 650, o casamento de peso resolve para o Bold. */
+  font-weight: 700;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.studio-brand > svg {
+  color: var(--ic-accent);
+}
+
+.studio-brand-button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  /* O peso vem da marca (700, mockup 650→Bold): herdar só família/tamanho
+     preserva-o sem precisar restaurar após o shorthand. */
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+  /* F1: a marca nunca trunca nem encolhe — é a identidade, não uma ação. */
+  flex: 0 0 auto;
+}
+
+.studio-brand-button:hover {
+  background-color: var(--ic-accent-soft);
+}
+
+.studio-beta {
+  /* Mockup `app-version`: micro-selo com borda, texto muted — piso 11px (mockup 8px). */
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ic-text-muted);
+  background: none;
+  border: 1px solid var(--ic-border);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+
+/* F2 — a zona de menus é medida, nunca um breakpoint (ver `StudioMenus`): a
+   largura natural dos quatro gatilhos é o que a zona reporta, e o transbordo
+   real — fonte ampliada, locale longa, controles de janela do Tauri — é o que
+   troca a apresentação pelo hambúrguer. O hambúrguer mantém a métrica de
+   altura do `MenubarTrigger` (26px, raio do kit) e o mesmo tratamento de
+   hover/aberto. Só esta zona troca: a marca (F1) e os controles de janela
+   (F4) nunca colapsam. */
+.studio-menus {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Larga: cede com a janela — `min-width: 0` permite encolher abaixo do
+   conteúdo, e é esse transbordo que o observador lê (`scrollWidth` >
+   `clientWidth`). Estreita: o hambúrguer é fixo — a zona não encolhe. */
+.studio-menus[data-narrow='false'] {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.studio-menus[data-narrow='true'] {
+  flex: 0 0 auto;
+}
+
+.studio-menu-hamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--ic-radius-sm);
+  background: none;
+  color: var(--ic-text);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.studio-menu-hamburger:hover,
+.studio-menu-hamburger[data-state='open'] {
+  background-color: var(--ic-elevated);
+}
+
+/* Inset como o foco dos controles de janela (mesma barra): a zona
+   `.studio-menus` tem `overflow: hidden` e recortaria um anel externo na
+   própria caixa de 26px do gatilho. */
+.studio-menu-hamburger:focus-visible {
+  outline: 2px solid var(--ic-accent-ring);
+  outline-offset: -2px;
+}
+
+/* F3 — breadcrumb elástico: relata o documento, não é navegação (sem botão,
+   sem tabindex). Só o nome elipsa; ícone, dot, chevron e a variante são
+   `flex: none` e mantêm a largura. */
+.studio-doc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* A faixa é a folga da barra e a devolve primeiro: `flex-basis: 0` com
+     `min-width: 0` deixa o nome ceder antes de qualquer ação sumir. */
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--ic-text-muted);
+}
+
+.studio-doc > svg {
+  flex: 0 0 auto;
+}
+
+.studio-doc > span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.studio-doc strong {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--ic-text);
+}
+
+.studio-doc-unsaved {
+  /* Só renderiza sujo (mockup `unsaved-dot.dirty`): 5px no acento. */
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 50%;
+  background-color: var(--ic-accent);
+}
+
+/* --- Window controls (F4 — Tauri only) ------------------------------------ */
+
+/* Min/max-restore/close na ordem do Windows, colados à borda da janela: o
+   respiro de 16px é da barra; os botões de caption são da janela. Na web a
+   zona é `display: none` (o browser desenha o próprio chrome); o shell
+   desktop marca `[data-tauri]` no `<html>` e a zona sobe. Nunca `disabled`. */
+.studio-window-controls {
+  display: none;
+  align-self: stretch;
+  flex: 0 0 auto;
+  margin-right: -16px;
+}
+
+[data-tauri] .studio-window-controls {
+  display: flex;
+  align-items: stretch;
+}
+
+/* 44 × 42 — a proporção de hit-area do SO nesta altura de barra. */
+.studio-window-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ic-text-muted);
+  cursor: default;
+}
+
+.studio-window-control:hover {
+  background-color: var(--ic-elevated);
+  color: var(--ic-text);
+}
+
+.studio-window-control:focus-visible {
+  outline: 2px solid var(--ic-accent-ring);
+  outline-offset: -2px;
+}
+
+/* Fechar é fechar: o hover é o vermelho da janela do SO, com o glifo no par
+   de contraste medido pelo `check-ui-contrast`. */
+.studio-window-close:hover {
+  background-color: var(--ic-danger-fill);
+  color: var(--ic-on-danger);
+}
+
+/* --- Canvas bar (mockup: 54px, respiro 16px, gap 12px, grupos gap 4px) ----
+   Scoped to the canvas column: it is the first row of `.studio-canvas`,
+   never a full-width band above the sidebars. */
+
+.studio-canvasbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 54px;
+  flex: 0 0 54px;
+  padding: 0 16px;
+  background-color: var(--ic-bg);
+  border-bottom: 1px solid var(--ic-border);
+}
+
+.studio-topbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.studio-topbar-spacer {
+  flex: 1 1 auto;
+}
+
+.studio-divider {
+  width: 1px;
+  height: 19px;
+  margin: 0 7px;
+  background-color: var(--ic-border);
+  flex: 0 0 auto;
+}
+
+/* Gatilho de menu da concha (mockup `variant-selector button`: 29px, 11px,
+   borda, fundo field, raio 4px). Em uso no `View options` da barra do canvas:
+   a variante vive só nos tiles, sem duplicata na barra. */
+.studio-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 29px;
+  min-width: 0;
+  /* Sem o `min-width: 105px` do mockup: ele supõe distribuição space-between
+     que o markup congelado não tem — com gap, mínimo fixo só somaria respiro
+     à direita. O gatilho dimensiona pelo conteúdo. */
+  padding: 0 8px;
+  border: 1px solid var(--ic-border);
+  border-radius: 4px;
+  background-color: var(--ic-elevated);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ic-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.studio-trigger:hover {
+  color: var(--ic-text);
+}
+
+.studio-export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ic-on-accent);
+  background-color: var(--ic-accent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.studio-export-button:hover:not(:disabled) {
+  background-color: var(--ic-accent-hover);
+}
+
+.studio-export-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* --- Body: three regions ------------------------------------------------ */
+
+.studio-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  background-color: var(--ic-bg);
+}
+
+.studio-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background-color: var(--ic-bg);
+  transition: width 160ms ease;
+}
+
+.studio-panel-left {
+  border-right: 1px solid var(--ic-border);
+}
+
+.studio-panel-right {
+  border-left: 1px solid var(--ic-border);
+}
+
+.studio-panel[data-open="false"] {
+  width: 0 !important;
+  border-width: 0;
+  visibility: hidden;
+}
+
+/* Panel resizers live in-flow in the studio shell: the Composer positions
+   them absolute against its own positioned shell, but `.studio-body` is not
+   positioned — the 8px strips fell back to the viewport (`left/right: -4px`)
+   and each end stuck 4px past it, which was the whole page-level horizontal
+   overflow at wide viewports. Here the strip is a zero-net flex item at the
+   panel seam (8px wide, swallowed by symmetric negative margins), so there
+   is no viewport-relative paint to overflow. */
+.studio .ic-panel-resizer {
+  position: relative;
+  top: auto;
+  bottom: auto;
+  flex: 0 0 8px;
+  align-self: stretch;
+  margin: 0 -4px;
+}
+
+.studio .ic-panel-resizer.is-left {
+  left: auto;
+}
+
+.studio .ic-panel-resizer.is-right {
+  right: auto;
+}
+
+.studio-panel-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Sombra só com rolagem real (decisão do dono): o mockup não tem sombra
+   nenhuma no fim do inspetor — nem no estado curto. Aqui o `aside` chegava
+   com fundo, borda e sombra de menu (na base do Composer ele divide a regra
+   do menu de contexto, com elevação e sombras internas), e a sombra de
+   elevação aparecia sobre o pé mesmo com o conteúdo curto, sem nada rolável
+   acima. Na concha o inspetor é coluna — fundo e hairline já vêm do painel —
+   então a pintura de menu sai por inteiro. Sem sombra inventada para indicar
+   rolagem: o mockup não tem, e a rolagem longa continua funcionando na
+   rolagem do painel. */
+.studio .ic-inspector {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.studio-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 49px;
+  flex: 0 0 49px;
+  padding: 0 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ic-text-muted);
+}
+
+.studio-panel-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ic-text-faint);
+}
+
+/* --- Canvas region ------------------------------------------------------ */
+
+.studio-canvas {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  /* A coluna inteira é mesa (mockup `workspace`): palco, legenda, faixa e
+     toolbar assentam no mesmo pano — sem ela a legenda e a faixa cairiam no
+     fundo do app. A cor escolhida pinta inline (palco, faixa e tira
+     inferior); esta regra é a mesa padrão e a base opaca sobre a qual o alpha
+     da tinta compõe. */
+  background-color: var(--ic-workspace);
+}
+
+.studio-canvas.is-hand {
+  cursor: grab;
+}
+
+.studio-canvas.is-hand:active {
+  cursor: grabbing;
+}
+
+/* O breadcrumb e o View options moravam sobre a mesa (mockup
+   `workspace-top`); no slice do chrome eles se mudaram — o breadcrumb para a
+   titlebar, o View options para a barra do canvas — e a mesa começa direto
+   no palco. */
+
+.studio-stage-wrap {
+  /* Só a mesa: palco rolável que cede o restante da coluna à legenda, à
+     faixa e à toolbar in-flow abaixo. */
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.studio-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+  background-color: var(--ic-workspace);
+}
+
+/* Hand pan: the stage translates the Composer's edit surface by the pan
+   offset the shell owns (Reset view returns it with the zoom). The desk paint
+   is the mockup `workspace` surface: the inline work-area colour falls back
+   to the desk token (see `StudioCanvasStage`), so by default this agrees
+   with it; a chosen colour keeps painting inline above it. The declaration
+   stays as the stated intent — the rule never overrides an inline paint. */
+.studio-stage > .ic-preview-panel > .ic-edit-stage {
+  transform: translate(var(--pan-x, 0px), var(--pan-y, 0px));
+  background-color: var(--ic-workspace);
+}
+
+/* The reused Composer canvas owns its own scroll-free stage; the studio
+   wrapper only tracks the pointer for the statusbar readout.
+   Faixa contínua (decisão do dono): no mockup a coluna `workspace` tem uma
+   tinta só — palco, legenda, faixa e toolbar assentam direto na mesa (a
+   legenda e a faixa não têm fundo, borda nem sombra; a toolbar tem o fundo,
+   a borda e a sombra dela). Aqui a camada do meio pintava o fundo do app
+   (a regra base do Composer dá `var(--ic-bg)` ao painel) enquanto a coluna e
+   a mesa pintavam o workspace: a faixa de baixo lia uma banda acinzentada
+   separada. Condicionada à mesa — especificidade maior que a regra base, sem
+   tocar nela. */
+.studio-stage > .ic-preview-panel {
+  min-height: 100%;
+  background-color: var(--ic-workspace);
+}
+
+/* Four-corner selection handles: the Composer paints one scale handle; the
+   studio promotes it to four (uniform scale about the centre from any
+   corner — the engine has no directional resize to offer). The paint follows:
+   `--ic-gold` is re-themed to the mockup accent under `.studio`, so handles,
+   outlines and guides read green like the mockup `selection-bounds`. */
+.studio-canvas .ic-scale-handle.is-tl {
+  left: -7px;
+  top: -7px;
+  right: auto;
+  bottom: auto;
+  cursor: nwse-resize;
+}
+
+.studio-canvas .ic-scale-handle.is-tr {
+  left: auto;
+  top: -7px;
+  right: -7px;
+  bottom: auto;
+  cursor: nesw-resize;
+}
+
+.studio-canvas .ic-scale-handle.is-bl {
+  left: -7px;
+  top: auto;
+  right: auto;
+  bottom: -7px;
+  cursor: nesw-resize;
+}
+
+.studio-canvas .ic-scale-handle.is-br {
+  cursor: nwse-resize;
+}
+
+/* Etiqueta de dimensão (mockup `dimension-tag`: fundo acento, texto
+   sobre-acento — piso 11px, mockup 9px). */
+.studio-canvas .ic-dimension-tag {
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  transform: translateX(-50%) scale(calc(1 / max(var(--layer-scale, 1), 0.01)));
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ic-on-accent);
+  background-color: var(--ic-accent);
+  border: none;
+  pointer-events: none;
+}
+
+.studio-canvas .ic-safe-area-overlay {
+  color: var(--ic-accent);
+}
+
+/* Toolbar do canvas (mockup `canvas-toolbar`: in-flow abaixo dos tiles, altura
+   43px, respiro 5px 7px, raio 7px, fundo background, sombra 4/18, respiro
+   inferior 24px; ferramentas 29px e divisores 18px). A faixa em volta não tem
+   sombra — só a toolbar, como no mockup. */
+.studio-pillbar {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 24px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  background-color: var(--ic-bg);
+  border: 1px solid var(--ic-border);
+  box-shadow: 0 4px 18px var(--ic-shadow);
+  flex-shrink: 0;
+}
+
+.studio-pillbar .studio-divider {
+  height: 18px;
+  margin: 0 6px;
+}
+
+/* Leitura do zoom (mockup `zoom-value` 10px — piso 11px): o gatilho do menu
+   de presets, dimensionado pelo conteúdo. */
+.studio-zoom-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 58px;
+  justify-content: center;
+  padding: 0 5px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ic-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.studio-zoom-value:hover {
+  color: var(--ic-text);
+}
+
+/* Faixa das variantes (decisão do dono): a seção full-bleed in-flow abaixo do
+   palco que carrega a legenda e os tiles, com a mesma tinta do palco pintada
+   inline pelo componente. A coluna em flex é o que mantém a legenda
+   centralizada (`align-self: center` é propriedade de item flex) e a faixa
+   de tiles com os respiros dela; `flex-shrink: 0` preserva o comportamento
+   anterior dos dois como itens da coluna. Sem cartão, borda, hairline ou
+   sombra: só a tinta e o fluxo, como no mockup. */
+.studio-variant-band {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Tira inferior da bancada (decisão do dono): o pano da coluna abaixo da
+   faixa — em volta e atrás da pillbar, até a statusbar — carrega a mesma
+   tinta do palco e da faixa, inline (`deskColor`). A pillbar segue chrome
+   flutuante por cima: fundo, borda e sombra são dela. O pano é um **irmão**
+   do palco e da faixa, não o fundo do `section`: pintar a coluna faria os
+   dois filhos receberem a mesma tinta semi-transparente sobre si mesmos, e
+   com alpha o empilhamento deixaria palco e faixa mais densos que a tira que
+   os acompanha. `display: flex` em coluna preserva o `align-self: center` da
+   pillbar, e `flex-shrink: 0` mantém a altura dela como item da coluna. */
+.studio-desk-tail {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Legenda do canvas (mockup `canvas-caption`: fileira com ponto, sRGB, LxA e
+   variante; respiro superior 34px, respiros internos 8px, 9px — piso 11px).
+   Só leitura, sem comportamento; a tinta é o papel apagado do mockup. */
+.studio-caption {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+  margin: 34px 0 0;
+  font-size: 11px;
+  color: var(--ic-text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.studio-caption-dot {
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--ic-text-muted);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Faixa de variantes (mockup `variant-previews`: grupo centralizado in-flow,
+   gap 14, respiro 16/0/23; tiles 78×92, arte 49px raio 12, rótulo 9px — piso
+   11px). Sem hairline e sem sombra: no mockup a faixa assenta direto na mesa.
+   O scroll horizontal só existe em viewport estreita; a base é o grupo
+   centralizado do mockup. */
+.studio-tiles {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin: 16px 0 23px;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.studio-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 78px;
+  height: 92px;
+  flex: 0 0 auto;
+  padding: 7px 10px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ic-text-muted);
+}
+
+.studio-tile:hover {
+  border-color: var(--ic-border);
+}
+
+.studio-tile[data-active="true"] {
+  border-color: var(--ic-border);
+  background-color: var(--ic-bg);
+  color: var(--ic-text);
+}
+
+/* O raio do frame do tile **nao** mora aqui: o componente calcula
+   `raioDoCanvas / ladoDoCanvas * 49` (o mesmo resolver do export) e aplica
+   inline no bitmap e na moldura vazia, para os dois estados apresentarem o
+   mesmo frame. Um `border-radius` fixo aqui seria uma segunda verdade. */
+.studio-tile img {
+  width: 49px;
+  height: 49px;
+  object-fit: cover;
+  background-color: var(--ic-elevated);
+  pointer-events: none;
+}
+
+.studio-tile-empty {
+  width: 49px;
+  height: 49px;
+  background-color: var(--ic-elevated);
+}
+
+.studio-tile-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--ic-accent);
+}
+
+/* --- Inspector tabs ----------------------------------------------------- */
+/* Abas (mockup `panel-tabs`: 49px, respiro 0 15, gap 17, 11px/500, sublinhado
+   2px no acento). */
+
+.studio-tabs {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  padding: 0 15px;
+  border-bottom: 1px solid var(--ic-border);
+  flex: 0 0 auto;
+}
+
+.studio-tab {
+  height: 49px;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ic-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+
+.studio-tab:hover {
+  color: var(--ic-text);
+}
+
+.studio-tab[data-active="true"] {
+  color: var(--ic-text);
+  border-bottom-color: var(--ic-accent);
+}
+
+/* Aba Export: grade 2×2 de variantes vivas (mockup `preview-inspector`:
+   respiro 22, grade 1fr 1fr, gaps 22/16, rótulo centralizado). Cada tile
+   renderiza o pipeline real (`useStudioPreview`) — nunca um placeholder: sem
+   projeto, o tile mostra o estado vazio honesto. */
+.studio-tiles-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px 16px;
+  padding: 22px;
+  overflow-x: hidden;
+  /* Grade do Export não é faixa: sem a separação de topo da faixa. */
+  border-top: none;
+  box-shadow: none;
+}
+
+.studio-tiles-grid .studio-tile {
+  width: auto;
+  text-align: center;
+}
+
+/* Tiles do export no painel: cartões-checkbox multi-seleção (mínimo 1) sobre a
+   mesma grade 2×2, mais o **anel de variante ativa** — um controle separado
+   (SET_ACTIVE_VARIANT): clicar o cartão marca/desmarca a variante no export;
+   clicar o anel troca a variante que o canvas edita. O cartão preenche a
+   célula da grade. */
+.studio-export-tile {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.studio-export-tile .studio-tile {
+  flex: 1 1 auto;
+  width: 100%;
+  text-align: center;
+}
+
+.studio-export-tile-card[aria-checked='true'] {
+  border-color: var(--ic-accent);
+  background-color: var(--ic-bg);
+  color: var(--ic-text);
+}
+
+/* Inertes em S2: nada de hover nem clique enquanto o pipeline corre. */
+.studio-export-tile-card:disabled,
+.studio-export-ring:disabled {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Selo de marcado: irmão do cartão (não aninhado), decorativo — o estado
+   acessível mora no `aria-checked` do próprio cartão. */
+.studio-export-tile-check {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  color: var(--ic-accent-text);
+  pointer-events: none;
+}
+
+.studio-export-ring {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1.5px solid var(--ic-border);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.studio-export-ring:hover:not(:disabled) {
+  border-color: var(--ic-text-muted);
+}
+
+.studio-export-ring[data-active='true'] {
+  border-color: var(--ic-accent);
+}
+
+.studio-export-ring[data-active='true']::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background-color: var(--ic-accent);
+}
+
+/* Pé de export da aba: container único que morfa por estágio (S1 Export N
+   files; S2 Cancel + Exporting…; S3 Export more/Close + Download all (.zip);
+   erro Back). O primário estica e os fantasmas dimensionam pelo conteúdo; em
+   painel estreito o primário desce para a própria linha. */
+.studio-export-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  border-top: 1px solid var(--ic-border);
+  background-color: var(--ic-bg);
+}
+
+.studio-export-foot .studio-export-button {
+  flex: 1 1 auto;
+  justify-content: center;
+  height: 32px;
+}
+
+/* Fantasma do rodapé (Cancel/Close/Export more/Back): a densidade do botão de
+   export sem o preenchimento de acento. */
+.studio-export-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ic-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.studio-export-ghost:hover {
+  color: var(--ic-text);
+  background-color: var(--ic-elevated);
+}
+
+/* Pé do inspetor (mockup `inspector-foot`: 36px, respiro 0 14, 9px — piso 11px).
+   Hairline no topo como no mockup, sem sombra: a coluna vai de cima a baixo e
+   o pé corre inline até a statusbar — claro e escuro via papéis. */
+.studio-inspector-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  flex: 0 0 36px;
+  padding: 0 14px;
+  font-size: 11px;
+  color: var(--ic-text-faint);
+  border-top: 1px solid var(--ic-border);
+  background-color: var(--ic-bg);
+}
+
+/* --- Statusbar: three zones (mockup: 29px, gap 22, respiro 14) ------------ */
+/* Piso 11px (mockup 9px) — decisão vigente, ver ADR da fatia. */
+
+.studio-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  height: 29px;
+  flex: 0 0 29px;
+  padding: 0 14px;
+  font-size: 11px;
+  color: var(--ic-text-muted);
+  background-color: var(--ic-bg-top);
+  border-top: 1px solid var(--ic-border-soft);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.studio-statusbar .studio-status-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.studio-statusbar .studio-status-spacer {
+  flex: 1 1 auto;
+}
+
+.studio-statusbar .studio-status-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 55px;
+  color: var(--ic-text-muted);
+}
+
+.studio-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--ic-success);
+  flex: 0 0 auto;
+}
+
+.studio-status-snap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ic-text-muted);
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.studio-status-snap:hover {
+  color: var(--ic-text);
+  background-color: var(--ic-accent-soft);
+}
+
+.studio-status-coords {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Dialogs (mockup `editor-dialog`: fundo background, raio 8px — a escala
+   base 0.375rem; título 16px/600; texto 11px; ações à direita, respiro 22px;
+   `export-dialog`: título 23px 25px, ajustes 23px 25px, rodapé 17px 25px) --- */
+
+.studio-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--ic-shadow);
+}
+
+.studio-dialog {
+  width: min(440px, calc(100vw - 48px));
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  border-radius: 8px;
+  background-color: var(--ic-overlay);
+  border: 1px solid var(--ic-border);
+  box-shadow: 0 24px 64px var(--ic-shadow);
+  padding: 23px 25px;
+}
+
+.studio-dialog h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.studio-dialog .studio-dialog-description {
+  margin: 0 0 14px;
+  font-size: 11px;
+  color: var(--ic-text-muted);
+}
+
+/* Texto corrido e rótulos do diálogo (mockup: parágrafos 11px; `dialog-label`
+   11px; caixas de formato/tamanho 10px e notas 9px — piso 11px). As margens
+   utilitárias do markup (`mt-*`/`mb-*`) continuam valendo; aqui só o corpo. */
+.studio-dialog p {
+  font-size: 11px;
+}
+
+.studio-dialog label {
+  font-size: 11px;
+}
+
+.studio-dialog label.studio-dialog-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ic-text-muted);
+  margin-bottom: 14px;
+}
+
+/* Títulos de seção do export (mockup `export-settings h3`: 11px/600 com
+   respiro 23/11; o `span` qualificador 9px — piso 11px). */
+.studio-dialog h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ic-text-muted);
+  letter-spacing: 0;
+}
+
+.studio-dialog h3 > span {
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.studio-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.studio-shortcut-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 14px;
+}
+
+.studio-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 11px;
+  border-bottom: 1px solid var(--ic-border-soft);
+}
+
+.studio-shortcut-row:last-child {
+  border-bottom: none;
+}
+
+/* Seções do export no painel: o respiro lateral dos tiles (22px) para a
+   coluna não encostar na borda; `lead` dá o topo quando não há grade acima. */
+.studio-export-settings {
+  padding: 0 22px 22px;
+}
+
+.studio-export-lead {
+  padding-top: 18px;
+}
+
+.studio-export-note {
+  margin: 0 0 14px;
+  font-size: 11px;
+  color: var(--ic-text-muted);
+}
+
+.studio-export-progress {
+  height: 5px;
+  border-radius: 4px;
+  background-color: var(--ic-elevated);
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.studio-export-progress > div {
+  height: 100%;
+  background-color: var(--ic-accent);
+  transition: width 200ms ease;
+}
+
+/* Lista de arquivos (mockup `export-file-list`: linhas 31px, 10px e `small`
+   9px — piso 11px). */
+.studio-export-files {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+
+.studio-export-files li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--ic-border-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-export-files li:last-child {
+  border-bottom: none;
+}
+
+/* O caminho trunca: o painel é estreito e o nome pode ser longo. */
+.studio-export-files li > span:first-of-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-export-files .studio-export-size {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--ic-text-muted);
+  white-space: nowrap;
+}
+
+/* --- OpenPencil-style color picker --------------------------------------- */
+/* Decisão do dono (FATIA 1b): o picker é o estilo OpenPencil — o do mockup NÃO
+   entra. O `StudioColorPicker` existente já atende (área 2D S/V, matiz, alfa e
+   quatro formatos, verificado contra a referência em `img/openpencil-*.png` e
+   a paridade OpenPencil v0.16.0): estas regras só vestem a concha, sem
+   reimplementar. Cores via papéis; o xadrez usa o par dedicado. */
+
+.studio-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.studio-picker-satval {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  border: 1px solid var(--ic-border);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.studio-picker-cursor {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.studio-picker-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.studio-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.studio-picker-format-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--ic-label-size);
+  font-weight: 600;
+  color: var(--ic-text-muted);
+}
+
+.studio-picker-hue,
+.studio-picker-alpha {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--ic-border);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.studio-picker-hue {
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+}
+
+.studio-picker-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.studio-picker-formats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.studio-checker {
+  background-image:
+    linear-gradient(45deg, var(--ic-checker-dark) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--ic-checker-dark) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--ic-checker-dark) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--ic-checker-dark) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  background-color: var(--ic-checker-light);
+}

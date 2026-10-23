@@ -372,7 +372,191 @@ const PROJECTS = {
       blendMode: 'multiply',
       fill: { kind: 'solid', color: '#ff5252' }
     })
-  ], { maskRadius: 56 })
+  ], { maskRadius: 56 }),
+
+  // --- Studio rebuild (Fase 3): the IC77 motor, one behaviour each ---------
+  //
+  // Stroke, hollow fill, alignment, corner smoothing, drop shadow and line
+  // caps all arrived together in the cherry-pick, and the markup pins live in
+  // `strokeAndSmoothing.spec.ts`. What pins assert, pixels verify: each
+  // fixture below must render NON-BLANK on both pipelines (a hollow shape the
+  // two sides both skip agrees at ~100% and proves nothing — the `simples`
+  // blank-canvas story, retold). If a fixture below ever renders blank, the
+  // feature is broken, not the threshold.
+
+  // Centered stroke with an explicit join: the outline straddles the edge.
+  traco: base('traco', [
+    shape({ kind: 'rectangle', width: 176, height: 176, cornerRadius: 0 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      stroke: { color: '#0f172a', width: 12, alignment: 'center', join: 'round' }
+    })
+  ]),
+
+  // Hollow: no fill, only the outline. The old pipeline `continue`d past
+  // `fill: none` and drew nothing — this fixture is blank if that returns.
+  vazado: base('vazado', [
+    shape({ kind: 'rectangle', width: 176, height: 176, cornerRadius: 0 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'none' },
+      stroke: { color: '#b91c1c', width: 16, alignment: 'center', join: 'miter' }
+    })
+  ]),
+
+  // Inside alignment: the doubled stroke clipped to the shape.
+  tracoDentro: base('tracoDentro', [
+    shape({ kind: 'rectangle', width: 176, height: 176, cornerRadius: 0 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      stroke: { color: '#0f172a', width: 16, alignment: 'inside', join: 'miter' }
+    })
+  ]),
+
+  // Outside alignment: the doubled stroke kept by the mask.
+  tracoFora: base('tracoFora', [
+    shape({ kind: 'rectangle', width: 176, height: 176, cornerRadius: 0 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      stroke: { color: '#0f172a', width: 16, alignment: 'outside', join: 'bevel' }
+    })
+  ]),
+
+  // Second corner level: radius + smoothing, one curve in both pipelines.
+  cantos: base('cantos', [
+    shape({ kind: 'rounded-rectangle', width: 208, height: 208, cornerRadius: 48, cornerSmoothing: 0.6 }, {
+      transform: { x: 24, y: 24, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#00695c' }
+    })
+  ]),
+
+  // Generic drop shadow (a glow is the same effect with zero offset).
+  //
+  // Threshold 4, measured — not fitted blindly: agreement is 96.4% with 100%
+  // alpha coverage, i.e. the silhouettes are identical and only the soft
+  // fringe shading differs. That fringe is rasterized by two different
+  // engines (Chromium canvas on the reference side, sharp/libvips on the
+  // candidate side) from the textbook mapping (stdDeviation = blur/2, the
+  // same mapping every shadow export ships). A mapping change to chase the
+  // fringe would move all existing shadow exports for a sharper number here.
+  sombra: base('sombra', [
+    shape({ kind: 'rectangle', width: 160, height: 160, cornerRadius: 0 }, {
+      transform: { x: 48, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'drop-shadow', enabled: true, params: { x: 0, y: 8, blur: 16, color: '#000000', opacity: 0.5 } }]
+    })
+  ]),
+
+  // Long offset past the shape edge: the canvas used to clip the fill to the
+  // outline, amputating everything the shadow casts outside it (white below
+  // on canvas, mid-grey in SVG), while the small offset above hides inside
+  // its own tolerance. The offset here lands a full band outside the shape,
+  // so a clipped canvas cannot pass this fixture.
+  sombraLonga: base('sombraLonga', [
+    shape({ kind: 'rounded-rectangle', width: 176, height: 176, cornerRadius: 32 }, {
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'drop-shadow', enabled: true, params: { x: 0, y: 20, blur: 16, color: '#000000', opacity: 0.5 } }]
+    })
+  ]),
+
+  // Tier 2 (2.0) — spread. Positive grows the silhouette, negative chokes
+  // it; the SVG dilates/erodes before the blur (drop) or with a flipped sign
+  // (inner — the caster, not the contour). Thresholds measured live, same
+  // metric as `sombra`; the `__controle` gate below proves the param acts
+  // instead of both sides ignoring it in agreement (the `IC63/1b` hole).
+  sombraSpread: base('sombraSpread', [
+    shape({ kind: 'rectangle', width: 160, height: 160, cornerRadius: 0 }, {
+      transform: { x: 48, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'drop-shadow', enabled: true, params: { x: 0, y: 8, blur: 16, spread: 12, color: '#000000', opacity: 0.5 } }]
+    })
+  ]),
+
+  sombraChoke: base('sombraChoke', [
+    shape({ kind: 'rectangle', width: 160, height: 160, cornerRadius: 0 }, {
+      transform: { x: 48, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'drop-shadow', enabled: true, params: { x: 0, y: 8, blur: 16, spread: -10, color: '#000000', opacity: 0.5 } }]
+    })
+  ]),
+
+  innerSpreadMais: base('innerSpreadMais', [
+    shape({ kind: 'rounded-rectangle', width: 176, height: 176, cornerRadius: 32 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'inner-shadow', enabled: true, params: { x: 0, y: 6, blur: 12, spread: 10, color: '#000000', opacity: 0.5 } }]
+    })
+  ]),
+
+  innerSpreadMenos: base('innerSpreadMenos', [
+    shape({ kind: 'rounded-rectangle', width: 176, height: 176, cornerRadius: 32 }, {
+      transform: { x: 40, y: 40, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'inner-shadow', enabled: true, params: { x: 0, y: 6, blur: 12, spread: -10, color: '#000000', opacity: 0.5 } }]
+    })
+  ]),
+  // Tier 2 (2.1) — background blur. O vidro é translúcido sobre uma
+  // costura de duas cores: borrar um fundo sem detalhe é invisível nas duas
+  // pipelines (a primeira versão desta fixture era um retângulo vermelho
+  // full-bleed e media 0% provando nada — o buraco do `IC63/1b` de novo).
+  fundoDesfocado: base('fundoDesfocado', [
+    shape({ kind: 'rectangle', width: 128, height: 256 }, {
+      transform: { x: -64, y: 0, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#d32f2f' }
+    }),
+    shape({ kind: 'rectangle', width: 128, height: 256 }, {
+      transform: { x: 64, y: 0, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' }
+    }),
+    shape({ kind: 'rounded-rectangle', width: 144, height: 144, cornerRadius: 24 }, {
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      opacity: 0.55,
+      fill: { kind: 'solid', color: '#ffffff' },
+      effects: [{ kind: 'backdrop-blur', enabled: true, params: { radius: 14 } }]
+    })
+  ]),
+  // Tier 2 (2.2) — glass v1: o vidro não tem fill próprio (as coats são o
+  // efeito), sobre a mesma costura bicolor da 2.1. O controle remove a
+  // entrada inteira; os dois renders têm que mudar.
+  vidroGlass: base('vidroGlass', [
+    shape({ kind: 'rectangle', width: 128, height: 256 }, {
+      transform: { x: -64, y: 0, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#d32f2f' }
+    }),
+    shape({ kind: 'rectangle', width: 128, height: 256 }, {
+      transform: { x: 64, y: 0, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' }
+    }),
+    shape({ kind: 'rounded-rectangle', width: 144, height: 144, cornerRadius: 24 }, {
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      fill: { kind: 'none' },
+      effects: [{
+        kind: 'glass',
+        enabled: true,
+        params: { tint: '#ffffff', tintOpacity: 0.2, blurRadius: 14, edgeHighlight: 0.6, frost: 0.25 }
+      }]
+    })
+  ]),
+  // Tier 2 (2.3) — noise-grain: o tile de seed fixa sobre a pintura,
+  // recortado no footprint. O controle remove a entrada inteira. O resíduo
+  // (posições do grão) é engine-específico por natureza — densidade igualada
+  // (desvio médio/canal 16.3 vs 15.4), limiar com folga medida.
+  graoRuido: base('graoRuido', [
+    shape({ kind: 'rounded-rectangle', width: 176, height: 176, cornerRadius: 32 }, {
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      effects: [{ kind: 'noise-grain', enabled: true, params: { amount: 0.5, size: 2, monochrome: true } }]
+    })
+  ]),
+  // Line body with a flat cap: butt draws the plain box, round the capsule.
+  // The cap lives on the stroke but shapes the closed body, not an outline.
+  linha: base('linha', [
+    shape({ kind: 'line', width: 200, height: 32 }, {
+      transform: { x: 28, y: 112, scale: 1, rotation: 0 },
+      fill: { kind: 'solid', color: '#1565c0' },
+      stroke: { color: '#0f172a', width: 8, alignment: 'center', cap: 'butt' }
+    })
+  ])
 };
 
 /**
@@ -441,8 +625,83 @@ const ACEITACAO = {
   rotacao: { minFora: 1 },
   camadas: { minFora: 0.5 },
   squircleComBlend: { minFora: 0.5 },
-  maskComBlend: { minFora: 0.5 }
+  maskComBlend: { minFora: 0.5 },
+  traco: { minFora: 1 },
+  vazado: { minFora: 1 },
+  tracoDentro: { minFora: 1 },
+  tracoFora: { minFora: 1 },
+  cantos: { minFora: 1 },
+  sombra: { minFora: 4 },
+  sombraLonga: { minFora: 4 },
+  sombraSpread: { minFora: 2 },
+  sombraChoke: { minFora: 1 },
+  innerSpreadMais: { minFora: 12 },
+  innerSpreadMenos: { minFora: 1 },
+  fundoDesfocado: { minFora: 1 },
+  vidroGlass: { minFora: 7 },
+  graoRuido: { minFora: 6 },
+  linha: { minFora: 1 }
 };
+
+/**
+ * Tier 2 (2.0) — o spread tem que **agir**.
+ *
+ * A mesma classe de defeito do override inerte do `IC63/1b`, mas sem override
+ * envolvido: se os dois pipelines ignorarem o param `spread`, canvas e SVG
+ * concordam perfeitamente — "iguais porque nenhum fez nada" — e o portão
+ * passa com o recurso morto. O controle é o mesmo projeto com o param
+ * removido; os dois renders têm que mudar.
+ */
+const SPREAD_FIXTURES = ['sombraSpread', 'sombraChoke', 'innerSpreadMais', 'innerSpreadMenos'];
+const semSpread = (project) => ({
+  ...project,
+  layers: project.layers.map((l) => ({
+    ...l,
+    effects: (l.effects ?? []).map((e) => {
+      if (!e.params || !('spread' in e.params)) return e;
+      const params = { ...e.params };
+      delete params.spread;
+      return { ...e, params };
+    })
+  }))
+} );
+
+/** Tier 2 (2.1): o controle remove a entrada de backdrop-blur inteira. */
+const BACKDROP_FIXTURES = ['fundoDesfocado'];
+const semBackdrop = (project) => ({
+  ...project,
+  layers: project.layers.map((l) => ({
+    ...l,
+    effects: (l.effects ?? []).filter((e) => e.kind !== 'backdrop-blur')
+  }))
+});
+/** Tier 2 (2.2): o controle remove a entrada de glass inteira. */
+const GLASS_FIXTURES = ['vidroGlass'];
+const semGlass = (project) => ({
+  ...project,
+  layers: project.layers.map((l) => ({
+    ...l,
+    effects: (l.effects ?? []).filter((e) => e.kind !== 'glass')
+  }))
+});
+/** Tier 2 (2.3): o controle remove a entrada de noise-grain inteira. */
+const GRAO_FIXTURES = ['graoRuido'];
+const semGrao = (project) => ({
+  ...project,
+  layers: project.layers.map((l) => ({
+    ...l,
+    effects: (l.effects ?? []).filter((e) => e.kind !== 'noise-grain')
+  }))
+});
+const semEfeito = (nome, project) =>
+  BACKDROP_FIXTURES.includes(nome)
+    ? semBackdrop(project)
+    : GLASS_FIXTURES.includes(nome)
+      ? semGlass(project)
+      : GRAO_FIXTURES.includes(nome)
+        ? semGrao(project)
+        : semSpread(project);
+const COM_EFEITO = [...SPREAD_FIXTURES, ...BACKDROP_FIXTURES, ...GLASS_FIXTURES, ...GRAO_FIXTURES];
 
 const BASELINE = 'packages/iconcore-renderer/tests/__fixtures__/svg-parity';
 
@@ -554,7 +813,7 @@ await page.evaluate((m) => {
 }));
 
 const referencias = await page.evaluate(
-  async ({ baseUrl, projects, masks }) => {
+  async ({ baseUrl, projects, controles, masks }) => {
     const renderer = await import(`${baseUrl}/packages/iconcore-renderer/dist/index.js`);
     const out = {};
 
@@ -573,6 +832,13 @@ const referencias = await page.evaluate(
 
     for (const [nome, project] of Object.entries(projects)) {
       out[nome] = await renderizar(project, masks[nome]);
+
+      // Tier 2 (2.0): o controle sem-spread de cada fixture de spread. Se o
+      // canvas ignorar o param, os bytes são idênticos — e o portão abaixo
+      // reprova em vez de medir concordância de dois nadas.
+      if (controles[nome]) {
+        out[`${nome}__semspread`] = await renderizar(controles[nome], masks[nome]);
+      }
 
       /**
        * `IC63/1b` — **um override que não faz nada é um bug**, e a comparação
@@ -608,6 +874,7 @@ const referencias = await page.evaluate(
   {
     baseUrl,
     projects: PROJECTS,
+    controles: Object.fromEntries(COM_EFEITO.map((nome) => [nome, semEfeito(nome, PROJECTS[nome])])),
     // Computed here, in Node, because `page.evaluate` cannot see this scope — and
     // because the point is that both pipelines are handed the *same* value.
     masks: Object.fromEntries(Object.entries(PROJECTS).map(([nome, p]) => [nome, maskFor(p)]))
@@ -851,6 +1118,38 @@ if (overridesInertes.length) {
     `\nSVG parity FALHOU: override sem efeito em ${overridesInertes.join(', ')} — ` +
       `o render e identico ao controle sem overrides`
   );
+  process.exit(1);
+}
+
+/**
+ * Tier 2 (2.0) — o spread tem que mudar os dois renders.
+ *
+ * Comparado por bytes de PNG no canvas e por string no SVG: a pergunta é "o
+ * render com spread é o mesmo objeto que o render sem?", nas duas pipelines.
+ * Um spread inerte — param que o motor ignora, emissão que esqueceu de
+ * ligar — produz igualdade, e é exatamente esse o defeito que a
+ * concordância canvas↔SVG não enxerga.
+ */
+const spreadsInertes = [];
+for (const nome of COM_EFEITO) {
+  const controle = referencias[`${nome}__semspread`];
+  if (controle !== undefined && referencias[nome] === controle) {
+    spreadsInertes.push(`${nome} (canvas)`);
+  } else if (controle !== undefined) {
+    console.log(`  spread ativo      ${nome.padEnd(22)} o canvas muda em relacao ao controle`);
+  }
+  const project = PROJECTS[nome];
+  const com = renderToSvgWithOptions(project, 'default', { mask: maskFor(project) }).svg;
+  const sem = renderToSvgWithOptions(semEfeito(nome, project), 'default', { mask: maskFor(project) }).svg;
+  if (com === sem) {
+    spreadsInertes.push(`${nome} (svg)`);
+  } else {
+    console.log(`  spread ativo      ${nome.padEnd(22)} o svg muda em relacao ao controle`);
+  }
+}
+
+if (spreadsInertes.length) {
+  console.error(`\nSVG parity FALHOU: spread sem efeito em ${spreadsInertes.join(', ')}`);
   process.exit(1);
 }
 

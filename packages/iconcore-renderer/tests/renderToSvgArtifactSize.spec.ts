@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { IconCoreProject, Fill, IconLayer, ImageFilter, ExportFormat } from '@iconcore/shared';
 import { renderToSvgWithOptions } from '../src/renderToSvg';
 import { namespaceSvgIds } from '../src/svgSize';
+import { idsOf, urlRefsOf } from './svgScan';
 
 const solid: Fill = { kind: 'solid', color: '#ffffff' };
 
@@ -130,8 +131,10 @@ describe('id namespacing for embedded SVG (D4)', () => {
     expect(svg).toContain('id="lone-a"');
     expect(svg).toContain('id="ltwo-a"');
     // Every reference must point at a definition that exists in this document.
-    const defined = new Set([...svg.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
-    const referenced = [...svg.matchAll(/url\(#([^)\s]+)\)/g)].map((m) => m[1]);
+    // Lido por varredura (`idsOf`/`urlRefsOf`), não por regex sobre o documento:
+    // `/url\(#([^)\s]+)\)/g` foi marcada como polinomial (js/polynomial-redos).
+    const defined = new Set(idsOf(svg));
+    const referenced = urlRefsOf(svg);
     const dangling = referenced.filter((id) => !defined.has(id));
     expect(dangling).toEqual([]);
   });
@@ -141,7 +144,7 @@ describe('id namespacing for embedded SVG (D4)', () => {
       projectWith([shapeLayer({ hue: 10 }), svgLayer('one')]),
       'default'
     ).svg;
-    const defined = new Set([...svg.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
+    const defined = new Set(idsOf(svg));
 
     const filterId = /<filter id="(filter-shape-1-\d+)"/.exec(svg)?.[1];
     expect(filterId).toBeTruthy();

@@ -56,10 +56,13 @@ const normalizeHex = (value: string): string => {
 
 export const isValidHex = (value: string): boolean => normalizeHex(value).length === 7;
 
-/** Serializa para CSS. `color: ''` cai no token do tema. */
-export const workAreaToCss = (value: WorkAreaColor | null | undefined): string => {
+/** Serializa para CSS. `color: ''` cai no `fallback` (o fundo do tema). */
+export const workAreaToCss = (
+  value: WorkAreaColor | null | undefined,
+  fallback = 'var(--ic-bg)'
+): string => {
   const color = normalizeHex(value?.color ?? '');
-  if (!color) return 'var(--ic-bg)';
+  if (!color) return fallback;
   const alpha = value?.alpha ?? 1;
   // Alpha 1 vira hex, porque `color-mix` com transparente e o jeito barato de dizer
   // "opaco" e custa uma linha a menos na folha.

@@ -168,6 +168,61 @@ describe('blend mode', () => {
   });
 });
 
+describe('conic/diamond approximation centring', () => {
+  // Regression measured on the owner's sample set: this branch was the only
+  // one that skipped the compositor's `(S − w) / 2` centring, so the clipPath
+  // and the wedges stayed at the local origin while every sibling branch
+  // centred — the exported SVG shifted the artwork by −66px on a 512 canvas.
+  // (256 − 180) / 2 = 38; the wedge centre lands at 38 + 90 = 128.
+
+  it('places the clip and the conic wedges in canvas space', () => {
+    const svg = render(
+      project([
+        shapeLayer({ kind: 'rectangle', width: 180, height: 180, cornerRadius: 0 }, {
+          fill: {
+            kind: 'angular-gradient',
+            centerX: 0.5,
+            stops: [
+              { offset: 0, color: '#ff0000' },
+              { offset: 1, color: '#0000ff' }
+            ]
+          }
+        })
+      ])
+    );
+
+    // The clip shares the wedges' coordinate space, and both are centred.
+    expect(svg).toContain('<rect x="38" y="38" width="180" height="180"');
+    expect(svg).toContain('M 128 128');
+    // The old local-origin form, kept as a negative so it cannot come back.
+    expect(svg).not.toContain('M 90 90');
+  });
+
+  it('places the diamond base and its reach in canvas space', () => {
+    const svg = render(
+      project([
+        shapeLayer({ kind: 'rectangle', width: 180, height: 180, cornerRadius: 0 }, {
+          fill: {
+            kind: 'diamond-gradient',
+            centerX: 0.5,
+            centerY: 0.5,
+            radius: 0.5,
+            stops: [
+              { offset: 0, color: '#ffffff' },
+              { offset: 1, color: '#111827' }
+            ]
+          }
+        })
+      ])
+    );
+
+    // Base square at (38, 38); the outer diamond still starts at
+    // reach = max(w, h) * 0.5 = 90 around the centred (128, 128).
+    expect(svg).toContain('<rect x="38" y="38" width="180" height="180"');
+    expect(svg).toContain('points="128,38 218,128 128,218 38,128"');
+  });
+});
+
 describe('rounded rectangle is untouched', () => {
   it('still uses the declared corner radius', () => {
     const svg = render(

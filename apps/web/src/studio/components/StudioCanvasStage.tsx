@@ -1,0 +1,160 @@
+import { useRef } from 'react';
+import { useComposer } from '../../composer/ComposerContext';
+import { PreviewCanvas } from '../../composer/components/PreviewCanvas';
+import { workAreaToCss } from '../../composer/utils/workArea';
+import { StudioCanvasBar } from './StudioCanvasBar';
+import { StudioCanvasCaption } from './StudioCanvasCaption';
+import { StudioPillBar } from './StudioPillBar';
+import { StudioVariantTiles } from './StudioVariantTiles';
+import type { StudioTool } from './StudioStatusBar';
+
+interface StudioCanvasStageProps {
+  tool: StudioTool;
+  onTool: (tool: StudioTool) => void;
+  onCursor: (cursor: { x: number; y: number } | null) => void;
+  pan: { x: number; y: number };
+  onPan: (pan: { x: number; y: number }) => void;
+  onResetView: () => void;
+  leftOpen: boolean;
+  inspectorOpen: boolean;
+  onToggleLeft: () => void;
+  onToggleInspector: () => void;
+}
+
+/**
+ * Studio canvas stage: the canvas column — the scoped toolbar, the pannable
+ * stage, the caption readout (sRGB · dimensions · variant), the live variant
+ * tiles, the canvas toolbar — in-flow like the mockup `workspace`, with its
+ * breathings (caption 34px above, tiles 16/0/23, toolbar 24px below). The
+ * document breadcrumb lives in the titlebar; the canvas bar carries the
+ * column's own controls (panel collapses at its edges, undo/redo, View
+ * options), where the whole column can reach them. The creation toolbar the
+ * Composer painted inside the canvas is gone too: the Layers header Insert
+ * is the one entry point. What the stage keeps is chrome with no dead
+ * controls: the bar and pill dispatch, the caption reads, tiles render the
+ * live pipeline, and Fit to canvas returns zoom and pan together.
+ *
+ * The viewport itself stays the Composer's `PreviewCanvas` — real zoom,
+ * gesture transactions (one undo per drag), grid/keyline/margin overlays,
+ * snapping — so stage and Inspector can only disagree by a bug, never by
+ * construction.
+ *
+ * Faixa contínua (decisão do dono): no mockup a coluna `workspace` inteira —
+ * palco, legenda, faixa e toolbar — assenta num pano só, sem banda, sombra ou
+ * borda separando a parte de baixo. A cor de work area que o Composer pinta
+ * inline caía em `var(--ic-bg)` quando nada foi escolhido, e a coluna da
+ * concha pinta `var(--ic-workspace)`: o palco lia um fundo e a faixa outro, e
+ * a costura aparecia. Aqui o caimento padrão é a mesa do mockup; cor
+ * escolhida continua pintando igual nos dois (via `workAreaFallback`).
+ *
+ * Faixa das variantes (decisão do dono): a legenda e os tiles vivem numa
+ * seção própria (`studio-variant-band`) logo abaixo do palco, full-bleed e
+ * in-flow, com a **mesma** tinta do palco (`deskColor` — um binding só, usado
+ * pelos três): cor escolhida pintava o palco e deixava a legenda e os tiles
+ * na mesa, e a costura reaparecia embaixo. Sem cartão, borda, hairline ou
+ * sombra; legenda e tiles não repintam — a cor aqui é tinta de fundo, e os
+ * respiros (legenda 34/0/0, tiles 16/0/23) são os dos componentes.
+ *
+ * Tira inferior (decisão do dono): o pano da coluna abaixo da faixa — em
+ * volta e atrás da pillbar até a statusbar — carrega a mesma tinta
+ * (`studio-desk-tail`), e a toolbar continua chrome flutuante por cima. O
+ * pano é um irmão do palco e da faixa, nunca o fundo do `section`: pintar a
+ * coluna faria os filhos receberem a mesma tinta semi-transparente sobre si
+ * mesmos, e com alpha o empilhamento deixaria o palco e a faixa mais densos
+ * que a tira que os acompanha.
+ */
+const DESK_FALLBACK = 'var(--ic-workspace)';
+
+export const StudioCanvasStage = ({
+  tool,
+  onTool,
+  onCursor,
+  pan,
+  onPan,
+  onResetView,
+  leftOpen,
+  inspectorOpen,
+  onToggleLeft,
+  onToggleInspector
+}: StudioCanvasStageProps) => {
+  const { state } = useComposer();
+  const panRef = useRef(pan);
+  panRef.current = pan;
+  const dragRef = useRef<{ x: number; y: number; pan: { x: number; y: number } } | null>(null);
+  const movedRef = useRef(false);
+
+  // A tinta da bancada: palco, faixa das variantes e tira inferior pintam
+  // **esta** expressão — cor escolhida pinta os três igual, e "Follow the
+  // theme" volta à mesa nos três. Duas chamadas seriam duas verdades.
+  const deskColor = workAreaToCss(state.workAreaColor, DESK_FALLBACK);
+
+  const trackCursor = (event: React.PointerEvent) => {
+    const frame = event.currentTarget.getBoundingClientRect();
+    onCursor({ x: Math.round(event.clientX - frame.left), y: Math.round(event.clientY - frame.top) });
+  };
+
+  return (
+    <section
+      className={`studio-canvas ${tool === 'hand' ? 'is-hand' : ''}`}
+      aria-label="Canvas"
+      onPointerMove={trackCursor}
+      onPointerLeave={() => onCursor(null)}
+    >
+      <StudioCanvasBar
+        leftOpen={leftOpen}
+        inspectorOpen={inspectorOpen}
+        onToggleLeft={onToggleLeft}
+        onToggleInspector={onToggleInspector}
+        onResetView={onResetView}
+      />
+      <div className="studio-stage-wrap">
+        <div
+          className="studio-stage"
+          style={
+            {
+              '--pan-x': `${pan.x}px`,
+              '--pan-y': `${pan.y}px`,
+              backgroundColor: deskColor
+            } as React.CSSProperties
+          }
+          onPointerDownCapture={(event) => {
+            if (tool !== 'hand') return;
+            // The Hand owns the pointer from here: layers must not start drags
+            // and the stage must not deselect underneath the pan.
+            event.stopPropagation();
+            event.preventDefault();
+            movedRef.current = false;
+            dragRef.current = { x: event.clientX, y: event.clientY, pan: panRef.current };
+          }}
+          onPointerMoveCapture={(event) => {
+            const drag = dragRef.current;
+            if (!drag) return;
+            const dx = event.clientX - drag.x;
+            const dy = event.clientY - drag.y;
+            if (Math.abs(dx) + Math.abs(dy) > 3) movedRef.current = true;
+            onPan({ x: drag.pan.x + dx, y: drag.pan.y + dy });
+          }}
+          onPointerUpCapture={() => {
+            dragRef.current = null;
+          }}
+          onClickCapture={(event) => {
+            if (movedRef.current) {
+              // A pan that travelled ends in a click the canvas must not hear.
+              event.stopPropagation();
+              movedRef.current = false;
+            }
+          }}
+        >
+          <PreviewCanvas interactionMode={tool} workAreaFallback={DESK_FALLBACK} />
+        </div>
+      </div>
+      <div className="studio-variant-band" style={{ backgroundColor: deskColor }}>
+        <StudioCanvasCaption />
+        <StudioVariantTiles />
+      </div>
+      <div className="studio-desk-tail" style={{ backgroundColor: deskColor }}>
+        <StudioPillBar tool={tool} onTool={onTool} onFit={onResetView} />
+      </div>
+    </section>
+  );
+};

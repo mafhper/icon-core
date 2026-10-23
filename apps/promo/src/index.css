@@ -1,19 +1,168 @@
 @import "tailwindcss";
 
+/*
+ * Typefaces, self-hosted. Same mechanics as `apps/web`: source under `assets/fonts/`,
+ * derived copy in `src/fonts/` (where Vite resolves, hashes and respects `base`), and
+ * `scripts/check-brand.mjs` compares both by SHA-256. Not a CDN: this page is the front
+ * door of an offline-first tool, and a remote face disappears without a trace when the
+ * network does — the text simply falls back and the drawing changes.
+ *
+ * `font-display: swap` here, unlike the Studio shell's `block`: the landing page never
+ * measures text in canvas, so painting the fallback immediately beats an invisible heading.
+ * Static weights only (Cal Sans convention): 400-700 for Manrope, 400/600/700 for Sora and
+ * 400/500/600 for the mono. `800` and the in-between `720`/`760` resolve by CSS matching.
+ */
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/Manrope-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/Manrope-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/Manrope-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/Manrope-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/Sora-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/Sora-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/Sora-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/IBMPlexMono-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/IBMPlexMono-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/IBMPlexMono-SemiBold.woff2") format("woff2");
+}
+
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --font-display: "Sora", sans-serif;
   --font-body: "Manrope", sans-serif;
-  /* The promoted mono is the one the page actually loads (IBM Plex Mono, shared
-     with the app); JetBrains Mono was declared but never requested. */
+  /* The promoted mono is the one the page actually renders (IBM Plex Mono), and since the
+     self-host pass it comes from `src/fonts/` like the other two. */
   --font-mono: "IBM Plex Mono", monospace;
 }
 
+/* Shell color roles exposed as Tailwind utilities (bg-background, text-muted-foreground, ...).
+   `inline` keeps the utilities resolving `var(--*)` at the element, so .dark / .mono on
+   <html> re-theme the whole page without regenerating classes. */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-cyan: var(--cyan);
+  --color-cyan-foreground: var(--cyan-foreground);
+  --color-mint: var(--mint);
+  --color-canvas: var(--canvas);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --color-scene: var(--scene);
+  --color-scene-foreground: var(--scene-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --shadow-icon: var(--elev-icon);
+  --shadow-float: var(--elev-float);
+  --shadow-window: var(--elev-window);
+}
+
+/*
+ * Legacy promo page tokens. The page shell still reads three of them: `body` takes
+ * `--page`/`--page-2` for its wash and `--ink` for its text, and the focus ring uses
+ * `--ink` too. The rest belonged to the v1 band that left the page. --muted and --cyan
+ * are namespaced because the shell tokens use the same names with different roles.
+ */
 :root {
   color-scheme: light;
   --page: #f4f3ef;
   --page-2: #e7e3da;
   --ink: #171717;
-  --muted: #62615d;
+  --promo-muted: #62615d;
   --line: rgba(23, 23, 23, 0.16);
   --line-strong: rgba(23, 23, 23, 0.28);
   --surface: rgba(255, 255, 255, 0.68);
@@ -25,8 +174,148 @@
      `--gold` stays for graphics/borders; prose uses this darker step. */
   --gold-ink: #7d5a1c;
   --gold-soft: rgba(201, 154, 69, 0.28);
-  --cyan: #5aa9c8;
+  --promo-cyan: #5aa9c8;
   --shadow: rgba(48, 42, 30, 0.16);
+}
+
+/*
+ * Shell design tokens. UI colors live here; artwork colors live in appearance.ts.
+ * .dark and .mono are toggled on <html> by the appearance controls.
+ */
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.972 0.004 240);
+  --foreground: oklch(0.21 0.012 250);
+  --card: oklch(0.995 0.002 240);
+  --card-foreground: oklch(0.21 0.012 250);
+  --popover: oklch(0.995 0.002 240);
+  --popover-foreground: oklch(0.21 0.012 250);
+  --primary: oklch(0.58 0.115 162);
+  --primary-foreground: oklch(0.99 0.01 160);
+  --secondary: oklch(0.94 0.005 240);
+  --secondary-foreground: oklch(0.21 0.012 250);
+  --muted: oklch(0.945 0.005 240);
+  --muted-foreground: oklch(0.5 0.015 250);
+  --accent: oklch(0.94 0.025 195);
+  --accent-foreground: oklch(0.27 0.03 220);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.895 0.006 240);
+  --input: oklch(0.895 0.006 240);
+  --ring: oklch(0.58 0.115 162);
+  --cyan: oklch(0.82 0.145 215);
+  --cyan-foreground: oklch(0.22 0.04 230);
+  --mint: oklch(0.9 0.07 165);
+  --canvas: oklch(0.9 0.004 160);
+  --glass: oklch(1 0 0 / 0.62);
+  --glass-border: oklch(1 0 0 / 0.75);
+  --scene: oklch(0.86 0.03 220);
+  --scene-foreground: oklch(0.2 0.02 250);
+  --chart-1: oklch(0.7 0.15 40);
+  --chart-2: oklch(0.65 0.12 185);
+  --chart-3: oklch(0.55 0.1 250);
+  --chart-4: oklch(0.82 0.15 85);
+  --chart-5: oklch(0.62 0.17 15);
+  --elev-icon: 0 50px 90px -40px oklch(0.2 0.02 250 / 0.55), 0 18px 30px -18px oklch(0.2 0.02 250 / 0.35);
+  --elev-float: 0 24px 60px -28px oklch(0.2 0.02 250 / 0.3), 0 2px 6px -2px oklch(0.2 0.02 250 / 0.08);
+  --elev-window: 0 60px 120px -50px oklch(0.2 0.02 250 / 0.45), 0 0 0 1px oklch(0.2 0.02 250 / 0.06);
+  --spec: oklch(1 0 0 / 0.7);
+  --rim: oklch(1 0 0 / 0.55);
+}
+
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.155 0.008 250);
+  --foreground: oklch(0.96 0.004 240);
+  --card: oklch(0.2 0.009 250);
+  --card-foreground: oklch(0.96 0.004 240);
+  --popover: oklch(0.21 0.009 250);
+  --popover-foreground: oklch(0.96 0.004 240);
+  --primary: oklch(0.74 0.13 162);
+  --primary-foreground: oklch(0.17 0.02 165);
+  --secondary: oklch(0.25 0.01 250);
+  --secondary-foreground: oklch(0.96 0.004 240);
+  --muted: oklch(0.235 0.01 250);
+  --muted-foreground: oklch(0.7 0.012 250);
+  --accent: oklch(0.28 0.03 215);
+  --accent-foreground: oklch(0.94 0.02 200);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 0.1);
+  --input: oklch(1 0 0 / 0.14);
+  --ring: oklch(0.74 0.13 162);
+  --cyan: oklch(0.84 0.145 215);
+  --cyan-foreground: oklch(0.18 0.04 230);
+  --mint: oklch(0.42 0.07 165);
+  --canvas: oklch(0.19 0.008 250);
+  --glass: oklch(0.2 0.01 250 / 0.55);
+  --glass-border: oklch(1 0 0 / 0.1);
+  --scene: oklch(0.3 0.04 230);
+  --scene-foreground: oklch(0.96 0.004 240);
+  --elev-icon: 0 50px 90px -40px oklch(0 0 0 / 0.85), 0 18px 30px -18px oklch(0 0 0 / 0.6);
+  --elev-float: 0 24px 60px -28px oklch(0 0 0 / 0.7), 0 0 0 1px oklch(1 0 0 / 0.04);
+  --elev-window: 0 60px 120px -50px oklch(0 0 0 / 0.9), 0 0 0 1px oklch(1 0 0 / 0.08);
+  --spec: oklch(1 0 0 / 0.45);
+  --rim: oklch(1 0 0 / 0.22);
+  /*
+   * The page shell names its wash and ink with the legacy variables. Re-pointing them
+   * here is what keeps the body following the theme now that the v1 band is gone.
+   */
+  --page: oklch(0.17 0.006 250);
+  --page-2: oklch(0.13 0.006 250);
+  --ink: oklch(0.94 0.004 240);
+  --promo-muted: oklch(0.72 0.01 250);
+  --line: oklch(1 0 0 / 0.14);
+  --line-strong: oklch(1 0 0 / 0.26);
+  --graphite: oklch(0.9 0.004 240);
+  --gold-ink: oklch(0.84 0.1 85);
+  --shadow: oklch(0 0 0 / 0.5);
+}
+
+.mono {
+  --background: oklch(0.97 0 0);
+  --foreground: oklch(0.2 0 0);
+  --card: oklch(0.995 0 0);
+  --card-foreground: oklch(0.2 0 0);
+  --popover: oklch(0.995 0 0);
+  --popover-foreground: oklch(0.2 0 0);
+  --primary: oklch(0.3 0 0);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.935 0 0);
+  --secondary-foreground: oklch(0.2 0 0);
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.92 0 0);
+  --accent-foreground: oklch(0.2 0 0);
+  --border: oklch(0.88 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.3 0 0);
+  --cyan: oklch(0.62 0 0);
+  --cyan-foreground: oklch(0.98 0 0);
+  --mint: oklch(0.9 0 0);
+  --canvas: oklch(0.9 0 0);
+  --scene: oklch(0.85 0 0);
+  --scene-foreground: oklch(0.2 0 0);
+}
+
+/* 32 px work-area grid, used by the editor showcase when the grid switch is on. */
+@utility ic-grid-bg {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/*
+ * Default border color for a bare `border`, as in the shell. It has to sit in `base`: unlayered,
+ * the `*` selector would outrank every `border-*` color utility on the page. The shell names this
+ * role `--color-border`, but colors are configured here with `@theme inline`, which emits no
+ * `--color-*` custom properties, so the live token is `--border` (light, dark and mono).
+ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 * {
@@ -39,8 +328,8 @@ html {
 
 body {
   margin: 0;
-  /* Body copy uses the loaded Manrope; the previous stack led with two fonts the
-     page never requested, so everything silently rendered in Sora. */
+  /* Body copy composes in the self-hosted Manrope (declared above); the rest of the stack
+     only covers a machine where that file failed to decode. */
   font-family: Manrope, "Sora", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background:
@@ -48,722 +337,51 @@ body {
     linear-gradient(180deg, var(--page) 0%, var(--page-2) 100%);
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+/*
+ * No `a { color: inherit; text-decoration: none }` here. The Tailwind preflight already declares
+ * both inside `@layer base`; repeating them unlayered outranked every `text-*` and `underline`
+ * utility on the page (unlayered beats layered), which is how the download pill lost
+ * `text-primary-foreground` and rendered `--ink` instead.
+ */
 
 .promo-root {
   min-height: 100vh;
 }
 
-.promo-nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  width: min(1180px, calc(100% - 32px));
-  margin: 16px auto 0;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 22px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 16px 40px var(--shadow);
-  padding: 10px 12px 10px 18px;
-  border-radius: 22px;
-}
-
-.promo-brand {
-  font-size: 0.98rem;
-  font-weight: 760;
-  letter-spacing: -0.02em;
-}
-
-.promo-nav nav {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 620;
-}
-
-.promo-nav nav a:hover,
-.text-link:hover {
-  color: var(--ink);
-}
-
-.nav-cta,
-.button,
-.promo-download {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 42px;
-  border: 1px solid var(--line-strong);
-  border-radius: 14px;
-  padding: 0 16px;
-  font-size: 0.84rem;
-  font-weight: 720;
-  background: rgba(255, 255, 255, 0.54);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 10px 24px rgba(48, 42, 30, 0.1);
-}
-
-.button-primary,
-.nav-cta {
-  border-color: rgba(201, 154, 69, 0.5);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.42)),
-    linear-gradient(135deg, rgba(201, 154, 69, 0.34), rgba(90, 169, 200, 0.2));
-}
-
-main {
-  width: min(1180px, calc(100% - 32px));
-  margin: 0 auto;
-}
-
-.hero-section {
-  min-height: calc(100vh - 96px);
-  display: grid;
-  grid-template-columns: minmax(0, 0.86fr) minmax(420px, 1.14fr);
-  gap: 46px;
-  align-items: center;
-  padding: 62px 0 42px;
-}
-
-.hero-copy {
-  display: grid;
-  gap: 22px;
-}
-
-.hero-copy h1,
-.section-heading h2,
-.split-section h2,
-.community-section h2 {
-  margin: 0;
-  letter-spacing: -0.055em;
-  line-height: 0.96;
-  text-wrap: balance;
-}
-
-.hero-copy h1 {
-  font-size: clamp(3rem, 7vw, 6.25rem);
-  max-width: 9.5ch;
-}
-
-.hero-copy p {
-  margin: 0;
-  max-width: 58ch;
-  color: var(--muted);
-  font-size: 1.08rem;
-  line-height: 1.62;
-}
-
-.hero-actions,
-.community-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-
-.text-link {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 0.9rem;
-  border-bottom: 1px solid var(--line-strong);
-}
-
-.product-preview {
-  border: 1px solid rgba(255, 255, 255, 0.26);
-  border-radius: 30px;
-  background:
-    linear-gradient(150deg, rgba(255, 255, 255, 0.16), transparent 28%),
-    linear-gradient(180deg, var(--graphite) 0%, #111215 100%);
-  box-shadow: 0 34px 90px rgba(20, 20, 22, 0.34);
-  overflow: hidden;
-  color: #f7f4ed;
-}
-
-.preview-titlebar {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.preview-titlebar span {
-  width: 9px;
-  height: 9px;
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.32);
-}
-
-.preview-titlebar strong {
-  margin-left: 12px;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-}
-
-.preview-layout {
-  display: grid;
-  grid-template-columns: 62px minmax(0, 1fr) 180px;
-  min-height: 420px;
-}
-
-.preview-rail,
-.preview-panel {
-  background: rgba(255, 255, 255, 0.045);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.preview-rail {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  padding: 20px;
-}
-
-.preview-rail span {
-  width: 22px;
-  height: 22px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.preview-rail .is-active {
-  background: linear-gradient(135deg, var(--gold), var(--cyan));
-}
-
-.preview-canvas {
-  position: relative;
-  display: grid;
-  place-items: center;
-  background: #ece9df;
-}
-
-.preview-grid,
-.ic-canvas-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(23, 23, 23, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23, 23, 23, 0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.preview-icon {
-  width: 164px;
-  height: 164px;
-  border-radius: 42px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #f1cc78, #62adc8);
-  box-shadow: 0 24px 50px rgba(17, 18, 21, 0.28);
-  position: relative;
-  z-index: 1;
-}
-
-.preview-icon i {
-  width: 70px;
-  height: 88px;
-  border-radius: 18px 18px 34px 18px;
-  background: rgba(255, 255, 255, 0.82);
-  transform: rotate(9deg);
-}
-
-.preview-selection {
-  position: absolute;
-  width: 192px;
-  height: 192px;
-  border: 1px solid var(--gold);
-  z-index: 2;
-}
-
-.preview-selection b {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--gold);
-}
-
-.preview-selection b:first-child {
-  right: -5px;
-  bottom: -5px;
-}
-
-.preview-selection b:last-child {
-  left: 50%;
-  top: -28px;
-}
-
-.preview-panel {
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  border-right: 0;
-  padding: 20px;
-}
-
-.preview-panel p,
-.preview-panel em {
-  margin: 0 0 8px;
-  color: rgba(247, 244, 237, 0.56);
-  font-size: 0.72rem;
-  font-style: normal;
-}
-
-.preview-panel strong {
-  display: block;
-  margin-bottom: 18px;
-  font-size: 0.9rem;
-}
-
-.preview-panel span {
-  display: block;
-  height: 32px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  background: rgba(255, 255, 255, 0.09);
-}
-
-.preview-export {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.preview-export span {
-  margin-right: auto;
-  color: rgba(247, 244, 237, 0.7);
-  font-size: 0.78rem;
-}
-
-.preview-export i {
-  font-style: normal;
-  border: 1px solid rgba(201, 154, 69, 0.42);
-  border-radius: 999px;
-  padding: 6px 10px;
-  color: #f7f4ed;
-  font-size: 0.72rem;
-}
-
-.section-block,
-.split-section,
-.community-section,
-.faq-section,
-.promo-footer {
-  margin-top: 24px;
-  border: 1px solid var(--line);
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.54);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 54px rgba(48, 42, 30, 0.08);
-}
-
-.section-block {
-  padding: 34px;
-}
-
-.section-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(300px, 0.55fr);
-  gap: 28px;
-  align-items: end;
-  margin-bottom: 26px;
-}
-
-.section-heading h2,
-.split-section h2,
-.community-section h2 {
-  font-size: clamp(2rem, 4vw, 4rem);
-}
-
-.section-heading p,
-.split-section p,
-.community-section p,
-.faq-section p,
-.promo-footer p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.58;
-}
-
-.workflow-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.workflow-card {
-  min-height: 330px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  padding: 18px;
-  background: rgba(255, 255, 255, 0.48);
-}
-
-.workflow-card.is-featured {
-  background:
-    linear-gradient(150deg, rgba(201, 154, 69, 0.16), rgba(90, 169, 200, 0.08)),
-    rgba(255, 255, 255, 0.56);
-}
-
-.workflow-card > span {
-  display: block;
-  margin-top: 18px;
-  color: var(--gold-ink);
-  font-size: 0.76rem;
-  font-weight: 760;
-}
-
-.workflow-card h3 {
-  margin: 10px 0;
-  font-size: 1.36rem;
-  letter-spacing: -0.03em;
-}
-
-.workflow-card p {
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.workflow-mini {
-  position: relative;
-  height: 146px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: #f8f7f1;
-  overflow: hidden;
-}
-
-.mini-canvas {
-  position: absolute;
-  inset: 22px;
-  display: grid;
-  place-items: center;
-  background-image:
-    linear-gradient(rgba(23, 23, 23, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23, 23, 23, 0.06) 1px, transparent 1px);
-  background-size: 18px 18px;
-}
-
-.mini-canvas span {
-  width: 72px;
-  height: 72px;
-  border-radius: 21px;
-  background: linear-gradient(135deg, var(--gold), var(--cyan));
-}
-
-.mini-handles {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 92px;
-  height: 92px;
-  transform: translate(-50%, -50%);
-  border: 1px solid var(--gold);
-}
-
-.mini-handles b {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--gold);
-}
-
-.mini-handles b:nth-child(1) { right: -4px; bottom: -4px; }
-.mini-handles b:nth-child(2) { left: -4px; top: -4px; }
-.mini-handles b:nth-child(3) { right: -4px; top: -4px; }
-
-.mini-export {
-  display: grid;
-  gap: 10px;
-  padding: 24px;
-}
-
-.mini-export span,
-.mini-export strong {
-  display: block;
-  border-radius: 12px;
-  background: rgba(23, 23, 23, 0.12);
-}
-
-.mini-export span {
-  height: 22px;
-}
-
-.mini-export strong {
-  width: 62%;
-  height: 34px;
-  background: linear-gradient(135deg, rgba(201, 154, 69, 0.62), rgba(90, 169, 200, 0.4));
-}
-
-.mini-flow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-
-.mini-flow span {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 8px 10px;
-  font-size: 0.76rem;
-  font-weight: 720;
-}
-
-.mini-flow i {
-  width: 20px;
-  height: 1px;
-  background: var(--line-strong);
-}
-
-.split-section {
-  padding: 34px;
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.62fr);
-  gap: 32px;
-  align-items: center;
-}
-
-.split-section-alt {
-  grid-template-columns: minmax(320px, 0.62fr) minmax(0, 0.9fr);
-}
-
-.feature-panel {
-  display: grid;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  padding: 18px;
-  background:
-    linear-gradient(150deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.34)),
-    linear-gradient(135deg, rgba(201, 154, 69, 0.12), rgba(90, 169, 200, 0.08));
-}
-
-.feature-panel span {
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-  color: var(--graphite);
-  font-weight: 720;
-}
-
-.feature-panel span:last-child {
-  border-bottom: 0;
-}
-
-.export-panel {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.export-panel span {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  justify-content: center;
-  text-align: center;
-  padding: 0 8px;
-}
-
-.desktop-section,
-.community-section {
-  text-align: left;
-}
-
-.release-line {
-  margin: -8px 0 16px;
-  color: var(--gold-ink);
-  font-weight: 760;
-}
-
-.download-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.promo-download.is-disabled {
-  opacity: 0.46;
-}
-
-.promo-download.is-loading {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-.release-error {
-  margin: -8px 0 16px;
-  font-size: 0.82rem;
-  color: var(--muted);
-}
-
-.community-section {
-  padding: 34px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 28px;
-  align-items: center;
-  background:
-    linear-gradient(135deg, rgba(28, 30, 34, 0.94), rgba(28, 30, 34, 0.84)),
-    var(--graphite);
-  color: #f7f4ed;
-}
-
-.community-section p {
-  color: rgba(247, 244, 237, 0.72);
-}
-
-.community-section .button {
-  color: #f7f4ed;
-  border-color: rgba(255, 255, 255, 0.24);
-}
-
-.faq-section {
-  padding: 26px 34px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 22px;
-}
-
-.faq-section h3 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-}
-
-.promo-footer {
-  width: min(1180px, calc(100% - 32px));
-  margin: 24px auto 32px;
-  padding: 26px 34px;
-  display: grid;
-  grid-template-columns: 1.2fr 0.7fr 1fr;
-  gap: 24px;
-}
-
-.promo-footer strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 1.1rem;
-}
-
-.promo-footer nav {
-  display: grid;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 0.88rem;
-}
-
-@media (max-width: 920px) {
-  .promo-nav {
-    grid-template-columns: 1fr auto;
+/* --- Icon artwork motion ---
+   The core glow breathes and the core pulses. IconArt drops the SVG
+   <animateTransform> when the provider reports reduced motion; these rules
+   cover the CSS keyframes for the same preference. */
+@keyframes ic-core-glow {
+  0%,
+  100% {
+    opacity: 0.25;
   }
 
-  .promo-nav nav {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-    overflow-x: auto;
-    padding-bottom: 2px;
-  }
-
-  .hero-section,
-  .section-heading,
-  .split-section,
-  .split-section-alt,
-  .community-section,
-  .promo-footer {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-section {
-    min-height: auto;
-  }
-
-  .workflow-grid,
-  .faq-section,
-  .download-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .preview-layout {
-    grid-template-columns: 48px minmax(0, 1fr);
-  }
-
-  .preview-panel {
-    display: none;
+  50% {
+    opacity: 0.85;
   }
 }
 
-@media (max-width: 620px) {
-  .promo-nav,
-  main,
-  .promo-footer {
-    width: min(100% - 18px, 1180px);
+@keyframes ic-core-pulse {
+  0%,
+  100% {
+    transform: scale(1);
   }
 
-  .promo-nav {
-    border-radius: 18px;
-    grid-template-columns: 1fr;
-    align-items: start;
-    gap: 14px;
-    padding: 16px 18px;
+  50% {
+    transform: scale(1.025);
   }
+}
 
-  .promo-nav nav {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    justify-content: stretch;
-    gap: 10px 18px;
-    overflow: visible;
-    padding-bottom: 0;
-    width: 100%;
-  }
+.ic-core-glow {
+  animation: ic-core-glow 3.2s ease-in-out infinite;
+}
 
-  .promo-nav nav a {
-    min-width: 0;
-    line-height: 1.25;
-  }
-
-  .nav-cta {
-    display: none;
-  }
-
-  .hero-section {
-    padding-top: 36px;
-    gap: 26px;
-  }
-
-  .hero-copy h1 {
-    font-size: 3.25rem;
-  }
-
-  .hero-actions,
-  .community-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .button,
-  .promo-download {
-    width: 100%;
-  }
-
-  .section-block,
-  .split-section,
-  .community-section,
-  .faq-section,
-  .promo-footer {
-    border-radius: 22px;
-    padding: 22px;
-  }
+.ic-core-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ic-core-pulse 3.2s ease-in-out infinite;
 }
 
 /* --- Keyboard focus visibility --- */
@@ -779,8 +397,8 @@ button:focus-visible {
     scroll-behavior: auto;
   }
 
-  .button,
-  .text-link {
-    transition: none;
+  .ic-core-glow,
+  .ic-core-pulse {
+    animation: none;
   }
 }

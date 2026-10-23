@@ -17,7 +17,7 @@ const layer = (over: Partial<IconLayer> & { id: string }): IconLayer => ({
 const display = (...layers: IconLayer[]) => [...layers].sort((a, b) => b.zIndex - a.zIndex);
 
 describe('groupLayers', () => {
-  it('splits by kind into the three groups the sidebar shows', () => {
+  it('splits into Assets and Background — every kind in Assets, background last', () => {
     const groups = groupLayers(
       display(
         layer({ id: 'title', kind: 'text', zIndex: 3 }),
@@ -28,15 +28,14 @@ describe('groupLayers', () => {
       )
     );
 
-    expect(groups.map((g) => g.id)).toEqual(['text', 'artwork', 'background']);
-    expect(groups[0].layers.map((l) => l.id)).toEqual(['title']);
-    expect(groups[1].layers.map((l) => l.id)).toEqual(['logo', 'photo', 'circle']);
-    expect(groups[2].layers.map((l) => l.id)).toEqual(['bg']);
+    expect(groups.map((g) => g.id)).toEqual(['assets', 'background']);
+    expect(groups[0].layers.map((l) => l.id)).toEqual(['title', 'logo', 'photo', 'circle']);
+    expect(groups[1].layers.map((l) => l.id)).toEqual(['bg']);
   });
 
   it('drops empty groups rather than showing a heading with nothing under it', () => {
     const groups = groupLayers(display(layer({ id: 'circle', kind: 'shape', zIndex: 0 })));
-    expect(groups.map((g) => g.id)).toEqual(['artwork']);
+    expect(groups.map((g) => g.id)).toEqual(['assets']);
   });
 
   it('returns nothing for an empty project', () => {
@@ -57,28 +56,34 @@ describe('groupLayers', () => {
 
   it('never loses a layer, even one whose kind no group matches', () => {
     const odd = layer({ id: 'weird', zIndex: 2 }) as IconLayer;
-    // A kind the sidebar does not know about yet.
+    // A kind the sidebar does not know about yet: the Assets catch-all takes it.
     (odd as { kind: string }).kind = 'future-kind';
 
     const groups = groupLayers(display(odd, layer({ id: 'circle', zIndex: 1 })));
-    const seen = groups.flatMap((g) => g.layers.map((l) => l.id));
-    expect(seen.sort()).toEqual(['circle', 'weird']);
+    expect(groups.find((g) => g.id === 'assets')?.layers.map((l) => l.id)).toEqual(['weird', 'circle']);
   });
 
-  it('puts the background in its own group even when it is a shape', () => {
+  it('lets the role win over the kind: a text handle still goes to Background', () => {
     const groups = groupLayers(
       display(
         layer({ id: 'circle', kind: 'shape', zIndex: 1 }),
-        layer({ id: 'bg', kind: 'shape', role: 'background', zIndex: -1 })
+        layer({ id: 'bg-text', kind: 'text', role: 'background', zIndex: -1 })
       )
     );
-    const bgGroup = groups.find((g) => g.id === 'background');
-    expect(bgGroup?.layers.map((l) => l.id)).toEqual(['bg']);
-    // And it is not also listed as artwork.
-    expect(groups.find((g) => g.id === 'artwork')?.layers.map((l) => l.id)).toEqual(['circle']);
+    expect(groups.find((g) => g.id === 'background')?.layers.map((l) => l.id)).toEqual(['bg-text']);
+    // And it is not also listed as an asset.
+    expect(groups.find((g) => g.id === 'assets')?.layers.map((l) => l.id)).toEqual(['circle']);
   });
 
-  it('gives every group a label and a hint', () => {
+  it('keeps a gradient-filled shape in Assets: the paint never claims Background', () => {
+    const groups = groupLayers(
+      display(layer({ id: 'gradient', kind: 'shape', fill: { kind: 'linear-gradient' }, zIndex: 0 }))
+    );
+    expect(groups.map((g) => g.id)).toEqual(['assets']);
+    expect(groups[0].layers.map((l) => l.id)).toEqual(['gradient']);
+  });
+
+  it('names the groups in sentence case — the sidebar uppercases them in CSS', () => {
     const groups = groupLayers(
       display(
         layer({ id: 'title', kind: 'text', zIndex: 2 }),
@@ -86,8 +91,8 @@ describe('groupLayers', () => {
         layer({ id: 'bg', role: 'background', zIndex: -1 })
       )
     );
+    expect(groups.map((g) => g.label)).toEqual(['Assets layers', 'Background layer']);
     for (const g of groups) {
-      expect(g.label.length).toBeGreaterThan(0);
       expect(g.hint.length).toBeGreaterThan(0);
     }
   });

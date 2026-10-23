@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, FieldGroup, TextField, NumberField, Select, Switch, Slider, ColorField, ControlRow, InlineField, SegmentedControl, Menu, MenuItem, Popover } from '../src/index';
+import { Button, IconButton, ButtonGroup, ToolbarDivider, Tooltip, TooltipProvider, Kbd, Section, Field, FieldGroup, TextField, NumberField, Select, Switch, Slider, ColorField, ControlRow, InlineField, SegmentedControl, Menu, MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem, Popover } from '../src/index';
 
 describe('Button', () => {
   it('defaults type to "button" (never submits)', () => {
@@ -351,6 +351,52 @@ describe('Menu', () => {
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('menuitem', { name: 'Circle' })).not.toBeInTheDocument();
+  }, 10_000);
+
+  it('treats a label as a heading, never as an item', async () => {
+    const user = userEvent.setup();
+    render(
+      <Menu trigger={<IconButton icon={<span />} aria-label="Menu" />} label="Menu">
+        <MenuLabel>Theme</MenuLabel>
+        <MenuItem label="Light" onSelect={() => {}} />
+      </Menu>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(await screen.findByText('Theme')).toBeInTheDocument();
+
+    // A heading arrows can land on is a trap: it is not part of the item set,
+    // so the first arrow-down stop is the first selectable item.
+    expect(screen.queryByRole('menuitem', { name: 'Theme' })).not.toBeInTheDocument();
+    expect(screen.getByText('Theme')).not.toHaveAttribute('tabindex');
+
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: 'Light' })).toHaveFocus();
+  }, 10_000);
+
+  it('marks the checked option of a radio group and reports a change', async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    render(
+      <Menu trigger={<IconButton icon={<span />} aria-label="Theme menu" />} label="Theme menu">
+        <MenuLabel>Theme</MenuLabel>
+        <MenuRadioGroup value="system" onValueChange={onValueChange}>
+          <MenuRadioItem value="light" label="Light" />
+          <MenuRadioItem value="dark" label="Dark" />
+          <MenuRadioItem value="system" label="System" />
+        </MenuRadioGroup>
+      </Menu>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Theme menu' }));
+    expect(await screen.findByRole('menuitemradio', { name: 'System' })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    );
+    expect(screen.getByRole('menuitemradio', { name: 'Light' })).toHaveAttribute('aria-checked', 'false');
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Light' }));
+    expect(onValueChange).toHaveBeenCalledWith('light');
   }, 10_000);
 });
 
