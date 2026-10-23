@@ -246,11 +246,21 @@ describe('linear gradient geometry', () => {
       ])
     );
 
+  // Index scans, not regexes: a non-global `/<linearGradient[^>]*>/` rescans to
+  // the end of the string from every occurrence when no `>` follows, which is the
+  // quadratic shape `js/polynomial-redos` flags. `indexOf` is linear and reads the
+  // same fixture.
   const gradientEndpoints = (svg: string) => {
-    const tag = svg.match(/<linearGradient[^>]*>/)?.[0] ?? '';
-    const attr = (name: string) => Number(tag.match(new RegExp(`\\b${name}="(-?[\\d.]+)"`))?.[1]);
+    const start = svg.indexOf('<linearGradient');
+    const close = start === -1 ? -1 : svg.indexOf('>', start);
+    const tag = close === -1 ? '' : svg.slice(start, close + 1);
+    const attr = (name: string) => {
+      const key = `${name}="`;
+      const from = tag.indexOf(key);
+      return from === -1 ? Number.NaN : Number(tag.slice(from + key.length).split('"')[0]);
+    };
     return {
-      userSpace: /gradientUnits="userSpaceOnUse"/.test(tag),
+      userSpace: tag.includes('gradientUnits="userSpaceOnUse"'),
       x1: attr('x1'),
       y1: attr('y1'),
       x2: attr('x2'),
