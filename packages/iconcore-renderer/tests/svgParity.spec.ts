@@ -223,6 +223,45 @@ describe('conic/diamond approximation centring', () => {
   });
 });
 
+describe('linear gradient span', () => {
+  // The canvas compositor builds the gradient line with the CSS length
+  // `half = (w·|dx| + h·|dy|) / 2` (`buildGradient` in `backends/canvas.ts`).
+  // The SVG emitter used `50 ± dx·50` — half the bbox projection — so for a
+  // diagonal the stops spanned 0.707 of the line and the export did not match
+  // the editor. These pin the gradient line's endpoints in percent of the
+  // bounding box, which is the quantity `objectBoundingBox` transforms; a
+  // smooth-gradient pixel average hid the defect instead of showing it.
+  const gradientSvg = (angle: number) =>
+    render(
+      project([
+        shapeLayer({ kind: 'rectangle', width: 208, height: 208, cornerRadius: 0 }, {
+          fill: {
+            kind: 'linear-gradient',
+            angle,
+            stops: [
+              { offset: 0, color: '#ff5722' },
+              { offset: 1, color: '#2196f3' }
+            ]
+          }
+        })
+      ])
+    );
+
+  it('spans the whole diagonal of a square at 45°, as the canvas does', () => {
+    // A 45° gradient line in a square runs corner to corner: bottom-left
+    // (0%, 100%) to top-right (100%, 0%). The compressed form was
+    // 14.65% → 85.36%, which is the side length, not the diagonal.
+    expect(gradientSvg(45)).toContain('x1="0.00%" y1="100.00%" x2="100.00%" y2="0.00%"');
+  });
+
+  it('keeps the span it always had for the axis-aligned angles', () => {
+    // 0 = to top: vertical line, full height, centred horizontally.
+    expect(gradientSvg(0)).toContain('x1="50.00%" y1="100.00%" x2="50.00%" y2="0.00%"');
+    // 90 = to right: horizontal line, full width, centred vertically.
+    expect(gradientSvg(90)).toContain('x1="0.00%" y1="50.00%" x2="100.00%" y2="50.00%"');
+  });
+});
+
 describe('rounded rectangle is untouched', () => {
   it('still uses the declared corner radius', () => {
     const svg = render(

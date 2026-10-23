@@ -114,10 +114,24 @@ const paintFor = (fill: Fill, id: string): { defs: string; paint: string } | nul
 
   if (fill.kind === 'linear-gradient') {
     const { x: dx, y: dy } = cssAngleVector(fill.angle ?? 90);
-    const x1 = (50 - dx * 50).toFixed(2);
-    const y1 = (50 - dy * 50).toFixed(2);
-    const x2 = (50 + dx * 50).toFixed(2);
-    const y2 = (50 + dy * 50).toFixed(2);
+    // CSS gradient line length is `|w·dx| + |h·dy|`. The canvas compositor
+    // (`buildGradient`) uses exactly that span; the old `50 ± dx·50` projected
+    // only `dx`, so a diagonal covered 0.707 of the line and the export stopped
+    // short of the editor. In a square bbox this form is exact — `|dx| + |dy|`
+    // reproduces the CSS length for every angle — and axis-aligned angles
+    // (`|dx| + |dy| = 1`) are untouched. A non-square bbox still cannot
+    // reproduce the CSS *angle*: `objectBoundingBox` stretches the vector in
+    // both axes, so the direction error stays whatever the span is, and only
+    // the length can be fixed. The length is exact at the square and lands
+    // between the old undershoot and the CSS target for the aspects icons use
+    // (measured: 2:1 at 45° goes from −25,5% to +5,4%), overshooting wider
+    // boxes (16:1 at 45°: −5,7% → +33,4%). Zeroing that needs the shape's w/h,
+    // not a percentage.
+    const span = Math.abs(dx) + Math.abs(dy);
+    const x1 = (50 - dx * span * 50).toFixed(2);
+    const y1 = (50 - dy * span * 50).toFixed(2);
+    const x2 = (50 + dx * span * 50).toFixed(2);
+    const y2 = (50 + dy * span * 50).toFixed(2);
     return {
       defs: `<linearGradient id="${id}" x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%">${gradStopsMarkup(fill)}</linearGradient>`,
       paint: `url(#${id})`

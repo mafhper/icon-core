@@ -566,11 +566,16 @@ const PROJECTS = {
  * tolerance — it is the number that matters, because a smooth gradient legitimately
  * differs in every dithered pixel while a wrong curve differs in the whole corner.
  *
- * `gradiente` looks like a failure and is not: the comparison quantises to 4 bits
- * per channel, which punishes a smooth gradient's dithering. The two images are
- * visually identical and the generated SVG is correct, so its agreement figure is
- * reported but not gated. Tightening the metric instead of naming the exception
- * would have sent this looking for a defect that does not exist.
+ * `gradiente` was excused here as "a smooth gradient's dithering", with "the
+ * generated SVG is correct" and the figure reported but not gated. The second
+ * half of that was false: the SVG spanned `50 ± dx·50`, which is half the
+ * projection, while the canvas spans `(|w·dx| + |h·dy|) / 2`. A 45° gradient
+ * therefore covered 0.707 of its line and the export stopped short of the
+ * editor. Measured on this fixture: 48,8% agreement and 16,9% of pixels outside
+ * tolerance before, 97,3% and 0,0% after the span fix. The dithering story was
+ * true about *why the metric is noisy* and false about *whether the image was
+ * right*, and the exemption meant no fixture could tell those apart. It is
+ * gated now, at the level where the defect would return.
  *
  * **`texto` e `textoEBold` sao a mesma excecao, e foram Posto de lado por medicao.**
  *
@@ -589,8 +594,10 @@ const PROJECTS = {
  * | colunas com perfil distinto | — | — | **0** |
  *
  * Identical to the pixel. The glyphs are drawn in the same place by the same font;
- * what differs is the antialiasing on the edges, which is the same artefact
- * `gradiente` has at a *higher* figure (16,9%) and has always been excused for.
+ * what differs is the antialiasing on the edges. That figure — 16,9% — is the
+ * one the old `gradiente` exemption cited, and there it was hiding a real span
+ * defect (see above). The case for `texto` rests on the ink measurement, not on
+ * the analogy to a number that turned out to be a symptom.
  *
  * So: one threshold cannot rank "smooth gradient dithering" and "different glyph
  * shapes" — it punishes the first and would admit the second. Two metrics can, and
@@ -610,7 +617,7 @@ const PROJECTS = {
  */
 const ACEITACAO = {
   simples: { minFora: 0.5 },
-  gradiente: { minFora: null },
+  gradiente: { minFora: 1 },
   radial: { minFora: 0.5 },
   opacidade: { minFora: 0.5 },
   svgCor: { minFora: 0.5 },
