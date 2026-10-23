@@ -6,11 +6,31 @@ Icon Core é um workspace gratuito e open source para ícones de aplicativos. Co
 
 Tudo roda localmente no navegador ou no app desktop. Não exige conta, serviço de upload ou backend.
 
-![Edit Space do Icon Core](docs/assets/app-editor.png)
+![Icon Core Studio: camadas à esquerda, o canvas e as variantes no centro e o Inspector à direita](docs/assets/app-editor.png)
 
-| Começar um novo ícone | Export Utilities |
-| --- | --- |
-| ![Welcome](docs/assets/app-welcome.png) | ![Export Utilities](docs/assets/app-export.webp) |
+## Como começar
+
+Três portas, mesma saída: arquivos de ícone prontos.
+
+### Começar do zero
+
+![Tela inicial: criar no Edit Space, enviar direto para exportação ou enviar, editar e exportar](docs/assets/app-welcome.png)
+
+Abra o Edit Space em uma tela vazia. Adicione formas, textos e imagens como camadas, ajuste cada uma e acompanhe as variantes claro, escuro e mono enquanto trabalha.
+
+### Começar a partir de um arquivo
+
+Pule o canvas. Solte um SVG, PNG, JPG ou WebP pronto e vá direto para a exportação.
+
+### Começar a partir de um arquivo e refinar
+
+Abra seu arquivo no Edit Space primeiro, ajuste posicionamento e variantes, e então exporte.
+
+## Exportar pelo Inspector
+
+![A aba Export do Inspector: variantes, formatos, tamanhos de PNG e a opção de fundo transparente](docs/assets/app-export.webp)
+
+A exportação é uma aba do Inspector, ao lado de Design. Escolha as variantes, os formatos (SVG, PNG, ICO), os tamanhos de PNG de que precisa e se o fundo do canvas vai transparente; o painel conta os arquivos antes de gerá-los. **Export** baixa os arquivos e **Download all (.zip)** junta tudo em um pacote. O preview usa o mesmo motor da exportação, então o arquivo corresponde ao que você viu.
 
 ## Teste
 
@@ -21,24 +41,14 @@ Tudo roda localmente no navegador ou no app desktop. Não exige conta, serviço 
 
 [![Landing page do Icon Core](docs/assets/promo.png)](https://mafhper.github.io/icon-core/)
 
-## Workspaces
-
-| Workspace | Use quando |
-| --- | --- |
-| Create in Edit Space | Você quer montar um ícone com camadas, texto, formas e imagens. |
-| Upload to Export Utilities | Você já tem o arquivo final e só precisa gerar os assets. |
-| Upload, Adjust, Export | Você quer importar um arquivo, ajustar e depois exportar o pacote final. |
-
 ## Funcionalidades
 
-- **Canvas WYSIWYG** — o preview ao vivo usa o mesmo motor da exportação, então o que você vê é o que você exporta
-- Edição em camadas para imagens, SVG, formas e texto, com controles de posição, escala, rotação, opacidade, cor, gradiente, blend mode e sombra — mais hue, saturation, brightness e contrast em camadas de imagem e SVG
-- Pré-visualização de aparência e plataforma (default / light / dark / mono · quadrado / arredondado / círculo) e ajustes por variante
-- Safe area apenas como guia — os ícones ficam full-bleed e cada plataforma aplica a própria máscara
-- Exportação para favicon, PWA, Tauri, Electron e desktop genérico
-- Saída flexível: PNG / WebP / JPEG / SVG / ICO / ICNS, qualidade, estrutura aninhada ou plana, ZIP ou pasta escolhida (desktop), compressão, página de teste HTML e relatórios por target
+- Camadas para formas, textos, imagens e SVG, com posição, tamanho, rotação, opacidade, cor, gradientes, blend e sombra — mais matiz, saturação, brilho e contraste em camadas de imagem e SVG
+- Pré-visualizações claro, escuro e mono como miniaturas ao lado do canvas, com guia de área segura opcional
+- Uma única superfície de exportação para SVG, PNG (16 a 1024 px) e ICO multi-tamanho, com as variantes escolhidas
 - Cada ajuste de camada sobrevive à exportação em SVG, não só ao PNG
-- Apps web e desktop usando o mesmo modelo de projeto
+- A moldura exportada segue o formato do canvas, enquanto contêineres como o ICO ficam full-bleed porque cada plataforma aplica a própria máscara
+- Projetos são salvos automaticamente no navegador; nada é enviado para fora
 
 ## Desenvolvimento
 
@@ -85,8 +95,11 @@ npm run test
 ```
 
 O CI também roda `npm run build`, a suíte e2e do Playwright contra a landing page
-(`npm run test:e2e`) e a captura do contrato visual (`npm run ui:shots`). Os quatro
+(`npm run test:e2e`) e a captura do contrato visual (`npm run ui:shots`). Os
 `scripts/check-*.mjs` são baratos e pegam o que o lint não pega.
+
+As imagens deste README saem de `scripts/capture-screenshots.mjs`, que usa os dois
+servidores de dev e grava em `docs/assets/`; rode o script em vez de editar imagem à mão.
 
 Gere os bundles desktop:
 
@@ -108,6 +121,7 @@ packages/
   iconcore-engine/     Planejamento e utilitários de schema
   iconcore-validator/  Validação de projetos
   iconcore-cli/        Ferramentas de linha de comando
+  iconcore-ui/         Primitivos do design system
 ```
 
 ## Contribuição

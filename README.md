@@ -4,7 +4,7 @@
 
 Free, open-source app icons, from first sketch to finished files. Design in the browser or on the desktop. Everything runs on your machine. No account, no uploads, no server.
 
-![Icon Core editor: layer list on the left, canvas with keylines in the center, properties on the right](docs/assets/app-editor.png)
+![Icon Core Studio: layers on the left, the canvas and its variant tiles in the middle, the Inspector on the right](docs/assets/app-editor.png)
 
 ## Start your way
 
@@ -12,7 +12,7 @@ Three doors, same exit: finished icon files.
 
 ### Start from scratch
 
-![Start screen offering three ways to begin](docs/assets/app-welcome.png)
+![Start screen: create in Edit Space, upload straight to export, or upload, edit and then export](docs/assets/app-welcome.png)
 
 Open Edit Space on a blank canvas. Add shapes, text and images as layers, tune each one, and preview light, dark and mono variants as you go.
 
@@ -24,11 +24,11 @@ Skip the canvas. Drop in a finished SVG, PNG, JPG or WebP and go straight to exp
 
 Open your file in Edit Space first, adjust positioning and variants, then export.
 
-## Export once, ship everywhere
+## Export from the Inspector
 
-![Export Utilities with targets, format and output options](docs/assets/app-export.webp)
+![The Inspector's Export tab: variant checkboxes, file formats, PNG sizes and the transparent background switch](docs/assets/app-export.webp)
 
-Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP, JPEG, SVG, ICO, ICNS), take a ZIP or separate files. The preview uses the same engine as export, so the files match what you saw.
+Export is a tab in the Inspector, beside Design. Choose the variants, the formats (SVG, PNG, ICO), the PNG sizes you need and whether the canvas background goes transparent; the panel counts the files before writing them. **Export** downloads them, and **Download all (.zip)** packs the result into one archive. The preview uses the same engine as the export, so the file matches what you saw.
 
 ## Try it
 
@@ -42,11 +42,11 @@ Pick targets (favicon, PWA, Tauri, Electron, desktop), pick a format (PNG, WebP,
 ## What it does
 
 - Layers for shapes, text, images and SVG, with position, size, rotation, opacity, color, gradients, blend and shadow — plus hue, saturation, brightness and contrast on image and SVG layers
-- Light, dark and mono previews, with square, rounded and circle safe areas drawn as guides
-- Icons export full bleed: the safe area never crops your artwork, each platform applies its own mask
-- One click export to favicon, PWA, Tauri, Electron and desktop sets
+- Light, dark and mono previews as live tiles beside the canvas, with an optional safe-area guide
+- One export surface for SVG, PNG (16 to 1024 px) and multi-size ICO, with the variants you pick
 - Every layer adjustment survives the SVG export, not just the PNG
-- HTML preview sheet and per target report included
+- The exported frame follows the canvas shape, while container formats such as ICO stay full bleed because each platform applies its own mask
+- Projects autosave in the browser; nothing is uploaded
 
 ## Development
 
@@ -75,7 +75,17 @@ npm run test
 
 CI also runs `npm run build`, the Playwright e2e suite against the landing page
 (`npm run test:e2e`) and the visual contract capture (`npm run ui:shots`). The
-four `scripts/check-*.mjs` guards are cheap and catch what lint cannot.
+`scripts/check-*.mjs` guards are cheap and catch what lint cannot.
+
+The README screenshots come from `scripts/capture-screenshots.mjs`, which drives
+both dev servers and writes to `docs/assets/`; re-run it instead of editing images
+by hand.
+
+Generate the desktop bundles:
+
+```bash
+npm run build:desktop
+```
 
 ## Repository
 
