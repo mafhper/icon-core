@@ -104,8 +104,22 @@ const layerTransformAttr = (canvas: Dimensions, transform: IconLayer['transform'
  * SVG paint for fills that map to a native gradient/colour. Returns `null` for
  * `'none'`; angular/diamond are approximated separately (SVG has no conic
  * gradient) — see `approximationMarkup`.
+ *
+ * `bbox` is the fill's user-space box when the caller knows it (shape, line and
+ * canvas background fills). With it, the linear gradient is emitted in
+ * `userSpaceOnUse` and the geometry is **identical to the canvas compositor's**
+ * (`buildGradient`): a line centred on the box with `half = (|w·dx| + |h·dy|)/2`.
+ * Percentages in `objectBoundingBox` cannot express that on a non-square box —
+ * the gradient space is scaled by width on X and height on Y, so the same
+ * percentage span distorts the direction (measured at 16:1, 45°: +33,4%
+ * overshoot). Text has no box known to this function (its extent belongs to
+ * the reader), so it keeps the percentage form.
  */
-const paintFor = (fill: Fill, id: string): { defs: string; paint: string } | null => {
+const paintFor = (
+  fill: Fill,
+  id: string,
+  bbox?: { x: number; y: number; width: number; height: number }
+): { defs: string; paint: string } | null => {
   if (fill.kind === 'none') return null;
 
   if (fill.kind === 'solid') {
@@ -114,19 +128,26 @@ const paintFor = (fill: Fill, id: string): { defs: string; paint: string } | nul
 
   if (fill.kind === 'linear-gradient') {
     const { x: dx, y: dy } = cssAngleVector(fill.angle ?? 90);
-    // CSS gradient line length is `|w·dx| + |h·dy|`. The canvas compositor
-    // (`buildGradient`) uses exactly that span; the old `50 ± dx·50` projected
-    // only `dx`, so a diagonal covered 0.707 of the line and the export stopped
-    // short of the editor. In a square bbox this form is exact — `|dx| + |dy|`
-    // reproduces the CSS length for every angle — and axis-aligned angles
-    // (`|dx| + |dy| = 1`) are untouched. A non-square bbox still cannot
-    // reproduce the CSS *angle*: `objectBoundingBox` stretches the vector in
-    // both axes, so the direction error stays whatever the span is, and only
-    // the length can be fixed. The length is exact at the square and lands
-    // between the old undershoot and the CSS target for the aspects icons use
-    // (measured: 2:1 at 45° goes from −25,5% to +5,4%), overshooting wider
-    // boxes (16:1 at 45°: −5,7% → +33,4%). Zeroing that needs the shape's w/h,
-    // not a percentage.
+    if (bbox) {
+      // The compositor's line, in the shape's own user space. `||` mirrors
+      // `buildGradient`'s degenerate-box fallback.
+      const cx = bbox.x + bbox.width / 2;
+      const cy = bbox.y + bbox.height / 2;
+      const half =
+        (Math.abs(bbox.width * dx) + Math.abs(bbox.height * dy)) / 2 ||
+        Math.max(bbox.width, bbox.height) / 2;
+      const x1 = (cx - dx * half).toFixed(2);
+      const y1 = (cy - dy * half).toFixed(2);
+      const x2 = (cx + dx * half).toFixed(2);
+      const y2 = (cy + dy * half).toFixed(2);
+      return {
+        defs: `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">${gradStopsMarkup(fill)}</linearGradient>`,
+        paint: `url(#${id})`
+      };
+    }
+    // No box known (text): the old percentage form. In a square box this is
+    // exact — `|dx| + |dy|` reproduces the CSS line length for every angle —
+    // and axis-aligned angles are untouched.
     const span = Math.abs(dx) + Math.abs(dy);
     const x1 = (50 - dx * span * 50).toFixed(2);
     const y1 = (50 - dy * span * 50).toFixed(2);
@@ -623,7 +644,7 @@ export const renderToSvgWithOptions = (
       defs.push(`<clipPath id="${clipId}"><rect width="${canvas.width}" height="${canvas.height}"/></clipPath>`);
       bgMarkup = `<g clip-path="url(#${clipId})">${approximationMarkup(bg, rect)}</g>\n`;
     } else {
-      const paint = paintFor(bg, nextId('bg'));
+      const paint = paintFor(bg, nextId('bg'), { x: 0, y: 0, width: canvas.width, height: canvas.height });
       if (paint) {
         if (paint.defs) defs.push(paint.defs);
         bgMarkup = `<rect width="${canvas.width}" height="${canvas.height}" fill="${paint.paint}"/>\n`;
@@ -989,7 +1010,12 @@ export const renderToSvgWithOptions = (
           stroke?.cap ?? 'round'
         );
       } else if (fill && fill.kind !== 'none') {
-        const resolved = paintFor(fill, nextId(`line-${layer.id}`));
+        const resolved = paintFor(fill, nextId(`line-${layer.id}`), {
+          x: ox,
+          y: oy,
+          width: shape.width,
+          height: shape.height
+        });
         if (!resolved) return own;
         if (resolved.defs) defs.push(resolved.defs);
         own += shapeMarkup(
@@ -1024,7 +1050,15 @@ export const renderToSvgWithOptions = (
       return own;
     }
 
-    const resolved = fill && fill.kind !== 'none' ? paintFor(fill, nextId(`fill-${layer.id}`)) : null;
+    const resolved =
+      fill && fill.kind !== 'none'
+        ? paintFor(fill, nextId(`fill-${layer.id}`), {
+            x: ox,
+            y: oy,
+            width: shape.width,
+            height: shape.height
+          })
+        : null;
     if (fill && fill.kind !== 'none' && !resolved) return own;
     if (resolved?.defs) defs.push(resolved.defs);
     // Centred like the Canvas2D compositor: `((S - w) / 2, (S - h) / 2)`.

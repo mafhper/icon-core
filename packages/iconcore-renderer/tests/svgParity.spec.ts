@@ -223,18 +223,17 @@ describe('conic/diamond approximation centring', () => {
   });
 });
 
-describe('linear gradient span', () => {
+describe('linear gradient geometry', () => {
   // The canvas compositor builds the gradient line with the CSS length
-  // `half = (w·|dx| + h·|dy|) / 2` (`buildGradient` in `backends/canvas.ts`).
-  // The SVG emitter used `50 ± dx·50` — half the bbox projection — so for a
-  // diagonal the stops spanned 0.707 of the line and the export did not match
-  // the editor. These pin the gradient line's endpoints in percent of the
-  // bounding box, which is the quantity `objectBoundingBox` transforms; a
-  // smooth-gradient pixel average hid the defect instead of showing it.
-  const gradientSvg = (angle: number) =>
+  // `half = (w·|dx| + h·|dy|) / 2` around the box's centre (`buildGradient` in
+  // `backends/canvas.ts`). The SVG emitter must reproduce it in `userSpaceOnUse`;
+  // a percentage in `objectBoundingBox` is stretched by width on X and height on
+  // Y, so it only matches when the box is square. These pin the endpoints in
+  // the shape's user space, which is the quantity `userSpaceOnUse` consumes.
+  const gradientSvg = (width: number, height: number, angle: number) =>
     render(
       project([
-        shapeLayer({ kind: 'rectangle', width: 208, height: 208, cornerRadius: 0 }, {
+        shapeLayer({ kind: 'rectangle', width, height, cornerRadius: 0 }, {
           fill: {
             kind: 'linear-gradient',
             angle,
@@ -247,18 +246,56 @@ describe('linear gradient span', () => {
       ])
     );
 
+  const gradientEndpoints = (svg: string) => {
+    const tag = svg.match(/<linearGradient[^>]*>/)?.[0] ?? '';
+    const attr = (name: string) => Number(tag.match(new RegExp(`\\b${name}="(-?[\\d.]+)"`))?.[1]);
+    return {
+      userSpace: /gradientUnits="userSpaceOnUse"/.test(tag),
+      x1: attr('x1'),
+      y1: attr('y1'),
+      x2: attr('x2'),
+      y2: attr('y2')
+    };
+  };
+
   it('spans the whole diagonal of a square at 45°, as the canvas does', () => {
-    // A 45° gradient line in a square runs corner to corner: bottom-left
-    // (0%, 100%) to top-right (100%, 0%). The compressed form was
-    // 14.65% → 85.36%, which is the side length, not the diagonal.
-    expect(gradientSvg(45)).toContain('x1="0.00%" y1="100.00%" x2="100.00%" y2="0.00%"');
+    // 208×208 centred in the 256 canvas: box starts at 24, centre 128, half 104.
+    // The diagonal therefore runs (24, 232) → (232, 24).
+    const g = gradientEndpoints(gradientSvg(208, 208, 45));
+    expect(g.userSpace).toBe(true);
+    expect(g.x1).toBeCloseTo(24, 1);
+    expect(g.y1).toBeCloseTo(232, 1);
+    expect(g.x2).toBeCloseTo(232, 1);
+    expect(g.y2).toBeCloseTo(24, 1);
+  });
+
+  it('uses the shape factor on a non-square box, not the bbox percentage', () => {
+    // 240×15 (16:1) centred in 256: box (8, 120.5), centre (128, 128).
+    // half = (240 + 15)·0.7071 / 2 = 90.156, so each endpoint moves 63.75 px
+    // on both axes. The old percentage form put 70.7% of the box on each axis,
+    // which is 169.7 px across and 10.6 px down — a different line.
+    const g = gradientEndpoints(gradientSvg(240, 15, 45));
+    expect(g.userSpace).toBe(true);
+    expect(g.x1).toBeCloseTo(64.25, 1);
+    expect(g.y1).toBeCloseTo(191.75, 1);
+    expect(g.x2).toBeCloseTo(191.75, 1);
+    expect(g.y2).toBeCloseTo(64.25, 1);
   });
 
   it('keeps the span it always had for the axis-aligned angles', () => {
     // 0 = to top: vertical line, full height, centred horizontally.
-    expect(gradientSvg(0)).toContain('x1="50.00%" y1="100.00%" x2="50.00%" y2="0.00%"');
+    const vertical = gradientEndpoints(gradientSvg(208, 208, 0));
+    expect(vertical.x1).toBeCloseTo(128, 1);
+    expect(vertical.y1).toBeCloseTo(232, 1);
+    expect(vertical.x2).toBeCloseTo(128, 1);
+    expect(vertical.y2).toBeCloseTo(24, 1);
+
     // 90 = to right: horizontal line, full width, centred vertically.
-    expect(gradientSvg(90)).toContain('x1="0.00%" y1="50.00%" x2="100.00%" y2="50.00%"');
+    const horizontal = gradientEndpoints(gradientSvg(208, 208, 90));
+    expect(horizontal.x1).toBeCloseTo(24, 1);
+    expect(horizontal.y1).toBeCloseTo(128, 1);
+    expect(horizontal.x2).toBeCloseTo(232, 1);
+    expect(horizontal.y2).toBeCloseTo(128, 1);
   });
 });
 
