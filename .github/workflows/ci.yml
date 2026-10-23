@@ -35,6 +35,11 @@ jobs:
       - name: Third-party asset guard
         run: node scripts/check-third-party-assets.mjs
 
+      # The published repository must not cite the private workspace. Ratchet: the
+      # baseline in .public-surface-baseline.json only goes down; a new reference fails.
+      - name: Public surface guard
+        run: node scripts/check-public-surface.mjs
+
       - name: Brand guard (one source, derived copies)
         run: node scripts/check-brand.mjs
 
@@ -53,6 +58,13 @@ jobs:
       - name: UI contrast guard
         run: node scripts/check-ui-contrast.mjs
 
+      # A landing tem paleta propria (apps/promo/src/index.css, zero --ic-*) e
+      # ficou fora de todo gate ate 2026-10-23: o par primary/primary-foreground
+      # do tema light media 3,95:1. O valor foi corrigido no
+      # mesmo commit que cria o gate, para ele nao nascer vermelho.
+      - name: Promo contrast guard
+        run: node scripts/check-promo-contrast.mjs
+
       # Ja houve tres copias do download do projeto (Topbar, Ctrl+S, CommandPalette),
       # cada uma carregando o dirty indevido e o revoke no mesmo tick. Duas e uma
       # decisao; tres e um sintoma.
@@ -65,6 +77,14 @@ jobs:
       # depois do bump para 1.7.0 (IC-N44).
       - name: Version sync guard
         run: node scripts/check-version-sync.mjs
+
+      # O PR #248 aninhou o react por workspace e deixou o Radix hoisted na raiz sem peer para
+      # resolver: ERR_MODULE_NOT_FOUND em quatro specs do @iconcore/ui. A main fica verde porque
+      # os tres workspaces pedem a mesma versao — sorte do grafo, nao contrato. O guard le so o
+      # package-lock.json e os package.json (sem instalar nada) e cobra copia unica + ancora
+      # exata na raiz; o procedimento dos quatro pontos do bump esta no cabecalho dele.
+      - name: React single copy guard
+        run: node scripts/check-react-single-copy.mjs
 
       - name: Typecheck
         run: npm run typecheck

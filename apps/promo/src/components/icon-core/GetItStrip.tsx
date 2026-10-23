@@ -92,6 +92,7 @@ export function GetItStrip({
 
   useEffect(() => {
     let alive = true;
+    setLatest({ status: 'loading' });
 
     loadLatestRelease(siteConfig.repo)
       .then((release) => {
@@ -108,7 +109,9 @@ export function GetItStrip({
     return () => {
       alive = false;
     };
-  }, []);
+    // `attempt` is the retry trigger shared with the list: bumping it refetches
+    // without a reload, and the cached success is still served inside the window.
+  }, [attempt]);
 
   useEffect(() => {
     if (!open) return;
@@ -214,7 +217,14 @@ export function GetItStrip({
                 className="underline underline-offset-4"
               >
                 Ver no GitHub
-              </a>
+              </a>{' '}
+              <button
+                type="button"
+                onClick={() => setAttempt((value) => value + 1)}
+                className="cursor-pointer underline underline-offset-4"
+              >
+                Tentar de novo
+              </button>
             </p>
           )}
 

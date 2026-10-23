@@ -1,0 +1,6 @@
+{
+  "references": 128,
+  "filesWithReferences": 60,
+  "measured": "2026-10-23",
+  "scope": "tracked text files; excludes node_modules, dist, dist-pages, the private workspace, apps/desktop/src-tauri/{target,gen/schemas,icons} and *.icns"
+}

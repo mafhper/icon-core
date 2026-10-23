@@ -150,6 +150,34 @@ describe('GetItStrip desktop downloads', () => {
     expect(fallback?.textContent).toContain('Ver downloads no GitHub');
   });
 
+  it('retries the latest release from the error block, without reloading the page', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(respond({}, { ok: false, status: 500 }))
+      .mockResolvedValueOnce(respond(LATEST_PAYLOAD));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { ui, render } = renderStrip();
+    await render;
+    await settle();
+
+    // O erro do latest (a lista segue fechada) é quem carrega o retry.
+    expect(ui.container.textContent).toContain('Não deu para consultar a última versão agora.');
+    const retry = Array.from(ui.container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Tentar de novo')
+    );
+    expect(retry).toBeDefined();
+
+    await click(retry as HTMLButtonElement);
+    await settle();
+
+    // Segunda busca: o retry refaz a chamada, e o resultado entra no lugar do erro.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenLastCalledWith(LATEST_URL, { headers: { Accept: 'application/vnd.github+json' } });
+    expect(ui.container.textContent).toContain('Icon Core v1.7.0');
+    expect(ui.container.textContent).not.toContain('Não deu para consultar a última versão agora.');
+  });
+
   it('names the rate limit instead of reporting a generic failure', async () => {
     stubGitHub({ latest: {}, latestStatus: 403 });
     const { ui, render } = renderStrip();

@@ -12,7 +12,7 @@ Fix it in the same commit that reveals it.
 
 ## 1. Shape of the workspace
 
-An npm workspace: three apps on top of seven packages. Everything is TypeScript
+An npm workspace: three apps on top of eight packages. Everything is TypeScript
 with `tsc -p tsconfig.build.json` (composite projects), and every package
 resolves its neighbours through `dist/`, not `src/` — so **edit a package, then
 rebuild it** (`npm run build:packages`) before the apps or the tests can see the
@@ -52,6 +52,11 @@ encodes, is:
 ```
 shared → engine → renderer → validator → exporters → cli → ui
 ```
+
+`build:packages` runs one step the graph above does not draw: `@iconcore/library`
+— the embedded Rune icon set — builds immediately after `shared`, its only
+dependency. No app imports it yet, so it is built and validated by CI but not
+consumed by either app.
 
 `packages/iconcore-ui` is deliberately independent — a guard
 (`scripts/check-ui-boundary.mjs`) forbids it from importing any `@iconcore/*`

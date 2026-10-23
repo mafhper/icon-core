@@ -223,6 +223,92 @@ describe('conic/diamond approximation centring', () => {
   });
 });
 
+describe('linear gradient geometry', () => {
+  // The canvas compositor builds the gradient line with the CSS length
+  // `half = (w·|dx| + h·|dy|) / 2` around the box's centre (`buildGradient` in
+  // `backends/canvas.ts`). The SVG emitter must reproduce it in `userSpaceOnUse`;
+  // a percentage in `objectBoundingBox` is stretched by width on X and height on
+  // Y, so it only matches when the box is square. These pin the endpoints in
+  // the shape's user space, which is the quantity `userSpaceOnUse` consumes.
+  const gradientSvg = (width: number, height: number, angle: number) =>
+    render(
+      project([
+        shapeLayer({ kind: 'rectangle', width, height, cornerRadius: 0 }, {
+          fill: {
+            kind: 'linear-gradient',
+            angle,
+            stops: [
+              { offset: 0, color: '#ff5722' },
+              { offset: 1, color: '#2196f3' }
+            ]
+          }
+        })
+      ])
+    );
+
+  // Index scans, not regexes: a non-global `/<linearGradient[^>]*>/` rescans to
+  // the end of the string from every occurrence when no `>` follows, which is the
+  // quadratic shape `js/polynomial-redos` flags. `indexOf` is linear and reads the
+  // same fixture.
+  const gradientEndpoints = (svg: string) => {
+    const start = svg.indexOf('<linearGradient');
+    const close = start === -1 ? -1 : svg.indexOf('>', start);
+    const tag = close === -1 ? '' : svg.slice(start, close + 1);
+    const attr = (name: string) => {
+      const key = `${name}="`;
+      const from = tag.indexOf(key);
+      return from === -1 ? Number.NaN : Number(tag.slice(from + key.length).split('"')[0]);
+    };
+    return {
+      userSpace: tag.includes('gradientUnits="userSpaceOnUse"'),
+      x1: attr('x1'),
+      y1: attr('y1'),
+      x2: attr('x2'),
+      y2: attr('y2')
+    };
+  };
+
+  it('spans the whole diagonal of a square at 45°, as the canvas does', () => {
+    // 208×208 centred in the 256 canvas: box starts at 24, centre 128, half 104.
+    // The diagonal therefore runs (24, 232) → (232, 24).
+    const g = gradientEndpoints(gradientSvg(208, 208, 45));
+    expect(g.userSpace).toBe(true);
+    expect(g.x1).toBeCloseTo(24, 1);
+    expect(g.y1).toBeCloseTo(232, 1);
+    expect(g.x2).toBeCloseTo(232, 1);
+    expect(g.y2).toBeCloseTo(24, 1);
+  });
+
+  it('uses the shape factor on a non-square box, not the bbox percentage', () => {
+    // 240×15 (16:1) centred in 256: box (8, 120.5), centre (128, 128).
+    // half = (240 + 15)·0.7071 / 2 = 90.156, so each endpoint moves 63.75 px
+    // on both axes. The old percentage form put 70.7% of the box on each axis,
+    // which is 169.7 px across and 10.6 px down — a different line.
+    const g = gradientEndpoints(gradientSvg(240, 15, 45));
+    expect(g.userSpace).toBe(true);
+    expect(g.x1).toBeCloseTo(64.25, 1);
+    expect(g.y1).toBeCloseTo(191.75, 1);
+    expect(g.x2).toBeCloseTo(191.75, 1);
+    expect(g.y2).toBeCloseTo(64.25, 1);
+  });
+
+  it('keeps the span it always had for the axis-aligned angles', () => {
+    // 0 = to top: vertical line, full height, centred horizontally.
+    const vertical = gradientEndpoints(gradientSvg(208, 208, 0));
+    expect(vertical.x1).toBeCloseTo(128, 1);
+    expect(vertical.y1).toBeCloseTo(232, 1);
+    expect(vertical.x2).toBeCloseTo(128, 1);
+    expect(vertical.y2).toBeCloseTo(24, 1);
+
+    // 90 = to right: horizontal line, full width, centred vertically.
+    const horizontal = gradientEndpoints(gradientSvg(208, 208, 90));
+    expect(horizontal.x1).toBeCloseTo(24, 1);
+    expect(horizontal.y1).toBeCloseTo(128, 1);
+    expect(horizontal.x2).toBeCloseTo(232, 1);
+    expect(horizontal.y2).toBeCloseTo(128, 1);
+  });
+});
+
 describe('rounded rectangle is untouched', () => {
   it('still uses the declared corner radius', () => {
     const svg = render(
